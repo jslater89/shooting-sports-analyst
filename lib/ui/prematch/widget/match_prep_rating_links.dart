@@ -233,6 +233,7 @@ class _RatingLinksActions extends StatelessWidget {
   Widget build(BuildContext context) {
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var ratingsInUse = model.ratingsInUse;
+    var lastName = registration.shooterName?.split(" ").lastOrNull;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -240,7 +241,15 @@ class _RatingLinksActions extends StatelessWidget {
           decorateIconColor: false,
           child: Icon(Icons.link),
           onTap: () async {
-            var rating = await FindRatingDialog.show(context, project: model.ratingProject, group: group, ratingsInUse: ratingsInUse, getRootTheme: true);
+            var rating = await FindRatingDialog.show(
+              context,
+              registration: registration,
+              project: model.ratingProject,
+              group: group,
+              ratingsInUse: ratingsInUse,
+              getRootTheme: true,
+              initialSearch: lastName,
+            );
 
             if(rating != null) {
               model.linkRating(registration, rating);

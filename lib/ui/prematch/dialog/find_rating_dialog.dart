@@ -2,35 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 
 class FindRatingDialog extends StatefulWidget {
-  FindRatingDialog({super.key, required this.project, required this.group, required this.ratingsInUse});
+  FindRatingDialog({super.key, required this.project, required this.group, required this.ratingsInUse, this.initialSearch, this.registration});
   final Set<ShooterRating> ratingsInUse;
   final DbRatingProject project;
   final RatingGroup group;
+  final String? initialSearch;
+  final MatchRegistration? registration;
 
   @override
   State<FindRatingDialog> createState() => _FindRatingDialogState();
 
-  static Future<ShooterRating?> show(BuildContext context, {required DbRatingProject project, required RatingGroup group, required Set<ShooterRating> ratingsInUse, bool getRootTheme = false}) async {
+  static Future<ShooterRating?> show(BuildContext context, {
+    required DbRatingProject project,
+    required RatingGroup group,
+    required Set<ShooterRating> ratingsInUse,
+    bool getRootTheme = false,
+    String? initialSearch,
+    MatchRegistration? registration,
+  }) async {
     BuildContext? rootContext;
     if(getRootTheme) {
       rootContext = Navigator.of(context, rootNavigator: true).context;
     }
+    final dialog = FindRatingDialog(
+      project: project,
+      group: group,
+      ratingsInUse: ratingsInUse,
+      initialSearch: initialSearch,
+      registration: registration,
+    );
     if(rootContext != null) {
       return showDialog<ShooterRating>(context: context, builder: (context) =>
         Theme(
           data: Theme.of(rootContext!),
-          child: FindRatingDialog(project: project, group: group, ratingsInUse: ratingsInUse)
+          child: dialog,
         )
       );
     }
     else {
       return showDialog<ShooterRating>(context: context, builder: (context) =>
-        FindRatingDialog(project: project, group: group, ratingsInUse: ratingsInUse)
+        dialog,
       );
     }
   }
@@ -41,6 +58,15 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
   final searchController = TextEditingController();
   List<ShooterRating> results = [];
   bool searching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if(widget.initialSearch != null) {
+      searchController.text = widget.initialSearch!;
+      _search(widget.initialSearch!);
+    }
+  }
 
   Future<void> _search(String value) async {
     setState(() {
@@ -62,13 +88,23 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
   @override
   Widget build(BuildContext context) {
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
+    String? registrationInfo;
+    if(widget.registration != null) {
+      registrationInfo = "Searching for rating for ${widget.registration?.shooterName}";
+      if(widget.registration?.shooterClassificationName != null) {
+        registrationInfo += " - ${widget.registration?.shooterClassificationName}";
+      }
+    }
     return AlertDialog(
       title: Text("Find rating"),
       content: SizedBox(
         width: 500 * uiScaleFactor,
         height: 600 * uiScaleFactor,
         child: Column(
+          spacing: 8 * uiScaleFactor,
           children: [
+            if(registrationInfo != null) Text(registrationInfo),
             Text("Enter a name or part of a name to find a rating. Up to 50 results are shown. For very common "
             "names, you may need to use a more specific query."),
             TextFormField(
