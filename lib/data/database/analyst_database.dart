@@ -196,14 +196,16 @@ class AnalystDatabase {
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
   /// inserted, updated, or read.
-  Map<RatingGroup, Map<String, DbShooterRating>> loadedShooterRatingCache = {};
-  DbShooterRating? lookupCachedRating(RatingGroup group, String memberNumber) {
-    return loadedShooterRatingCache[group]?[memberNumber];
+  Map<DbRatingProject, Map<RatingGroup, Map<String, DbShooterRating>>> loadedShooterRatingCache = {};
+  DbShooterRating? lookupCachedRating(DbRatingProject project, RatingGroup group, String memberNumber) {
+    return loadedShooterRatingCache[project]?[group]?[memberNumber];
   }
-  void cacheRating(RatingGroup group, DbShooterRating rating) {
-    loadedShooterRatingCache[group] ??= {};
+
+  void cacheRating(DbRatingProject project, RatingGroup group, DbShooterRating rating) {
+    loadedShooterRatingCache[project] ??= {};
+    loadedShooterRatingCache[project]![group] ??= {};
     for(var n in rating.allPossibleMemberNumbers) {
-      loadedShooterRatingCache[group]![n] = rating;
+      loadedShooterRatingCache[project]![group]![n] = rating;
     }
   }
   void clearLoadedShooterRatingCache() {

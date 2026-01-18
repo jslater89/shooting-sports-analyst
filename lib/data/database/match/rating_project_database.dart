@@ -194,7 +194,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool saveToCache = true,
   }) async {
     if(useCache) {
-      var cachedRating = lookupCachedRating(group, memberNumber);
+      var cachedRating = lookupCachedRating(project, group, memberNumber);
       if(cachedRating != null) {
         loadedShooterRatingCacheHits++;
         return cachedRating;
@@ -211,7 +211,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirst();
       if(rating != null) {
         if(saveToCache) {
-          cacheRating(group, rating);
+          cacheRating(project, group, rating);
         }
         loadedShooterRatingCacheMisses++;
         return rating;
@@ -225,7 +225,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirst();
       if(rating != null && saveToCache) {
         loadedShooterRatingCacheMisses++;
-        cacheRating(group, rating);
+        cacheRating(project, group, rating);
       }
       return rating;
     }
@@ -248,7 +248,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool saveToCache = true,
   }) {
     if(useCache) {
-      var cachedRating = lookupCachedRating(group, memberNumber);
+      var cachedRating = lookupCachedRating(project, group, memberNumber);
       if(cachedRating != null) {
         loadedShooterRatingCacheHits++;
         return cachedRating;
@@ -265,7 +265,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirstSync();
       if(rating != null) {
         if(saveToCache) {
-          cacheRating(group, rating);
+          cacheRating(project, group, rating);
         }
         loadedShooterRatingCacheMisses++;
         return rating;
@@ -279,7 +279,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirstSync();
       if(rating != null && saveToCache) {
         loadedShooterRatingCacheMisses++;
-        cacheRating(group, rating);
+        cacheRating(project, group, rating);
       }
       return rating;
     }
@@ -297,7 +297,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     dbRating.project.value = project;
     dbRating.group.value = group;
     if(useCache) {
-      cacheRating(group, dbRating);
+      cacheRating(project, group, dbRating);
     }
     return isar.writeTxn(() async {
       await isar.dbShooterRatings.put(dbRating);
@@ -366,7 +366,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     dbRating.project.value = project;
     dbRating.group.value = group;
     if(useCache) {
-      cacheRating(group, dbRating);
+      cacheRating(project, group, dbRating);
     }
     if(standalone) {
       return isar.writeTxnSync(() {
@@ -393,7 +393,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// If [linksChanged] is false, the links will not be saved in the write transaction.
   Future<DbShooterRating> upsertDbShooterRating(DbShooterRating rating, {bool linksChanged = true, bool useCache = true}) {
     if(useCache) {
-      cacheRating(rating.group.value!, rating);
+      cacheRating(rating.project.value!, rating.group.value!, rating);
     }
     return isar.writeTxn(() async {
       return _innerUpsertDbShooterRating(rating, linksChanged);
@@ -403,7 +403,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   Future<List<DbShooterRating>> upsertDbShooterRatings(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) async {
     if(useCache) {
       for(var r in ratings) {
-        cacheRating(r.group.value!, r);
+        cacheRating(r.project.value!, r.group.value!, r);
       }
     }
     return isar.writeTxn(() async {
@@ -434,7 +434,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// in a write transaction.
   DbShooterRating upsertDbShooterRatingSync(DbShooterRating rating, {bool linksChanged = true, bool useCache = true, bool standalone = true}) {
     if(useCache) {
-      cacheRating(rating.group.value!, rating);
+      cacheRating(rating.project.value!, rating.group.value!, rating);
     }
     if(standalone) {
       return isar.writeTxnSync(() {
@@ -449,7 +449,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   List<DbShooterRating> upsertDbShooterRatingsSync(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) {
     if(useCache) {
       for(var r in ratings) {
-        cacheRating(r.group.value!, r);
+        cacheRating(r.project.value!, r.group.value!, r);
       }
     }
     return isar.writeTxnSync(() {
@@ -539,7 +539,7 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     if(useCache) {
       for(var r in ratings) {
-        cacheRating(r.group.value!, r);
+        cacheRating(r.project.value!, r.group.value!, r);
       }
     }
   }
@@ -661,7 +661,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     if(Timings.enabled) outerStart = DateTime.now();
     if(useCache) {
       for(var r in ratings) {
-        cacheRating(r.group.value!, r);
+        cacheRating(r.project.value!, r.group.value!, r);
       }
     }
     if(Timings.enabled) Timings().add(TimingType.cacheUpdatedRatings, DateTime.now().difference(outerStart).inMicroseconds);
