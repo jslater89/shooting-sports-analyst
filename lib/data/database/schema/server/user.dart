@@ -24,7 +24,7 @@ class User {
   Id get id => username.stableHash;
 
   final fantasyUser = IsarLink<FantasyUser>();
-  final predictionGamePlayer = IsarLink<PredictionGamePlayer>();
+  final predictionGamePlayers = IsarLinks<PredictionGamePlayer>();
 
   final roles = IsarLinks<Role>();
   @Enumerated(EnumType.value, 'permissionName')

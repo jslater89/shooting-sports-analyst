@@ -22,7 +22,7 @@ class PredictionGamePlayer {
   String? nickname;
 
   /// The server user that this player is backed by, if any.
-  @Backlink(to: 'predictionGamePlayer')
+  @Backlink(to: 'predictionGamePlayers')
   final serverUser = IsarLink<User>();
 
   /// The game this user is participating in.

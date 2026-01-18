@@ -37,7 +37,7 @@ extension UserRoleDatabase on AnalystDatabase {
       if(saveLinks) {
         await user.roles.save();
         await user.fantasyUser.save();
-        await user.predictionGamePlayer.save();
+        await user.predictionGamePlayers.save();
       }
     });
     return user;
