@@ -179,6 +179,7 @@ extension PredictionGameExtension on AnalystDatabase {
         await wager.wagerTransaction.save();
         await wager.payoutTransaction.save();
         await wager.refundTransaction.save();
+        await wager.predictionSet.save();
       }
     });
 
