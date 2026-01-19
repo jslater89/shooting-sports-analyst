@@ -55,10 +55,14 @@ class WagerList extends StatelessWidget {
       }
     }
 
-    Map<DbWager, WagerScores> relevantScores = {};
+    Map<DbWager, WagerScores> relevantScoresMap = {};
 
     if(matchResult != null) {
-      relevantScores = model.managerModel.manager.getAllRelevantScores(model.wagers, match: matchResult);
+      Map<DbWager, ShootingMatch> matches = {};
+      for(var wager in model.wagers) {
+        matches[wager] = matchResult;
+      }
+      relevantScoresMap = model.managerModel.manager.getAllRelevantScores(model.wagers, matches: matches);
     }
 
     var listView = ListView.builder(
@@ -136,9 +140,8 @@ class WagerList extends StatelessWidget {
         bool hitsOnPredictionSetResult = false;
         Map<DbPrediction, bool>? legResults;
         Map<DbPrediction, bool>? predictionSetLegResults;
-        WagerScores? relevantScores;
-        if(matchResult != null) {
-          relevantScores = model.managerModel.manager.getRelevantScores(wager);
+        WagerScores? relevantScores = relevantScoresMap[wager];
+        if(matchResult != null && relevantScores != null) {
           legResults = wager.evaluateLegs(relevantScores.scores);
           predictionSetLegResults = wager.evaluateLegs(relevantScores.predictionSetScores);
           hitsOnMainResult = legResults.entries.every((e) => e.value);

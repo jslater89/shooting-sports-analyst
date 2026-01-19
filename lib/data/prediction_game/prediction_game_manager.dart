@@ -9,8 +9,10 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -189,16 +191,121 @@ class PredictionGameManager {
     return db.getTransactionsSync(game: predictionGame, matchPrep: matchPrep, player: player);
   }
 
-  /// Get relevant scores for a list of given wagers belonging to [match]: scores for all of
+  /// Get relevant scores for a list of given wagers: scores for all of
   /// the shooters in the wager's legs, for both the match result and the result within the
   /// relevant prediction set.
   ///
-  /// If [match] is provided, it will be used to calculate the scores.
-  Map<DbWager, WagerScores> getAllRelevantScores(List<DbWager> wagers, {ShootingMatch? match}) {
+  /// Any matches provided in [matches] will be used to calculate scores. Other matches will be
+  /// loaded from the database as needed.
+  Map<DbWager, WagerScores> getAllRelevantScores(List<DbWager> wagers, {Map<DbWager, ShootingMatch>? matches}) {
+    /// First load all matches we need, if not provided.
+    if(matches == null) {
+      matches = {};
+    }
+    for(var wager in wagers) {
+      var match = matches[wager];
+      if(match == null) {
+        var dbMatch = wager.matchPrep.value?.futureMatch.value?.dbMatch.value;
+        if(dbMatch != null) {
+          var matchRes = HydratedMatchCache().get(dbMatch);
+          if(matchRes.isOk()) {
+            match = matchRes.unwrap();
+          }
+        }
+      }
+    }
+
+    // Get lists of data we're interested in: rating groups, prediction sets, and shooters.
+    Map<ShootingMatch, Set<RatingGroup>> matchesToGroups = {};
+    Map<ShootingMatch, Set<PredictionSet>> matchesToPredictionSets = {};
+    Map<ShootingMatch, List<DbShooterRating>> matchesToWageredShooters = {};
+    for(var wager in wagers) {
+      var match = matches[wager];
+
+      if(match != null) {
+        for(var leg in wager.legs) {
+          var shooter = leg.target.getShooterRatingSync(db);
+          var underdog = leg.underdog?.getShooterRatingSync(db);
+          var shooters = [shooter, underdog].nonNulls.toList();
+          for(var s in shooters) {
+            matchesToWageredShooters.addToListIfMissingByEquality(match, s, (a, b) => a.equalsShooter(b));
+          }
+        }
+        // Rating groups and prediction sets both implement DB equality
+        matchesToGroups.addToSet(match, wager.ratingGroup.value!);
+        matchesToPredictionSets.addToSet(match, wager.predictionSet.value!);
+      }
+    }
+
+    Set<PredictionSet> predictionSetsToProcess = matchesToPredictionSets.values.flattenedToSet;
+    Map<PredictionSet, List<Shooter>> predictionSetShooters = {};
+    for(var predictionSet in predictionSetsToProcess) {
+      predictionSetShooters[predictionSet] = predictionSet.algorithmPredictions.map((p) => p.asShooter(loadFromRating: false)).nonNulls.toList();
+    }
+
+    // Get the scores of interest.
+    Set<ShootingMatch> matchesToProcess = matchesToGroups.keys.toSet();
+    Map<ShootingMatch, Map<RatingGroup, Map<String, RelativeMatchScore>>> groupScores = {};
+    Map<ShootingMatch, Map<RatingGroup, Map<PredictionSet, Map<String, RelativeMatchScore>>>> setScores = {};
+    for(var match in matchesToProcess) {
+      // For each match, we need to calculate scores for each rating group of interest, both
+      // overall, and within each prediction set of interest.
+      groupScores[match] = {};
+      setScores[match] = {};
+      for(var group in matchesToGroups[match]!) {
+        var overallShooters = match.filterShooters(divisions: group.divisions);
+        var overallScores = match.getScores(shooters: overallShooters);
+        var filteredOverall = Map.fromEntries(
+          overallScores.entries
+            .where((element) => matchesToWageredShooters[match]!
+              .any((s) => element.key.equalsShooter(s))
+            )
+          );
+
+        Map<String, RelativeMatchScore> overallByNumber = {};
+        for(var entry in filteredOverall.entries) {
+          for(var number in entry.key.knownMemberNumbers) {
+            overallByNumber[number] = entry.value;
+          }
+        }
+        groupScores[match]![group] = overallByNumber;
+
+        setScores[match]![group] = {};
+        for(var predictionSet in matchesToPredictionSets[match]!) {
+          var shooters = predictionSetShooters[predictionSet]!;
+          var entries = match.getEntriesFor(shooters);
+          var predictionSetScores = match.getScores(shooters: entries);
+          var relevantScores = Map.fromEntries(
+            predictionSetScores.entries
+              .where((element) => matchesToWageredShooters[match]!
+                .any((s) => element.key.equalsShooter(s))
+              )
+            );
+
+          Map<String, RelativeMatchScore> predictionSetByNumber = {};
+          for(var entry in relevantScores.entries) {
+            for(var number in entry.key.knownMemberNumbers) {
+              predictionSetByNumber[number] = entry.value;
+            }
+          }
+          setScores[match]![group]![predictionSet] = predictionSetByNumber;
+        }
+      }
+    }
+
     Map<DbWager, WagerScores> relevantScores = {};
     for(var wager in wagers) {
-      relevantScores[wager] = getRelevantScores(wager, match: match);
+      var match = matches[wager];
+      if(match != null) {
+        var group = wager.ratingGroup.value!;
+        var predictionSet = wager.predictionSet.value!;
+        var scores = WagerScores(wager: wager);
+        scores.scores = groupScores[match]![group]!;
+        scores.predictionSetScores = setScores[match]![group]![predictionSet]!;
+        relevantScores[wager] = scores;
+      }
     }
+
     return relevantScores;
   }
 
@@ -442,7 +549,7 @@ class PredictionGameManager {
 
     final divisions = ratingGroup.divisions;
     if(predictionSet != null) {
-      List<Shooter> predictedShooters = predictionSet.algorithmPredictions.map((p) => p.asShooter()).nonNulls.toList();
+      List<Shooter> predictedShooters = predictionSet.algorithmPredictions.map((p) => p.asShooter(loadFromRating: false)).nonNulls.toList();
       var entries = match.getEntriesFor(predictedShooters, divisions: divisions);
       var scores = match.getScores(shooters: entries);
       var matchScores = scores;

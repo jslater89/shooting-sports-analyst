@@ -30,6 +30,7 @@ class FilterSet {
   List<int> squads = [];
   List<int> knownSquads;
 
+  /// Create a filter set.
   FilterSet(this.sport, {bool empty = false, this.knownSquads = const [], List<Division>? divisions, this.mode = FilterMode.and}) {
     this.divisions = {};
     classifications = {};

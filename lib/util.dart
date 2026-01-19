@@ -226,6 +226,21 @@ extension ListMap<K, V> on Map<K, List<V>> {
     return true;
   }
 
+  /// Add [value] to the list at [key], but only if it is not already in the list,
+  /// creating the list if it doesn't exist.
+  ///
+  /// The [equals] function is used to determine if the value is already in the list
+  /// instead of the default equality operator.
+  ///
+  /// Returns true if the value was added, or false if it was already in the list.
+  bool addToListIfMissingByEquality(K key, V value, bool Function(V, V) equals) {
+    if(this[key]?.any((v) => equals(v, value)) ?? false) {
+      return false;
+    }
+    addToList(key, value);
+    return true;
+  }
+
   /// Remove [value] from the list at [key], if it is in the list.
   ///
   /// Returns true if the value was removed, or false if it was not in the list,

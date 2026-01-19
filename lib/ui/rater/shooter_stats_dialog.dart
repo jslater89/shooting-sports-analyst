@@ -447,6 +447,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var size = MediaQuery.of(context).size;
     Map<int, int> yearIndices = {};
 
+    // Raters may provide alternate chart values to avoid the Glicko-2 problem
+    // where rating immediately jumps to the correct value and the Y axis ends
+    // up only showing 100-200 rating points of range.
+    double? maximumMinimum;
+    double? minimumMaximum;
+
+    if(rating is Glicko2Rating) {
+      // For Glicko-2, always include 1500 in the range
+      minimumMaximum = 1500;
+      maximumMinimum = 1500;
+    }
+    // Elo doesn't really have this problem because the initial rating jump is usually
+    // much smaller.
+
     if(_series == null) {
       var eventsOfInterest = displayedStats.events.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
       // Map from year to index of first event in that year,
@@ -526,6 +540,23 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       );
     }
 
+    double chartMinimum;
+    double chartMaximum;
+
+    if(maximumMinimum != null) {
+      chartMinimum = min(minimumMaximum!, minWithError - 50);
+    }
+    else {
+      chartMinimum = minWithError - 50;
+    }
+
+    if(minimumMaximum != null) {
+      chartMaximum = max(minimumMaximum!, maxWithError + 50);
+    }
+    else {
+      chartMaximum = maxWithError + 50;
+    }
+
     if(_chart == null) {
       _chart = charts.LineChart(
         [_series!],
@@ -594,7 +625,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           showAxisLine: true,
         ),
         primaryMeasureAxis: charts.NumericAxisSpec(
-          viewport: charts.NumericExtents(minWithError - 50, maxWithError + 50),
+          viewport: charts.NumericExtents(chartMinimum, chartMaximum),
           tickProviderSpec: charts.BasicNumericTickProviderSpec(
             dataIsInWholeNumbers: true,
             desiredMinTickCount: 8,

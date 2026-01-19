@@ -20,6 +20,7 @@ extension Glicko2RatingsUi on Glicko2Rater {
   static const _classFlex = 1;
   static const _nameFlex = 6;
   static const _ratingFlex = 2;
+  static const _lastChangeFlex = 2;
   static const _rdFlex = 2;
   static const _volatilityFlex = 2;
   static const _matchesFlex = 2;
@@ -35,6 +36,7 @@ extension Glicko2RatingsUi on Glicko2Rater {
         Expanded(flex: _classFlex, child: Text("Class")),
         Expanded(flex: _nameFlex, child: Text("Name")),
         Expanded(flex: _ratingFlex, child: Text("Rating", textAlign: TextAlign.end)),
+        Expanded(flex: _lastChangeFlex, child: Text("Last ±", textAlign: TextAlign.end)),
         Expanded(
           flex: _rdFlex,
           child: Tooltip(
@@ -78,6 +80,7 @@ extension Glicko2RatingsUi on Glicko2Rater {
             Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ratingFlex, child: Text(rating.rating.round().toString(), textAlign: TextAlign.end)),
+            Expanded(flex: _lastChangeFlex, child: Text(rating.lastMatchChange.round().toString(), textAlign: TextAlign.end)),
             Expanded(flex: _rdFlex, child: Text(settings.scaleToDisplay(rating.currentInternalRD).round().toString(), textAlign: TextAlign.end)),
             Expanded(flex: _volatilityFlex, child: Text(settings.volatilityToDisplay(rating.volatility).toStringAsFixed(3), textAlign: TextAlign.end)),
             Expanded(flex: _matchesFlex, child: Text(rating.lengthInMatches.toString(), textAlign: TextAlign.end)),
