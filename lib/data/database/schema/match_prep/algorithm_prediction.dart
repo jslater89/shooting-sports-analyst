@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'algorithm_prediction.g.dart';
@@ -117,6 +118,28 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     prediction.highPlace = highPlace;
     prediction.medianPlace = medianPlace;
     return prediction;
+  }
+
+  /// Convert this [DbAlgorithmPrediction] to a minimal [Shooter] object
+  /// that can be used to compare to a [ShootingMatch] entry.
+  ///
+  /// If [loadFromRating] is true, the shooter's name will be loaded from the
+  /// [DbShooterRating] object.
+  Shooter asShooter({bool loadFromRating = true}) {
+    String firstName = "Unknown";
+    String lastName = "Unknown";
+    String memberNumber = this.memberNumber;
+    if(loadFromRating && rating.value != null) {
+      firstName = rating.value!.firstName;
+      lastName = rating.value!.lastName;
+      memberNumber = rating.value!.memberNumber;
+    }
+    var shooter = Shooter(
+      firstName: firstName,
+      lastName: lastName,
+      memberNumber: memberNumber,
+    );
+    return shooter;
   }
 
   Future<void> saveLinks() async {

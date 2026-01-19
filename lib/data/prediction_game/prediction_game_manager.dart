@@ -189,10 +189,45 @@ class PredictionGameManager {
     return db.getTransactionsSync(game: predictionGame, matchPrep: matchPrep, player: player);
   }
 
+  /// Get relevant scores for a list of given wagers belonging to [match]: scores for all of
+  /// the shooters in the wager's legs, for both the match result and the result within the
+  /// relevant prediction set.
+  ///
+  /// If [match] is provided, it will be used to calculate the scores.
+  Map<DbWager, WagerScores> getAllRelevantScores(List<DbWager> wagers, {ShootingMatch? match}) {
+    Map<DbWager, WagerScores> relevantScores = {};
+    for(var wager in wagers) {
+      relevantScores[wager] = getRelevantScores(wager, match: match);
+    }
+    return relevantScores;
+  }
+
   /// Get the relevant scores for a wager: scores for all of the shooters in the wager's legs,
   /// for both the match result and the result within the prediction set.
-  WagerScores getRelevantScores(DbWager wager) {
+  ///
+  /// If [match] is provided, it will be used to calculate the scores
+  WagerScores getRelevantScores(DbWager wager, {ShootingMatch? match}) {
     var scores = WagerScores(wager: wager);
+    ShootingMatch? actualMatch;
+    var dbMatch = wager.matchPrep.value?.futureMatch.value?.dbMatch.value;
+    if(dbMatch == null) {
+      return scores;
+    }
+    if(match == null) {
+      var matchRes = HydratedMatchCache().get(dbMatch);
+      if(matchRes.isOk()) {
+        actualMatch = matchRes.unwrap();
+      }
+      else {
+        _log.e("Error hydrating match: ${matchRes.unwrapErr().message}");
+        return scores;
+      }
+    }
+    else {
+      actualMatch = match;
+    }
+
+
     List<Shooter> shooters = [];
     for(var leg in wager.legs) {
       var shooter = leg.target.getShooterRatingSync(db);
@@ -205,9 +240,14 @@ class PredictionGameManager {
       }
     }
 
-    scores.scores = _getScoresForShooters(shooters, wager, false);
-    scores.predictionSetScores = _getScoresForShooters(shooters, wager, true);
+    var group = wager.ratingGroup.value!;
+    var predictionSet = wager.predictionSet.value;
+
+    scores.scores = _getScoresForShooters(shooters, group, actualMatch, null);
+    scores.predictionSetScores = _getScoresForShooters(shooters, group, actualMatch, predictionSet);
+
     return scores;
+
   }
 
   /// Resolve a wager with the given status, creating a payout or refund transaction
@@ -353,26 +393,23 @@ class PredictionGameManager {
     }
   }
 
-  Map<String, RelativeMatchScore> _getScoresForShooters(List<Shooter> shooters, DbWager wager, bool usePredictionSet) {
+  Map<String, RelativeMatchScore> _getScoresForShooters(List<Shooter> relevantShooters, RatingGroup group, ShootingMatch match, PredictionSet? predictionSet) {
     Map<String, RelativeMatchScore> scores = {};
-    if(wager.matchPrep.value == null) {
-      return scores;
-    }
-    for(var shooter in shooters) {
+    for(var shooter in relevantShooters) {
       RelativeMatchScore? score;
-      if(usePredictionSet) {
+      if(predictionSet != null) {
         score = _getMatchScore(
           shooter: shooter,
-          ratingGroup: wager.ratingGroup.value!,
-          matchPrep: wager.matchPrep.value!,
-          predictionSet: wager.predictionSet.value,
+          ratingGroup: group,
+          match: match,
+          predictionSet: predictionSet,
         );
       }
       else {
         score = _getMatchScore(
           shooter: shooter,
-          ratingGroup: wager.ratingGroup.value!,
-          matchPrep: wager.matchPrep.value!,
+          ratingGroup: group,
+          match: match,
         );
       }
       if(score != null) {
@@ -385,7 +422,7 @@ class PredictionGameManager {
   RelativeMatchScore? _getMatchScore({
     required Shooter shooter,
     required RatingGroup ratingGroup,
-    required MatchPrep matchPrep,
+    required ShootingMatch match,
     PredictionSet? predictionSet,
   }) {
     // TODO: cache, maybe?
@@ -405,20 +442,7 @@ class PredictionGameManager {
 
     final divisions = ratingGroup.divisions;
     if(predictionSet != null) {
-      final dbMatch = matchPrep.futureMatch.value!.dbMatch.value;
-      ShootingMatch? match;
-      if(dbMatch == null) {
-        return null;
-      }
-      final result = HydratedMatchCache().get(dbMatch);
-      if(result.isOk()) {
-        match = result.unwrap();
-      }
-      else {
-        _log.e("Error hydrating match: ${result.unwrapErr().message}");
-        return null;
-      }
-      List<Shooter> predictedShooters = predictionSet.getHydratedPredictions().map((p) => p.shooter).toList();
+      List<Shooter> predictedShooters = predictionSet.algorithmPredictions.map((p) => p.asShooter()).nonNulls.toList();
       var entries = match.getEntriesFor(predictedShooters, divisions: divisions);
       var scores = match.getScores(shooters: entries);
       var matchScores = scores;
@@ -430,20 +454,6 @@ class PredictionGameManager {
       return null;
     }
     else {
-
-      final dbMatch = matchPrep.futureMatch.value!.dbMatch.value;
-      ShootingMatch? match;
-      if(dbMatch == null) {
-        return null;
-      }
-      final result = HydratedMatchCache().get(dbMatch);
-      if(result.isOk()) {
-        match = result.unwrap();
-      }
-      else {
-        _log.e("Error hydrating match: ${result.unwrapErr().message}");
-        return null;
-      }
       var entries = match.filterShooters(divisions: divisions);
       var scores = match.getScores(shooters: entries);
       var matchScores = scores;

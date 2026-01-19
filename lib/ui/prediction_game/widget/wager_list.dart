@@ -4,21 +4,16 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
@@ -47,24 +42,29 @@ class WagerList extends StatelessWidget {
     bool showPlayer = model.player == null;
     bool showMatchName = model.matchPrep == null;
 
+    final futureMatch = model.matchPrep?.futureMatch.value;
+    final matchPrepName = futureMatch?.eventName;
+    ShootingMatch? matchResult;
+    if(futureMatch != null) {
+      var dbMatchResult = futureMatch.dbMatch.value;
+      if(dbMatchResult != null) {
+        var result = HydratedMatchCache().get(dbMatchResult);
+        if(result.isOk()) {
+          matchResult = result.unwrap();
+        }
+      }
+    }
+
+    Map<DbWager, WagerScores> relevantScores = {};
+
+    if(matchResult != null) {
+      relevantScores = model.managerModel.manager.getAllRelevantScores(model.wagers, match: matchResult);
+    }
+
     var listView = ListView.builder(
       itemCount: model.wagers.length,
       itemBuilder: (context, index) {
         var wager = model.wagers[index];
-        var matchPrepName = wager.matchPrep.value!.futureMatch.value!.eventName;
-        var dbMatchResult = wager.matchPrep.value!.futureMatch.value!.dbMatch.value;
-        ShootingMatch? matchResult;
-
-        if(dbMatchResult != null) {
-          var result = HydratedMatchCache().get(dbMatchResult);
-          if(result.isOk()) {
-            matchResult = result.unwrap();
-          }
-          else {
-            _log.e("Error hydrating match result: ${result.unwrapErr().message}");
-          }
-        }
-
         var playerName = wager.user.value!.nickname ?? wager.user.value!.serverUser.value?.username ?? "(no username)";
         var hydratedWager = wager.hydrate();
         var prediction = "${hydratedWager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})";
@@ -116,7 +116,7 @@ class WagerList extends StatelessWidget {
         }
         if(showMatchName) {
           subtitleText.add(
-            Expanded(flex: 6, child: Text(matchPrepName, overflow: TextOverflow.ellipsis)),
+            Expanded(flex: 6, child: Text(matchPrepName ?? "", overflow: TextOverflow.ellipsis)),
           );
         }
 
@@ -136,9 +136,9 @@ class WagerList extends StatelessWidget {
         bool hitsOnPredictionSetResult = false;
         Map<DbPrediction, bool>? legResults;
         Map<DbPrediction, bool>? predictionSetLegResults;
-        _WagerScores? relevantScores;
+        WagerScores? relevantScores;
         if(matchResult != null) {
-          relevantScores = model.getRelevantScores(wager);
+          relevantScores = model.managerModel.manager.getRelevantScores(wager);
           legResults = wager.evaluateLegs(relevantScores.scores);
           predictionSetLegResults = wager.evaluateLegs(relevantScores.predictionSetScores);
           hitsOnMainResult = legResults.entries.every((e) => e.value);
@@ -288,7 +288,7 @@ class WagerList extends StatelessWidget {
     }
   }
 
-  String wagerScoreString(DbPrediction prediction, _WagerScores relevantScores, {bool includeLastNames = false, String separator = "\n"}) {
+  String wagerScoreString(DbPrediction prediction, WagerScores relevantScores, {bool includeLastNames = false, String separator = "\n"}) {
     if(prediction.type == DbPredictionType.spread) {
       var mainTargetScore = relevantScores.scores[prediction.target.memberNumber];
       var mainDogScore = relevantScores.scores[prediction.underdog!.memberNumber];
@@ -413,151 +413,7 @@ class WagerListModel extends ChangeNotifier {
   PredictionGamePlayer? get player => playerId != null ? managerModel.getPlayerById(playerId!) : null;
   MatchPrep? get matchPrep => matchPrepId != null ? managerModel.getMatchPrepById(matchPrepId!) : null;
 
-  /// A cache of overall match scores for each rating group.
-  Map<RatingGroup, Map<MatchEntry, RelativeMatchScore>> _matchScoreCache = {};
-  Map<String, RelativeMatchScore> _memberNumberScoreCache = {};
-
-  /// A cache of match scores within prediction sets for each rating group.
-  Map<RatingGroup, Map<PredictionSet, Map<MatchEntry, RelativeMatchScore>>> _predictionSetScoreCache = {};
-  Map<String, RelativeMatchScore> _predictionSetMemberNumberScoreCache = {};
-
   List<DbWager> wagers = [];
-
-  /// Get a match score for a given shooter rating, using the rating's group divisions
-  /// and member number(s) to find the appropriate score.
-  ///
-  /// If [predictionSet] is provided, the score will be retrieved from only the set
-  /// of competitors in that set. Otherwise, the score will be retrieved from the overall
-  /// scores inside the given rating group's divisions.
-  ///
-  /// Returns null if [shooter] does not have a match score in the given rating group
-  /// or prediction set.
-  RelativeMatchScore? getMatchScore({
-    required Shooter shooter,
-    required RatingGroup ratingGroup,
-    PredictionSet? predictionSet,
-  }) {
-    if(matchPrep == null) {
-      return null;
-    }
-
-    var memberNumber = shooter.memberNumber;
-    if(predictionSet != null) {
-      var cachedScore = _predictionSetMemberNumberScoreCache[memberNumber];
-      if(cachedScore != null) {
-        return cachedScore;
-      }
-    }
-    else {
-      var cachedScore = _memberNumberScoreCache[memberNumber];
-      if(cachedScore != null) {
-        return cachedScore;
-      }
-    }
-
-    final divisions = ratingGroup.divisions;
-    if(predictionSet != null) {
-      var cachedScores = _predictionSetScoreCache[ratingGroup]?[predictionSet];
-      if(cachedScores == null) {
-        final dbMatch = matchPrep!.futureMatch.value!.dbMatch.value;
-        ShootingMatch? match;
-        if(dbMatch == null) {
-          return null;
-        }
-        final result = HydratedMatchCache().get(dbMatch);
-        if(result.isOk()) {
-          match = result.unwrap();
-        }
-        else {
-          _log.e("Error hydrating match: ${result.unwrapErr().message}");
-          return null;
-        }
-        List<Shooter> predictedShooters = predictionSet.getHydratedPredictions().map((p) => p.shooter).toList();
-        var entries = match.getEntriesFor(predictedShooters, divisions: divisions);
-        var scores = match.getScores(shooters: entries);
-        _predictionSetScoreCache[ratingGroup]?[predictionSet] = scores;
-        cachedScores = scores;
-      }
-
-      var score = cachedScores.entries.firstWhereOrNull((element) => shooter.equalsShooter(element.key))?.value;
-      if(score != null) {
-        for(var n in shooter.knownMemberNumbers) {
-          _predictionSetMemberNumberScoreCache[n] = score;
-        }
-        return score;
-      }
-      return null;
-    }
-    else {
-      var cachedScores = _matchScoreCache[ratingGroup];
-
-      if(cachedScores == null) {
-        final dbMatch = matchPrep!.futureMatch.value!.dbMatch.value;
-        ShootingMatch? match;
-        if(dbMatch == null) {
-          return null;
-        }
-        final result = HydratedMatchCache().get(dbMatch);
-        if(result.isOk()) {
-          match = result.unwrap();
-        }
-        else {
-          _log.e("Error hydrating match: ${result.unwrapErr().message}");
-          return null;
-        }
-        var entries = match.filterShooters(divisions: divisions);
-        var scores = match.getScores(shooters: entries);
-        _matchScoreCache[ratingGroup] = scores;
-        cachedScores = scores;
-      }
-
-      var score = cachedScores.entries.firstWhereOrNull((element) => shooter.equalsShooter(element.key))?.value;
-      if(score != null) {
-        for(var n in shooter.knownMemberNumbers) {
-          _memberNumberScoreCache[n] = score;
-        }
-        return score;
-      }
-      return null;
-    }
-  }
-
-  _WagerScores getRelevantScores(DbWager wager) {
-    var db = AnalystDatabase();
-    _WagerScores scores = _WagerScores(wager: wager);
-    List<Shooter> shooters = [];
-    for(var leg in wager.legs) {
-      var shooter = leg.target.getShooterRatingSync(db);
-      var underdog = leg.underdog?.getShooterRatingSync(db);
-      if(shooter != null) {
-        shooters.add(shooter);
-      }
-      if(underdog != null) {
-        shooters.add(underdog);
-      }
-    }
-
-    scores.scores = getScoresForShooters(shooters, wager.ratingGroup.value!, null);
-    scores.predictionSetScores = getScoresForShooters(shooters, wager.ratingGroup.value!, wager.predictionSet.value);
-    return scores;
-  }
-
-  Map<String, RelativeMatchScore> getScoresForShooters(List<Shooter> shooters, RatingGroup ratingGroup, PredictionSet? predictionSet) {
-    Map<String, RelativeMatchScore> scores = {};
-    for(var shooter in shooters) {
-      RelativeMatchScore? score;
-      if(predictionSet != null) {
-        score = getMatchScore(shooter: shooter, ratingGroup: ratingGroup, predictionSet: predictionSet);
-      }
-      else {
-        score = getMatchScore(shooter: shooter, ratingGroup: ratingGroup);
-      }
-      if(score != null) {
-        scores[shooter.memberNumber] = score;
-      }
-    }
-    return scores;
-  }
 
   Future<void> loadWagers() async {
     var newWagers = await managerModel.getWagers(openOnly: openOnly, matchPrep: matchPrep, player: player);
@@ -585,7 +441,6 @@ class WagerListModel extends ChangeNotifier {
   Future<void> setMatchPrep(MatchPrep? matchPrep) async {
     matchPrepId = matchPrep?.id;
     await loadWagers();
-    _clearScoreCaches();
     notifyListeners();
   }
 
@@ -593,30 +448,5 @@ class WagerListModel extends ChangeNotifier {
     playerId = player?.id;
     await loadWagers();
     notifyListeners();
-  }
-
-  void _clearScoreCaches() {
-    _matchScoreCache.clear();
-    _predictionSetScoreCache.clear();
-  }
-}
-
-class _WagerScores {
-  DbWager wager;
-  Map<String, RelativeMatchScore> scores = {};
-  Map<String, RelativeMatchScore> predictionSetScores = {};
-
-  _WagerScores({required this.wager});
-
-  void addScore(Shooter shooter, RelativeMatchScore score) {
-    for(var n in shooter.knownMemberNumbers) {
-      scores[n] = score;
-    }
-  }
-
-  void addPredictionSetScore(Shooter shooter, RelativeMatchScore score) {
-    for(var n in shooter.knownMemberNumbers) {
-      predictionSetScores[n] = score;
-    }
   }
 }

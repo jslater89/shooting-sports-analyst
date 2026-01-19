@@ -7,6 +7,7 @@
 import "dart:convert";
 
 import "package:http/http.dart" as http;
+import "package:shooting_sports_analyst/api/auth/auth_provider.dart";
 import "package:shooting_sports_analyst/api/miff/miff.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/match_query_element.dart";
@@ -67,6 +68,8 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
       serverX25519PubBase64: serverX25519PubBase64,
       serverEd25519PubBase64: serverEd25519PubBase64,
     );
+
+    _initialized = true;
   }
 
   @override
@@ -82,6 +85,22 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
     var sessionResult = ssaAuthClient.getCurrentSession();
     if(sessionResult.isErr()) {
       return false;
+    }
+    var session = sessionResult.unwrap();
+    return session.hasAnyRole(["uploader", "admin"]);
+  }
+
+  Future<bool> authenticatedCanUpload() async {
+    var sessionResult = await ssaAuthClient.getSession();
+    if(sessionResult.isErr()) {
+      if(sessionResult.unwrapErr() != AuthError.unauthenticated) {
+        return false;
+      }
+      await ssaAuthClient.authenticate();
+      sessionResult = await ssaAuthClient.getSession();
+      if(sessionResult.isErr()) {
+        return false;
+      }
     }
     var session = sessionResult.unwrap();
     return session.hasAnyRole(["uploader", "admin"]);

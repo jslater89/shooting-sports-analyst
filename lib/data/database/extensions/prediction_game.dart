@@ -439,9 +439,9 @@ class PredictionLeaderboardEntry {
   PredictionGamePlayer player;
   double value;
 
-  PredictionLeaderboardEntry.fromPlayer(this.player, LeaderboardSortMode sortMode) : value = _calculateValue(player, sortMode), rank = -1;
+  PredictionLeaderboardEntry.fromPlayer(this.player, LeaderboardSortMode sortMode) : value = calculateValue(player, sortMode), rank = -1;
 
-  static double _calculateValue(PredictionGamePlayer player, LeaderboardSortMode sortMode) {
+  static double calculateValue(PredictionGamePlayer player, LeaderboardSortMode sortMode) {
     switch(sortMode) {
       case LeaderboardSortMode.rawBalance:
         return player.balance;

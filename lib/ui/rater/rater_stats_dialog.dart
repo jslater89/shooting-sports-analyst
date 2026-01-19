@@ -255,6 +255,12 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       var ratings = widget.statistics.ratingsByClass[cls]!;
       var len = ratings.length;
 
+      if(ratings.isEmpty) {
+        tooltips[cls] = "${cls.displayName}: no ratings";
+        plots[cls] = Container();
+        continue;
+      }
+
       if(ratings.first < minOverall) minOverall = ratings.first;
       if(ratings.last > maxOverall) maxOverall = ratings.last;
 

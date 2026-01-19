@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -202,7 +203,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                     Text("Wager"),
                   ],
                 ),
-                onPressed: !canWager ? null : () async {
+                onPressed: (!canWager && !kDebugMode) ? null : () async {
                   if(selectedMatchPrep == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Please select a match prep to wager on.")),
@@ -281,8 +282,8 @@ class PredictionGamePlayerStats extends StatelessWidget {
     var unvoidedWagers = wagers.where((wager) => wager.status != DbWagerStatus.voided).toList();
     var wonWagers = unvoidedWagers.where((wager) => wager.status == DbWagerStatus.won).toList();
     var totalWagered = unvoidedWagers.map((wager) => wager.amount).sum;
-    var totalWon = wonWagers.map((wager) => wager.amount).sum;
-    var winPercentage = unvoidedWagers.length > 0 ? (totalWon / totalWagered) : 0;
+    var totalWon = wonWagers.map((wager) => wager.payout()).sum;
+    var winPercentage = unvoidedWagers.length > 0 ? (wonWagers.length / unvoidedWagers.length) : 0;
 
     return Row(
       spacing: 8 * uiScaleFactor,
