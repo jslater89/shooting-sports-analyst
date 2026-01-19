@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
@@ -154,21 +155,6 @@ class AnalystDatabase {
     catch(e, stackTrace) {
       _log.e("Failed to open database", error: e, stackTrace: stackTrace);
       rethrow;
-    }
-
-    // TODO Fix for broken IDPA databases; remove after releasing alpha11
-    var provider = idpaSport.builtinRatingGroupsProvider;
-    if(provider != null && (await isar.ratingGroups.getByUuid("icore-pcc")) != null) {
-      int deleted = 0;
-      for(var group in provider.builtinRatingGroups) {
-        var wrongId = group.uuid.replaceFirst("idpa-", "icore-");
-        await isar.writeTxn(() async {
-          await isar.ratingGroups.deleteByUuid(wrongId);
-          await isar.ratingGroups.put(group);
-        });
-        deleted += 1;
-      }
-      _log.i("Fixed $deleted broken IDPA rating groups");
     }
 
     await isar.writeTxn(() async {
@@ -618,6 +604,7 @@ class AnalystDatabase {
 
     // For least confusion
     match.databaseId = dbMatch.id;
+    HydratedMatchCache().cache(match);
     return Result.ok(dbMatch);
   }
 
@@ -653,6 +640,7 @@ class AnalystDatabase {
 
     // For least confusion
     match.databaseId = dbMatch.id;
+    HydratedMatchCache().cache(match);
     return Result.ok(dbMatch);
   }
 
