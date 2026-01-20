@@ -1,6 +1,8 @@
 
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
@@ -10,6 +12,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stats.dart';
@@ -239,6 +242,15 @@ enum _SSAMenuCommand implements MenuCommand {
     StringMenuArgument(label: "directory", description: "Directory to import the MIFFs from", required: true),
     BoolMenuArgument(label: "overwrite", description: "Overwrite existing matches", required: false, defaultValue: true),
   ]),
+  loadRatingProject("2", "Load Rating Project", execute: _loadRatingProject, arguments: [
+    StringMenuArgument(label: "project file", description: "File to load the rating project from", required: true),
+    BoolMenuArgument(label: "overwrite", description: "Overwrite existing rating project", required: false, defaultValue: true),
+  ]),
+  calculateRatingProject("3", "Calculate Rating Project", execute: _calculateRatingProject, arguments: [
+    IntMenuArgument(label: "project id", description: "Project ID to calculate", required: true),
+    BoolMenuArgument(label: "full recalculation", description: "Force a full recalculation", required: false, defaultValue: false),
+    BoolMenuArgument(label: "skip deduplication", description: "Skip deduplication", required: false, defaultValue: true),
+  ]),
   back("B", "Back");
 
   final String key;
@@ -314,6 +326,130 @@ Future<void> _importMiffs(Console console, List<MenuArgumentValue> arguments) as
     }
   }
   progressBar.complete();
+}
+
+Future<void> _loadRatingProject(Console console, List<MenuArgumentValue> arguments) async {
+  var path = arguments[0].value as String;
+  var overwrite = arguments[1].value as bool;
+
+  var imported = jsonDecode(File(path).readAsStringSync());
+  if(imported is Map<String, dynamic>) {
+    DbRatingProject project;
+    try {
+      project = DbRatingProject.fromJson(imported);
+    }
+    catch(e, st) {
+      console.print("Invalid project file, root is: ${imported.runtimeType}, error: ${e.toString()}, stackTrace: ${st.toString()}");
+      return;
+    }
+    var existingProject = await AnalystDatabase().getRatingProjectByName(project.name);
+    if(existingProject != null && !overwrite) {
+      console.print("Project already exists: ${project.name}");
+      return;
+    }
+    if(existingProject != null) {
+      // If we're overwriting an existing project, keep the list of last-used matches to avoid recalculating in full
+      // when we import an update to a project we already calculated.
+      List<MatchPointer> usedMatches = [];
+      var sortedMatches = project.matchesToUse().sorted((a, b) => a.date!.compareTo(b.date!));
+      for(var match in sortedMatches) {
+        if(existingProject.matchPointers.contains(match)) {
+          usedMatches.add(match);
+        }
+      }
+      project.lastUsedMatches = usedMatches;
+      project.completedFullCalculation = existingProject.completedFullCalculation;
+    }
+    await AnalystDatabase().saveRatingProject(project);
+    console.print("Imported ${project.name} at ${project.id} ${overwrite ? "(overwrote existing project)" : ""}");
+    if(project.lastUsedMatches.isNotEmpty) {
+      console.print("Retained ${project.lastUsedMatches.length} last-used matches");
+    }
+    if(project.completedFullCalculation) {
+      console.print("Prior project completed full calculation, carrying over");
+    }
+  }
+  else {
+    console.print("Invalid project file, root is: ${imported.runtimeType}");
+  }
+}
+
+Future<void> _calculateRatingProject(Console console, List<MenuArgumentValue> arguments) async {
+  int projectId = arguments[0].value;
+  bool fullRecalc = arguments[1].value;
+  bool skipDeduplication = arguments[2].value;
+  var project = await _database.getRatingProjectById(projectId);
+  if(project == null) {
+    console.print("Project not found");
+    return;
+  }
+  console.print("Loading ratings for project ${project.name}");
+  var start = DateTime.now();
+
+  int lastProgress = -1;
+  int lastMaxProgress = -1;
+  int tickAccumulator = 0;
+  var loader = RatingProjectLoader(project, RatingProjectLoaderHost(
+    progressCallback: ({
+      required int progress,
+      required int total,
+      required LoadingState state,
+      String? eventName,
+      String? groupName,
+      int? subProgress,
+      int? subTotal,
+    }) async {
+      if(progress < 0 || total < 0) {
+        return;
+      }
+
+      String subtotalString = "";
+      if(subProgress != null && subTotal != null) {
+        subtotalString = " sub: $subProgress of $subTotal";
+      }
+
+      // If we've never seen any positive progress, set the last progress to the current progress.
+      if(lastMaxProgress < 0) {
+        lastMaxProgress = total;
+        lastProgress = progress;
+        tickAccumulator = 0;
+        console.print("State: ${state.label} ${progress} of ${total} $subtotalString ${groupName ?? ""} ${eventName ?? ""} ");
+      }
+
+      // If we go backward, we need a new progress bar.
+      if(progress < lastProgress) {
+        tickAccumulator = 0;
+        console.print("State: ${state.label} ${progress} of ${total} $subtotalString ${groupName ?? ""} ${eventName ?? ""} ");
+      }
+
+      lastProgress = progress;
+      lastMaxProgress = total;
+
+      tickAccumulator++;
+      if(tickAccumulator % 10 == 0) {
+        console.print("State: ${state.label} ${progress} of ${total} $subtotalString ${groupName ?? ""} ${eventName ?? ""} ");
+      }
+    },
+    deduplicationCallback: (group, deduplicationResult) async {
+      console.print("Detected deduplication, ignoring");
+      return Result.ok([]);
+    },
+    unableToAppendCallback: (lastUsedMatches, newMatches) async {
+      console.print("Unable to append, recalculating");
+      return true;
+    },
+    fullRecalculationRequiredCallback: () async {
+      console.print("Full recalculation required, recalculating");
+      return true;
+    },
+  ));
+  console.print("Beginning project load with fullRecalc: $fullRecalc, skipDeduplication: $skipDeduplication");
+  var result = await loader.calculateRatings(fullRecalc: fullRecalc, skipDeduplication: skipDeduplication);
+  if(result.isErr()) {
+    console.print("Error calculating ratings: ${result.unwrapErr().message}");
+    return;
+  }
+  console.print("Ratings calculated in ${DateTime.now().difference(start).inSeconds} seconds");
 }
 
 Future<void> _ssaServerToolsMenuLoop(Console console) async {
