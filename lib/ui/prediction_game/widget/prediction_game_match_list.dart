@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/ui/prediction_game/dialog/match_prep_wag
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/ui/prematch/dialog/match_prep_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class PredictionGameMatchList extends StatelessWidget {
   const PredictionGameMatchList({super.key});
@@ -19,7 +20,7 @@ class PredictionGameMatchList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var model = Provider.of<PredictionGameManagerModel>(context);
-    var matches = model.predictionGame.matchPreps.toList();
+    var matches = model.getMatchPrepsSync(futureOnly: false, hasPredictionsOnly: false);
     return Column(
       children: [
         Row(
@@ -63,7 +64,7 @@ class PredictionGameMatchList extends StatelessWidget {
                   ),
                 ));
               }
-            trailing.add(Tooltip(
+              trailing.add(Tooltip(
                 message: "Process wagers for this match",
                 child: IconButton(
                   icon: Icon(Icons.dataset_linked),
@@ -80,6 +81,23 @@ class PredictionGameMatchList extends StatelessWidget {
                   }
                 ),
               ));
+              trailing.add(
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    var confirm = await ConfirmDialog.show(
+                      context,
+                      title: "Delete match",
+                      content: Text("Are you sure you want to delete this match from the prediction game?\n\nThis will delete all wagers and transactions associated with this match."),
+                      positiveButtonLabel: "DELETE MATCH",
+                      negativeButtonLabel: "CANCEL",
+                    );
+                    if(confirm ?? false) {
+                      model.deleteMatchPrep(match);
+                    }
+                  }
+                )
+              );
               return ListTile(
                 title: Text(match.futureMatch.value!.eventName),
                 onTap: () async {

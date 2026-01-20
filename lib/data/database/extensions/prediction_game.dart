@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
@@ -48,6 +49,28 @@ extension PredictionGameExtension on AnalystDatabase {
       isar.predictionGames.putSync(predictionGame);
     });
     return predictionGame;
+  }
+
+  Future<List<MatchPrep>> getMatchPreps(PredictionGame game, {bool futureOnly = true, bool hasPredictionsOnly = true}) async {
+    var query = game.matchPreps.filter();
+    if(futureOnly) {
+      query = query.futureMatch((q) => q.dateGreaterThan(DateTime.now()));
+    }
+    if(hasPredictionsOnly) {
+      query = query.predictionSetsIsNotEmpty();
+    }
+    return query.sortByMatchDateDesc().findAll();
+  }
+
+  List<MatchPrep> getMatchPrepsSync(PredictionGame game, {bool futureOnly = true, bool hasPredictionsOnly = true}) {
+    var query = game.matchPreps.filter();
+    if(futureOnly) {
+      query = query.futureMatch((q) => q.dateGreaterThan(DateTime.now()));
+    }
+    if(hasPredictionsOnly) {
+      query = query.predictionSetsIsNotEmpty();
+    }
+    return query.sortByMatchDateDesc().findAllSync();
   }
 
   /// Save a prediction game player to the database.
@@ -252,7 +275,7 @@ extension PredictionGameExtension on AnalystDatabase {
       // Everything else is backlinked.
       await isar.dbWagers.delete(wager.id);
     });
-    updatePlayerBalance(player!, -netAmount); // netAmount is negative because we're deleting the wager
+    await updatePlayerBalance(player!, -netAmount); // netAmount is negative because we're deleting the wager
   }
 
   /// Fully deletes a wager from the database, also deleting

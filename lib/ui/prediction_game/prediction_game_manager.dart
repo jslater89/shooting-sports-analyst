@@ -197,4 +197,22 @@ class PredictionGameManagerModel extends ChangeNotifier {
     manager.auditUserBalanceSync(player);
     notifyListeners();
   }
+
+  Future<void> deleteMatchPrep(MatchPrep match) async {
+    await manager.removeMatchPrep(match);
+    notifyListeners();
+  }
+
+  void deleteMatchPrepSync(MatchPrep match) {
+    manager.removeMatchPrepSync(match);
+    notifyListeners();
+  }
+
+  Future<List<MatchPrep>> getMatchPreps({bool futureOnly = true, bool hasPredictionsOnly = true}) async {
+    return manager.getMatchPreps(futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+  }
+
+  List<MatchPrep> getMatchPrepsSync({bool futureOnly = true, bool hasPredictionsOnly = true}) {
+    return manager.getMatchPrepsSync(futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+  }
 }

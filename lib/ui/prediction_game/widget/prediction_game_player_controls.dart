@@ -60,7 +60,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
   @override
   void initState() {
     var model = context.read<PredictionGameManagerModel>();
-    validMatchPreps = model.predictionGame.matchPreps.where((m) => m.latestPredictionSet() != null).toList();
+    validMatchPreps = model.getMatchPrepsSync(futureOnly: true, hasPredictionsOnly: true);
     if(validMatchPreps.isNotEmpty) {
       _selectMatchPrep(model, validMatchPreps.first);
     }
@@ -171,9 +171,12 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
           spacing: 8 * uiScaleFactor,
           children: [
             DropdownMenu<MatchPrep>(
-              width: 300 * uiScaleFactor,
+              width: 400 * uiScaleFactor,
               label: Text("Match"),
-              dropdownMenuEntries: validMatchPreps.map((e) => DropdownMenuEntry(value: e, label: e.futureMatch.value!.eventName)).toList(),
+              dropdownMenuEntries: validMatchPreps.map((e) => DropdownMenuEntry(
+                value: e,
+                label: "${e.futureMatch.value!.eventName} - ${e.ratingProject.value!.name}"
+              )).toList(),
               initialSelection: selectedMatchPrep,
               onSelected: (value) {
                 if(value != null) {
@@ -182,7 +185,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
               },
             ),
             DropdownMenu<RatingGroup>(
-              width: 300 * uiScaleFactor,
+              width: 200 * uiScaleFactor,
               label: Text("Group"),
               dropdownMenuEntries: validRatingGroups.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
               initialSelection: selectedRatingGroup,

@@ -9,10 +9,8 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -25,11 +23,45 @@ class PredictionGameManager {
   final db = AnalystDatabase();
   PredictionGame predictionGame;
 
-    /// Add a match prep to the prediction game.
+  // ======================
+  // Match prep management
+  // ======================
+
+  /// Add a match prep to the prediction game.
   Future<void> addMatchPrep(MatchPrep matchPrep) async {
     predictionGame.matchPreps.add(matchPrep);
     await db.savePredictionGame(predictionGame, saveLinks: true);
     await loadPredictionGame();
+  }
+
+  void addMatchPrepSync(MatchPrep matchPrep) {
+    predictionGame.matchPreps.add(matchPrep);
+    db.savePredictionGameSync(predictionGame);
+    loadPredictionGameSync();
+  }
+
+  Future<void> removeMatchPrep(MatchPrep matchPrep) async {
+    var wagers = await getWagers(matchPrep: matchPrep);
+    for(var wager in wagers) {
+      await removeWager(wager);
+    }
+    predictionGame.matchPreps.remove(matchPrep);
+    await db.savePredictionGame(predictionGame, saveLinks: true);
+    await loadPredictionGame();
+  }
+
+  void removeMatchPrepSync(MatchPrep matchPrep) {
+    predictionGame.matchPreps.remove(matchPrep);
+    db.savePredictionGameSync(predictionGame);
+    loadPredictionGameSync();
+  }
+
+  Future<List<MatchPrep>> getMatchPreps({bool futureOnly = true, bool hasPredictionsOnly = true}) async {
+    return db.getMatchPreps(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+  }
+
+  List<MatchPrep> getMatchPrepsSync({bool futureOnly = true, bool hasPredictionsOnly = true}) {
+    return db.getMatchPrepsSync(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
   }
 
   // ======================

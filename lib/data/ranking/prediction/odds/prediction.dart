@@ -146,7 +146,14 @@ class PercentagePrediction extends UserPrediction {
       double bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
       double worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
     }) {
-    return PredictionProbability.fromPercentagePrediction(this, shootersToPredictions);
+    return PredictionProbability.fromPercentagePrediction(
+      this, shootersToPredictions,
+      random: random,
+      disasterChance: disasterChance,
+      houseEdge: houseEdge,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
+    );
   }
 
   @override

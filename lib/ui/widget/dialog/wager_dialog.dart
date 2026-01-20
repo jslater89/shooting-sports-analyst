@@ -35,7 +35,7 @@ class WagerDialogResult {
 
 /// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
 class WagerDialog extends StatefulWidget {
-  const WagerDialog({
+  WagerDialog({
     super.key,
     required this.predictions,
     required this.matchId,
