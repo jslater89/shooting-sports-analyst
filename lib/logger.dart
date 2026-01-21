@@ -6,6 +6,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:logger/logger.dart';
 import 'package:mutex/mutex.dart';
@@ -57,6 +58,20 @@ extension _LevelComparison on Level {
 
   bool operator <=(Level other) {
     return Level.values.indexOf(this) <= Level.values.indexOf(other);
+  }
+}
+
+class _SSASendPortOutput {
+  final SendPort sendPort;
+  _SSASendPortOutput(this.sendPort);
+
+  void send(OutputEvent event) {
+    sendPort.send({
+      "isolateName": SSALogger.isolateName,
+      "level": event.level,
+      "lines": event.lines,
+      "time": DateTime.now().toIso8601String(),
+    });
   }
 }
 
@@ -190,12 +205,14 @@ class _SSAFileOutput {
 class _SSALogOutput extends LogOutput {
   final bool console;
   final bool file;
+  final bool sendPort;
 
   _SSAFileOutput fileOutput = _SSAFileOutput();
+  _SSASendPortOutput? sendPortOutput;
 
   late Future<bool> launchFuture;
 
-  _SSALogOutput({this.console = true, this.file = false}) {
+  _SSALogOutput({this.console = true, this.file = false, this.sendPort = false}) {
     if(file) launchFuture = fileOutput.launchFuture;
     else launchFuture = Future.value(true);
   }
@@ -206,17 +223,22 @@ class _SSALogOutput extends LogOutput {
 
     if(this.console && SSALogger.consoleOutput) event.lines.forEach((element) { print(element); });
     if(this.file && SSALogger.fileOutput) fileOutput.write(event.lines.join("\n"));
+    if(SSALogger.sendPortOutput) SSALogger._sendPortOutput!.send(event);
   }
 }
 
 class SSALogger extends LogPrinter {
   static bool consoleOutput = true;
   static bool fileOutput = true;
+  static bool sendPortOutput = false;
+  static SendPort? sendPort;
+  static String? isolateName;
   static bool get kDebugMode => FlutterOrNative.debugModeProvider.kDebugMode;
   static bool get kReleaseMode => FlutterOrNative.debugModeProvider.kReleaseMode;
 
   static Level get _callsiteLevel => kDebugMode ? Level.debug : Level.warning;
 
+  static _SSASendPortOutput? _sendPortOutput;
   late _SSALogOutput _output;
   late Logger _logger;
 
@@ -229,6 +251,40 @@ class SSALogger extends LogPrinter {
   }
   SSALogger.fileOnly(this.tag) {
     _init(console: false, file: true);
+  }
+
+  static setupSendPort(SendPort port, {String? isolateName}) {
+    if(isolateName != null) {
+      SSALogger.isolateName = isolateName;
+    }
+    sendPortOutput = true;
+    sendPort = port;
+    fileOutput = false;
+    consoleOutput = false;
+    _sendPortOutput = _SSASendPortOutput(port);
+  }
+
+  static List<ReceivePort> _receivePorts = [];
+  static _SSAFileOutput _receivePortOutput = _SSAFileOutput();
+  static handleReceivePort(ReceivePort port) {
+    _receivePorts.add(port);
+    port.listen((event) {
+      if(event is Map) {
+        if(event["level"] != null) {
+          var level = event["level"] as Level;
+          if(level.index < _minLevel.index) return;
+        }
+        if(event["lines"] != null) {
+          String? isolateName = event["isolateName"] as String?;
+          var lines = event["lines"] as List<String>;
+          if(isolateName != null) {
+            lines = lines.map((line) => "($isolateName) $line").toList();
+          }
+          if(fileOutput) _receivePortOutput.write(lines.join("\n"));
+          if(consoleOutput) lines.forEach((line) { print(line); });
+        }
+      }
+    });
   }
 
   Future<void> get ready => _readyCompleter.future;
