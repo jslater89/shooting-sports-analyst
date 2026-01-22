@@ -205,15 +205,17 @@ class _SSAFileOutput {
 class _SSALogOutput extends LogOutput {
   final bool console;
   final bool file;
-  final bool sendPort;
 
-  _SSAFileOutput fileOutput = _SSAFileOutput();
+  _SSAFileOutput? fileOutput;
   _SSASendPortOutput? sendPortOutput;
 
   late Future<bool> launchFuture;
 
-  _SSALogOutput({this.console = true, this.file = false, this.sendPort = false}) {
-    if(file) launchFuture = fileOutput.launchFuture;
+  _SSALogOutput({this.console = true, this.file = false}) {
+    if(file && SSALogger.fileOutput) {
+      fileOutput = _SSAFileOutput();
+      launchFuture = fileOutput!.launchFuture;
+    }
     else launchFuture = Future.value(true);
   }
 
@@ -222,7 +224,7 @@ class _SSALogOutput extends LogOutput {
     await launchFuture;
 
     if(this.console && SSALogger.consoleOutput) event.lines.forEach((element) { print(element); });
-    if(this.file && SSALogger.fileOutput) fileOutput.write(event.lines.join("\n"));
+    if(this.file && SSALogger.fileOutput) fileOutput!.write(event.lines.join("\n"));
     if(SSALogger.sendPortOutput) SSALogger._sendPortOutput!.send(event);
   }
 }
