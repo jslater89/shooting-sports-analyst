@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:data/stats.dart' show WeibullDistribution;
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -78,7 +79,7 @@ extension MatchHeatDatabase on AnalystDatabase {
       _log.w("Match not found: ${ptr.name}");
       return null;
     }
-    var matchRes = await HydratedMatchCache().get(dbMatch);
+    var matchRes = await MatchCache.instance.get(dbMatch);
     if(matchRes.isErr()) {
       _log.w("Error hydrating match: ${matchRes.unwrapErr()}");
       return null;

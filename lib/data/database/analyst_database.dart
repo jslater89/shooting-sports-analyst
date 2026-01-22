@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
@@ -604,7 +605,7 @@ class AnalystDatabase {
 
     // For least confusion
     match.databaseId = dbMatch.id;
-    HydratedMatchCache().cache(match);
+    await MatchCache.instance.cache(match);
     return Result.ok(dbMatch);
   }
 
@@ -640,7 +641,10 @@ class AnalystDatabase {
 
     // For least confusion
     match.databaseId = dbMatch.id;
-    HydratedMatchCache().cache(match);
+
+    // This is unawaited async, but we probably won't immediately need
+    // the result again.
+    MatchCache.instance.cache(match);
     return Result.ok(dbMatch);
   }
 

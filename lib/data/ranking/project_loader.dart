@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -183,7 +184,7 @@ class RatingProjectLoader {
     wallStart = DateTime.now();
     this.skipDeduplication = skipDeduplication;
 
-    HydratedMatchCache().clear();
+    await MatchCache.instance.clear();
     db.clearLoadedShooterRatingCache();
     timings.reset();
 
