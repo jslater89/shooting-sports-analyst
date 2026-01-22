@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -129,7 +130,7 @@ class RatingProjectRollback {
       for(var ptr in matches) {
         var dbMatch = db.getMatchByAnySourceIdSync(ptr.sourceIds);
         if (dbMatch != null) {
-          var hydrated = HydratedMatchCache().get(dbMatch);
+          var hydrated = await MatchCache.instance.get(dbMatch);
           if(hydrated.isOk()) {
             matchesRemoved.add(hydrated.unwrap());
           }
