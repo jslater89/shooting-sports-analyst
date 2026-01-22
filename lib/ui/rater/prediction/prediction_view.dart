@@ -175,7 +175,7 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
     );
     if(dbMatch == null) return;
 
-    var matchRes = dbMatch.hydrate(useCache: true);
+    var matchRes = dbMatch.hydrateSync(useCache: true);
 
     if(matchRes.isErr()) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(matchRes.unwrapErr().message)));

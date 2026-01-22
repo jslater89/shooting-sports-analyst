@@ -50,7 +50,7 @@ Future<void> _winningPointsByDate(AnalystDatabase db, Console console) async {
       console.print("Sport has no divisions: ${match.eventName}");
       return;
     }
-    var hydratedMatchRes = await match.hydrate(useCache: true);
+    var hydratedMatchRes = await match.hydrateSync(useCache: true);
     if(hydratedMatchRes.isErr()) {
         console.print("Error hydrating match: ${hydratedMatchRes.unwrapErr()}");
       continue;

@@ -78,7 +78,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                     onTap: () async {
                       var ratingsContext = context.read<RatingContext>();
                       var ratings = await ratingsContext.getProject();
-                      var fullMatchResult = match.hydrate();
+                      var fullMatchResult = await match.hydrate();
                       if(fullMatchResult.isErr()) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text("Unable to load match from database"))

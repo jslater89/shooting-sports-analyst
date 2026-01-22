@@ -46,7 +46,7 @@ class HydratedMatchCache implements MatchCache {
       return Result.ok(_cache[match.id]!);
     }
 
-    var result = match.hydrate();
+    var result = match.hydrateSync();
     if (result.isOk()) {
       cache(result.unwrap());
     }

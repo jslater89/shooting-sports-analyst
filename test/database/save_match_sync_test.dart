@@ -61,7 +61,7 @@ void main() {
       expect(retrievedMatchAsync, isNotNull, reason: "Retrieved match should be retrievable by database ID");
       expect(retrievedMatchAsync!.eventName, equals(match.name), reason: "Retrieved match name should match");
 
-      var hydratedResultAsync = retrievedMatchAsync.hydrate();
+      var hydratedResultAsync = retrievedMatchAsync.hydrateSync();
       expect(hydratedResultAsync.isOk(), isTrue, reason: "Match should hydrate successfully");
       var hydratedMatchAsync = hydratedResultAsync.unwrap();
       expect(hydratedMatchAsync.shooters, isNotEmpty, reason: "Hydrated match should have competitors after saveMatchSync");
@@ -80,7 +80,7 @@ void main() {
       expect(retrievedMatch!.eventName, equals(match.name), reason: "Retrieved match name should match");
 
       // KEY CHECK: Load the match from database, hydrate it, and verify it has competitors
-      var hydratedResult = retrievedMatch.hydrate();
+      var hydratedResult = retrievedMatch.hydrateSync();
       expect(hydratedResult.isOk(), isTrue, reason: "Match should hydrate successfully");
       var hydratedMatch = hydratedResult.unwrap();
       expect(hydratedMatch.shooters, isNotEmpty, reason: "Hydrated match should have competitors after saveMatchSync");
@@ -93,7 +93,7 @@ void main() {
       expect(retrievedById!.eventName, equals(match.name), reason: "Retrieved match name should match");
 
       // Also hydrate and check the one retrieved by ID
-      var hydratedByIdResult = retrievedById.hydrate();
+      var hydratedByIdResult = retrievedById.hydrateSync();
       expect(hydratedByIdResult.isOk(), isTrue, reason: "Match retrieved by ID should hydrate successfully");
       var hydratedById = hydratedByIdResult.unwrap();
       expect(hydratedById.shooters, isNotEmpty, reason: "Hydrated match (by ID) should have competitors");
@@ -158,7 +158,7 @@ void main() {
       expect(retrievedMatch, isNotNull);
 
       // Hydrate the match to access shooters
-      var hydratedResult = retrievedMatch!.hydrate();
+      var hydratedResult = retrievedMatch!.hydrateSync();
       expect(hydratedResult.isOk(), isTrue, reason: "Match should hydrate successfully");
       var hydratedMatch = hydratedResult.unwrap();
       expect(hydratedMatch.shooters.length, equals(match.shooters.length),

@@ -1187,7 +1187,7 @@ Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject
   project.matchPointers.add(MatchPointer.fromDbMatch(dbMatch!));
 
   await db.saveRatingProject(project);
-  var match = dbMatch.hydrate().unwrap();
+  var match = dbMatch.hydrateSync().unwrap();
 
   List<DbShooterRating> newRatings = [];
   for(var competitor in match.shooters) {

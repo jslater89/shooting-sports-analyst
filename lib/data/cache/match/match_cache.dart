@@ -13,7 +13,7 @@ import 'package:shooting_sports_analyst/util.dart';
 /// (using a server isolate to handle singleton storage) [IsolateMatchCacheClient]. When false,
 /// it will return a local in-memory cache [HydratedMatchCache].
 ///
-/// In UI code, you can use [MatchCache.hydratedInstance] to always get a hydrated cache,
+/// In UI code, you can use [MatchCache.inMemoryInstance] to always get a hydrated cache,
 /// which is fully synchronous and can be more readily used in UI code. In
 /// data-handling code, prefer to use [MatchCache.instance] for isolate safety.
 abstract interface class MatchCache {
@@ -26,23 +26,23 @@ abstract interface class MatchCache {
 
   static bool serverMode = false;
   static MatchCache? _instance;
-  static HydratedMatchCache? _hydratedInstance;
+  static HydratedMatchCache? _inMemoryInstance;
   static MatchCache get instance {
     if(_instance == null) {
       if(serverMode) {
         _instance = IsolateMatchCacheClient();
       }
       else {
-        _instance = hydratedInstance;
+        _instance = inMemoryInstance;
       }
     }
     return _instance!;
   }
 
-  static HydratedMatchCache get hydratedInstance {
-    if(_hydratedInstance == null) {
-      _hydratedInstance = HydratedMatchCache();
+  static HydratedMatchCache get inMemoryInstance {
+    if(_inMemoryInstance == null) {
+      _inMemoryInstance = HydratedMatchCache();
     }
-    return _hydratedInstance!;
+    return _inMemoryInstance!;
   }
 }

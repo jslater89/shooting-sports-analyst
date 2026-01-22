@@ -341,7 +341,7 @@ class RatingProjectLoader {
         ));
       }
 
-      var matchRes = dbMatch.unwrap().hydrate(useCache: true);
+      var matchRes = dbMatch.unwrap().hydrateSync(useCache: true);
       if(matchRes.isErr()) {
         var err = matchRes.unwrapErr();
         return Result.err(MatchLoadFailureError(

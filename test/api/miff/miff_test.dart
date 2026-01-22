@@ -45,7 +45,7 @@ void main() {
         var dbMatch = await db.getMatchByAnySourceId([matchId]);
         expect(dbMatch, isNotNull, reason: "Match $matchId should exist in database");
 
-        var originalMatch = dbMatch!.hydrate().unwrap();
+        var originalMatch = dbMatch!.hydrateSync().unwrap();
 
         // Export to MIFF
         var miffBytes = await exportToMiff(originalMatch);
@@ -63,7 +63,7 @@ void main() {
         var dbMatch = await db.getMatchByAnySourceId([matchId]);
         expect(dbMatch, isNotNull, reason: "Match $matchId should exist in database");
 
-        var originalMatch = dbMatch!.hydrate().unwrap();
+        var originalMatch = dbMatch!.hydrateSync().unwrap();
 
         var _ = DbShootingMatch.from(originalMatch);
 
@@ -89,7 +89,7 @@ void main() {
         var dbMatch = await db.getMatchByAnySourceId([matchId]);
         expect(dbMatch, isNotNull, reason: "Match $matchId should exist in database");
 
-        var originalMatch = dbMatch!.hydrate().unwrap();
+        var originalMatch = dbMatch!.hydrateSync().unwrap();
 
         // First export/import cycle
         var miffBytes1 = await exportToMiff(originalMatch);
@@ -117,7 +117,7 @@ void main() {
         var dbMatch = await db.getMatchByAnySourceId([matchId]);
         expect(dbMatch, isNotNull, reason: "Match $matchId should exist in database");
 
-        var originalMatch = dbMatch!.hydrate().unwrap();
+        var originalMatch = dbMatch!.hydrateSync().unwrap();
         var miffBytes = await exportToMiff(originalMatch);
 
         // Test validate() method

@@ -60,7 +60,7 @@ class PractiscoreReportUI extends SourceUI {
                       onError(MatchSourceError.databaseError);
                     }
                     else {
-                      var hydratedMatch = res.unwrap().hydrate();
+                      var hydratedMatch = await res.unwrap().hydrate();
                       if(hydratedMatch.isErr()) {
                         onError(MatchSourceError.databaseError);
                       }

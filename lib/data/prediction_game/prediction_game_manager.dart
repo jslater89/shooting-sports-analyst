@@ -346,7 +346,7 @@ class PredictionGameManager {
   /// for both the match result and the result within the prediction set.
   ///
   /// If [match] is provided, it will be used to calculate the scores
-  WagerScores getRelevantScores(DbWager wager, {ShootingMatch? match}) {
+  Future<WagerScores> getRelevantScores(DbWager wager, {ShootingMatch? match}) async {
     var scores = WagerScores(wager: wager);
     ShootingMatch? actualMatch;
     var dbMatch = wager.matchPrep.value?.futureMatch.value?.dbMatch.value;
@@ -354,7 +354,7 @@ class PredictionGameManager {
       return scores;
     }
     if(match == null) {
-      var matchRes = HydratedMatchCache().get(dbMatch);
+      var matchRes = await MatchCache.instance.get(dbMatch);
       if(matchRes.isOk()) {
         actualMatch = matchRes.unwrap();
       }

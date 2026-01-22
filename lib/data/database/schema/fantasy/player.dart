@@ -152,7 +152,7 @@ class FantasyPlayer with DbSportEntity {
     );
     Set<String> matchIds = events.map((e) => e.matchId).toSet();
     var matches = await db.getMatchesByAnySourceIds(matchIds.toList());
-    return matches.map((m) => m.hydrate(useCache: true).unwrap()).toList();
+    return matches.map((m) => m.hydrateSync(useCache: true).unwrap()).toList();
   }
 
   /// The teams that this player is on, across all leagues.

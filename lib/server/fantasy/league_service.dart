@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:shelf_plus/shelf_plus.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -67,7 +68,7 @@ class LeagueService {
         continue;
       }
       matchIds.add(dbMatch.sourceIds.first);
-      final matchRes = HydratedMatchCache().get(dbMatch);
+      final matchRes = await MatchCache.instance.get(dbMatch);
       if(matchRes.isErr()) {
         return Response.internalServerError(body: 'Failed to get match');
       }

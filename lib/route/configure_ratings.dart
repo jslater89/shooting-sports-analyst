@@ -757,8 +757,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load match from database.")));
                                               return;
                                             }
+                                            var canonicalMatch = await dbMatch.unwrap().hydrate();
+                                            if(canonicalMatch.isErr()) {
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to hydrate match.")));
+                                              return;
+                                            }
                                             Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                              return ResultPage(canonicalMatch: dbMatch.unwrap().hydrate().unwrap(), allowWhatIf: false);
+                                              return ResultPage(canonicalMatch: canonicalMatch.unwrap(), allowWhatIf: false);
                                             }));
                                           },
                                           child: Text(

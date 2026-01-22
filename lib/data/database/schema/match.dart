@@ -7,6 +7,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -293,9 +294,26 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
 
   }
 
-  Result<ShootingMatch, ResultErr> hydrate({bool useCache = false}) {
+  /// Hydrate this match into a [ShootingMatch].
+  ///
+  /// If [useCache] is true, this match will be loaded from the cache if it is available.
+  /// This method should be preferred over [hydrateSync], as this method will use the sync
+  /// cache if available and fall back to the async cache if not.
+  Future<Result<ShootingMatch, ResultErr>> hydrate({bool useCache = false}) async {
     if(useCache) {
-      var cached = HydratedMatchCache().get(this);
+      var cached = await MatchCache.instance.get(this);
+      if(cached.isOk()) return Result.ok(cached.unwrap());
+    }
+    return hydrateSync(useCache: false);
+  }
+
+  /// Hydrate this match into a [ShootingMatch].
+  ///
+  /// This method will only use the in-memory cache, and should be avoided in multi-isolate
+  /// contexts (and data handling code called from multi-isolate contexts).
+  Result<ShootingMatch, ResultErr> hydrateSync({bool useCache = false}) {
+    if(useCache) {
+      var cached = MatchCache.inMemoryInstance.get(this);
       if(cached.isOk()) return Result.ok(cached.unwrap());
     }
 
