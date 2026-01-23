@@ -5,6 +5,7 @@
  */
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/migration_result.dart';
@@ -503,7 +504,7 @@ extension RatingProjectDatabase on AnalystDatabase {
               late DateTime matchStart;
               if(Timings.enabled) matchStart = DateTime.now();
               // If the hydrated match is cached, build a dummy match with the correct DB ID for the event.
-              var cacheResult = HydratedMatchCache().getBySourceId(event.matchId);
+              var cacheResult = await MatchCache.instance.getBySourceId(event.matchId);
               DbShootingMatch? match = null;
               if(cacheResult.isOk()) {
                 var m = cacheResult.unwrap();
@@ -557,7 +558,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     // For more than 500 ratings, do 100 transactions total. For less than 50, just
     // call the sync version directly.
     if(ratingsList.length < 50) {
-      updateChangedRatingsSync(ratings, useCache: useCache, matches: matches);
+      await updateChangedRatingsSync(ratings, useCache: useCache, matches: matches);
       return;
     }
 
@@ -579,7 +580,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         endIndex = ratingsList.length;
       }
       var batch = ratingsList.sublist(startIndex, endIndex);
-      updateChangedRatingsSync(batch, useCache: useCache, matches: matches);
+      await updateChangedRatingsSync(batch, useCache: useCache, matches: matches);
 
       totalProcessed = endIndex;
       if(onPersisted != null) {
@@ -599,10 +600,28 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// for a hybrid sync-async operation that supports progress callbacks without the loss of speed of the fully async version.
   ///
   /// Takes and returns a map of match IDs to DbShootingMatch objects as an internal optimization.
-  Map<String, DbShootingMatch> updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, Map<String, DbShootingMatch>? matches}) {
+  Future<Map<String, DbShootingMatch>> updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, Map<String, DbShootingMatch>? matches}) async {
     late DateTime outerStart;
     if(Timings.enabled) outerStart = DateTime.now();
     matches ??= {};
+    late DateTime matchStart;
+    if(Timings.enabled) matchStart = DateTime.now();
+    for(var r in ratings) {
+      for(var event in r.newRatingEvents) {
+        if(!event.isPersisted) {
+          if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
+            if(Timings.enabled) matchStart = DateTime.now();
+            var cacheResult = await MatchCache.instance.getBySourceId(event.matchId);
+            var match = cacheResult.isOk() ? cacheResult.unwrap() : null;
+            if(match != null) {
+              matches[event.matchId] = DbShootingMatch.dbPlaceholder(match.databaseId!);
+            }
+          }
+        }
+      }
+    }
+    if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
+
     isar.writeTxnSync(() {
       late DateTime start;
       for(var r in ratings) {
@@ -621,26 +640,14 @@ extension RatingProjectDatabase on AnalystDatabase {
             if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
               late DateTime matchStart;
               if(Timings.enabled) matchStart = DateTime.now();
-              // If the hydrated match is cached, build a dummy match with the correct DB ID for the event.
-              var cacheResult = HydratedMatchCache().getBySourceId(event.matchId);
-              DbShootingMatch? match = null;
-              if(cacheResult.isOk()) {
-                var m = cacheResult.unwrap();
-                if(m.databaseId != null) {
-                  DbShootingMatch placeholder = DbShootingMatch.dbPlaceholder(m.databaseId!);
-                  match = placeholder;
-                }
-              }
 
               // Otherwise, check our local cache.
-              if(match == null) {
-                match = matches![event.matchId];
-              }
+              var match = matches![event.matchId];
 
               // If it still isn't available, ask the DB.
               if(match == null) {
                 match = this.getMatchByAnySourceIdSync([event.matchId]);
-                matches![event.matchId] = match!;
+                matches[event.matchId] = match!;
               }
               event.match.value = match;
               if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);

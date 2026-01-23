@@ -4,12 +4,16 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
@@ -217,7 +221,40 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
     lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
     lastRatingGroupUuid = widget.group.uuid;
     var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
-    model = PredictionViewModel(matchId: outerModel.matchPrepModel.futureMatch.matchId, initialPredictions: groupPredictions, showWager: true);
+    model = PredictionViewModel(
+      matchId: outerModel.matchPrepModel.futureMatch.matchId,
+      initialPredictions: groupPredictions,
+      showWager: true,
+    );
+    _updateOutcomes(outerModel);
+  }
+
+  Future<void> _updateOutcomes(_MatchPrepPredictionsModel outerModel) async {
+    if(outerModel.matchPrepModel.futureMatch.dbMatch.value != null) {
+      var matchRes = HydratedMatchCache().get(outerModel.matchPrepModel.futureMatch.dbMatch.value!);
+      if(matchRes.isOk()) {
+        Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
+        var match = matchRes.unwrap();
+        var filters = widget.group.filters;
+        var shooters = match.filterShooters(
+          filterMode: FilterMode.and,
+          divisions: filters.activeDivisions.toList(),
+          allowReentries: false,
+        );
+        var scores = match.getScores(
+          shooters: shooters,
+          scoreDQ: false,
+        );
+        for(var prediction in model.predictions) {
+          var score = scores.entries
+            .firstWhereOrNull((element) => element.key.equalsShooter(prediction.shooter))?.value;
+          if(score != null) {
+            outcomes[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score.ratio, place: score.place);
+          }
+        }
+        model.setOutcomes(outcomes);
+      }
+    }
   }
 
   void updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) {

@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
@@ -229,7 +230,7 @@ class PredictionGameManager {
   ///
   /// Any matches provided in [matches] will be used to calculate scores. Other matches will be
   /// loaded from the database as needed.
-  Map<DbWager, WagerScores> getAllRelevantScores(List<DbWager> wagers, {Map<DbWager, ShootingMatch>? matches}) {
+  Future<Map<DbWager, WagerScores>> getAllRelevantScores(List<DbWager> wagers, {Map<DbWager, ShootingMatch>? matches}) async {
     /// First load all matches we need, if not provided.
     if(matches == null) {
       matches = {};
@@ -239,7 +240,7 @@ class PredictionGameManager {
       if(match == null) {
         var dbMatch = wager.matchPrep.value?.futureMatch.value?.dbMatch.value;
         if(dbMatch != null) {
-          var matchRes = HydratedMatchCache().get(dbMatch);
+          var matchRes = await MatchCache.instance.get(dbMatch);
           if(matchRes.isOk()) {
             match = matchRes.unwrap();
           }
@@ -345,7 +346,7 @@ class PredictionGameManager {
   /// for both the match result and the result within the prediction set.
   ///
   /// If [match] is provided, it will be used to calculate the scores
-  WagerScores getRelevantScores(DbWager wager, {ShootingMatch? match}) {
+  Future<WagerScores> getRelevantScores(DbWager wager, {ShootingMatch? match}) async {
     var scores = WagerScores(wager: wager);
     ShootingMatch? actualMatch;
     var dbMatch = wager.matchPrep.value?.futureMatch.value?.dbMatch.value;
@@ -353,7 +354,7 @@ class PredictionGameManager {
       return scores;
     }
     if(match == null) {
-      var matchRes = HydratedMatchCache().get(dbMatch);
+      var matchRes = await MatchCache.instance.get(dbMatch);
       if(matchRes.isOk()) {
         actualMatch = matchRes.unwrap();
       }

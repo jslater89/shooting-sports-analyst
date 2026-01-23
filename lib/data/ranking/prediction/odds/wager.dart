@@ -152,6 +152,14 @@ class Parlay implements IWager {
     // Find the maximum place we need to consider
     var placeLegs = legs.where((leg) => leg.prediction is PlacePrediction).toList();
     var placePredictions = placeLegs.map((leg) => leg.prediction as PlacePrediction).toList();
+
+
+    if(placePredictions.length < 2) {
+      // Only parlays with more than one place prediction can be impossible to
+      // satisfy.
+      return true;
+    }
+
     var maxPlace = placePredictions.map((p) => p.worstPlace).reduce(max);
 
     // Try to assign each prediction to a valid place

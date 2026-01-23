@@ -43,7 +43,7 @@ class ExportMiffsCommand extends DbOneoffCommand {
     var allMatches = await db.getAllMatches();
     var exporter = MiffExporter();
     for(var match in allMatches) {
-      var hydratedRes = match.hydrate();
+      var hydratedRes = match.hydrateSync();
       if(hydratedRes.isErr()) {
         console.print("Error hydrating match ${match.id}: ${hydratedRes.unwrapErr().message}");
         continue;

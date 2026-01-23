@@ -152,8 +152,6 @@ class RelativeMatchScore extends RelativeScore {
   String toString() {
     return "RelativeMatchScore($place, $ratio)";
   }
-
-  RelativeMatchScore? firstWhereOrNull(bool Function(dynamic element) param0) {}
 }
 
 class RelativeStageScore extends RelativeScore {

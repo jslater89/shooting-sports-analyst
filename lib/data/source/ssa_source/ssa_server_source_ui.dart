@@ -56,7 +56,7 @@ class SSAServerSourceUI extends SourceUI {
                         );
                         if(matches == null) return;
                         for(var match in matches) {
-                          var hydratedRes = match.hydrate();
+                          var hydratedRes = await match.hydrate();
                           if(hydratedRes.isErr()) {
                             onError(FormatError(hydratedRes.unwrapErr()));
                             continue;
@@ -106,7 +106,7 @@ class SSAServerSourceUI extends SourceUI {
                           if (res.isErr()) {
                             onError(MatchSourceError.databaseError);
                           } else {
-                            var hydratedMatch = res.unwrap().hydrate();
+                            var hydratedMatch = await res.unwrap().hydrate();
                             if (hydratedMatch.isErr()) {
                               onError(MatchSourceError.databaseError);
                             } else {
@@ -388,7 +388,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         return;
       }
 
-      var hydratedMatch = res.unwrap().hydrate();
+      var hydratedMatch = await res.unwrap().hydrate();
       if (hydratedMatch.isErr()) {
         setState(() {
           downloadStates[result.matchId] = DownloadState.error;

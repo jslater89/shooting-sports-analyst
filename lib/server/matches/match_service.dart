@@ -55,7 +55,7 @@ class MatchService {
     if(match == null) {
       return Response.notFound("Match not found");
     }
-    var hydratedRes = match.hydrate();
+    var hydratedRes = await match.hydrate();
     if(hydratedRes.isErr()) {
       return Response.internalServerError(body: "Failed to hydrate match");
     }

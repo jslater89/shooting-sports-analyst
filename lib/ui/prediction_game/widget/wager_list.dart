@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
@@ -24,13 +25,68 @@ final _log = SSALogger("WagerList");
 /// A list of wagers for a prediction game, match prep, or prediction game player.
 ///
 /// Requires a [WagerListModel] to be provided.
-class WagerList extends StatelessWidget {
+class WagerList extends StatefulWidget {
   WagerList({super.key, this.trailingWidth, this.dimResolvedWagers = true});
 
   final double? trailingWidth;
   final bool dimResolvedWagers;
 
+  @override
+  State<WagerList> createState() => _WagerListState();
+}
+
+class _WagerListState extends State<WagerList> {
   final db = AnalystDatabase();
+
+  late WagerListModel _model;
+  bool _loadingScores = false;
+  String? _matchPrepName;
+  ShootingMatch? _matchResult;
+  Map<DbWager, WagerScores>? _relevantScoresMap;
+
+  @override
+  void initState() {
+    super.initState();
+    var model = context.read<WagerListModel>();
+    _model = model;
+    _model.addListener(_loadScores);
+    _loadScores();
+  }
+
+  Future<void> _loadScores() async {
+    if(_loadingScores) {
+      return;
+    }
+    _loadingScores = true;
+    final futureMatch = _model.matchPrep?.futureMatch.value;
+    _matchPrepName = futureMatch?.eventName;
+    if(futureMatch != null) {
+      var dbMatchResult = futureMatch.dbMatch.value;
+      if(dbMatchResult != null) {
+        var result = MatchCache.inMemoryInstance.get(dbMatchResult);
+        if(result.isOk()) {
+          _matchResult = result.unwrap();
+        }
+      }
+    }
+
+    Map<DbWager, ShootingMatch> matches = {};
+    if(_matchResult != null) {
+      for(var wager in _model.wagers) {
+        matches[wager] = _matchResult!;
+      }
+    }
+    _relevantScoresMap = await _model.managerModel.manager.getAllRelevantScores(_model.wagers, matches: matches);
+    setState(() {
+      _loadingScores = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _model.removeListener(_loadScores);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,27 +98,8 @@ class WagerList extends StatelessWidget {
     bool showPlayer = model.player == null;
     bool showMatchName = model.matchPrep == null;
 
-    final futureMatch = model.matchPrep?.futureMatch.value;
-    final matchPrepName = futureMatch?.eventName;
-    ShootingMatch? matchResult;
-    if(futureMatch != null) {
-      var dbMatchResult = futureMatch.dbMatch.value;
-      if(dbMatchResult != null) {
-        var result = HydratedMatchCache().get(dbMatchResult);
-        if(result.isOk()) {
-          matchResult = result.unwrap();
-        }
-      }
-    }
-
-    Map<DbWager, WagerScores> relevantScoresMap = {};
-
-    if(matchResult != null) {
-      Map<DbWager, ShootingMatch> matches = {};
-      for(var wager in model.wagers) {
-        matches[wager] = matchResult;
-      }
-      relevantScoresMap = model.managerModel.manager.getAllRelevantScores(model.wagers, matches: matches);
+    if(_loadingScores) {
+      return const Center(child: CircularProgressIndicator());
     }
 
     var listView = ListView.builder(
@@ -120,7 +157,7 @@ class WagerList extends StatelessWidget {
         }
         if(showMatchName) {
           subtitleText.add(
-            Expanded(flex: 6, child: Text(matchPrepName ?? "", overflow: TextOverflow.ellipsis)),
+            Expanded(flex: 6, child: Text(_matchPrepName ?? "", overflow: TextOverflow.ellipsis)),
           );
         }
 
@@ -140,8 +177,8 @@ class WagerList extends StatelessWidget {
         bool hitsOnPredictionSetResult = false;
         Map<DbPrediction, bool>? legResults;
         Map<DbPrediction, bool>? predictionSetLegResults;
-        WagerScores? relevantScores = relevantScoresMap[wager];
-        if(matchResult != null && relevantScores != null) {
+        WagerScores? relevantScores = _relevantScoresMap?[wager];
+        if(_matchResult != null && relevantScores != null) {
           legResults = wager.evaluateLegs(relevantScores.scores);
           predictionSetLegResults = wager.evaluateLegs(relevantScores.predictionSetScores);
           hitsOnMainResult = legResults.entries.every((e) => e.value);
@@ -166,7 +203,7 @@ class WagerList extends StatelessWidget {
             trailing.add(Text(scoreText));
           }
         }
-        if(canResolve && matchResult != null && wager.isOpen) {
+        if(canResolve && _matchResult != null && wager.isOpen) {
           String mainResolveMessage = ", for a house profit of ${wager.amount.toStringAsFixed(2)}";
           if(hitsOnMainResult) {
             mainResolveMessage = ", paying out ${wager.payout().toStringAsFixed(2)} to ${wager.user.value!.nickname}";
@@ -262,14 +299,14 @@ class WagerList extends StatelessWidget {
           trailingWidget = const SizedBox.shrink();
         }
 
-        if(trailingWidth != null) {
+        if(widget.trailingWidth != null) {
           trailingWidget = SizedBox(
-            width: trailingWidth! * uiScaleFactor,
+            width: widget.trailingWidth! * uiScaleFactor,
             child: trailingWidget,
           );
         }
 
-        bool disabled = dimResolvedWagers && !wager.isOpen;
+        bool disabled = widget.dimResolvedWagers && !wager.isOpen;
         return ListTile(
           enabled: !disabled,
           title: descriptionText,

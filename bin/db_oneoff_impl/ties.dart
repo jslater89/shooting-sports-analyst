@@ -40,7 +40,7 @@ class TiesCommand extends DbOneoffCommand {
         continue;
       }
       var dbMatch = dbMatchRes.unwrap();
-      var matchRes = await dbMatch.hydrate(useCache: true);
+      var matchRes = await dbMatch.hydrateSync(useCache: true);
       if(matchRes.isErr()) {
         console.print("Error hydrating match: ${matchRes.unwrapErr()}");
         continue;

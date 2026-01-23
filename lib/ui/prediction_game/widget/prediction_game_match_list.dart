@@ -56,8 +56,13 @@ class PredictionGameMatchList extends StatelessWidget {
                   child: IconButton(
                     icon: Icon(Icons.scoreboard_outlined),
                     onPressed: () async {
+                      var match = await matchResult.hydrate();
+                      if(match.isErr()) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to hydrate match.")));
+                        return;
+                      }
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(
-                        canonicalMatch: matchResult.hydrate().unwrap(),
+                        canonicalMatch: match.unwrap(),
                         ratings: ratings,
                       )));
                     }

@@ -143,7 +143,7 @@ Future<(Map<DbShooterRating, DbFantasyStats>?, String?)> _calculateFantasyStatsB
   if(dbMatch == null) {
     return (null, "No match found for ${matchPointer.name} at ${matchPointer.sourceIds.firstOrNull}");
   }
-  var hydratedMatch = dbMatch.hydrate(useCache: true);
+  var hydratedMatch = dbMatch.hydrateSync(useCache: true);
   if(hydratedMatch.isErr()) {
     return (null, "Error hydrating match: ${hydratedMatch.unwrapErr()}");
   }

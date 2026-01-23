@@ -173,7 +173,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _settings = await widget.dataSource.getSettings().unwrap();
     activeTabs = await widget.dataSource.getGroups().unwrap();
     activeTabs.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    _selectedMatch = (await widget.dataSource.getLatestMatch()).unwrap().hydrate().unwrap();
+    var _latestMatch = await widget.dataSource.getLatestMatch();
+    if(_latestMatch.isErr()) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load latest match.")));
+      return;
+    }
+    _selectedMatch = (await _latestMatch.unwrap().hydrate()).unwrap();
     _sport = await widget.dataSource.getSport().unwrap();
     _tabController = TabController(
         length: activeTabs.length,
@@ -666,7 +671,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         if(match != null) {
           var dbMatch = await match.getDbMatch(AnalystDatabase()).unwrap();
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ResultPage(canonicalMatch: dbMatch.hydrate(useCache: true).unwrap(), allowWhatIf: false, ratings: widget.dataSource);
+            return ResultPage(canonicalMatch: dbMatch.hydrateSync(useCache: true).unwrap(), allowWhatIf: false, ratings: widget.dataSource);
           }));
         }
         break;

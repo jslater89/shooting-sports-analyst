@@ -11,12 +11,15 @@ import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
-class ServerDebugProvider implements DebugModeProvider {
+class ServerDebugProvider implements DebugModeProvider, ServerModeProvider {
   @override
   bool get kDebugMode => true;
 
   @override
   bool get kReleaseMode => false;
+
+  @override
+  bool get kServerMode => true;
 }
 
 class ServerConfigProvider implements ConfigProvider {

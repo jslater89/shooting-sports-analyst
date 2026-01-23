@@ -499,7 +499,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
               var pointer = _matchHeat.keys.toList()[index];
               var dbMatch = await AnalystDatabase().getMatchByAnySourceId(pointer.sourceIds);
               if(dbMatch != null) {
-                var matchRes = await dbMatch.hydrate(useCache: true);
+                var matchRes = await dbMatch.hydrateSync(useCache: true);
                 if(matchRes.isOk()) {
                   var match = matchRes.unwrap();
                   Navigator.push(context, MaterialPageRoute(builder: (context) => ResultPage(

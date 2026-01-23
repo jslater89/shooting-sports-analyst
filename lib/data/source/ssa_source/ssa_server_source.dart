@@ -238,7 +238,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
         if(localCopy == null) {
           return Result.err(MatchSourceError.notModified);
         }
-        var hydrateRes = localCopy.hydrate();
+        var hydrateRes = await localCopy.hydrate();
         if(hydrateRes.isErr()) {
           return Result.err(GeneralError(StringError("Failed to hydrate local copy: ${hydrateRes.unwrapErr().message}")));
         }
