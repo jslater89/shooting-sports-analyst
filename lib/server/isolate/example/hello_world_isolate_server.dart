@@ -18,7 +18,7 @@ class HelloWorldServer {
   static Future<void> entrypoint(IsolateStartData startData) async {
     IsolateCommon.setup(startData);
     var serverIsolate = HelloWorldServer();
-    serverIsolate.helper.handleStartup(IsolateCommon.managerSendPort!);
+    serverIsolate.helper.handleStartup(startData: startData);
     await Future.delayed(Duration(days: 10000));
   }
 }

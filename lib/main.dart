@@ -64,11 +64,14 @@ class GlobalData {
 
 GlobalData globals = GlobalData();
 
-class FlutterDebugProvider implements DebugModeProvider {
+class FlutterDebugProvider implements DebugModeProvider, ServerModeProvider {
   bool get kDebugMode => foundation.kDebugMode;
 
   @override
   bool get kReleaseMode => foundation.kReleaseMode;
+
+  @override
+  bool get kServerMode => false;
 }
 
 class FlutterConfigProvider implements ConfigProvider {
@@ -146,7 +149,9 @@ class FlutterSecureStorageProvider implements SecureStorageProvider {
 }
 
 void main() async {
-  FlutterOrNative.debugModeProvider = FlutterDebugProvider();
+  var provider = FlutterDebugProvider();
+  FlutterOrNative.debugModeProvider = provider;
+  FlutterOrNative.serverModeProvider = provider;
   FlutterOrNative.machineFingerprintProvider = FlutterMachineFingerprinter();
   // dumpRatings();
 

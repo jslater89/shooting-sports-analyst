@@ -33,6 +33,8 @@ typedef ServerCommandHandler<C, R> = Future<R> Function(C command);
 ///    return a value of type [R], which the helper wraps in a [ServerResponse] and sends back
 ///    to the client isolate.
 class ServerIsolateHelper<C, R> {
+  static bool verboseLogging = false;
+
   /// The isolate ID of this server isolate.
   final String isolateId;
   /// The send ports of the client isolates that are connected to this server isolate.
@@ -57,7 +59,11 @@ class ServerIsolateHelper<C, R> {
     if(message is! IsolateMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
-    else if(message is IsolateRegistrationResponse) {
+
+    if(verboseLogging) {
+      _log.i("${message.runtimeType}: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
+    }
+    if(message is IsolateRegistrationResponse) {
       _log.i("Registered with manager isolate");
       // Servers only receive messages from the manager isolate, but
       // just in case that pattern changes...
@@ -103,10 +109,10 @@ class ServerIsolateHelper<C, R> {
   /// an [IsolateRegistrationResponse] to confirm registration.
   ///
   /// [managerSendPort] is a send port that sends to the IsolateManagerServer's receive port.
-  Future<void> handleStartup(SendPort managerSendPort) async {
-    _clientSendPorts[IsolateManagerServer.id] = managerSendPort;
+  Future<void> handleStartup({required IsolateStartData startData}) async {
+    _clientSendPorts[IsolateManagerServer.id] = startData.managerPort!;
     _log.i("Server isolate $isolateId registering with manager isolate");
-    managerSendPort.send(
+    startData.managerPort!.send(
       IsolateRegistrationRequest(
         sourceIsolateId: isolateId,
         destinationIsolateId: IsolateManagerServer.id,
@@ -114,5 +120,7 @@ class ServerIsolateHelper<C, R> {
       )
     );
     await _registeredCompleter.future;
+
+    startData.initPort.send(StartupCompleteResponse(sourceIsolateId: isolateId));
   }
 }

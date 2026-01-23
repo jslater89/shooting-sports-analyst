@@ -4,8 +4,12 @@ import 'package:shooting_sports_analyst/data/cache/match/isolate_match_cache.dar
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MatchCache");
 
 /// A cache for matches. Use [MatchCache.instance] to get an instance
 /// appropriate for the current mode.
@@ -25,18 +29,26 @@ abstract interface class MatchCache {
   FutureOr<Result<ShootingMatch, ResultErr>> get(DbShootingMatch match);
   FutureOr<Result<ShootingMatch, ResultErr>> getBySourceId(String sourceId);
 
-  static bool serverMode = false;
+  static setInstance(MatchCache instance) {
+    _instance = instance;
+    if(instance is HydratedMatchCache) {
+      _inMemoryInstance = instance;
+    }
+  }
+
   static MatchCache? _instance;
   static HydratedMatchCache? _inMemoryInstance;
   static MatchCache get instance {
+    var serverMode = FlutterOrNative.serverModeProvider.kServerMode;
     if(_instance == null) {
       if(serverMode) {
-        if(IsolateCommon.managerSendPort == null) {
-          throw Exception("IsolateCommon.managerSendPort is not set. Isolate must be started with IsolateCommon.setup() first in the isolate entrypoint.");
+        _log.i("Server mode: using isolate match cache");
+        if(_instance == null) {
+          throw Exception("MatchCache must be set before use in server mode.");
         }
-        _instance = IsolateMatchCacheClient(IsolateCommon.managerSendPort!);
       }
       else {
+        _log.i("Not server mode: using in-memory match cache");
         _instance = inMemoryInstance;
       }
     }

@@ -6,6 +6,7 @@ import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_client.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_server.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_manager.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
@@ -13,7 +14,10 @@ import 'package:shooting_sports_analyst/server/providers.dart';
 final _log = SSALogger("HelloWorldIsolateExample");
 
 void main() async {
-  FlutterOrNative.debugModeProvider = ServerDebugProvider();
+  var provider = ServerDebugProvider();
+  FlutterOrNative.debugModeProvider = provider;
+  FlutterOrNative.serverModeProvider = provider;
+
   // Create the ports for the init isolate and the logger isolate.
   var initIsolateReceivePort = ReceivePort();
   var initIsolateSendPort = initIsolateReceivePort.sendPort;
@@ -25,37 +29,20 @@ void main() async {
   SSALogger.handleReceivePort(loggerReceivePort);
   _log.i("Logger setup complete");
 
-  // Create the manager isolate and get its send port.
-  final Completer<SendPort> managerIsolateSendPortCompleter = Completer();
-  final Function(dynamic) initReceivePortHandler = (message) {
-    _log.v("Init isolate received message: ${message.runtimeType}");
-    if(message is IsolateConnectionResponse) {
-      managerIsolateSendPortCompleter.complete(message.sendPort);
-    }
-    else {
-      _log.e("Init isolate received unexpected message: ${message.runtimeType}");
-      if(message is IsolateMessage) {
-        _log.e("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
-      }
-      return;
-    }
-  };
-  _log.i("Init isolate receive port listener set up");
-  initIsolateReceivePort.listen(initReceivePortHandler);
+  // Start the manager isolate and get its send port.
+  var managerIsolateSendPort = await IsolateCommon.startManagerIsolate(loggerSendPort: loggerSendPort, initIsolateReceivePort: initIsolateReceivePort);
 
-  var managerIsolate = await Isolate.spawn(
-    IsolateManagerServer.entrypoint,
-    IsolateStartData(isolateId: IsolateManagerServer.id, logPort: loggerSendPort, initPort: initIsolateSendPort, managerPort: null),
-  );
-  _log.i("Manager isolate spawned");
-  var managerIsolateSendPort = await managerIsolateSendPortCompleter.future;
-  _log.i("Manager isolate send port received");
-
+  var startupReceivePort = ReceivePort();
+  startupReceivePort.listen((message) {
+    if(message is StartupCompleteResponse) {
+      _log.i("Startup complete for isolate ${message.sourceIsolateId}");
+    }
+  });
   // Set up the final init data for non-manager isolates.
   final initData = IsolateStartData(
     isolateId: "",
     logPort: loggerSendPort,
-    initPort: initIsolateSendPort,
+    initPort: startupReceivePort.sendPort,
     managerPort: managerIsolateSendPort,
   );
 
@@ -66,5 +53,7 @@ void main() async {
   var helloWorldClientIsolate1 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client1"));
   var helloWorldClientIsolate2 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client2"));
 
+  var mainIsolateData = initData.copyWithId("main");
+  var mainIsolateClient = await HelloWorldIsolateClient.startOnCurrentIsolate(mainIsolateData, existingIsolate: true);
   _log.i("Server and client isolates spawned");
 }

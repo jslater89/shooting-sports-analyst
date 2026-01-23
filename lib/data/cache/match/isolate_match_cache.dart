@@ -12,39 +12,42 @@ import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/hydrated_cache.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
+import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/server/isolate/isolate_client.dart";
-import "package:shooting_sports_analyst/server/isolate/isolate_entrypoint.dart";
+import "package:shooting_sports_analyst/server/isolate/isolate_common.dart";
+import "package:shooting_sports_analyst/server/isolate/isolate_messages.dart";
 import "package:shooting_sports_analyst/server/isolate/isolate_server_helper.dart";
 import "package:shooting_sports_analyst/util.dart";
+
+final _log = SSALogger("IsolateMatchCache");
 
 /// A client for the isolate-based match cache, which connects to the
 /// server isolate to cache and look up matches.
 class IsolateMatchCacheClient implements MatchCache {
   static IsolateMatchCacheClient? _instance;
-  factory IsolateMatchCacheClient(SendPort managerSendPort) {
+  factory IsolateMatchCacheClient(IsolateManagerClient isolateManagerClient) {
     if(_instance == null) {
-      _instance = IsolateMatchCacheClient._internal(managerSendPort);
+      _instance = IsolateMatchCacheClient._internal(isolateManagerClient);
     }
     return _instance!;
   }
-  IsolateMatchCacheClient._internal(SendPort managerSendPort) {
+  IsolateMatchCacheClient._internal(this.isolateManagerClient) {
     if(IsolateCommon.isolateId == "unset") {
       throw Exception("IsolateCommon.isolateId is not set. Isolate must be started with IsolateCommon.setup() first in the isolate entrypoint.");
     }
-    isolateManagerClient = IsolateManagerClient(IsolateCommon.isolateId, managerSendPort);
     _init();
   }
 
   Future<void> _init() async {
     await isolateManagerClient.ready;
-    await isolateManagerClient.connect(isolateId: _IsolateMatchCacheServer.id);
+    await isolateManagerClient.connect(isolateId: IsolateMatchCacheServer.id);
     _readyCompleter.complete(true);
   }
 
   Future<bool> get clientReady => _readyCompleter.future;
   final Completer<bool> _readyCompleter = Completer();
 
-  late final IsolateManagerClient isolateManagerClient;
+  final IsolateManagerClient isolateManagerClient;
 
   @override
   Future<bool> ready() {
@@ -54,7 +57,7 @@ class IsolateMatchCacheClient implements MatchCache {
   @override
   Future<void> cache(ShootingMatch match) {
     return isolateManagerClient.sendCommand<_CacheCommand, _AckResponse>(
-      isolateId: _IsolateMatchCacheServer.id,
+      isolateId: IsolateMatchCacheServer.id,
       command: _CacheCommand(match: match)
     );
   }
@@ -62,7 +65,7 @@ class IsolateMatchCacheClient implements MatchCache {
   @override
   FutureOr<void> clear() {
     return isolateManagerClient.sendCommand<_ClearCommand, _AckResponse>(
-      isolateId: _IsolateMatchCacheServer.id,
+      isolateId: IsolateMatchCacheServer.id,
       command: _ClearCommand()
     );
   }
@@ -70,7 +73,7 @@ class IsolateMatchCacheClient implements MatchCache {
   @override
   Future<Result<ShootingMatch, ResultErr>> get(DbShootingMatch match) async {
     var response = await isolateManagerClient.sendCommand<_GetByDbIdCommand, _IsolateMatchCacheServerResponse>(
-      isolateId: _IsolateMatchCacheServer.id,
+      isolateId: IsolateMatchCacheServer.id,
       command: _GetByDbIdCommand(id: match.id)
     );
 
@@ -92,7 +95,7 @@ class IsolateMatchCacheClient implements MatchCache {
   @override
   Future<Result<ShootingMatch, ResultErr>> getBySourceId(String sourceId) async {
     var response = await isolateManagerClient.sendCommand<_GetBySourceIdCommand, _IsolateMatchCacheServerResponse>(
-      isolateId: _IsolateMatchCacheServer.id,
+      isolateId: IsolateMatchCacheServer.id,
       command: _GetBySourceIdCommand(sourceId: sourceId)
     );
 
@@ -114,16 +117,24 @@ class IsolateMatchCacheClient implements MatchCache {
   @override
   FutureOr<void> remove(int id) {
     return isolateManagerClient.sendCommand<_RemoveCommand, _AckResponse>(
-      isolateId: _IsolateMatchCacheServer.id,
+      isolateId: IsolateMatchCacheServer.id,
       command: _RemoveCommand(id: id)
     );
+  }
+
+  static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {bool existingIsolate = true}) async {
+    var managerClient = await IsolateCommon.setupClient(startData, existingIsolate: existingIsolate);
+    var client = IsolateMatchCacheClient(managerClient);
+    await client.clientReady;
+
+    return client;
   }
 }
 
 /// A server isolate that wraps a [HydratedMatchCache] and provides an isolate server interface for it.
 ///
 /// This allows the cache to be used by multiple worker isolates.
-class _IsolateMatchCacheServer {
+class IsolateMatchCacheServer {
   static const id = "match_cache";
   final ReceivePort receivePort;
   late final ServerIsolateHelper<_IsolateMatchCacheServerCommand, _IsolateMatchCacheServerResponse> serverHelper;
@@ -131,7 +142,7 @@ class _IsolateMatchCacheServer {
 
   final HydratedMatchCache cache = HydratedMatchCache();
 
-  _IsolateMatchCacheServer({
+  IsolateMatchCacheServer({
     required this.receivePort
   }) {
     serverHelper = ServerIsolateHelper(isolateId: id, commandHandler: _commandHandler);
@@ -154,9 +165,12 @@ class _IsolateMatchCacheServer {
       case _GetByDbIdCommand(id: var matchId):
         if(cache.contains(matchId)) {
           var result = cache.getById(matchId);
+          var match = result.unwrap();
+          _log.v("Cache hit, returning match: ${match.name}");
           return _MatchResponse(match: result.unwrap());
         }
         else {
+          _log.v("Cache miss, loading from database");
           var match = await db.getMatch(matchId);
           if(match == null) {
             return _ErrorResponse(message: "Match not found");
@@ -165,7 +179,10 @@ class _IsolateMatchCacheServer {
           if(hydrated.isErr()) {
             return _ErrorResponse(message: "Failed to hydrate match: ${hydrated.unwrapErr().message}");
           }
-          return _MatchResponse(match: hydrated.unwrap());
+          var hydratedMatch = hydrated.unwrap();
+          cache.cache(hydratedMatch);
+          _log.v("Cached match: ${hydratedMatch.name}");
+          return _MatchResponse(match: hydratedMatch);
         }
 
       case _GetBySourceIdCommand(sourceId: var sourceId):
@@ -177,6 +194,14 @@ class _IsolateMatchCacheServer {
           return _ErrorResponse(message: result.unwrapErr().message);
         }
     }
+  }
+
+  static Future<void> entrypoint(IsolateStartData startData) async {
+    IsolateCommon.setup(startData);
+    final matchCacheReceivePort = ReceivePort();
+    var server = IsolateMatchCacheServer(receivePort: matchCacheReceivePort);
+    await server.serverHelper.handleStartup(startData: startData);
+    await Future.delayed(Duration(days: 10000));
   }
 }
 

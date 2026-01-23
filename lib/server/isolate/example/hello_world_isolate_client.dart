@@ -33,14 +33,26 @@ class HelloWorldIsolateClient {
 
   /// The entrypoint for the client isolate, which handles initial setup
   /// (setting up common isolate variables in [IsolateCommon]) and connecting to the server isolate.
+  ///
+  /// Pass this method to Isolate.spawn to run it on a new isolate, or call [startOnCurrentIsolate] to create a
+  /// HelloWorldIsolateClient on the existing isolate.
   static Future<void> entrypoint(IsolateStartData startData) async {
-    IsolateCommon.setup(startData);
-    var managerClient = IsolateManagerClient(IsolateCommon.isolateId, IsolateCommon.managerSendPort!);
-    await managerClient.ready;
+    var client = await startOnCurrentIsolate(startData, existingIsolate: false);
+
+    // Real client code would probably wait on a webserver or some other long-running task, and
+    // use the returned client to interact with the server isolate.
+    await Future.delayed(Duration(days: 10000));
+  }
+
+  /// Create a HelloWorldIsolateClient on the current isolate.
+  static Future<HelloWorldIsolateClient> startOnCurrentIsolate(IsolateStartData startData, {bool existingIsolate = true}) async {
+    var managerClient = await IsolateCommon.setupClient(startData, existingIsolate: existingIsolate);
     var client = HelloWorldIsolateClient(IsolateCommon.isolateId, managerClient);
     await client.connect();
     _log.i("Client connected to server isolate");
+    startData.initPort.send(StartupCompleteResponse(sourceIsolateId: IsolateCommon.isolateId));
     var helloWorld = await client.getHelloWorld();
     _log.i("Hello world: $helloWorld");
+    return client;
   }
 }

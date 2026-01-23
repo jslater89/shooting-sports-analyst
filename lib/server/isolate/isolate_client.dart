@@ -159,8 +159,9 @@ class IsolateManagerClient {
     if(!_registered) {
       throw Exception("Isolate not registered with IsolateManagerServer");
     }
-    if(_commandInProgress) {
-      throw Exception("A command is already in progress");
+    while(_commandInProgress) {
+      // Wait for the current command to complete
+      await _commandCompleter!.future;
     }
     if(!_serverSendPorts.containsKey(isolateId)) {
       throw Exception("Server isolate $isolateId not found");

@@ -9,9 +9,15 @@ import 'package:shooting_sports_analyst/config/serialized_config.dart';
 /// This class provides access to a variety of interfaces that are different
 /// between Flutter code and Dart-only code. By implementing and filling
 class FlutterOrNative {
+  static ServerModeProvider? _serverModeProvider;
   static DebugModeProvider? _debugModeProvider;
   static ConfigProvider? _configProvider;
   static MachineFingerprintProvider? _machineFingerprintProvider;
+
+  static ServerModeProvider get serverModeProvider => _serverModeProvider!;
+  static set serverModeProvider(ServerModeProvider provider) {
+    _serverModeProvider = provider;
+  }
 
   static DebugModeProvider get debugModeProvider => _debugModeProvider!;
   static set debugModeProvider(DebugModeProvider provider) {
@@ -30,6 +36,10 @@ class FlutterOrNative {
   static bool check() {
     return _debugModeProvider != null && _configProvider != null && _machineFingerprintProvider != null;
   }
+}
+
+abstract interface class ServerModeProvider {
+  bool get kServerMode;
 }
 
 abstract interface class DebugModeProvider {

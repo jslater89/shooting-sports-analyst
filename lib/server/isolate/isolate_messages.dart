@@ -9,6 +9,16 @@ sealed class IsolateMessage{
 sealed class ClientRequest extends IsolateMessage{}
 sealed class ClientResponse extends IsolateMessage{}
 
+/// A message from an isolate to the init isolate, indicating that the new isolate
+/// has completed its startup process.
+class StartupCompleteResponse extends ClientResponse {
+  /// The isolate ID of the source isolate of this message.
+  final String sourceIsolateId;
+  final String destinationIsolateId = "init";
+
+  StartupCompleteResponse({required this.sourceIsolateId});
+}
+
 /// A request to register an isolate with the IsolateManagerServer, either a server or client.
 ///
 /// [sourceIsolateId] is the isolate's ID.
