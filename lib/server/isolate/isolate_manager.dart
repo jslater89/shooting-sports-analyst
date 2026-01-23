@@ -15,8 +15,18 @@ import 'package:shooting_sports_analyst/server/providers.dart';
 final _log = SSALogger("IsolateManager");
 
 
-/// IsolateManagerServer is a special server isolate that forwards [IsolateConnectionRequest]s
-/// to the appropriate server isolate and returns their [IsolateConnectionResponse]s.
+/// IsolateManagerServer is a central registry isolate that manages communication between
+/// client and server isolates. It maintains a registry of all registered isolates (both
+/// clients and servers) and their send ports.
+///
+/// When a client isolate wants to connect to a server isolate:
+/// 1. The client sends an [IsolateConnectionRequest] to the manager, containing a send port that sends to the client's receive port.
+/// 2. The manager forwards the request to the target server isolate.
+/// 3. The server isolate responds with an [IsolateConnectionResponse] containing a send port that sends to the server's receive port.
+/// 4. The manager forwards the response back to the client isolate.
+///
+/// After this exchange, the client and server isolates can communicate directly without
+/// going through the manager. The manager only facilitates the initial connection setup.
 class IsolateManagerServer {
   static const id = "isolate_manager";
 
@@ -78,19 +88,6 @@ class IsolateManagerServer {
         throw Exception("Isolate ${message.destinationIsolateId} not registered");
       }
     }
-  }
-
-  /// Register a server isolate with the IsolateManagerServer.
-  ///
-  /// [sendPort] is the port that the server isolate should use to send back to
-  /// this isolate.
-  Future<void> register(String isolateId, SendPort sendPort) async {
-    _sendPorts[isolateId] = sendPort;
-    sendPort.send(IsolateConnectionRequest(
-      sourceIsolateId: id,
-      destinationIsolateId: isolateId,
-      sendPort: sendPort,
-    ));
   }
 
   static Future<void> entrypoint(IsolateStartData startData) async {

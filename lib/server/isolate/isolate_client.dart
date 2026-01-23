@@ -7,29 +7,26 @@ import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 
 final _log = SSALogger("IsolateManagerClient");
 
-/// IsolateManagerClient is a convenience function for inter-isolate communication
-/// along server isolate/client isolate patterns. It provides a single point of
-/// entry for client isolates (e.g. webserver isolates) to register with server
-/// isolates (e.g. the isolate match cache), exchanging send/receive ports to
-/// establish communications without the main isolate having to pass in ports
-/// for every single server isolate.
+/// IsolateManagerClient is a singleton helper class for client isolates to communicate
+/// with server isolates through the IsolateManagerServer. It provides a single point of
+/// entry for client isolates (e.g. webserver isolates) to connect to server isolates
+/// (e.g. the isolate match cache), exchanging send/receive ports to establish direct
+/// communication without the main isolate having to pass in ports for every server isolate.
 ///
-/// Server isolates managed by the IsolateManager should handle messages of type
-/// [IsolateConnectionRequest] and respond with messages of type [IsolateConnectionResponse].
+/// The client automatically registers with the IsolateManagerServer upon construction.
+/// Server isolates should use [ServerIsolateHelper] to handle connection requests and
+/// commands from client isolates.
 ///
-/// IsolateManager should generally be used to implement type-safe client isolate
-/// classes that communicate with their respective server isolates. The process
-/// goes like this:
+/// Typical usage in a client isolate:
 ///
-/// 1. ClientIsolate gets the IsolateManager in its internal code.
-/// 2. ClientIsolate uses [IsolateManagerClient.ready] to verify that the manager
-/// is ready to accept commands.
-/// 3. ClientIsolate uses [IsolateManagerClient.connect] to connect to the server isolate
-/// or isolate(s).
-/// 4. ClientIsolate uses [IsolateManagerClient.sendCommand] to send commands to the server
-/// isolate(s), and receives ServerResponse objects containing any desired data.
-///
-/// Server isolates
+/// 1. Create an instance of IsolateManagerClient with the isolate ID and manager send port.
+/// 2. Wait for [ready] to complete to ensure registration with the manager is finished.
+/// 3. Call [connect] with a server isolate ID to establish a connection. The manager
+///    will forward the connection request to the server isolate, which responds with
+///    its receive port. The client stores this port for direct communication.
+/// 4. Use [sendCommand] to send commands directly to the server isolate using the
+///    stored send port. The server isolate processes the command and returns a
+///    [ServerResponse] containing the result.
 class IsolateManagerClient {
   /// The isolate ID of the current isolate.
   final String thisIsolateId;
@@ -77,8 +74,13 @@ class IsolateManagerClient {
     return response;
   }
 
-  /// Handle messages from IsolateManagerServer, which will
-  /// always be of type [IsolateConnectionResponse] or [IsolateRegistrationResponse].
+  /// Handle messages received on the client's receive port.
+  ///
+  /// Processes messages from both the IsolateManagerServer (registration and connection
+  /// responses) and from server isolates (command responses). Messages are:
+  /// - [IsolateRegistrationResponse]: Confirms registration with the manager
+  /// - [IsolateConnectionResponse]: Contains the server isolate's receive port after connection
+  /// - [ServerResponse]: Contains the result of a command sent to a server isolate
   Future<void> _listen(dynamic message) async {
     if(message is! IsolateMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
@@ -106,9 +108,16 @@ class IsolateManagerClient {
 
   /// Connect to a server isolate.
   ///
-  /// [isolateId] specifies the isolate to connect to.
+  /// Sends an [IsolateConnectionRequest] to the IsolateManagerServer, which forwards
+  /// it to the target server isolate. The server isolate responds with an
+  /// [IsolateConnectionResponse] containing its receive port, which is stored for
+  /// future direct communication. If a connection to this server isolate already
+  /// exists, the cached send port is returned immediately.
   ///
-  /// The returned [SendPort] can be used to send messages to the server isolate.
+  /// [isolateId] specifies the server isolate to connect to.
+  ///
+  /// Returns a [SendPort] that can be used to send messages directly to the server
+  /// isolate's receive port.
   Future<SendPort> connect({
     required String isolateId,
   }) async {

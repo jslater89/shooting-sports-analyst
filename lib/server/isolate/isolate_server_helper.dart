@@ -10,21 +10,28 @@ final _log = SSALogger("ServerIsolateHelper");
 
 typedef ServerCommandHandler<C, R> = Future<R> Function(C command);
 
-/// A helper for server isolates that handles communication with client isolates,
-/// including the IsolateManagerServer, and handles converting server isolate-specific
-/// data types to and from the generic [IsolateMessage] types.
+/// A helper for server isolates that handles communication with client isolates
+/// through the IsolateManagerServer. It manages registration with the manager,
+/// handles connection requests from client isolates, and processes client commands.
 ///
 /// [C] is the client command data type for this server isolate.
-/// [R] is the server response datatype for this server isolate.
+/// [R] is the server response data type for this server isolate.
 ///
-/// To use:
-/// 1. Spawn your server isolate, passing in a send port that sends to the init receive port.
-/// 2. Create an instance of ServerIsolateHelper for your server isolate, and call [handleStartup]
-/// with the send port from the init isolate.
-/// 3. In the init isolate, call [IsolateManagerServer.register] with the send port from the server isolate.
-/// 4. [commandHandler] will be called when a command is received from a client isolate.
-/// 5. [commandHandler] should return a [ServerResponse] object.
-/// 6. The [ServerResponse] object will be sent back to the client isolate that sent the command.
+/// Typical usage in a server isolate:
+///
+/// 1. Spawn the server isolate, passing [IsolateStartData] that includes the manager send port.
+/// 2. Create an instance of ServerIsolateHelper with the isolate ID and a command handler function.
+/// 3. Call [handleStartup] with the manager send port from [IsolateStartData.managerPort].
+///    This sends an [IsolateRegistrationRequest] to the manager. Wait for [registered] to complete.
+/// 4. In the init isolate, call [IsolateManagerServer.register] with the server isolate's ID
+///    and send port to complete the registration process.
+/// 5. When a client isolate connects via [IsolateManagerClient.connect], the manager forwards
+///    an [IsolateConnectionRequest] to this server. The helper stores the client's send port
+///    and responds with an [IsolateConnectionResponse] containing this server's receive port.
+/// 6. When a client sends a command via [IsolateManagerClient.sendCommand], the helper receives
+///    a [ClientCommand] and calls [commandHandler] with the command data. The handler should
+///    return a value of type [R], which the helper wraps in a [ServerResponse] and sends back
+///    to the client isolate.
 class ServerIsolateHelper<C, R> {
   /// The isolate ID of this server isolate.
   final String isolateId;
@@ -90,7 +97,12 @@ class ServerIsolateHelper<C, R> {
     }
   }
 
-  /// Handle starting up the server isolate, sending the startup message to the init isolate.
+  /// Handle starting up the server isolate by registering with the IsolateManagerServer.
+  ///
+  /// Sends an [IsolateRegistrationRequest] to the manager isolate and waits for
+  /// an [IsolateRegistrationResponse] to confirm registration.
+  ///
+  /// [managerSendPort] is a send port that sends to the IsolateManagerServer's receive port.
   Future<void> handleStartup(SendPort managerSendPort) async {
     _clientSendPorts[IsolateManagerServer.id] = managerSendPort;
     _log.i("Server isolate $isolateId registering with manager isolate");
