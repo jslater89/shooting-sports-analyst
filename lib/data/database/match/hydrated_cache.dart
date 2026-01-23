@@ -30,6 +30,8 @@ class HydratedMatchCache implements MatchCache {
     }
   }
 
+  bool contains(int id) => _cache.containsKey(id);
+
   @override
   void remove(int id) {
     _cache.remove(id);
@@ -51,6 +53,13 @@ class HydratedMatchCache implements MatchCache {
       cache(result.unwrap());
     }
     return result;
+  }
+
+  Result<ShootingMatch, ResultErr> getById(int id) {
+    if(_cache.containsKey(id)) {
+      return Result.ok(_cache[id]!);
+    }
+    return Result.err(StringError("id not found in cache"));
   }
 
   @override

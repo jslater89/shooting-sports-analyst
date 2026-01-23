@@ -45,7 +45,7 @@ void main() async {
 
   var managerIsolate = await Isolate.spawn(
     IsolateManagerServer.entrypoint,
-    IsolateStartData(logPort: loggerSendPort, initPort: initIsolateSendPort, managerPort: null),
+    IsolateStartData(isolateId: IsolateManagerServer.id, logPort: loggerSendPort, initPort: initIsolateSendPort, managerPort: null),
   );
   _log.i("Manager isolate spawned");
   var managerIsolateSendPort = await managerIsolateSendPortCompleter.future;
@@ -53,16 +53,18 @@ void main() async {
 
   // Set up the final init data for non-manager isolates.
   final initData = IsolateStartData(
+    isolateId: "",
     logPort: loggerSendPort,
     initPort: initIsolateSendPort,
     managerPort: managerIsolateSendPort,
   );
 
   // Spawn the server isolate. Its helper will register with the manager isolate.
-  var helloWorldServerIsolate = await Isolate.spawn(HelloWorldServer.entrypoint, initData);
+  var helloWorldServerIsolate = await Isolate.spawn(HelloWorldServer.entrypoint, initData.copyWithId(HelloWorldServer.id));
 
-  // Spawn the client isolate. It will use its isolate's IsolateManagerClient to connect to the server isolate.
-  var helloWorldClientIsolate = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData);
+  // Spawn the client isolates. They will use their own isolate's IsolateManagerClient to connect to the server isolate.
+  var helloWorldClientIsolate1 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client1"));
+  var helloWorldClientIsolate2 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client2"));
 
   _log.i("Server and client isolates spawned");
 }

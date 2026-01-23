@@ -4,6 +4,7 @@ import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_server.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_client.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
 
@@ -30,12 +31,13 @@ class HelloWorldIsolateClient {
     return response.data.data;
   }
 
+  /// The entrypoint for the client isolate, which handles initial setup
+  /// (setting up common isolate variables in [IsolateCommon]) and connecting to the server isolate.
   static Future<void> entrypoint(IsolateStartData startData) async {
-    FlutterOrNative.debugModeProvider = ServerDebugProvider();
-    SSALogger.setupSendPort(startData.logPort, isolateName: "hello_client");
-    var managerClient = IsolateManagerClient("hello_client", startData.managerPort!);
+    IsolateCommon.setup(startData);
+    var managerClient = IsolateManagerClient(IsolateCommon.isolateId, IsolateCommon.managerSendPort!);
     await managerClient.ready;
-    var client = HelloWorldIsolateClient("hello_client", managerClient);
+    var client = HelloWorldIsolateClient(IsolateCommon.isolateId, managerClient);
     await client.connect();
     _log.i("Client connected to server isolate");
     var helloWorld = await client.getHelloWorld();

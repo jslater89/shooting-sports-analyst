@@ -4,6 +4,7 @@ import 'package:shooting_sports_analyst/data/cache/match/isolate_match_cache.dar
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 /// A cache for matches. Use [MatchCache.instance] to get an instance
@@ -30,7 +31,10 @@ abstract interface class MatchCache {
   static MatchCache get instance {
     if(_instance == null) {
       if(serverMode) {
-        _instance = IsolateMatchCacheClient();
+        if(IsolateCommon.managerSendPort == null) {
+          throw Exception("IsolateCommon.managerSendPort is not set. Isolate must be started with IsolateCommon.setup() first in the isolate entrypoint.");
+        }
+        _instance = IsolateMatchCacheClient(IsolateCommon.managerSendPort!);
       }
       else {
         _instance = inMemoryInstance;

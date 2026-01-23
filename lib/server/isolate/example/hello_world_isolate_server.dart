@@ -1,9 +1,7 @@
 
-import 'package:shooting_sports_analyst/flutter_native_providers.dart';
-import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_server_helper.dart';
-import 'package:shooting_sports_analyst/server/providers.dart';
 
 class HelloWorldServer {
   static const id = "hello_server";
@@ -18,10 +16,9 @@ class HelloWorldServer {
   }
 
   static Future<void> entrypoint(IsolateStartData startData) async {
-    FlutterOrNative.debugModeProvider = ServerDebugProvider();
-    SSALogger.setupSendPort(startData.logPort, isolateName: id);
+    IsolateCommon.setup(startData);
     var serverIsolate = HelloWorldServer();
-    serverIsolate.helper.handleStartup(startData.managerPort!);
+    serverIsolate.helper.handleStartup(IsolateCommon.managerSendPort!);
     await Future.delayed(Duration(days: 10000));
   }
 }

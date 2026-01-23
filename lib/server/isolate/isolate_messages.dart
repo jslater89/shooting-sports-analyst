@@ -87,14 +87,22 @@ class ServerResponse<T> extends ClientResponse {
   ServerResponse({required this.sourceIsolateId, required this.destinationIsolateId, required this.data});
 }
 
-/// A convenience container for passing initial data to a server isolate.
+/// A convenience container for passing initial data to a managed isolate.
 class IsolateStartData {
+  /// The isolate ID of the isolate.
+  final String isolateId;
   /// The send port to the logger isolate, for use in [SSALogger.setupSendPort].
   final SendPort logPort;
   /// The send port to the init isolate, for use in [ServerIsolateHelper.handleStartup].
   final SendPort initPort;
   /// The send port to the manager isolate, for use in [IsolateManagerServer.register].
+  ///
+  /// Not needed when starting the manager isolate, but required for all other isolates.
   final SendPort? managerPort;
 
-  IsolateStartData({required this.logPort, required this.initPort, this.managerPort});
+  IsolateStartData({required this.isolateId, required this.logPort, required this.initPort, this.managerPort});
+
+  IsolateStartData copyWithId(String newIsolateId) {
+    return IsolateStartData(isolateId: newIsolateId, logPort: logPort, initPort: initPort, managerPort: managerPort);
+  }
 }

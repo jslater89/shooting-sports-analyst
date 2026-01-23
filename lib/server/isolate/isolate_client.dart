@@ -27,6 +27,9 @@ final _log = SSALogger("IsolateManagerClient");
 /// 4. Use [sendCommand] to send commands directly to the server isolate using the
 ///    stored send port. The server isolate processes the command and returns a
 ///    [ServerResponse] containing the result.
+///
+/// [C] is the command type.
+/// [R] is the response type.
 class IsolateManagerClient {
   /// The isolate ID of the current isolate.
   final String thisIsolateId;
