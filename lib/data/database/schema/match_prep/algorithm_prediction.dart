@@ -99,19 +99,20 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     return predictions.map((p) => DbAlgorithmPrediction.fromHydrated(project, predictionSet, p)).toList();
   }
 
-  AlgorithmPrediction? hydrate() {
+  AlgorithmPrediction? hydrate({RatingSystem? preloadedAlgorithm, RaterSettings? preloadedSettings}) {
     var dbRating = getShooterRatingSync(AnalystDatabase(), save: true);
     if(dbRating == null) {
       return null;
     }
-    var wrapped = algorithm.wrapDbRating(dbRating);
+    preloadedAlgorithm ??= algorithm;
+    var wrapped = preloadedAlgorithm.wrapDbRating(dbRating);
     var prediction = AlgorithmPrediction(
       shooter: wrapped,
       mean: mean,
       sigma: oneSigma,
       ciOffset: ciOffset,
-      settings: settings,
-      algorithm: algorithm,
+      settings: preloadedSettings ?? settings,
+      algorithm: preloadedAlgorithm,
     );
     prediction.lowPlace = lowPlace;
     prediction.highPlace = highPlace;
