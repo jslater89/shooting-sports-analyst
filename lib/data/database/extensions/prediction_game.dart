@@ -51,6 +51,14 @@ extension PredictionGameExtension on AnalystDatabase {
     return predictionGame;
   }
 
+  Future<MatchPrep?> getMatchPrepById(int id) async {
+    return isar.matchPreps.get(id);
+  }
+
+  MatchPrep? getMatchPrepByIdSync(int id) {
+    return isar.matchPreps.getSync(id);
+  }
+
   Future<List<MatchPrep>> getMatchPreps(PredictionGame game, {bool futureOnly = true, bool hasPredictionsOnly = true}) async {
     var query = game.matchPreps.filter();
     if(futureOnly) {
