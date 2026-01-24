@@ -99,7 +99,6 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     return predictions.map((p) => DbAlgorithmPrediction.fromHydrated(project, predictionSet, p)).toList();
   }
 
-  // TODO: Result<>
   AlgorithmPrediction? hydrate() {
     var dbRating = getShooterRatingSync(AnalystDatabase(), save: true);
     if(dbRating == null) {

@@ -45,8 +45,8 @@ class PredictionProbability {
     this.bestPossibleOdds = bestPossibleOddsDefault,
     this.info = const{},
   }) {
-    if (probability <= 0 || probability >= 1) {
-      throw ArgumentError("Probability must be between 0 and 1");
+    if (probability < 0 || probability > 1) {
+      throw ArgumentError("Probability must be between 0 and 1, actual: $probability");
     }
   }
 
