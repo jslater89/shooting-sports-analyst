@@ -107,6 +107,15 @@ enum PredictionGameTransactionType {
 }
 
 class PredictionGamePlayerLimits {
+  int? maxConcurrentWagers;
   double? maxWager;
-  int? maxWagerCount;
+  double startingAmount;
+  double topUpAmount;
+
+  PredictionGamePlayerLimits({
+    this.maxConcurrentWagers,
+    this.maxWager,
+    this.startingAmount = 0.0,
+    this.topUpAmount = 0.0,
+  });
 }

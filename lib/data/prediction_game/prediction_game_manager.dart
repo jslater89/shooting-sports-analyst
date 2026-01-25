@@ -136,7 +136,7 @@ class PredictionGameManager {
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
-      if(limits.maxWagerCount != null && limits.maxWagerCount! < openWagers + 1) {
+      if(limits.maxConcurrentWagers != null && limits.maxConcurrentWagers! < openWagers + 1) {
         return Result.err(AddWagerError.exceededMaxWagerCount);
       }
     }
@@ -147,6 +147,7 @@ class PredictionGameManager {
       await db.saveWager(wager, saveLinks: true, createWagerTransaction: true);
     }
     catch(e) {
+      _log.e("Error adding wager: $e");
       return Result.err(AddWagerError.unknown);
     }
     await loadPredictionGame();
@@ -169,7 +170,7 @@ class PredictionGameManager {
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
-      if(limits.maxWagerCount != null && limits.maxWagerCount! < openWagers + 1) {
+      if(limits.maxConcurrentWagers != null && limits.maxConcurrentWagers! < openWagers + 1) {
         return Result.err(AddWagerError.exceededMaxWagerCount);
       }
     }
