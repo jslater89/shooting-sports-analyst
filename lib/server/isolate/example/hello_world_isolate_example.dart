@@ -32,10 +32,14 @@ void main() async {
   // Start the manager isolate and get its send port.
   var managerIsolateSendPort = await IsolateCommon.startManagerIsolate(loggerSendPort: loggerSendPort, initIsolateReceivePort: initIsolateReceivePort);
 
+  var serverIsolateStartupCompleter = Completer<void>();
   var startupReceivePort = ReceivePort();
   startupReceivePort.listen((message) {
     if(message is StartupCompleteResponse) {
       _log.i("Startup complete for isolate ${message.sourceIsolateId}");
+      if(message.sourceIsolateId == HelloWorldServer.id) {
+        serverIsolateStartupCompleter.complete();
+      }
     }
   });
   // Set up the final init data for non-manager isolates.
@@ -48,6 +52,9 @@ void main() async {
 
   // Spawn the server isolate. Its helper will register with the manager isolate.
   var helloWorldServerIsolate = await Isolate.spawn(HelloWorldServer.entrypoint, initData.copyWithId(HelloWorldServer.id));
+
+  await serverIsolateStartupCompleter.future;
+  _log.i("All server isolate startups complete");
 
   // Spawn the client isolates. They will use their own isolate's IsolateManagerClient to connect to the server isolate.
   var helloWorldClientIsolate1 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client1"));

@@ -76,7 +76,7 @@ class User {
   @ignore
   bool get isPatreonOauthAuthenticated => availableAuthMethods.contains(AuthMethod.patreonOauth);
   /// The session information for Patreon OAuth authentication, if available.
-  PatreonOauthSession? patreonInfo;
+  PatreonOauthInfo? patreonInfo;
 
   User({
     required this.username,
@@ -94,22 +94,36 @@ enum AuthMethod {
 }
 
 @embedded
-class PatreonOauthSession {
+class PatreonOauthInfo {
   String lastPatreonTierId = "";
   String lastPatreonTierName = "";
   DateTime expiresAt = practicalShootingZeroDate;
   DateTime nextTierCheck = practicalShootingZeroDate;
 
   /// Zero-arg constructor for Isar. Use [create] to initialize.
-  PatreonOauthSession();
+  PatreonOauthInfo();
 
-  /// Create a new Patreon OAuth se`ssion.
-  PatreonOauthSession.create({
+  /// Create a new Patreon OAuth session.
+  PatreonOauthInfo.create({
     required this.lastPatreonTierId,
     required this.lastPatreonTierName,
     required this.expiresAt,
     required this.nextTierCheck,
   });
+
+  PatreonOauthInfo copyWith({
+    String? lastPatreonTierId,
+    String? lastPatreonTierName,
+    DateTime? expiresAt,
+    DateTime? nextTierCheck,
+  }) {
+    return PatreonOauthInfo.create(
+      lastPatreonTierId: lastPatreonTierId ?? this.lastPatreonTierId,
+      lastPatreonTierName: lastPatreonTierName ?? this.lastPatreonTierName,
+      expiresAt: expiresAt ?? this.expiresAt,
+      nextTierCheck: nextTierCheck ?? this.nextTierCheck,
+    );
+  }
 
   @ignore
   bool get isValid => expiresAt.isAfter(DateTime.now());

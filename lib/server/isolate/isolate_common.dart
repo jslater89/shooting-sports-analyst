@@ -24,6 +24,13 @@ class IsolateCommon {
     isolateId = startData.isolateId;
   }
 
+  /// Set up the [IsolateManagerClient] for the current isolate.
+  ///
+  /// [startData] is the [IsolateStartData] for the current isolate.
+  /// [existingIsolate] is whether the current isolate is the main isolate. If existingIsolate is false,
+  /// the setup process will redirect logging to the main isolate via the [SendPort] in [startData.logPort].
+  ///
+  /// Returns the [IsolateManagerClient] for the current isolate.
   static Future<IsolateManagerClient> setupClient(IsolateStartData startData, {bool existingIsolate = false}) async {
     setup(startData, existingIsolate: existingIsolate);
     managerClient = IsolateManagerClient(isolateId, managerSendPort!);
@@ -31,6 +38,12 @@ class IsolateCommon {
     return managerClient!;
   }
 
+  /// Start the manager isolate and return the send port to the calling isolate. Call from the main isolate.
+  ///
+  /// [loggerSendPort] is the send port to the main isolate for logging.
+  /// [initIsolateReceivePort] is the receive port to listen for messages from the manager isolate.
+  ///
+  /// Returns the send port to the manager isolate.
   static Future<SendPort> startManagerIsolate({
     required SendPort loggerSendPort,
     required ReceivePort initIsolateReceivePort,
