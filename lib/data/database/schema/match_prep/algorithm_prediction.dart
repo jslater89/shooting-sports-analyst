@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/predicti
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -99,15 +100,17 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     return predictions.map((p) => DbAlgorithmPrediction.fromHydrated(project, predictionSet, p)).toList();
   }
 
-  AlgorithmPrediction? hydrate({RatingSystem? preloadedAlgorithm, RaterSettings? preloadedSettings}) {
-    var dbRating = getShooterRatingSync(AnalystDatabase(), save: true);
-    if(dbRating == null) {
-      return null;
-    }
+  AlgorithmPrediction? hydrate({RatingSystem? preloadedAlgorithm, RaterSettings? preloadedSettings, ShooterRating? preloadedRating}) {
     preloadedAlgorithm ??= algorithm;
-    var wrapped = preloadedAlgorithm.wrapDbRating(dbRating);
+    if(preloadedRating == null) {
+      var dbRating = getShooterRatingSync(AnalystDatabase(), save: true);
+      if(dbRating == null) {
+        return null;
+      }
+      preloadedRating = preloadedAlgorithm.wrapDbRating(dbRating);
+    }
     var prediction = AlgorithmPrediction(
-      shooter: wrapped,
+      shooter: preloadedRating,
       mean: mean,
       sigma: oneSigma,
       ciOffset: ciOffset,
@@ -129,10 +132,12 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     String firstName = "Unknown";
     String lastName = "Unknown";
     String memberNumber = this.memberNumber;
+    Set<String> knownMemberNumbers = {this.memberNumber};
     if(loadFromRating && rating.value != null) {
       firstName = rating.value!.firstName;
       lastName = rating.value!.lastName;
       memberNumber = rating.value!.memberNumber;
+      knownMemberNumbers = rating.value!.knownMemberNumbers;
     }
     var shooter = Shooter(
       firstName: firstName,

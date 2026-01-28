@@ -119,5 +119,11 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   }
 
   @override
+  int? get stageCount => length;
+
+  @override
+  int? get matchCount => null;
+
+  @override
   List<OpenskillRatingEvent> get emptyRatingEvents => [];
 }

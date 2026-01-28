@@ -1,12 +1,17 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_utils.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -79,6 +84,43 @@ extension PredictionGameExtension on AnalystDatabase {
       query = query.predictionSetsIsNotEmpty();
     }
     return query.sortByMatchDateDesc().findAllSync();
+  }
+
+  /// Get all prediction game players for a prediction game.
+  Future<List<PredictionGamePlayer>> getAllPlayersForGame(PredictionGame game) async {
+    return game.users.filter().findAll();
+  }
+
+  List<PredictionGamePlayer> getAllPlayersForGameSync(PredictionGame game) {
+    return game.users.filter().findAllSync();
+  }
+
+  /// Get the prediction game player for a certain user and prediction game.
+  Future<PredictionGamePlayer?> getPlayerForUserAndGame(User user, PredictionGame game) async {
+    return game.users.filter().serverUser((q) => q.idEqualTo(user.id)).findFirst();
+  }
+
+  PredictionGamePlayer? getPlayerForUserAndGameSync(User user, PredictionGame game) {
+    return game.users.filter().serverUser((q) => q.idEqualTo(user.id)).findFirstSync();
+  }
+
+  /// Get the algorithm prediction for a rating in a match prep, using the latest prediction set if none is provided.
+  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) async {
+    predictionSet ??= matchPrep.latestPredictionSet();
+    return predictionSet?.algorithmPredictions
+      .filter()
+      .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
+      .group((q) => q.uuidEqualTo(rating.group.uuid))
+      .findFirst();
+  }
+
+  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) {
+    predictionSet ??= matchPrep.latestPredictionSet();
+    return predictionSet?.algorithmPredictions
+      .filter()
+      .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
+      .group((q) => q.uuidEqualTo(rating.group.uuid))
+      .findFirstSync();
   }
 
   /// Save a prediction game player to the database.

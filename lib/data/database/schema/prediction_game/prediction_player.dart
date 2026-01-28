@@ -36,6 +36,9 @@ class PredictionGamePlayer {
   @Backlink(to: 'user')
   final transactions = IsarLinks<PredictionGameTransaction>();
 
+  /// The limits for the user.
+  PredictionGamePlayerLimits limits = PredictionGamePlayerLimits();
+
   /// The amount that the user should be topped up to at regular intervals,
   /// or null if none.
   double? topupTargetBalance;
@@ -106,10 +109,20 @@ enum PredictionGameTransactionType {
   };
 }
 
+/// Limits for a prediction game player.
+@embedded
 class PredictionGamePlayerLimits {
+  /// The maximum number of concurrent open wagers the player can have.
   int? maxConcurrentWagers;
+
+  /// The maximum wager amount the player can make.
   double? maxWager;
+
+  /// The player's starting balance.
   double startingAmount;
+
+  /// The player's top-up amount, to which their balance will be set
+  /// if they're below it at the end of some time period.
   double topUpAmount;
 
   PredictionGamePlayerLimits({

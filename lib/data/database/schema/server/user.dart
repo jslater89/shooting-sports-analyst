@@ -98,6 +98,18 @@ class PatreonOauthSession {
   String lastPatreonTierId = "";
   String lastPatreonTierName = "";
   DateTime expiresAt = practicalShootingZeroDate;
+  DateTime nextTierCheck = practicalShootingZeroDate;
+
+  /// Zero-arg constructor for Isar. Use [create] to initialize.
+  PatreonOauthSession();
+
+  /// Create a new Patreon OAuth se`ssion.
+  PatreonOauthSession.create({
+    required this.lastPatreonTierId,
+    required this.lastPatreonTierName,
+    required this.expiresAt,
+    required this.nextTierCheck,
+  });
 
   @ignore
   bool get isValid => expiresAt.isAfter(DateTime.now());

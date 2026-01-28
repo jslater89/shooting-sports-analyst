@@ -34,6 +34,10 @@ class CareerStats {
     return annualStats.firstWhereOrNull((e) => e.start.year == year);
   }
 
+  bool isAnnualStats(PeriodicStats stats) {
+    return stats.start.year == stats.end.year;
+  }
+
   CareerStats(this.sport, this.rating) {
     _calculateAnnualStats();
   }
@@ -61,7 +65,8 @@ class CareerStats {
 
     for(int year in years) {
       DateTime yearStart = DateTime(year);
-      DateTime yearEnd = DateTime(year + 1);
+      // 1 second before the start of the next year
+      DateTime yearEnd = DateTime(year + 1).add(Duration(seconds: -1));
 
       var historyEntries = matchHistory.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();
       var combinedEvents = rating.ratingEvents.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();

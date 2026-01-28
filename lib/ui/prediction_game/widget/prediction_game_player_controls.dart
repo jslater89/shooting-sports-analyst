@@ -230,6 +230,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                     title: "Odds for ${selectedRatingGroup!.name}",
                     helpText: "Current match: ${selectedMatchPrep!.futureMatch.value!.eventName}",
                     availableBalance: player.balance,
+                    game: model.predictionGame,
                   );
 
                   if(result != null) {

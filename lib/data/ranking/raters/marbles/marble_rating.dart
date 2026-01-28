@@ -62,6 +62,12 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
   List<MarbleRatingEvent> get emptyRatingEvents => [];
 
   @override
+  int? get stageCount => length;
+
+  @override
+  int? get matchCount => null;
+
+  @override
   void updateFromEvents(List<RatingEvent> events) {
     super.updateFromEvents(events);
     for(var event in events) {

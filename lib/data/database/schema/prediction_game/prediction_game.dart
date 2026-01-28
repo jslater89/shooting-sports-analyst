@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/predicti
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'prediction_game.g.dart';
@@ -27,14 +28,22 @@ class PredictionGame {
   /// The matches that are part of this game.
   final matchPreps = IsarLinks<MatchPrep>();
 
-  /// The minimum number of competitors required in a rating group for that group to be
-  /// eligible for the game.
+  /// The minimum number of competitors required in a rating group at a match for that
+  /// match/group to be eligible for the game.
   int minimumCompetitorsRequired;
 
   /// The minimum finish ratio required (using the center of the range, however the prediction
   /// algorithm defines 'center') for a competitor to be eligible for wagers. If null,
   /// all competitors are eligible.
   double? minimumWagerableCompetitorFinishRatio;
+
+  /// The minimum number of stages required in a competitor's history for them to be eligible for wagers.
+  /// If null, all competitors are eligible.
+  int? minimumWagerableStageCount;
+
+  /// The minimum number of matches required in a competitor's history for them to be eligible for wagers.
+  /// If null, all competitors are eligible.
+  int? minimumWagerableMatchCount;
 
   // TODO: a way to specify matchPrep -> allowed rating groups
   // and/or other ways to determine what we want to offer odds on
@@ -88,4 +97,66 @@ class PredictionGame {
     this.end,
     this.minimumCompetitorsRequired = 10,
   });
+
+  /// Check if a competitor is eligible for a wager.
+  WagerIneligibilityReason? checkValidity(AlgorithmPrediction prediction) {
+    var ratingStageCount = prediction.shooter.stageCount;
+    var ratingMatchCount = prediction.shooter.matchCount;
+    if(minimumWagerableCompetitorFinishRatio != null && prediction.center < minimumWagerableCompetitorFinishRatio!) {
+      return WagerIneligibilityReason.insufficientFinishRatio;
+    }
+    if(minimumWagerableStageCount != null && ratingStageCount != null && ratingStageCount < minimumWagerableStageCount!) {
+      return WagerIneligibilityReason.insufficientStageCount;
+    }
+    if(minimumWagerableMatchCount != null && ratingMatchCount != null && ratingMatchCount < minimumWagerableMatchCount!) {
+      return WagerIneligibilityReason.insufficientMatchCount;
+    }
+
+    return null;
+  }
+}
+
+/// The reasons a competitor may be ineligible for a wager.
+enum WagerIneligibilityReason {
+  /// The competitor's finish ratio is below the minimum required.
+  insufficientFinishRatio,
+  /// The competitor does not have enough stage count in their history.
+  insufficientStageCount,
+  /// The competitor does not have enough match count in their history.
+  insufficientMatchCount,
+  /// The competitor does not have enough competitors in the rating group.
+  insufficientCompetitorsInGroup;
+
+  /// Get a human-readable description of the reason for ineligibility.
+  ///
+  /// If [game] is provided, the description includes the minimum required values for the game.
+  String uiDescription([PredictionGame? game]) {
+    if(game != null) {
+      var minimumFinishRatioSentenceEnd = game.minimumWagerableCompetitorFinishRatio != null ? "the minimum requirement of ${game.minimumWagerableCompetitorFinishRatio?.asPercentage(decimals: 2, includePercent: true) ?? "unknown"}" : "the minimum requirement";
+      var minimumStageCountSentenceEnd = game.minimumWagerableStageCount != null ? " (minimum ${game.minimumWagerableStageCount} required)." : ".";
+      var minimumMatchCountSentenceEnd = game.minimumWagerableMatchCount != null ? " (minimum ${game.minimumWagerableMatchCount} required)." : ".";
+      var minimumCompetitorCountSentenceEnd = game.minimumCompetitorsRequired > 0 ? " (minimum of ${game.minimumCompetitorsRequired} required)." : ".";
+      return switch(this) {
+        insufficientFinishRatio => "The competitor is not projected to finish above $minimumFinishRatioSentenceEnd.",
+        insufficientStageCount => "The competitor does not have enough stages in their history$minimumStageCountSentenceEnd",
+        insufficientMatchCount => "The competitor does not have enough matches in their history$minimumMatchCountSentenceEnd",
+        insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match$minimumCompetitorCountSentenceEnd"
+      };
+    }
+    return switch(this) {
+      insufficientFinishRatio => "The competitor is not projected to finish above the minimum requirement.",
+      insufficientStageCount => "The competitor does not have enough stages in their history.",
+      insufficientMatchCount => "The competitor does not have enough matches in their history.",
+      insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match."
+    };
+  }
+
+  String get uiShortDescription {
+    return switch(this) {
+      insufficientFinishRatio => "Projected finish too low",
+      insufficientStageCount => "Insufficient stage history",
+      insufficientMatchCount => "Insufficient match history",
+      insufficientCompetitorsInGroup => "Too few competitors in group"
+    };
+  }
 }

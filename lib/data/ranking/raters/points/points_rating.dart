@@ -65,6 +65,12 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
     }
   }
 
+  @override
+  int? get stageCount => null;
+
+  @override
+  int? get matchCount => length;
+
   List<RatingEvent> usedEvents() {
     int matchCount = wrappedRating.intData[_IntKeys.matchesToCount.index];
     if(matchCount == 0) matchCount = this.sortedEvents.length;

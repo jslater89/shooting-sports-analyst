@@ -193,6 +193,12 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     );
   }
 
+  @override
+  int? get stageCount => length;
+
+  @override
+  int? get matchCount => null;
+
   double get backRatingError {
     var events = eventsForWindow();
     var errors = events.map((e) => (e as EloRatingEvent).backRatingError);

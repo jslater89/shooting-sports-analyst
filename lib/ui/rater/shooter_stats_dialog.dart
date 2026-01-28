@@ -458,6 +458,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       minimumMaximum = 1500;
       maximumMinimum = 1500;
     }
+    else if(rating is EloShooterRating && careerStats.isAnnualStats(displayedStats)) {
+      // minimumMaximum = 1000;
+      // maximumMinimum = 1000;
+    }
     // Elo doesn't really have this problem because the initial rating jump is usually
     // much smaller.
 

@@ -112,6 +112,12 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   int get lengthInStages => wrappedRating.intData[_IntKeys.lengthInStages.index];
   set lengthInStages(int v) => wrappedRating.intData[_IntKeys.lengthInStages.index] = v;
 
+  @override
+  int? get stageCount => lengthInStages;
+
+  @override
+  int? get matchCount => length;
+
   /// Calculate the current RD for this competitor based on the committed RD, volatility, and
   /// (fractional) number of pseudo-rating-periods since the last commit, in internal units.
   ///

@@ -327,6 +327,20 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   @ignore
   int get length => wrappedRating.length;
 
+  /// The number of stages in this shooter's history.
+  ///
+  /// If the rating system does not track stage count, this
+  /// should return null.
+  @ignore
+  int? get stageCount;
+
+  /// The number of matches in this shooter's history.
+  ///
+  /// If the rating system does not track match count, this
+  /// should return null.
+  @ignore
+  int? get matchCount;
+
   /// Update this rating from the given list of events.
   ///
   /// This function updates [wrappedRating.cachedLength], but implementations
