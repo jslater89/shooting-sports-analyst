@@ -15,8 +15,8 @@ class IsolateCommon {
   static SendPort? managerSendPort;
   static IsolateManagerClient? managerClient;
 
-  static void setup(IsolateStartData startData, {bool existingIsolate = false}) {
-    if(!existingIsolate) {
+  static void setup(IsolateStartData startData, {bool mainIsolate = false}) {
+    if(!mainIsolate) {
       FlutterOrNative.debugModeProvider = ServerDebugProvider();
       SSALogger.setupSendPort(startData.logPort, isolateName: startData.isolateId);
     }
@@ -27,12 +27,12 @@ class IsolateCommon {
   /// Set up the [IsolateManagerClient] for the current isolate.
   ///
   /// [startData] is the [IsolateStartData] for the current isolate.
-  /// [existingIsolate] is whether the current isolate is the main isolate. If existingIsolate is false,
+  /// [mainIsolate] is whether the current isolate is the main isolate. If mainIsolate is false,
   /// the setup process will redirect logging to the main isolate via the [SendPort] in [startData.logPort].
   ///
   /// Returns the [IsolateManagerClient] for the current isolate.
-  static Future<IsolateManagerClient> setupClient(IsolateStartData startData, {bool existingIsolate = false}) async {
-    setup(startData, existingIsolate: existingIsolate);
+  static Future<IsolateManagerClient> setupClient(IsolateStartData startData, {bool mainIsolate = false}) async {
+    setup(startData, mainIsolate: mainIsolate);
     managerClient = IsolateManagerClient(isolateId, managerSendPort!);
     await managerClient!.ready;
     return managerClient!;

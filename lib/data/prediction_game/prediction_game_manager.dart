@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -106,14 +107,16 @@ class PredictionGameManager {
   // Player management
   // ======================
 
-  Future<void> savePlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
+  Future<PredictionGamePlayer> savePlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
     await db.savePredictionGamePlayer(player, newTransactions: newTransactions, saveLinks: true);
     await loadPredictionGame();
+    return player;
   }
 
-  void savePlayerSync(PredictionGamePlayer player) {
+  PredictionGamePlayer savePlayerSync(PredictionGamePlayer player) {
     db.savePredictionGamePlayerSync(player);
     loadPredictionGameSync();
+    return player;
   }
 
   Future<void> deletePlayer(PredictionGamePlayer player) async {

@@ -131,4 +131,9 @@ class PredictionGamePlayerLimits {
     this.startingAmount = 0.0,
     this.topUpAmount = 0.0,
   });
+
+  @override
+  String toString() {
+    return "PredictionGamePlayerLimits(maxConcurrentWagers: $maxConcurrentWagers, maxWager: $maxWager, startingAmount: $startingAmount, topUpAmount: $topUpAmount)";
+  }
 }

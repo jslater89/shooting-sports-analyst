@@ -122,8 +122,8 @@ class IsolateMatchCacheClient implements MatchCache {
     );
   }
 
-  static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {bool existingIsolate = true}) async {
-    var managerClient = await IsolateCommon.setupClient(startData, existingIsolate: existingIsolate);
+  static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {bool mainIsolate = true}) async {
+    var managerClient = await IsolateCommon.setupClient(startData, mainIsolate: mainIsolate);
     var client = IsolateMatchCacheClient(managerClient);
     await client.clientReady;
 

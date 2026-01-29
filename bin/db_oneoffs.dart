@@ -75,6 +75,7 @@ late SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> main(List<String> args) async {
   FlutterOrNative.debugModeProvider = ServerDebugProvider();
+  FlutterOrNative.serverModeProvider = ServerDebugProvider(isServer: false);
   SSALogger.consoleOutput = false;
   SSALogger.fileOutput = true;
   await _log.ready;

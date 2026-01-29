@@ -37,7 +37,7 @@ class HelloWorldIsolateClient {
   /// Pass this method to Isolate.spawn to run it on a new isolate, or call [startOnCurrentIsolate] to create a
   /// HelloWorldIsolateClient on the existing isolate.
   static Future<void> entrypoint(IsolateStartData startData) async {
-    var client = await startOnCurrentIsolate(startData, existingIsolate: false);
+    var client = await startOnCurrentIsolate(startData, mainIsolate: false);
 
     // Real client code would probably wait on a webserver or some other long-running task, and
     // use the returned client to interact with the server isolate.
@@ -45,8 +45,8 @@ class HelloWorldIsolateClient {
   }
 
   /// Create a HelloWorldIsolateClient on the current isolate.
-  static Future<HelloWorldIsolateClient> startOnCurrentIsolate(IsolateStartData startData, {bool existingIsolate = true}) async {
-    var managerClient = await IsolateCommon.setupClient(startData, existingIsolate: existingIsolate);
+  static Future<HelloWorldIsolateClient> startOnCurrentIsolate(IsolateStartData startData, {bool mainIsolate = false}) async {
+    var managerClient = await IsolateCommon.setupClient(startData, mainIsolate: mainIsolate);
     var client = HelloWorldIsolateClient(IsolateCommon.isolateId, managerClient);
     await client.connect();
     _log.i("Client connected to server isolate");

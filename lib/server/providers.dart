@@ -19,7 +19,13 @@ class ServerDebugProvider implements DebugModeProvider, ServerModeProvider {
   bool get kReleaseMode => false;
 
   @override
-  bool get kServerMode => true;
+  bool get kServerMode => _isServer;
+
+  bool _isServer = true;
+
+  ServerDebugProvider({bool isServer = true}) {
+    _isServer = isServer;
+  }
 }
 
 class ServerConfigProvider implements ConfigProvider {

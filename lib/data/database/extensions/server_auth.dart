@@ -83,6 +83,7 @@ extension UserRoleDatabase on AnalystDatabase {
   Future<List<Role>> saveAllRoles(List<Role> roles) async {
     await isar.writeTxn(() async {
       await isar.roles.putAll(roles);
+      await isar.roles.filter().roleIdIsEmpty().deleteAll();
     });
     return roles;
   }
@@ -90,6 +91,7 @@ extension UserRoleDatabase on AnalystDatabase {
   List<Role> saveAllRolesSync(List<Role> roles) {
     isar.writeTxnSync(() {
       isar.roles.putAllSync(roles);
+      isar.roles.filter().roleIdIsEmpty().deleteAllSync();
     });
     return roles;
   }
