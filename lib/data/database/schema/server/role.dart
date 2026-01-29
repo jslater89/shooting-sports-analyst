@@ -25,6 +25,11 @@ class Role {
     required this.permissions,
     this.usageLimits = const [],
   });
+
+  @override
+  String toString() {
+    return "$name ($roleId)";
+  }
 }
 
 /// Information about the allowed usage or limits for a role.

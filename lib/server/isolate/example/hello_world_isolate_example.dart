@@ -61,6 +61,6 @@ void main() async {
   var helloWorldClientIsolate2 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client2"));
 
   var mainIsolateData = initData.copyWithId("main");
-  var mainIsolateClient = await HelloWorldIsolateClient.startOnCurrentIsolate(mainIsolateData, existingIsolate: true);
+  var mainIsolateClient = await HelloWorldIsolateClient.startOnCurrentIsolate(mainIsolateData, mainIsolate: true);
   _log.i("Server and client isolates spawned");
 }
