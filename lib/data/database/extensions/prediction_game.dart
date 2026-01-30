@@ -86,6 +86,16 @@ extension PredictionGameExtension on AnalystDatabase {
     return query.sortByMatchDateDesc().findAllSync();
   }
 
+  /// Get all prediction game players for a user.
+  Future<List<PredictionGamePlayer>> getAllPlayersForUser(User user, {bool onlyActiveGames = true}) async {
+    return user.predictionGamePlayers.filter().findAll();
+  }
+
+  /// Get all prediction game players for a user synchronously.
+  List<PredictionGamePlayer> getAllPlayersForUserSync(User user, {bool onlyActiveGames = true}) {
+    return user.predictionGamePlayers.filter().findAllSync();
+  }
+
   /// Get all prediction game players for a prediction game.
   Future<List<PredictionGamePlayer>> getAllPlayersForGame(PredictionGame game) async {
     return game.users.filter().findAll();

@@ -18,6 +18,7 @@ const ipscPccOptics = Division(name: "PCC Optic", shortName: "PCCO", alternateNa
 const ipscPccIrons = Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]);
 const ipscStandard = Division(name: "Standard", shortName: "STD", alternateNames: ["STA"], fallback: true);
 const ipscProductionOptics = Division(name: "Production Optics", longName: "Production Optics", shortName: "PO");
+const ipscOptics = Division(name: "Optics", longName: "Optics", shortName: "OP");
 const ipscProduction = Division(name: "Production", shortName: "PROD", fallback: true);
 const ipscClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]);
 const ipscRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
@@ -27,6 +28,7 @@ const ipscDivisions = [
   ipscPccIrons,
   ipscStandard,
   ipscProductionOptics,
+  ipscOptics,
   ipscProduction,
   ipscClassic,
   ipscRevolver,

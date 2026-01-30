@@ -89,6 +89,16 @@ class PredictionGame {
   DateTime? start;
   DateTime? end;
 
+  @ignore
+  /// Whether this game is currently active.
+  bool get isActive => hasStarted && !hasEnded;
+
+  @ignore
+  bool get hasStarted => start == null || start!.isBefore(DateTime.now());
+
+  @ignore
+  bool get hasEnded => end != null && end!.isBefore(DateTime.now());
+
   PredictionGame({
     required this.name,
     this.description,
