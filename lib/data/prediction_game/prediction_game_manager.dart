@@ -60,6 +60,38 @@ class PredictionGameManager {
     loadPredictionGameSync();
   }
 
+  Future<void> enableMatchPrep(MatchPrep matchPrep) async {
+    var matchPreps = predictionGame.disabledMatchPreps.toList();
+    matchPreps.remove(matchPrep.id);
+    predictionGame.disabledMatchPreps = matchPreps;
+    await db.savePredictionGame(predictionGame);
+    await loadPredictionGame();
+  }
+
+  void enableMatchPrepSync(MatchPrep matchPrep) {
+    var matchPreps = predictionGame.disabledMatchPreps.toList();
+    matchPreps.remove(matchPrep.id);
+    predictionGame.disabledMatchPreps = matchPreps;
+    db.savePredictionGameSync(predictionGame);
+    loadPredictionGameSync();
+  }
+
+  Future<void> disableMatchPrep(MatchPrep matchPrep) async {
+    var matchPreps = predictionGame.disabledMatchPreps.toList();
+    matchPreps.add(matchPrep.id);
+    predictionGame.disabledMatchPreps = matchPreps;
+    await db.savePredictionGame(predictionGame);
+    await loadPredictionGame();
+  }
+
+  void disableMatchPrepSync(MatchPrep matchPrep) {
+    var matchPreps = predictionGame.disabledMatchPreps.toList();
+    matchPreps.add(matchPrep.id);
+    predictionGame.disabledMatchPreps = matchPreps;
+    db.savePredictionGameSync(predictionGame);
+    loadPredictionGameSync();
+  }
+
   Future<List<MatchPrep>> getMatchPreps({bool futureOnly = true, bool hasPredictionsOnly = true}) async {
     return db.getMatchPreps(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
   }

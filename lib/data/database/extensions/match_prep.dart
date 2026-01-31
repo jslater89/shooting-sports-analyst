@@ -18,10 +18,17 @@ extension MatchPrepDatabase on AnalystDatabase {
     return isar.matchPreps.where().sortByMatchDateDesc().findAll();
   }
 
+  /// Get all match preps synchronously.
+  List<MatchPrep> getMatchPrepsSync() {
+    return isar.matchPreps.where().sortByMatchDateDesc().findAllSync();
+  }
+
   Future<List<MatchPrep>> queryMatchPreps({
     String? nameFilter,
     DateTime? after,
+    DateTime? before,
     int limit = 10,
+    bool hasPredictionsOnly = false,
   }) {
     var queryBase = isar.matchPreps.where();
     var filteredQuery = queryBase.filter();
@@ -30,7 +37,28 @@ extension MatchPrepDatabase on AnalystDatabase {
       afterQuery = filteredQuery.futureMatch((m) => m.eventNameContains(nameFilter, caseSensitive: false));
     }
     if(after != null) {
-      afterQuery = filteredQuery.futureMatch((m) => m.dateGreaterThan(after));
+      if(afterQuery == null) {
+        afterQuery = filteredQuery.futureMatch((m) => m.dateGreaterThan(after));
+      }
+      else {
+        afterQuery = afterQuery.futureMatch((m) => m.dateGreaterThan(after));
+      }
+    }
+    if(before != null) {
+      if(afterQuery == null) {
+        afterQuery = filteredQuery.futureMatch((m) => m.dateLessThan(before));
+      }
+      else {
+        afterQuery = afterQuery.futureMatch((m) => m.dateLessThan(before));
+      }
+    }
+    if(hasPredictionsOnly) {
+      if(afterQuery == null) {
+        afterQuery = filteredQuery.predictionSetsIsNotEmpty();
+      }
+      else {
+        afterQuery = afterQuery.predictionSetsIsNotEmpty();
+      }
     }
 
     if(afterQuery != null) {
@@ -40,11 +68,6 @@ extension MatchPrepDatabase on AnalystDatabase {
       return queryBase.sortByMatchDateDesc().limit(limit).findAll();
     }
   }
-
-  /// Get all match preps synchronously.
-  List<MatchPrep> getMatchPrepsSync() {
-    return isar.matchPreps.where().sortByMatchDateDesc().findAllSync();
-}
 
   /// Get a match prep for a specific project and match ID, in both cases the database ID
   /// rather than any other ID.

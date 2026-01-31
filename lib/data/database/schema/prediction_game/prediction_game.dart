@@ -28,6 +28,9 @@ class PredictionGame {
   /// The matches that are part of this game.
   final matchPreps = IsarLinks<MatchPrep>();
 
+  /// The IDs of match preps that are attached to this game but disabled/unavailable for wagers.
+  List<int> disabledMatchPreps = [];
+
   /// The minimum number of competitors required in a rating group at a match for that
   /// match/group to be eligible for the game.
   int minimumCompetitorsRequired;
@@ -44,6 +47,10 @@ class PredictionGame {
   /// The minimum number of matches required in a competitor's history for them to be eligible for wagers.
   /// If null, all competitors are eligible.
   int? minimumWagerableMatchCount;
+
+  /// The maximum number of days since a competitor's last rating activity for them to be eligible for wagers.
+  /// If null, all competitors are eligible.
+  int? maximumWagerableRatingAgeDays;
 
   // TODO: a way to specify matchPrep -> allowed rating groups
   // and/or other ways to determine what we want to offer odds on
@@ -112,6 +119,9 @@ class PredictionGame {
   WagerIneligibilityReason? checkValidity(AlgorithmPrediction prediction) {
     var ratingStageCount = prediction.shooter.stageCount;
     var ratingMatchCount = prediction.shooter.matchCount;
+    var lastActivity = prediction.shooter.lastSeen;
+    var daysSinceLastActivity = DateTime.now().difference(lastActivity).inDays;
+
     if(minimumWagerableCompetitorFinishRatio != null && prediction.center < minimumWagerableCompetitorFinishRatio!) {
       return WagerIneligibilityReason.insufficientFinishRatio;
     }
@@ -120,6 +130,9 @@ class PredictionGame {
     }
     if(minimumWagerableMatchCount != null && ratingMatchCount != null && ratingMatchCount < minimumWagerableMatchCount!) {
       return WagerIneligibilityReason.insufficientMatchCount;
+    }
+    if(maximumWagerableRatingAgeDays != null && daysSinceLastActivity > maximumWagerableRatingAgeDays!) {
+      return WagerIneligibilityReason.staleRating;
     }
 
     return null;
@@ -135,7 +148,9 @@ enum WagerIneligibilityReason {
   /// The competitor does not have enough match count in their history.
   insufficientMatchCount,
   /// The competitor does not have enough competitors in the rating group.
-  insufficientCompetitorsInGroup;
+  insufficientCompetitorsInGroup,
+  /// The competitor has not been seen recently enough.
+  staleRating;
 
   /// Get a human-readable description of the reason for ineligibility.
   ///
@@ -146,18 +161,21 @@ enum WagerIneligibilityReason {
       var minimumStageCountSentenceEnd = game.minimumWagerableStageCount != null ? " (minimum ${game.minimumWagerableStageCount} required)." : ".";
       var minimumMatchCountSentenceEnd = game.minimumWagerableMatchCount != null ? " (minimum ${game.minimumWagerableMatchCount} required)." : ".";
       var minimumCompetitorCountSentenceEnd = game.minimumCompetitorsRequired > 0 ? " (minimum of ${game.minimumCompetitorsRequired} required)." : ".";
+      var staleRatingSentenceEnd = game.maximumWagerableRatingAgeDays != null ? " (maximum of ${game.maximumWagerableRatingAgeDays} since last activity)." : ".";
       return switch(this) {
         insufficientFinishRatio => "The competitor is not projected to finish above $minimumFinishRatioSentenceEnd.",
         insufficientStageCount => "The competitor does not have enough stages in their history$minimumStageCountSentenceEnd",
         insufficientMatchCount => "The competitor does not have enough matches in their history$minimumMatchCountSentenceEnd",
-        insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match$minimumCompetitorCountSentenceEnd"
+        insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match$minimumCompetitorCountSentenceEnd",
+        staleRating => "The competitor has not been seen recently enough$staleRatingSentenceEnd"
       };
     }
     return switch(this) {
       insufficientFinishRatio => "The competitor is not projected to finish above the minimum requirement.",
       insufficientStageCount => "The competitor does not have enough stages in their history.",
       insufficientMatchCount => "The competitor does not have enough matches in their history.",
-      insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match."
+      insufficientCompetitorsInGroup => "There are not enough competitors in this rating group at the match.",
+      staleRating => "The competitor has not been seen recently enough."
     };
   }
 
@@ -166,7 +184,8 @@ enum WagerIneligibilityReason {
       insufficientFinishRatio => "Projected finish too low",
       insufficientStageCount => "Insufficient stage history",
       insufficientMatchCount => "Insufficient match history",
-      insufficientCompetitorsInGroup => "Too few competitors in group"
+      insufficientCompetitorsInGroup => "Too few competitors in group",
+      staleRating => "Not seen recently"
     };
   }
 }
