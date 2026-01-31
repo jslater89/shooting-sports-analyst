@@ -21,11 +21,12 @@ class MatchRegistration {
   /// If a registration source does not have a stable entryId, that registration source
   /// should prefer to delete and recreate the FutureMatch and MatchRegistration objects.
   Id get id {
-    return combineHashList([
+    return combineHashList64([
       matchId.stableHash,
       entryId.stableHash,
     ]);
   }
+
   /// A unique identifier for the match.
   @Index()
   String matchId;

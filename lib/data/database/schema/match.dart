@@ -553,7 +553,7 @@ class StandaloneDbMatchEntry extends DbMatchEntryBase {
   /// even across matches and sports.
   Id get dbId {
     if(matchSourceIds.isNotEmpty) {
-      return combineHashList([entryId.stableHash, matchSourceIds.first.stableHash]);
+      return combineHashList64([entryId.stableHash, matchSourceIds.first.stableHash]);
     }
     else {
       // TODO: this may cause crashes with Isar

@@ -288,15 +288,35 @@ extension StableIntHash on int {
     x = (x >> 16) ^ x;
     return x;
   }
+
+  /// 64-bit stable hash. Same guarantees as [stableHash] but full 64-bit range.
+  int get stableHash64 {
+    var x = this & 0xFFFFFFFFFFFFFFFF;
+    x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF;
+    x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF;
+    return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF;
+  }
 }
 
 /// Combine two hashes into a new hash, in a way that
 /// will not change over app runs or Flutter releases
 /// and can therefore be used in the database as a key.
+///
+/// Deprecated: use [combineHashes64] instead to use the
+/// full range of Dart int.
+@Deprecated("Use combineHashes64 instead")
 int combineHashes(int hash, int value) {
   hash = 0x1fffffff & (hash + value);
   hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
   return hash ^ (hash >> 6);
+}
+
+/// 64-bit combine of two hashes. Same guarantees as [combineHashes] but full
+/// 64-bit positive range (0 .. 2^63-1) for use as a database key.
+int combineHashes64(int hash, int value) {
+  hash = (hash + value) & 0x7FFFFFFFFFFFFFFF;
+  hash = (hash + ((hash & 0x001FFFFFFFFFFFFF) << 10)) & 0x7FFFFFFFFFFFFFFF;
+  return (hash ^ (hash >> 6)) & 0x7FFFFFFFFFFFFFFF;
 }
 
 /// Combine a list of hashes into a new hash, in a way that
@@ -304,8 +324,18 @@ int combineHashes(int hash, int value) {
 /// and can therefore be used in the database as a key.
 ///
 /// This is a non-commutative operation, so the order of the hashes matters.
+///
+/// Deprecated: use [combineHashList64] instead to use the
+/// full range of Dart int.
+@Deprecated("Use combineHashList64 instead")
 int combineHashList(List<int> hashes) {
   return hashes.fold(0, combineHashes);
+}
+
+/// 64-bit combine of a list of hashes. Same as [combineHashList] but full
+/// 64-bit range; order of hashes matters.
+int combineHashList64(List<int> hashes) {
+  return hashes.fold(0, combineHashes64);
 }
 
 extension AsPercentage on double {

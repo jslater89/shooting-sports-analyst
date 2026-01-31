@@ -54,7 +54,7 @@ class LeagueStanding {
     if(monthId != null) {
       ids.add(monthId.stableHash);
     }
-    return combineHashList(ids);
+    return combineHashList64(ids);
   }
 
   /// Create the ID for the league standing for [team] in [league], optionally at [season] or [month].
@@ -82,7 +82,7 @@ class LeagueStanding {
     if(month != null && type == LeagueStandingType.month) {
       ids.add(month.id.stableHash);
     }
-    return combineHashList(ids);
+    return combineHashList64(ids);
   }
 
   Id get id => idForIds(teamId: teamId, leagueId: leagueId, seasonId: seasonId, monthId: monthId, type: type);

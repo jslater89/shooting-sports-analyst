@@ -11,6 +11,7 @@ import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/migrations.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';

@@ -12,7 +12,7 @@ part 'match_heat.g.dart';
 
 @collection
 class MatchHeat {
-  Id get id => combineHashes(projectId.stableHash, matchSourceId.stableHash);
+  Id get id => combineHashes64(projectId.stableHash, matchSourceId.stableHash);
 
   @Index(composite: [CompositeIndex('matchSourceId')], unique: true)
   int projectId;

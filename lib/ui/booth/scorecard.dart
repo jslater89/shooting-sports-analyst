@@ -468,6 +468,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   Widget _buildTable() {
     var match = context.read<BroadcastBoothModel>().latestMatch;
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
 
     return TableView.builder(
@@ -509,7 +510,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
         if(column == 1) {
           decoration = TableSpanDecoration(
             border: TableSpanBorder(
-              trailing: BorderSide(color: ThemeColors.onBackgroundColor(context)),
+              trailing: BorderSide(
+                color: ThemeColors.onBackgroundColor(context),
+                width: 1 * uiScaleFactor,
+              ),
             ),
           );
         }
@@ -525,7 +529,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
             extent: FixedTableSpanExtent(_headerHeight * sc.tableTextSize.fontSizeFactor),
             backgroundDecoration: TableSpanDecoration(
               border: TableSpanBorder(
-                trailing: BorderSide(color: ThemeColors.onBackgroundColor(context)),
+                trailing: BorderSide(
+                  color: ThemeColors.onBackgroundColor(context),
+                  width: 1 * uiScaleFactor,
+                ),
               ),
             ),
           );

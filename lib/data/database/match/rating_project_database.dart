@@ -43,6 +43,26 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().nameEqualTo(name).findFirstSync();
   }
 
+  Future<List<DbRatingProject>> findRatingProjects({
+    String? name,
+    RatingProjectSort sort = const LastUpdatedSort(desc: true),
+    int limit = 10,
+  }) async {
+
+    var queryBase = isar.dbRatingProjects.where();
+    var filteredQuery = queryBase.filter();
+    QueryBuilder<DbRatingProject, DbRatingProject, QAfterFilterCondition>? afterQuery;
+    if(name != null) {
+      afterQuery = filteredQuery.nameContains(name, caseSensitive: false);
+    }
+    if(afterQuery != null) {
+      return afterQuery.sortByUpdatedDesc().limit(limit).findAll();
+    }
+    else {
+      return queryBase.sortByUpdatedDesc().limit(limit).findAll();
+    }
+  }
+
   Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true, bool saveLinks = true}) async {
     if(checkName) {
       var existingProject = await getRatingProjectByName(project.name);
@@ -1166,3 +1186,16 @@ typedef ChangedRatingPersistedSyncCallback = void Function({
   required int total,
   String? message
 });
+
+sealed class RatingProjectSort {
+  const RatingProjectSort();
+}
+
+class NameSort extends RatingProjectSort {
+  const NameSort();
+}
+
+class LastUpdatedSort extends RatingProjectSort {
+  final bool desc;
+  const LastUpdatedSort({required this.desc});
+}

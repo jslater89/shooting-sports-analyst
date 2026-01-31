@@ -23,7 +23,7 @@ part 'algorithm_prediction.g.dart';
 /// and the shooter's original member number.
 @collection
 class DbAlgorithmPrediction with DbShooterRatingEntity {
-  Id get id => combineHashList([projectId, predictionSetId, memberNumber.stableHash]);
+  Id get id => combineHashList64([projectId, predictionSetId, memberNumber.stableHash]);
 
   final project = IsarLink<DbRatingProject>();
 

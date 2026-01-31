@@ -18,6 +18,29 @@ extension MatchPrepDatabase on AnalystDatabase {
     return isar.matchPreps.where().sortByMatchDateDesc().findAll();
   }
 
+  Future<List<MatchPrep>> queryMatchPreps({
+    String? nameFilter,
+    DateTime? after,
+    int limit = 10,
+  }) {
+    var queryBase = isar.matchPreps.where();
+    var filteredQuery = queryBase.filter();
+    QueryBuilder<MatchPrep, MatchPrep, QAfterFilterCondition>? afterQuery;
+    if(nameFilter != null) {
+      afterQuery = filteredQuery.futureMatch((m) => m.eventNameContains(nameFilter, caseSensitive: false));
+    }
+    if(after != null) {
+      afterQuery = filteredQuery.futureMatch((m) => m.dateGreaterThan(after));
+    }
+
+    if(afterQuery != null) {
+      return afterQuery.sortByMatchDateDesc().limit(limit).findAll();
+    }
+    else {
+      return queryBase.sortByMatchDateDesc().limit(limit).findAll();
+    }
+  }
+
   /// Get all match preps synchronously.
   List<MatchPrep> getMatchPrepsSync() {
     return isar.matchPreps.where().sortByMatchDateDesc().findAllSync();
@@ -25,30 +48,34 @@ extension MatchPrepDatabase on AnalystDatabase {
 
   /// Get a match prep for a specific project and match ID, in both cases the database ID
   /// rather than any other ID.
-  Future<MatchPrep?> getMatchPrepForProjectAndMatchIds(int projectId, int matchId) async {
+  Future<MatchPrep?> getMatchPrepForProjectAndMatchIds(int projectId, String matchId) async {
     var syntheticId = MatchPrep.synthesizeIdFromIds(projectId, matchId);
     return isar.matchPreps.get(syntheticId);
   }
 
   /// Get a match prep for a specific project and match ID, in both cases the database ID
   /// rather than any other ID, synchronously.
-  MatchPrep? getMatchPrepForProjectAndMatchIdsSync(int projectId, int matchId) {
+  MatchPrep? getMatchPrepForProjectAndMatchIdsSync(int projectId, String matchId) {
     var syntheticId = MatchPrep.synthesizeIdFromIds(projectId, matchId);
     return isar.matchPreps.getSync(syntheticId);
   }
 
   /// Get a match prep for a specific project and match, if one exists.
   Future<MatchPrep?> getMatchPrepForProjectAndMatch(DbRatingProject project, FutureMatch match) async {
-    return getMatchPrepForProjectAndMatchIds(project.id, match.id);
+    return getMatchPrepForProjectAndMatchIds(project.id, match.matchId);
   }
 
   /// Get a match prep for a specific project and match, if one exists, synchronously.
   MatchPrep? getMatchPrepForProjectAndMatchSync(DbRatingProject project, FutureMatch match) {
-    return getMatchPrepForProjectAndMatchIdsSync(project.id, match.id);
+    return getMatchPrepForProjectAndMatchIdsSync(project.id, match.matchId);
   }
 
   /// Save a match prep to the database.
   Future<MatchPrep> saveMatchPrep(MatchPrep matchPrep, {bool saveOwnLinks = true, bool savePredictionSetLinks = true}) async {
+    if(!matchPrep.futureMatch.isLoaded) {
+      // Need to load to get matchDate
+      await matchPrep.futureMatch.load();
+    }
     await isar.writeTxn(() async {
       await isar.matchPreps.put(matchPrep);
       if(saveOwnLinks) {

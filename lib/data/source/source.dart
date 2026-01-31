@@ -91,6 +91,8 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
     if(source is PSv2MatchSource) {
       options = PSv2MatchFetchOptions(
         downloadScoreLogs: matchInProgress,
+        ignoreUnknownDivisions: true,
+        fuzzyHitFactorDivisionMatching: true,
       );
     }
 

@@ -18,7 +18,7 @@ part 'roster.g.dart';
 /// A team's monthly roster.
 @collection
 class MonthlyRoster {
-  Id get id => combineHashList([teamId, monthId]);
+  Id get id => combineHashList64([teamId, monthId]);
 
   final team = IsarLink<Team>();
   final month = IsarLink<LeagueMonth>();
@@ -131,7 +131,7 @@ class RosterAssignment {
     if(monthId != null) {
       ids.add(monthId);
     }
-    return combineHashList(ids);
+    return combineHashList64(ids);
   }
 
   Id get id => idForIds(teamId: teamId, slotId: slotId, monthId: monthId);

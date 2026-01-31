@@ -44,7 +44,7 @@ class _StagePointer {
     return false;
   }
 
-  int get hashCode => combineHashes(match.sourceIds.first.hashCode, stageNumber.hashCode);
+  int get hashCode => combineHashes64(match.sourceIds.first.hashCode, stageNumber.hashCode);
 }
 
 class _StagePerformance {

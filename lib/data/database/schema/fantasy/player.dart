@@ -41,7 +41,7 @@ class FantasyPlayer with DbSportEntity {
   /// By convention, it is best to use originalMemberNumber instead of memberNumber for this ID;
   /// memberNumber is likely to change over the course of a player's career (A/TY/FY forms, lifetime, etc.),
   /// whereas the first number they appear with is likely to remain the same.
-  Id get id => combineHashList([
+  Id get id => combineHashList64([
     sportName.stableHash,
     groupUuid.stableHash,
     memberNumber.stableHash,
@@ -54,7 +54,7 @@ class FantasyPlayer with DbSportEntity {
     required Shooter shooter,
     required DbRatingProject project,
   }) {
-    return combineHashList([
+    return combineHashList64([
       sport.name.stableHash,
       group.uuid.stableHash,
       shooter.originalMemberNumber.stableHash,
@@ -68,7 +68,7 @@ class FantasyPlayer with DbSportEntity {
     required String memberNumber,
     required int projectId,
   }) {
-    return combineHashList([
+    return combineHashList64([
       sportName.stableHash,
       groupUuid.stableHash,
       memberNumber.stableHash,
@@ -168,14 +168,14 @@ class PlayerMonthlyPerformance {
     required FantasyPlayer player,
     required LeagueMonth month,
   }) {
-    return combineHashes(player.id.stableHash, month.id.stableHash);
+    return combineHashes64(player.id.stableHash, month.id.stableHash);
   }
 
   static Id idFromEntityIds({
     required int playerId,
     required int monthId,
   }) {
-    return combineHashes(playerId.stableHash, monthId.stableHash);
+    return combineHashes64(playerId.stableHash, monthId.stableHash);
   }
 
   Id get id => idFromEntityIds(playerId: playerId, monthId: monthId);
@@ -234,7 +234,7 @@ class PlayerMonthlyPerformance {
 @collection
 class PlayerMatchPerformance {
 
-  Id get id => combineHashList([playerId.stableHash, projectId.stableHash, groupUuid.stableHash, matchId.stableHash]);
+  Id get id => combineHashList64([playerId.stableHash, projectId.stableHash, groupUuid.stableHash, matchId.stableHash]);
 
   @Backlink(to: 'matchPerformances')
   final player = IsarLink<FantasyPlayer>();

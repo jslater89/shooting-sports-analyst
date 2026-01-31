@@ -151,7 +151,7 @@ class _RatingCacheKey {
   _RatingCacheKey(this.division, this.memberNumber);
 
   @override
-  int get hashCode => combineHashes(memberNumber.hashCode, division.hashCode);
+  int get hashCode => combineHashes64(memberNumber.hashCode, division.hashCode);
 
   @override
   bool operator ==(Object other) {

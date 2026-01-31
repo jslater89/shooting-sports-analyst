@@ -24,7 +24,7 @@ part 'registration_mapping.g.dart';
 /// enforce database equality.
 @collection
 class MatchRegistrationMapping {
-  Id get id => combineHashList([matchId.stableHash, shooterName.stableHash, shooterDivisionName.stableHash]);
+  Id get id => combineHashList64([matchId.stableHash, shooterName.stableHash, shooterDivisionName.stableHash]);
 
   @Index(composite: [CompositeIndex("shooterName")])
   @Index(composite: [CompositeIndex("shooterName"), CompositeIndex("shooterDivisionName")])

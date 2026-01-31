@@ -18,7 +18,7 @@ part 'match_prep.g.dart';
 /// and other before-the-fact analysis for a particular match.
 @collection
 class MatchPrep {
-  Id get id => synthesizeIdFromIds(projectId, matchId);
+  Id get id => synthesizeIdFromHashedIds(projectId, matchId);
   int matchId;
   int projectId;
 
@@ -64,11 +64,15 @@ class MatchPrep {
     this.ratingProject.value = project;
   }
 
-  static int synthesizeIdFromIds(int projectId, int matchId) {
-    return combineHashes(projectId, matchId);
+  static int synthesizeIdFromIds(int projectId, String matchId) {
+    return synthesizeIdFromHashedIds(projectId.stableHash, matchId.stableHash);
+  }
+
+  static int synthesizeIdFromHashedIds(int projectHash, int matchHash) {
+    return combineHashes64(projectHash, matchHash);
   }
 
   static int synthesizeIdFromEntities(DbRatingProject project, FutureMatch match) {
-    return synthesizeIdFromIds(project.id, match.id);
+    return synthesizeIdFromIds(project.id, match.matchId);
   }
 }

@@ -37,7 +37,7 @@ class PredictionSet {
     this.created = created ?? DateTime.now();
   }
 
-  Id get id => combineHashList([matchPrepId.stableHash, name.stableHash]);
+  Id get id => combineHashList64([matchPrepId.stableHash, name.stableHash]);
 
   /// The id of the [MatchPrep] that this prediction set belongs to.
   late int matchPrepId;
