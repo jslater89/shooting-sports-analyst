@@ -29,6 +29,7 @@ extension MatchPrepDatabase on AnalystDatabase {
     DateTime? before,
     int limit = 10,
     bool hasPredictionsOnly = false,
+    List<int>? excludeIds,
   }) {
     var queryBase = isar.matchPreps.where();
     var filteredQuery = queryBase.filter();
@@ -58,6 +59,14 @@ extension MatchPrepDatabase on AnalystDatabase {
       }
       else {
         afterQuery = afterQuery.predictionSetsIsNotEmpty();
+      }
+    }
+    if(excludeIds != null) {
+      if(afterQuery == null) {
+        afterQuery = filteredQuery.allOf(excludeIds, (q, id) => q.not().idEqualTo(id));
+      }
+      else {
+        afterQuery = afterQuery.allOf(excludeIds, (q, id) => q.not().idEqualTo(id));
       }
     }
 
@@ -169,6 +178,17 @@ extension MatchPrepDatabase on AnalystDatabase {
         await prediction.project.save();
         await prediction.group.save();
         await prediction.predictionSet.save();
+      }
+    });
+  }
+
+  Future<void> saveAlgorithmPredictions(List<DbAlgorithmPrediction> predictions, {bool saveLinks = true}) async {
+    await isar.writeTxn(() async {
+      await isar.dbAlgorithmPredictions.putAll(predictions);
+      if(saveLinks) {
+        for(var prediction in predictions) {
+          await prediction.saveLinks();
+        }
       }
     });
   }
