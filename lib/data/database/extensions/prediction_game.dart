@@ -646,7 +646,7 @@ enum LeaderboardSortMode {
       case LeaderboardSortMode.profitRatio:
         return value.toStringAsFixed(3);
       case LeaderboardSortMode.averageOdds:
-        return PredictionProbability.fromDecimalOdds(value).moneylineOdds;
+        return PredictionProbability.fromDecimalOdds(value, houseEdge: 0.0).moneylineOdds;
     }
   }
 }
