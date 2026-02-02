@@ -83,6 +83,12 @@ extension FutureMatchDatabase on AnalystDatabase {
     return Result.ok(null);
   }
 
+  Future<void> unlinkFutureMatchResult(FutureMatch match) async {
+    await isar.writeTxn(() async {
+      await match.dbMatch.reset();
+    });
+  }
+
   /// Save a future match to the database synchronously.
   ///
   /// If [newRegistrations] is provided, the existing registrations on the

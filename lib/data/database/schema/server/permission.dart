@@ -32,6 +32,10 @@ enum Permission {
   matchServerUploadRegistration("registrations:upload"),
 
   // Prediction game permissions
+
+  /// Permission to play in prediction games.
+  predictionGamePlay("predictiongames:play"),
+
   /// Permission to create your own wagers in prediction games.
   predictionWagerCreateOwn("wagers:create:own"),
 

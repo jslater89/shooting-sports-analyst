@@ -56,6 +56,15 @@ extension PredictionGameExtension on AnalystDatabase {
     return predictionGame;
   }
 
+  Future<void> deletePredictionGame(PredictionGame predictionGame) async {
+    await isar.writeTxn(() async {
+      await predictionGame.users.filter().deleteAll();
+      await predictionGame.wagers.filter().deleteAll();
+      await predictionGame.transactions.filter().deleteAll();
+      await isar.predictionGames.delete(predictionGame.id);
+    });
+  }
+
   Future<MatchPrep?> getMatchPrepById(int id) async {
     return isar.matchPreps.get(id);
   }
@@ -112,6 +121,14 @@ extension PredictionGameExtension on AnalystDatabase {
 
   PredictionGamePlayer? getPlayerForUserAndGameSync(User user, PredictionGame game) {
     return game.users.filter().serverUser((q) => q.idEqualTo(user.id)).findFirstSync();
+  }
+
+  Future<PredictionGamePlayer?> getPlayerForIdAndGame(int playerId, PredictionGame game) async {
+    return game.users.filter().idEqualTo(playerId).findFirst();
+  }
+
+  PredictionGamePlayer? getPlayerForIdAndGameSync(int playerId, PredictionGame game) {
+    return game.users.filter().idEqualTo(playerId).findFirstSync();
   }
 
   /// Get the algorithm prediction for a rating in a match prep, using the latest prediction set if none is provided.
@@ -515,6 +532,17 @@ extension PredictionGameExtension on AnalystDatabase {
   }
 
   /// TODO: calculate/store leaderboard ahead of time
+
+
+  /// Get the list of disabled match preps for a prediction game.
+  Future<List<int>?> getDisabledMatchPreps(PredictionGame game) async {
+    return isar.predictionGames.where().idEqualTo(game.id).disabledMatchPrepsProperty().findFirst();
+  }
+
+  /// Get the list of disabled match preps for a prediction game synchronously.
+  List<int>? getDisabledMatchPrepsSync(PredictionGame game) {
+    return isar.predictionGames.where().idEqualTo(game.id).disabledMatchPrepsProperty().findFirstSync();
+  }
 }
 
 class PredictionLeaderboardEntry {
@@ -542,12 +570,23 @@ class PredictionLeaderboardEntry {
         }
         return wonWagers.length / closedWagers.length;
       case LeaderboardSortMode.profitRatio:
-        PredictionGameTransaction? initialTopUp = player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).sortByCreated().findFirstSync();
-        if(initialTopUp == null) {
+        var wagersOfInterest = player.wagers.filter()
+          .statusEqualTo(DbWagerStatus.won)
+          .or()
+          .statusEqualTo(DbWagerStatus.lost)
+          .findAllSync();
+        if(wagersOfInterest.isEmpty) {
           return 0.0;
         }
-        var bankroll = player.balance + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum;
-        return bankroll / initialTopUp.amount;
+        double wonAmount = 0.0;
+        double totalStake = 0.0;
+        for(var wager in wagersOfInterest) {
+          if(wager.status == DbWagerStatus.won) {
+            wonAmount += wager.payout();
+          }
+          totalStake += wager.amount;
+        }
+        return wonAmount / totalStake;
       case LeaderboardSortMode.averageOdds:
         var wagers = player.wagers.filter().not().statusEqualTo(DbWagerStatus.voided).findAllSync();
         if(wagers.isEmpty) {

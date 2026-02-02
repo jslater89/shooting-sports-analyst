@@ -92,12 +92,38 @@ class PredictionGameManager {
     loadPredictionGameSync();
   }
 
-  Future<List<MatchPrep>> getMatchPreps({bool futureOnly = true, bool hasPredictionsOnly = true}) async {
-    return db.getMatchPreps(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+  Future<List<MatchPrep>> getMatchPreps({bool futureOnly = true, bool hasPredictionsOnly = true, bool enabledOnly = false, bool reloadGameIfNeeded = true}) async {
+    List<int> disabledMatchPreps = [];
+    if(enabledOnly) {
+      disabledMatchPreps = predictionGame.disabledMatchPreps.toList();
+      if(reloadGameIfNeeded) {
+        var queryResult = await db.getDisabledMatchPreps(predictionGame);
+        if(queryResult != null) {
+          disabledMatchPreps = queryResult;
+        }
+      }
+    }
+
+    var dbPreps = await db.getMatchPreps(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+    if(enabledOnly) {
+      return dbPreps.where((prep) => !disabledMatchPreps.contains(prep.id)).toList();
+    }
+    return dbPreps;
   }
 
-  List<MatchPrep> getMatchPrepsSync({bool futureOnly = true, bool hasPredictionsOnly = true}) {
-    return db.getMatchPrepsSync(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+  List<MatchPrep> getMatchPrepsSync({bool futureOnly = true, bool hasPredictionsOnly = true, bool enabledOnly = false, bool reloadGameIfNeeded = true}) {
+    List<int> disabledMatchPreps = [];
+    if(enabledOnly) {
+      disabledMatchPreps = predictionGame.disabledMatchPreps.toList();
+      if(reloadGameIfNeeded) {
+        disabledMatchPreps = db.getDisabledMatchPrepsSync(predictionGame) ?? [];
+      }
+    }
+    var dbPreps = db.getMatchPrepsSync(predictionGame, futureOnly: futureOnly, hasPredictionsOnly: hasPredictionsOnly);
+    if(enabledOnly) {
+      return dbPreps.where((prep) => !disabledMatchPreps.contains(prep.id)).toList();
+    }
+    return dbPreps;
   }
 
   Map<PredictionSet, List<RatingGroup>> availableRatingGroups(MatchPrep prep) {
@@ -558,29 +584,32 @@ class PredictionGameManager {
 
   }
 
-
-
-  /// Audit the transactions for a player and update the balance if needed.
-  Future<void> auditUserBalance(PredictionGamePlayer player) async {
+  /// Audit the transactions for a player and update the balance if needed, returning
+  /// the change in balance, or 0 if the balance was consistent.
+  Future<double> auditUserBalance(PredictionGamePlayer player) async {
     double priorBalance = player.balance;
     bool isConsistent = db.auditPlayerTransactionsSync(player);
+    double balanceChange = player.balance - priorBalance;
     if(!isConsistent) {
       await db.savePredictionGamePlayer(player, saveLinks: false);
       _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
     }
 
     await loadPredictionGame();
+    return balanceChange;
   }
 
   /// Audit the transactions for a player and update the balance if needed.
-  void auditUserBalanceSync(PredictionGamePlayer player) {
+  double auditUserBalanceSync(PredictionGamePlayer player) {
     double priorBalance = player.balance;
     bool isConsistent = db.auditPlayerTransactionsSync(player);
+    double balanceChange = player.balance - priorBalance;
     if(!isConsistent) {
       db.savePredictionGamePlayerSync(player);
       _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
     }
     loadPredictionGameSync();
+    return balanceChange;
   }
 
   // ======================
