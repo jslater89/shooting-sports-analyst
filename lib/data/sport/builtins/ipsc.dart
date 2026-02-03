@@ -9,17 +9,16 @@ import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const ipscSportName = "IPSC";
 const ipscOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
 const ipscPccOptics = Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]);
 const ipscPccIrons = Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]);
-const ipscStandard = Division(name: "Standard", shortName: "STD", alternateNames: ["STA"], fallback: true);
+const ipscStandard = Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]);
 const ipscProductionOptics = Division(name: "Production Optics", longName: "Production Optics", shortName: "PO");
 const ipscOptics = Division(name: "Optics", longName: "Optics", shortName: "OP");
-const ipscProduction = Division(name: "Production", shortName: "PROD", fallback: true);
+const ipscProduction = Division(name: "Production", shortName: "PROD");
 const ipscClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]);
 const ipscRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const ipscDivisions = [
@@ -122,6 +121,7 @@ Division? uspsaDivisionForIpscDivision(Division? division) {
   if(division == ipscStandard) return uspsaLimited;
   if(division == ipscProduction) return uspsaProduction;
   if(division == ipscProductionOptics) return uspsaCarryOptics;
+  if(division == ipscOptics) return uspsaLimitedOptics;
   if(division == ipscClassic) return uspsaSingleStack;
   if(division == ipscRevolver) return uspsaRevolver;
   if(division == ipscPccOptics) return uspsaPcc;
@@ -136,6 +136,7 @@ Division? ipscDivisionForUspsaDivision(Division? division) {
   if(division == uspsaLimited) return ipscStandard;
   if(division == uspsaProduction) return ipscProduction;
   if(division == uspsaCarryOptics) return ipscProductionOptics;
+  if(division == uspsaLimitedOptics) return ipscOptics;
   if(division == uspsaSingleStack) return ipscClassic;
   if(division == uspsaRevolver) return ipscRevolver;
   if(division == uspsaPcc) return ipscPccOptics;
@@ -167,6 +168,9 @@ List<Division> addUspsaCompatibleIpscDivisions(List<Division> divisions) {
   if(divisions.contains(uspsaCarryOptics)) {
     outDivisions.add(ipscProductionOptics);
   }
+  if(divisions.contains(uspsaLimitedOptics)) {
+    outDivisions.add(ipscOptics);
+  }
   if(divisions.contains(uspsaSingleStack)) {
     outDivisions.add(ipscClassic);
   }
@@ -194,6 +198,9 @@ List<Division> addIpscCompatibleUspsaDivisions(List<Division> divisions) {
   }
   if(divisions.contains(ipscProductionOptics)) {
     outDivisions.add(uspsaCarryOptics);
+  }
+  if(divisions.contains(ipscOptics)) {
+    outDivisions.add(uspsaLimitedOptics);
   }
   if(divisions.contains(ipscClassic)) {
     outDivisions.add(uspsaSingleStack);
