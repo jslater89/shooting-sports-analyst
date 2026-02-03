@@ -100,6 +100,9 @@ class PatreonOauthInfo {
   DateTime expiresAt = practicalShootingZeroDate;
   DateTime nextTierCheck = practicalShootingZeroDate;
 
+  DateTime lastCookieSet = practicalShootingZeroDate;
+  DateTime lastTokenObtained = practicalShootingZeroDate;
+
   /// Zero-arg constructor for Isar. Use [create] to initialize.
   PatreonOauthInfo();
 
@@ -109,6 +112,8 @@ class PatreonOauthInfo {
     required this.lastPatreonTierName,
     required this.expiresAt,
     required this.nextTierCheck,
+    required this.lastCookieSet,
+    required this.lastTokenObtained,
   });
 
   PatreonOauthInfo copyWith({
@@ -116,12 +121,16 @@ class PatreonOauthInfo {
     String? lastPatreonTierName,
     DateTime? expiresAt,
     DateTime? nextTierCheck,
+    DateTime? lastCookieSet,
+    DateTime? lastTokenObtained,
   }) {
     return PatreonOauthInfo.create(
       lastPatreonTierId: lastPatreonTierId ?? this.lastPatreonTierId,
       lastPatreonTierName: lastPatreonTierName ?? this.lastPatreonTierName,
       expiresAt: expiresAt ?? this.expiresAt,
       nextTierCheck: nextTierCheck ?? this.nextTierCheck,
+      lastCookieSet: lastCookieSet ?? this.lastCookieSet,
+      lastTokenObtained: lastTokenObtained ?? this.lastTokenObtained,
     );
   }
 
