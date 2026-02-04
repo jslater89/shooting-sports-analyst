@@ -95,6 +95,14 @@ extension PredictionGameExtension on AnalystDatabase {
     return query.sortByMatchDateDesc().findAllSync();
   }
 
+  Future<List<PredictionSet>> getPredictionSetsForMatchPrep(MatchPrep matchPrep) async {
+    return matchPrep.predictionSets.filter().sortByCreatedDesc().findAll();
+  }
+
+  List<PredictionSet> getPredictionSetsForMatchPrepSync(MatchPrep matchPrep) {
+    return matchPrep.predictionSets.filter().sortByCreatedDesc().findAllSync();
+  }
+
   /// Get all prediction game players for a user.
   Future<List<PredictionGamePlayer>> getAllPlayersForUser(User user, {bool onlyActiveGames = true}) async {
     return user.predictionGamePlayers.filter().findAll();
