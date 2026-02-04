@@ -64,6 +64,26 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   int highPlace;
   int medianPlace;
 
+  double? meanRatio;
+  double? oneSigmaRatio;
+  double? shiftRatio;
+
+  @ignore
+  bool get hasRatioPredictions => meanRatio != null && oneSigmaRatio != null;
+
+  double? get ratioCenter => meanRatio;
+  double? get shiftedRatioCenter {
+    if(meanRatio != null && shiftRatio != null) {
+      return meanRatio! + shiftRatio!;
+    }
+    else if(meanRatio != null) {
+      return meanRatio!;
+    }
+    else {
+      return null;
+    }
+  }
+
   DbAlgorithmPrediction({
     required this.projectId,
     required this.predictionSetId,
@@ -74,6 +94,9 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     required this.lowPlace,
     required this.highPlace,
     required this.medianPlace,
+    required this.meanRatio,
+    required this.oneSigmaRatio,
+    required this.shiftRatio,
   });
 
   DbAlgorithmPrediction.fromHydrated(DbRatingProject project, PredictionSet predictionSet, AlgorithmPrediction prediction) :
@@ -85,7 +108,10 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     ciOffset = prediction.ciOffset,
     lowPlace = prediction.lowPlace,
     highPlace = prediction.highPlace,
-    medianPlace = prediction.medianPlace {
+    medianPlace = prediction.medianPlace,
+    meanRatio = prediction.meanRatio,
+    oneSigmaRatio = prediction.oneSigmaRatio,
+    shiftRatio = prediction.shiftRatio {
       this.rating.value = prediction.shooter.wrappedRating;
       this.project.value = project;
       this.group.value = prediction.shooter.group;
@@ -116,6 +142,9 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       ciOffset: ciOffset,
       settings: preloadedSettings ?? settings,
       algorithm: preloadedAlgorithm,
+      meanRatio: meanRatio,
+      oneSigmaRatio: oneSigmaRatio,
+      shiftRatio: shiftRatio,
     );
     prediction.lowPlace = lowPlace;
     prediction.highPlace = highPlace;
@@ -132,12 +161,12 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     String firstName = "Unknown";
     String lastName = "Unknown";
     String memberNumber = this.memberNumber;
-    Set<String> knownMemberNumbers = {this.memberNumber};
+    //Set<String> knownMemberNumbers = {this.memberNumber};
     if(loadFromRating && rating.value != null) {
       firstName = rating.value!.firstName;
       lastName = rating.value!.lastName;
       memberNumber = rating.value!.memberNumber;
-      knownMemberNumbers = rating.value!.knownMemberNumbers;
+      //knownMemberNumbers = rating.value!.knownMemberNumbers;
     }
     var shooter = Shooter(
       firstName: firstName,

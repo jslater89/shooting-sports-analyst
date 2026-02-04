@@ -123,7 +123,11 @@ class MatchPrepPageModel extends ChangeNotifier {
     // verify that the mapping is not a duplicate
     existingMapping = futureMatch.mappings.firstWhereOrNull((m) => m == newMapping);
     if(existingMapping != null) {
-      return Result.err(MatchPrepModelError.duplicateMapping);
+      // special case: since we don't key on classification but do look up by it, only consider it a duplicate
+      // if the classifications are the same
+      if(existingMapping.shooterClassificationName == newMapping.shooterClassificationName) {
+        return Result.err(MatchPrepModelError.duplicateMapping);
+      }
     }
 
     // Now that we're past all the error conditions, put the target rating in our convenience map

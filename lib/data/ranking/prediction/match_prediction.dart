@@ -46,6 +46,18 @@ class AlgorithmPrediction {
   late int highPlace;
   late int medianPlace;
 
+  /// The mean performance in ratio terms (i.e., 1.0 for the winner, [0.0, 1.0) for other competitors
+  /// relative to the winner). Null if this algorithm cannot generate ratio predictions.
+  double? meanRatio;
+
+  /// The standard deviation of the performance in ratio terms. Null if this algorithm cannot generate ratio predictions.
+  double? oneSigmaRatio;
+
+  /// A shift to apply to the performance in ratio terms, corresponding to the ciOffset.
+  double? shiftRatio;
+
+  bool get hasRatioPredictions => meanRatio != null && oneSigmaRatio != null;
+
   AlgorithmPrediction({
     required this.shooter,
     required this.mean,
@@ -53,6 +65,9 @@ class AlgorithmPrediction {
     this.ciOffset = 0.0,
     required this.settings,
     required this.algorithm,
+    required this.meanRatio,
+    required this.oneSigmaRatio,
+    this.shiftRatio,
     int? lowPlace,
     int? highPlace,
     int? medianPlace,
@@ -98,4 +113,17 @@ class AlgorithmPrediction {
 
   double get upperBoxWhiskerMidpoint => (upperBox + upperWhisker) / 2;
   double get lowerBoxWhiskerMidpoint => (lowerBox + lowerWhisker) / 2;
+
+  double? get ratioCenter => meanRatio;
+  double? get shiftedRatioCenter {
+    if(meanRatio != null && shiftRatio != null) {
+      return meanRatio! + shiftRatio!;
+    }
+    else if(meanRatio != null) {
+      return meanRatio!;
+    }
+    else {
+      return null;
+    }
+  }
 }

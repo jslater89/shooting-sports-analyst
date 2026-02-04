@@ -122,7 +122,7 @@ class PredictionGame {
     var lastActivity = prediction.shooter.lastSeen;
     var daysSinceLastActivity = DateTime.now().difference(lastActivity).inDays;
 
-    if(minimumWagerableCompetitorFinishRatio != null && prediction.center < minimumWagerableCompetitorFinishRatio!) {
+    if(minimumWagerableCompetitorFinishRatio != null && prediction.hasRatioPredictions && prediction.ratioCenter! < minimumWagerableCompetitorFinishRatio!) {
       return WagerIneligibilityReason.insufficientFinishRatio;
     }
     if(minimumWagerableStageCount != null && ratingStageCount != null && ratingStageCount < minimumWagerableStageCount!) {

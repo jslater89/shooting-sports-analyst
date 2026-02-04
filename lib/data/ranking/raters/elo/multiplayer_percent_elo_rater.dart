@@ -635,6 +635,19 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       r = Random();
     }
 
+    double bestRating = double.negativeInfinity;
+    double worstRating = double.infinity;
+
+    for(var rating in eloRatings) {
+      bestRating = max(bestRating, rating.rating);
+      worstRating = min(worstRating, rating.rating);
+    }
+
+    double ratioFloor = estimateRatioFloor(bestRating - worstRating);
+    double ratioMultiplier = 1.0 - ratioFloor;
+
+    double highPrediction = 0;
+
     for(var rating in eloRatings) {
       var error = rating.standardError;
       var scale = settings.scale;
@@ -724,8 +737,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       var averagePerformance = expectedScores.average;
+      highPrediction = max(highPrediction, averagePerformance);
       var variance = expectedScores.map((e) => pow(e - averagePerformance, 2)).average;
       var performanceDeviation = sqrt(variance);
+
+      double meanRatio = averagePerformance;
+      double oneSigmaRatio = performanceDeviation;
 
       predictions.add(AlgorithmPrediction(
         settings: settings,
@@ -734,6 +751,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         mean: averagePerformance,
         ciOffset: trendShift,
         sigma: performanceDeviation,
+        meanRatio: meanRatio,
+        oneSigmaRatio: oneSigmaRatio,
+        shiftRatio: trendShift,
       ));
     }
 
@@ -754,6 +774,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       prediction.highPlace = topPlace;
       prediction.lowPlace = bottomPlace;
       prediction.medianPlace = medianPlace;
+
+      prediction.meanRatio = ratioFloor + (prediction.mean / highPrediction * ratioMultiplier);
+      prediction.oneSigmaRatio = prediction.oneSigma / highPrediction * ratioMultiplier;
+      prediction.shiftRatio = prediction.shift / highPrediction * ratioMultiplier;
     }
 
     return predictions;

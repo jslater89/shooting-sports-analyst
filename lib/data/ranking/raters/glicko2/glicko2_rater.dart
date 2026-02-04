@@ -385,6 +385,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           sigma: 0.0,
           settings: settings,
           algorithm: this,
+          meanRatio: 1.0,
+          oneSigmaRatio: 0.0,
         ),
       ];
     }
@@ -550,6 +552,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         lowPlace: expectedLowPlaces[entry.key]!,
         highPlace: expectedHighPlaces[entry.key]!,
         medianPlace: expectedPlaces[entry.key]!,
+        meanRatio: entry.value.centralValue,
+        oneSigmaRatio: sigma,
       );
     }).toList();
   }
