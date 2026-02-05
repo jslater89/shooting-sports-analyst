@@ -5,6 +5,28 @@ import 'package:shooting_sports_analyst/data/database/schema/server/session.dart
 import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 
 extension UserRoleDatabase on AnalystDatabase {
+  Future<List<User>> queryUsers({
+    int limit = 100,
+    int skip = 0,
+  }) {
+    return isar.users.where().sortByUsername().offset(skip).limit(limit).findAll();
+  }
+
+  List<User> queryUsersSync({
+    int limit = 100,
+    int skip = 0,
+  }) {
+    return isar.users.where().sortByUsername().offset(skip).limit(limit).findAllSync();
+  }
+
+  Future<int> countUsers() async {
+    return await isar.users.count();
+  }
+
+  int countUsersSync() {
+    return isar.users.countSync();
+  }
+
   Future<User?> getUserByUsername(String username) async {
     return await isar.users.where().usernameEqualTo(username).findFirst();
   }
