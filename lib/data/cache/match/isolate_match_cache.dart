@@ -74,7 +74,7 @@ class IsolateMatchCacheClient implements MatchCache {
   Future<Result<ShootingMatch, ResultErr>> get(DbShootingMatch match) async {
     var response = await isolateManagerClient.sendCommand<_GetByDbIdCommand, _IsolateMatchCacheServerResponse>(
       isolateId: IsolateMatchCacheServer.id,
-      command: _GetByDbIdCommand(id: match.id)
+      command: _GetByDbIdCommand(id: match.id, sourceLastUpdated: match.sourceLastUpdated)
     );
 
     if(response == null) {
@@ -93,10 +93,10 @@ class IsolateMatchCacheClient implements MatchCache {
   }
 
   @override
-  Future<Result<ShootingMatch, ResultErr>> getBySourceId(String sourceId) async {
+  Future<Result<ShootingMatch, ResultErr>> getBySourceId(String sourceId, {DateTime? sourceLastUpdated}) async {
     var response = await isolateManagerClient.sendCommand<_GetBySourceIdCommand, _IsolateMatchCacheServerResponse>(
       isolateId: IsolateMatchCacheServer.id,
-      command: _GetBySourceIdCommand(sourceId: sourceId)
+      command: _GetBySourceIdCommand(sourceId: sourceId, sourceLastUpdated: sourceLastUpdated)
     );
 
     if(response == null) {
@@ -162,9 +162,18 @@ class IsolateMatchCacheServer {
         cache.clear();
         return _AckResponse();
 
-      case _GetByDbIdCommand(id: var matchId):
+      case _GetByMatchCommand(match: var match):
+        var result = cache.get(match);
+        if(result.isOk()) {
+          return _MatchResponse(match: result.unwrap());
+        }
+        else {
+          return _ErrorResponse(message: result.unwrapErr().message);
+        }
+
+      case _GetByDbIdCommand(id: var matchId, sourceLastUpdated: var sourceLastUpdated):
         if(cache.contains(matchId)) {
-          var result = cache.getById(matchId);
+          var result = cache.getById(matchId, sourceLastUpdated: sourceLastUpdated);
           var match = result.unwrap();
           _log.v("Cache hit, returning match: ${match.name}");
           return _MatchResponse(match: result.unwrap());
@@ -185,8 +194,8 @@ class IsolateMatchCacheServer {
           return _MatchResponse(match: hydratedMatch);
         }
 
-      case _GetBySourceIdCommand(sourceId: var sourceId):
-        var result = cache.getBySourceId(sourceId);
+      case _GetBySourceIdCommand(sourceId: var sourceId, sourceLastUpdated: var sourceLastUpdated):
+        var result = cache.getBySourceId(sourceId, sourceLastUpdated: sourceLastUpdated);
         if(result.isOk()) {
           return _MatchResponse(match: result.unwrap());
         }
@@ -247,11 +256,23 @@ class _ClearCommand extends _IsolateMatchCacheServerCommand {
 /// if the match was not found in the database.
 class _GetByDbIdCommand extends _IsolateMatchCacheServerCommand {
   final int id;
+  final DateTime? sourceLastUpdated;
 
-  const _GetByDbIdCommand({required this.id});
+  const _GetByDbIdCommand({required this.id, this.sourceLastUpdated});
 }
 
-/// Get a hydrated match from the cache by a source ID.
+/// Get a hydrated match from the cache by a [DbShootingMatch] object.
+///
+/// Responds with [_MatchResponse] if the match was found in the cache
+/// or [_ErrorResponse] if the match was not found in the cache.
+///
+/// Note that get does not attempt to load the match from the database if it is not found in the cache.
+class _GetByMatchCommand extends _IsolateMatchCacheServerCommand {
+  final DbShootingMatch match;
+
+  const _GetByMatchCommand({required this.match});
+}
+
 ///
 /// Responds with [_MatchResponse] if the match was found in the cache
 /// or [_ErrorResponse] if the match was not found in the cache.
@@ -259,8 +280,9 @@ class _GetByDbIdCommand extends _IsolateMatchCacheServerCommand {
 /// Note that getBySourceId does not attempt to load the match from the database if it is not found in the cache.
 class _GetBySourceIdCommand extends _IsolateMatchCacheServerCommand {
   final String sourceId;
+  final DateTime? sourceLastUpdated;
 
-  const _GetBySourceIdCommand({required this.sourceId});
+  const _GetBySourceIdCommand({required this.sourceId, this.sourceLastUpdated});
 }
 
 /// A response from the match cache server isolate to a client isolate.

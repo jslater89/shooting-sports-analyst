@@ -561,7 +561,6 @@ class PredictionGameManager {
       actualMatch = match;
     }
 
-
     List<Shooter> shooters = [];
     for(var leg in wager.legs) {
       var shooter = leg.target.getShooterRatingSync(db);

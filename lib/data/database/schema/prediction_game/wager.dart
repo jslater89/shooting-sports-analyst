@@ -85,6 +85,9 @@ class DbWager {
     }
   }
 
+  @ignore
+  double get moneylinePayout => payout(roundToMoneyline: true);
+
   /// Evaluate the legs of the wager against the given scores.
   ///
   /// Returns a map of the legs to their evaluation results.
