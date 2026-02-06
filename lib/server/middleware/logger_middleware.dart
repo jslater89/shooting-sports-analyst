@@ -17,7 +17,7 @@ Middleware createLoggerMiddleware() {
       var response = await innerHandler(request);
       var duration = DateTime.now().difference(start).inMilliseconds;
       var responseSize = response.contentLength ?? 0;
-      _log.v('${request.method} ${request.requestedUri.path} - ${response.statusCode} I:${requestSize} - O:${responseSize} - - ${duration}ms');
+      _log.v('${request.method} ${request.requestedUri.path} - ${response.statusCode} - I:${requestSize} O:${responseSize} - ${duration}ms');
       return response;
     };
   };
