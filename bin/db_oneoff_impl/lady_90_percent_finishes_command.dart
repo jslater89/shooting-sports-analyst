@@ -40,6 +40,7 @@ Future<void> _lady90PercentFinishes(AnalystDatabase db, Console console) async {
 
   var matchProgressBar = LabeledProgressBar(maxValue: matches.length);
   var buf = StringBuffer();
+  buf.writeln("date,event,level,first,last,division,percentage,place,competitorCount");
   for(var match in matches) {
     for(var shooter in match.shooters) {
       if(shooter.female && (shooter.precalculatedScore?.percentage ?? 0) >= 90) {

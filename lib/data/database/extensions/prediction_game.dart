@@ -522,14 +522,24 @@ extension PredictionGameExtension on AnalystDatabase {
   }
 
   /// Get the full leaderboard for a prediction game.
-  Future<List<PredictionLeaderboardEntry>> getLeaderboard(PredictionGame game, LeaderboardSortMode sortMode) async {
+  Future<List<PredictionLeaderboardEntry>> getLeaderboard(
+    PredictionGame game,
+    LeaderboardSortMode sortMode,
+    {
+      List<DbWager>? preloadedWagers,
+      List<PredictionGameTransaction>? preloadedTransactions,
+    }
+  ) async {
     List<PredictionLeaderboardEntry> entries = [];
     for(var player in game.users) {
-      if(player.wagers.isEmpty) {
+      var playerWagerCount = await player.wagers.count();
+      if(playerWagerCount == 0) {
         // Players with no wagers don't appear on the leaderboard
         continue;
       }
-      var leaderboardEntry = PredictionLeaderboardEntry.fromPlayer(player, sortMode);
+      List<DbWager>? playerWagers = preloadedWagers?.where((w) => w.user.value?.id == player.id).toList();
+      List<PredictionGameTransaction>? playerTransactions = preloadedTransactions?.where((t) => t.user.value?.id == player.id).toList();
+      var leaderboardEntry = PredictionLeaderboardEntry.fromPlayer(player, sortMode, preloadedWagers: playerWagers, preloadedTransactions: playerTransactions);
       entries.add(leaderboardEntry);
     }
     entries.sort((a, b) => b.value.compareTo(a.value));
@@ -558,31 +568,85 @@ class PredictionLeaderboardEntry {
   PredictionGamePlayer player;
   double value;
 
-  PredictionLeaderboardEntry.fromPlayer(this.player, LeaderboardSortMode sortMode) : value = calculateValue(player, sortMode), rank = -1;
+  PredictionLeaderboardEntry.fromPlayer(
+    this.player,
+    LeaderboardSortMode sortMode,
+    {
+      List<DbWager>? preloadedWagers,
+      List<PredictionGameTransaction>? preloadedTransactions,
+    }
+  ) : value = calculateValue(player, sortMode, preloadedWagers: preloadedWagers, preloadedTransactions: preloadedTransactions), rank = -1;
 
-  static double calculateValue(PredictionGamePlayer player, LeaderboardSortMode sortMode) {
+  /// Calculate the value of a player for a given sort mode.
+  ///
+  /// If [preloadedWagers] is provided, it will be used to calculate the value
+  /// instead of querying the database. It must contain only the player's wagers.
+  static double calculateValue(
+    PredictionGamePlayer player,
+    LeaderboardSortMode sortMode,
+    {
+      List<DbWager>? preloadedWagers,
+      List<PredictionGameTransaction>? preloadedTransactions,
+    }
+  ) {
     switch(sortMode) {
       case LeaderboardSortMode.rawBalance:
         return player.balance;
       case LeaderboardSortMode.balancePlusOpenWagers:
-        return player.balance + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum;
+        List<DbWager> openWagers;
+        if(preloadedWagers != null) {
+          openWagers = preloadedWagers.where((w) => w.status == DbWagerStatus.pending).toList();
+        }
+        else {
+          openWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync();
+        }
+        return player.balance + openWagers.map((w) => w.amount).sum;
       case LeaderboardSortMode.balancePlusOpenWagersNetOfTopups:
+        List<DbWager> pendingWagers;
+        if(preloadedWagers != null) {
+          pendingWagers = preloadedWagers.where((w) => w.status == DbWagerStatus.pending).toList();
+        }
+        else {
+          pendingWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync();
+        }
+
+        List<PredictionGameTransaction> topUpTransactions;
+        if(preloadedTransactions != null) {
+          topUpTransactions = preloadedTransactions.where((t) => t.type == PredictionGameTransactionType.topUp).toList();
+        }
+        else {
+          topUpTransactions = player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).findAllSync();
+        }
         return player.balance
-          + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum
-          - player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).findAllSync().map((t) => t.amount).sum;
+          + pendingWagers.map((w) => w.amount).sum
+          - topUpTransactions.map((t) => t.amount).sum;
       case LeaderboardSortMode.accuracy:
-        List<DbWager> closedWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.won).or().statusEqualTo(DbWagerStatus.lost).findAllSync();
+        List<DbWager> closedWagers;
+        if(preloadedWagers != null) {
+          closedWagers = preloadedWagers.where((w) => w.status == DbWagerStatus.won || w.status == DbWagerStatus.lost).toList();
+        }
+        else {
+          closedWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.won).or().statusEqualTo(DbWagerStatus.lost).findAllSync();
+        }
         List<DbWager> wonWagers = closedWagers.where((w) => w.status == DbWagerStatus.won).toList();
         if(closedWagers.isEmpty) {
           return 0.0;
         }
         return wonWagers.length / closedWagers.length;
       case LeaderboardSortMode.profitRatio:
-        var wagersOfInterest = player.wagers.filter()
-          .statusEqualTo(DbWagerStatus.won)
-          .or()
-          .statusEqualTo(DbWagerStatus.lost)
-          .findAllSync();
+        List<DbWager> wagersOfInterest;
+        if(preloadedWagers != null) {
+          wagersOfInterest = preloadedWagers
+            .where((w) => w.status == DbWagerStatus.won || w.status == DbWagerStatus.lost).toList();
+        }
+        else {
+          wagersOfInterest = player.wagers
+            .filter()
+            .statusEqualTo(DbWagerStatus.won)
+            .or()
+            .statusEqualTo(DbWagerStatus.lost)
+            .findAllSync();
+        }
         if(wagersOfInterest.isEmpty) {
           return 0.0;
         }
@@ -596,7 +660,13 @@ class PredictionLeaderboardEntry {
         }
         return wonAmount / totalStake;
       case LeaderboardSortMode.averageOdds:
-        var wagers = player.wagers.filter().not().statusEqualTo(DbWagerStatus.voided).findAllSync();
+        List<DbWager> wagers;
+        if(preloadedWagers != null) {
+          wagers = preloadedWagers.where((w) => w.status != DbWagerStatus.voided).toList();
+        }
+        else {
+          wagers = player.wagers.filter().not().statusEqualTo(DbWagerStatus.voided).findAllSync();
+        }
         if(wagers.isEmpty) {
           return 0.0;
         }
@@ -654,6 +724,9 @@ enum LeaderboardSortMode {
       case LeaderboardSortMode.profitRatio:
         return value.toStringAsFixed(3);
       case LeaderboardSortMode.averageOdds:
+        if(value == 0.0) {
+          return "n/a";
+        }
         return PredictionProbability.fromDecimalOdds(value, houseEdge: 0.0).moneylineOdds;
     }
   }
