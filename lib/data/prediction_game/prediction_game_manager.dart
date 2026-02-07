@@ -157,12 +157,15 @@ class PredictionGameManager {
   // ======================
 
   /// Get the leaderboard for the prediction game.
-  Future<List<PredictionLeaderboardEntry>> getLeaderboard(LeaderboardSortMode sortMode, {bool preload = false}) async {
-    List<DbWager>? preloadedWagers;
-    List<PredictionGameTransaction>? preloadedTransactions;
+  Future<List<PredictionLeaderboardEntry>> getLeaderboard(
+    LeaderboardSortMode sortMode, {
+    bool preload = false,
+    List<DbWager>? preloadedWagers,
+    List<PredictionGameTransaction>? preloadedTransactions,
+  }) async {
     if(preload) {
-      preloadedWagers = await getWagers();
-      preloadedTransactions = await getTransactions();
+      if(preloadedWagers == null) preloadedWagers = await getWagers();
+      if(preloadedTransactions == null) preloadedTransactions = await getTransactions();
     }
     return db.getLeaderboard(predictionGame, sortMode, preloadedWagers: preloadedWagers, preloadedTransactions: preloadedTransactions);
   }

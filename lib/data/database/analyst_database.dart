@@ -181,6 +181,11 @@ class AnalystDatabase {
     return isar.writeTxnSync(txn, silent: silent);
   }
 
+  // TODO: cache server isolate
+  // For lookupCachedRating and cacheRating, rename to ...Sync and return null in multi-isolate
+  // contexts, then use FutureOr for the async versions, use them wherever possible, and prefer
+  // the async versions wherever feasible (speed will be almost the same either way).
+
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
   /// inserted, updated, or read.
