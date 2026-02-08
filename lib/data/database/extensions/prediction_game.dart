@@ -491,11 +491,12 @@ extension PredictionGameExtension on AnalystDatabase {
   /// Audit the transactions for a player, both for total amount and validity (i.e.,
   /// transactions requiring a wager must have a wager).
   ///
-  /// Returns true if the audit passes (i.e., the balance is consistent with the transactions).
+  /// Returns true if the audit passes (i.e., the balance is consistent with the transactions
+  /// and all transactions are properly linked to the player and game).
   ///
   /// If [updateBalance] is true, the player's balance will be updated to the new balance.
-  /// If [save] is true, the player will be updated with the new balance and any invalid
-  /// transactions will be deleted.
+  /// If [save] is true, the player will be updated with the new balance, any invalid transactions
+  /// will be deleted, and any transactions without proper links will be linked.
   bool auditPlayerTransactionsSync(PredictionGamePlayer player, {bool updateBalance = true, bool save = true}) {
     var totalDebit = 0.0;
     var totalCredit = 0.0;
@@ -538,7 +539,7 @@ extension PredictionGameExtension on AnalystDatabase {
         savePredictionGameTransactionSync(transaction);
       }
     }
-    return isConsistent;
+    return isConsistent && transactionsToSave.isEmpty;
   }
 
   /// Get the full leaderboard for a prediction game.
@@ -637,9 +638,9 @@ class PredictionLeaderboardEntry {
         else {
           topUpTransactions = player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).findAllSync();
         }
-        _log.v("player.balance: ${player.balance}");
-        _log.v("pendingWagers.map((w) => w.amount).sum: ${pendingWagers.map((w) => w.amount).sum}");
-        _log.v("topUpTransactions.map((t) => t.amount).sum: ${topUpTransactions.map((t) => t.amount).sum}");
+        // _log.v("player.balance: ${player.balance}");
+        // _log.v("pendingWagers.map((w) => w.amount).sum: ${pendingWagers.map((w) => w.amount).sum}");
+        // _log.v("topUpTransactions.map((t) => t.amount).sum: ${topUpTransactions.map((t) => t.amount).sum}");
         return player.balance
           + pendingWagers.map((w) => w.amount).sum
           - topUpTransactions.map((t) => t.amount).sum;

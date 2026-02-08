@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/audit_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -598,30 +599,30 @@ class PredictionGameManager {
 
   /// Audit the transactions for a player and update the balance if needed, returning
   /// the change in balance, or 0 if the balance was consistent.
-  Future<double> auditUserBalance(PredictionGamePlayer player) async {
+  Future<PredictionGameAuditResult> auditUserBalance(PredictionGamePlayer player) async {
     double priorBalance = player.balance;
-    bool isConsistent = db.auditPlayerTransactionsSync(player);
+    bool auditPassed = db.auditPlayerTransactionsSync(player);
     double balanceChange = player.balance - priorBalance;
-    if(!isConsistent) {
+    if(!auditPassed) {
       await db.savePredictionGamePlayer(player, saveLinks: false);
       _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
     }
 
     await loadPredictionGame();
-    return balanceChange;
+    return PredictionGameAuditResult(balanceChange: balanceChange, linksChanged: !auditPassed && balanceChange == 0);
   }
 
   /// Audit the transactions for a player and update the balance if needed.
-  double auditUserBalanceSync(PredictionGamePlayer player) {
+  PredictionGameAuditResult auditUserBalanceSync(PredictionGamePlayer player) {
     double priorBalance = player.balance;
-    bool isConsistent = db.auditPlayerTransactionsSync(player);
+    bool auditPassed = db.auditPlayerTransactionsSync(player);
     double balanceChange = player.balance - priorBalance;
-    if(!isConsistent) {
+    if(!auditPassed) {
       db.savePredictionGamePlayerSync(player);
       _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
     }
     loadPredictionGameSync();
-    return balanceChange;
+    return PredictionGameAuditResult(balanceChange: balanceChange, linksChanged: !auditPassed && balanceChange == 0);
   }
 
   // ======================
