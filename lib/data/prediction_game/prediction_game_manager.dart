@@ -164,8 +164,12 @@ class PredictionGameManager {
     List<PredictionGameTransaction>? preloadedTransactions,
   }) async {
     if(preload) {
-      if(preloadedWagers == null) preloadedWagers = await getWagers();
-      if(preloadedTransactions == null) preloadedTransactions = await getTransactions();
+      if(preloadedWagers == null) {
+        preloadedWagers = await getWagers();
+      }
+      if(preloadedTransactions == null) {
+        preloadedTransactions = await getTransactions();
+      }
     }
     return db.getLeaderboard(predictionGame, sortMode, preloadedWagers: preloadedWagers, preloadedTransactions: preloadedTransactions);
   }

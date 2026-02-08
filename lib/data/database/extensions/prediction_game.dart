@@ -13,7 +13,10 @@ import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("PredictionGameDb");
 
 extension PredictionGameExtension on AnalystDatabase {
   /// Get a prediction game by its ID.
@@ -497,6 +500,7 @@ extension PredictionGameExtension on AnalystDatabase {
     var totalDebit = 0.0;
     var totalCredit = 0.0;
     var transactionsToRemove = <PredictionGameTransaction>[];
+    var transactionsToSave = <PredictionGameTransaction>[];
     for(var transaction in player.transactions) {
       if(transaction.type.shouldHaveWager && transaction.wager.value == null) {
         transactionsToRemove.add(transaction);
@@ -508,6 +512,19 @@ extension PredictionGameExtension on AnalystDatabase {
       else {
         totalCredit += transaction.amount;
       }
+
+      bool needsSave = false;
+      if(transaction.user.value?.id != player.id) {
+        transaction.user.value = player;
+        needsSave = true;
+      }
+      if(transaction.game.value?.id != player.game.value?.id) {
+        transaction.game.value = player.game.value;
+        needsSave = true;
+      }
+      if(needsSave) {
+        transactionsToSave.add(transaction);
+      }
     }
     var newBalance = totalCredit - totalDebit;
     var isConsistent = (newBalance - player.balance).abs() < 0.0001;
@@ -517,6 +534,9 @@ extension PredictionGameExtension on AnalystDatabase {
     if(save) {
       deletePredictionGameTransactionsSync(transactionsToRemove);
       savePredictionGamePlayerSync(player);
+      for(var transaction in transactionsToSave) {
+        savePredictionGameTransactionSync(transaction);
+      }
     }
     return isConsistent;
   }
@@ -617,6 +637,9 @@ class PredictionLeaderboardEntry {
         else {
           topUpTransactions = player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).findAllSync();
         }
+        _log.v("player.balance: ${player.balance}");
+        _log.v("pendingWagers.map((w) => w.amount).sum: ${pendingWagers.map((w) => w.amount).sum}");
+        _log.v("topUpTransactions.map((t) => t.amount).sum: ${topUpTransactions.map((t) => t.amount).sum}");
         return player.balance
           + pendingWagers.map((w) => w.amount).sum
           - topUpTransactions.map((t) => t.amount).sum;
