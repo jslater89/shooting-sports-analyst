@@ -47,7 +47,7 @@ class IsolateManagerServer {
 
   void _listen(dynamic message) {
     _log.v("Manager isolate received message: ${message.runtimeType} ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
-    if(message is! IsolateMessage) {
+    if(message is! IsolateManagerMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
     else if(message is IsolateRegistrationRequest) {
@@ -58,6 +58,7 @@ class IsolateManagerServer {
       // Save the client's send port.
       _sendPorts[message.sourceIsolateId] = message.sendPort;
       _sendPorts[message.sourceIsolateId]!.send(IsolateRegistrationResponse(
+        id: message.id,
         sourceIsolateId: id,
         destinationIsolateId: message.sourceIsolateId,
         sendPort: _receivePort.sendPort,
@@ -68,7 +69,8 @@ class IsolateManagerServer {
         throw Exception("Isolate ${message.sourceIsolateId} not registered");
       }
       // Forward the connection request to the server isolate.
-      _sendPorts[message.destinationIsolateId]!.send(IsolateConnectionRequest(
+      _sendPorts[message.destinationIsolateId]!.send(IsolateConnectionRequest.forwarded(
+        id: message.id,
         sourceIsolateId: message.sourceIsolateId,
         destinationIsolateId: message.destinationIsolateId,
         sendPort: _sendPorts[message.sourceIsolateId]!,
@@ -95,6 +97,7 @@ class IsolateManagerServer {
     SSALogger.setupSendPort(startData.logPort, isolateName: id);
     var managerIsolate = IsolateManagerServer();
     startData.initPort.send(IsolateConnectionResponse(
+      id: 0,
       sourceIsolateId: id,
       destinationIsolateId: "init",
       sendPort: managerIsolate._receivePort.sendPort,

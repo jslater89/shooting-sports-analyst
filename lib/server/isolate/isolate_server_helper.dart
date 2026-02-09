@@ -56,7 +56,7 @@ class ServerIsolateHelper<C, R> {
   }
 
   void _listen(dynamic message) async{
-    if(message is! IsolateMessage) {
+    if(message is! IsolateManagerMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
 
@@ -75,6 +75,7 @@ class ServerIsolateHelper<C, R> {
       _clientSendPorts[message.sourceIsolateId] = message.sendPort;
       _clientSendPorts[message.sourceIsolateId]!.send(
         IsolateConnectionResponse(
+          id: message.id,
           sourceIsolateId: isolateId,
           destinationIsolateId: message.sourceIsolateId,
           sendPort: _receivePort.sendPort,
@@ -85,6 +86,7 @@ class ServerIsolateHelper<C, R> {
       var response = await commandHandler(message.data);
       _clientSendPorts[message.sourceIsolateId]!.send(
         ServerResponse<R>(
+          id: message.id,
           sourceIsolateId: isolateId,
           destinationIsolateId: message.sourceIsolateId,
           data: response,

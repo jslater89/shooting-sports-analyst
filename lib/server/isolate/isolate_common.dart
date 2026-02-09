@@ -56,7 +56,7 @@ class IsolateCommon {
       }
       else {
         _log.e("Init isolate received unexpected message: ${message.runtimeType}");
-        if(message is IsolateMessage) {
+        if(message is IsolateManagerMessage) {
           _log.e("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
         }
         return;

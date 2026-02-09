@@ -44,13 +44,14 @@ class IsolateManagerClient {
   Future<bool> get ready => _readyCompleter.future;
   Completer<bool> _readyCompleter = Completer();
   bool _registered = false;
-  bool get _commandInProgress => _commandCompleter != null;
-  Completer<ServerResponse?>? _commandCompleter;
+
+  Map<int, Completer<ServerResponse?>> _commandCompleters = {};
 
   static IsolateManagerClient? _instance;
   factory IsolateManagerClient(String isolateId, SendPort managerSendPort) {
     if(_instance == null) {
       _instance = IsolateManagerClient._(isolateId, managerSendPort);
+      IsolateMessage.seedRandom(isolateId.hashCode);
     }
     return _instance!;
   }
@@ -62,17 +63,16 @@ class IsolateManagerClient {
   }
 
   Future<ServerResponse?> _registerWithServer() async {
-    if(_commandInProgress) {
-      throw Exception("A command is already in progress");
-    }
     _log.i("Client isolate $thisIsolateId registering with isolate manager server");
-    _commandCompleter = Completer();
-    _managerSendPort.send(IsolateRegistrationRequest(
+    var request = IsolateRegistrationRequest(
       sourceIsolateId: thisIsolateId,
       destinationIsolateId: IsolateManagerServer.id,
-      sendPort: _serverReceivePort.sendPort)
+      sendPort: _serverReceivePort.sendPort,
     );
-    var response = await _commandCompleter!.future;
+    _commandCompleters[request.id] = Completer();
+    _managerSendPort.send(request);
+    var response = await _commandCompleters[request.id]!.future;
+    _commandCompleters.remove(request.id);
     _readyCompleter.complete(true);
     return response;
   }
@@ -85,28 +85,27 @@ class IsolateManagerClient {
   /// - [IsolateConnectionResponse]: Contains the server isolate's receive port after connection
   /// - [ServerResponse]: Contains the result of a command sent to a server isolate
   Future<void> _listen(dynamic message) async {
-    if(message is! IsolateMessage) {
+    if(message is! IsolateManagerMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
     if(message is IsolateRegistrationResponse) {
       _registered = true;
       _log.i("Client isolate $thisIsolateId registered with manager isolate");
-      _commandCompleter!.complete(null);
+      _commandCompleters[message.id]!.complete(null);
     }
     else if(message is IsolateConnectionResponse) {
       _serverSendPorts[message.sourceIsolateId] = message.sendPort;
       _log.i("Connected to server isolate ${message.sourceIsolateId}");
-      _commandCompleter!.complete(null);
+      _commandCompleters[message.id]!.complete(null);
     }
     else if(message is ServerResponse) {
-      _commandCompleter!.complete(message);
+      _commandCompleters[message.id]!.complete(message);
     }
     else {
       _log.w("Received unexpected message from server isolate: ${message.runtimeType}");
-      _commandCompleter!.complete();
+      _commandCompleters[message.id]!.complete(null);
     }
-
-    _commandCompleter = null;
+    _commandCompleters.remove(message.id);
   }
 
   /// Connect to a server isolate.
@@ -127,21 +126,20 @@ class IsolateManagerClient {
     if(!_registered) {
       throw Exception("Isolate not registered with IsolateManagerServer");
     }
-    if(_commandInProgress) {
-      throw Exception("A command is already in progress");
-    }
     if(_serverSendPorts.containsKey(isolateId)) {
       _log.i("Reusing existing connection to server isolate $isolateId");
       return _serverSendPorts[isolateId]!;
     }
     _log.i("Client isolate $thisIsolateId connecting to server isolate $isolateId");
-    _commandCompleter = Completer();
-    _managerSendPort.send(IsolateConnectionRequest(
+    var request = IsolateConnectionRequest(
       sourceIsolateId: thisIsolateId,
       destinationIsolateId: isolateId,
-      sendPort: _serverReceivePort.sendPort)
+      sendPort: _serverReceivePort.sendPort,
     );
-    await _commandCompleter!.future;
+    _commandCompleters[request.id] = Completer();
+    _managerSendPort.send(request);
+    await _commandCompleters[request.id]!.future;
+    _commandCompleters.remove(request.id);
     return _serverSendPorts[isolateId]!;
   }
 
@@ -159,21 +157,19 @@ class IsolateManagerClient {
     if(!_registered) {
       throw Exception("Isolate not registered with IsolateManagerServer");
     }
-    while(_commandInProgress) {
-      // Wait for the current command to complete
-      await _commandCompleter!.future;
-    }
     if(!_serverSendPorts.containsKey(isolateId)) {
       throw Exception("Server isolate $isolateId not found");
     }
 
-    _commandCompleter = Completer();
-    _serverSendPorts[isolateId]!.send(ClientCommand(
+    var request = ClientCommand(
       sourceIsolateId: thisIsolateId,
       destinationIsolateId: isolateId,
-      data: command)
+      data: command,
     );
-    var response = await _commandCompleter!.future;
+    _commandCompleters[request.id] = Completer();
+    _serverSendPorts[isolateId]!.send(request);
+    var response = await _commandCompleters[request.id]!.future;
+    _commandCompleters.remove(request.id);
     if(response == null) {
       throw Exception("No response from server isolate $isolateId");
     }

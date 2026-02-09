@@ -255,7 +255,9 @@ class SSALogger extends LogPrinter {
     _init(console: false, file: true);
   }
 
-  static setupSendPort(SendPort port, {String? isolateName}) {
+  /// Set up this isolate's SSALogger to send logs over the given send port, and
+  /// to skip file and console output locally.
+  static void setupSendPort(SendPort port, {String? isolateName}) {
     if(isolateName != null) {
       SSALogger.isolateName = isolateName;
     }

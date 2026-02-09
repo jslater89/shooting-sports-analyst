@@ -1,17 +1,33 @@
 
 import 'dart:isolate';
+import 'dart:math';
 
-sealed class IsolateMessage{
+
+abstract interface class IsolateMessage {
+  int get id;
+
+  static var _messageIdGenerator = Random();
+  static void seedRandom(int seed) {
+    _messageIdGenerator = Random(seed);
+  }
+
+  static int generateId() => (_messageIdGenerator.nextInt(1<<32) << 32) | _messageIdGenerator.nextInt(1<<32);
+}
+
+sealed class IsolateManagerMessage implements IsolateMessage {
   String get sourceIsolateId;
   String get destinationIsolateId;
 }
 
-sealed class ClientRequest extends IsolateMessage{}
-sealed class ClientResponse extends IsolateMessage{}
+sealed class ClientRequest extends IsolateManagerMessage{}
+sealed class ClientResponse extends IsolateManagerMessage{}
 
 /// A message from an isolate to the init isolate, indicating that the new isolate
 /// has completed its startup process.
 class StartupCompleteResponse extends ClientResponse {
+  @override
+  int get id => 0;
+
   /// The isolate ID of the source isolate of this message.
   final String sourceIsolateId;
   final String destinationIsolateId = "init";
@@ -24,6 +40,9 @@ class StartupCompleteResponse extends ClientResponse {
 /// [sourceIsolateId] is the isolate's ID.
 /// [sendPort] is the port that connects to the isolate's receive port.
 class IsolateRegistrationRequest extends ClientRequest {
+  @override
+  final int id;
+
   /// The isolate ID of the source isolate of this message.
   final String sourceIsolateId;
   /// The isolate ID of the destination isolate of this message.
@@ -32,7 +51,7 @@ class IsolateRegistrationRequest extends ClientRequest {
   /// The send port that connects to the isolate's receive port.
   final SendPort sendPort;
 
-  IsolateRegistrationRequest({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
+  IsolateRegistrationRequest({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort}) : id = IsolateMessage.generateId();
 }
 
 /// A response to a [IsolateRegistrationRequest].
@@ -40,6 +59,9 @@ class IsolateRegistrationRequest extends ClientRequest {
 /// As isolates registering must receive the server's send port on registration, this
 /// response is just a confirmation.
 class IsolateRegistrationResponse extends ClientResponse {
+  @override
+  final int id;
+
   /// The isolate ID of the registered client.
   final String sourceIsolateId;
   /// The isolate ID of the destination isolate.
@@ -47,7 +69,7 @@ class IsolateRegistrationResponse extends ClientResponse {
   /// The send port that connects to the manager isolate's receive port.
   final SendPort sendPort;
 
-  IsolateRegistrationResponse({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
+  IsolateRegistrationResponse({required this.id, required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
 }
 
 /// A request to connect to a server isolate.
@@ -55,22 +77,34 @@ class IsolateRegistrationResponse extends ClientResponse {
 /// [sourceIsolateId] specifies the isolate to connect to.
 /// [sendPort] is the port used by the server isolate to send messages to the client isolate.
 class IsolateConnectionRequest extends ClientRequest {
+  @override
+  final int id;
+
   final String sourceIsolateId;
   final String destinationIsolateId;
   final SendPort sendPort;
 
-  IsolateConnectionRequest({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
+  IsolateConnectionRequest({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort}) : id = IsolateMessage.generateId();
+  IsolateConnectionRequest.forwarded({
+    required this.id,
+    required this.sourceIsolateId,
+    required this.destinationIsolateId,
+    required this.sendPort,
+  });
 }
 
 /// A response to a [IsolateConnectionRequest].
 ///
 /// [sendPort] is the port used by the client isolate to send messages to the server isolate.
 class IsolateConnectionResponse extends ClientResponse {
+  @override
+  final int id;
+
   final String sourceIsolateId;
   final String destinationIsolateId;
   final SendPort sendPort;
 
-  IsolateConnectionResponse({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
+  IsolateConnectionResponse({required this.id, required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
 }
 
 /// A command from a client isolate to a server isolate.
@@ -78,11 +112,14 @@ class IsolateConnectionResponse extends ClientResponse {
 /// [sourceIsolateId] is the ID of the client isolate that sent the command.
 /// [data] is the data of the command.
 class ClientCommand<T> extends ClientRequest {
+  @override
+  final int id;
+
   final String sourceIsolateId;
   final String destinationIsolateId;
   final T data;
 
-  ClientCommand({required this.sourceIsolateId, required this.destinationIsolateId, required this.data});
+  ClientCommand({required this.sourceIsolateId, required this.destinationIsolateId, required this.data}) : id = IsolateMessage.generateId();
 }
 
 /// A response from a server isolate to a client isolate.
@@ -90,11 +127,14 @@ class ClientCommand<T> extends ClientRequest {
 /// [sourceIsolateId] is the ID of the server isolate that sent the response.
 /// [data] is the data of the response.
 class ServerResponse<T> extends ClientResponse {
+  @override
+  final int id;
+
   final String sourceIsolateId;
   final String destinationIsolateId;
   final T data;
 
-  ServerResponse({required this.sourceIsolateId, required this.destinationIsolateId, required this.data});
+  ServerResponse({required this.id, required this.sourceIsolateId, required this.destinationIsolateId, required this.data});
 }
 
 /// A convenience container for passing initial data to a managed isolate.
