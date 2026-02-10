@@ -177,6 +177,10 @@ extension PredictionGameExtension on AnalystDatabase {
     if(newTransactions != null) {
       await isar.writeTxn(() async {
         await isar.predictionGameTransactions.putAll(newTransactions);
+        for(var transaction in newTransactions) {
+          await transaction.game.save();
+          await transaction.wager.save();
+        }
       });
       player.transactions.addAll(newTransactions);
       saveLinks = true;
