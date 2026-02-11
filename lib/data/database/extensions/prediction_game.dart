@@ -564,6 +564,10 @@ extension PredictionGameExtension on AnalystDatabase {
       }
       List<DbWager>? playerWagers = preloadedWagers?.where((w) => w.user.value?.id == player.id).toList();
       List<PredictionGameTransaction>? playerTransactions = preloadedTransactions?.where((t) => t.user.value?.id == player.id).toList();
+      if(playerWagers != null && playerWagers.isEmpty) {
+        // Players with no wagers don't appear on the leaderboard
+        continue;
+      }
       var leaderboardEntry = PredictionLeaderboardEntry.fromPlayer(player, sortMode, preloadedWagers: playerWagers, preloadedTransactions: playerTransactions);
       entries.add(leaderboardEntry);
     }

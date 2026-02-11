@@ -312,10 +312,10 @@ class DbPrediction {
         return "${target.name} ${abovePercentage ? "≥" : "≤"} ${percentage!.asPercentage(decimals: 2, includePercent: true)}";
       case DbPredictionType.spread:
         if(favoriteCovers) {
-          return "${target.name} covers -${percentage!.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog!.name}";
+          return "${target.name} -${percentage!.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog!.name}";
         }
         else {
-          return "${underdog!.name} covers +${percentage!.asPercentage(decimals: 2, includePercent: true)} vs. ${target.name}";
+          return "${underdog!.name} +${percentage!.asPercentage(decimals: 2, includePercent: true)} vs. ${target.name}";
         }
       default:
         throw ArgumentError("Invalid prediction type: ${type}");

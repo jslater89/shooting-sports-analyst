@@ -238,10 +238,10 @@ class PercentageSpreadPrediction extends UserPrediction {
   @override
   String get descriptiveString {
     if(favoriteCovers) {
-      return "${favorite.name} covers -${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
+      return "${favorite.name} -${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
     }
     else {
-      return "${underdog.name} covers +${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${favorite.name}";
+      return "${underdog.name} +${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${favorite.name}";
     }
   }
 
