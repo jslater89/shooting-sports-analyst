@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger("HelpTopic");
 
 

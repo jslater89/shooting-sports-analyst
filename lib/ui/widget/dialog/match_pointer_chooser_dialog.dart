@@ -14,7 +14,8 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/date_range_picker_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-SSALogger _log = SSALogger("MatchDatabaseChooserDialog");
+// ignore: unused_element
+SSALogger _log = SSALogger("MatchPointerChooserDialog");
 
 /// Choose matches from the match database, or a list of matches.
 class MatchPointerChooserDialog extends StatefulWidget {

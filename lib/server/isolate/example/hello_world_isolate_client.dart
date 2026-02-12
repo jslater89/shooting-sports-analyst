@@ -1,12 +1,10 @@
 
 
-import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_server.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_client.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
-import 'package:shooting_sports_analyst/server/providers.dart';
 
 final _log = SSALogger("HelloWorldIsolateClient");
 
@@ -37,6 +35,7 @@ class HelloWorldIsolateClient {
   /// Pass this method to Isolate.spawn to run it on a new isolate, or call [startOnCurrentIsolate] to create a
   /// HelloWorldIsolateClient on the existing isolate.
   static Future<void> entrypoint(IsolateStartData startData) async {
+    // ignore: unused_local_variable
     var client = await startOnCurrentIsolate(startData, mainIsolate: false);
 
     // Real client code would probably wait on a webserver or some other long-running task, and

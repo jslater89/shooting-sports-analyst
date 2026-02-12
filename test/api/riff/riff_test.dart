@@ -124,7 +124,7 @@ void main() {
       await reloadedMatch1!.registrations.load();
 
       // Second export/import cycle
-      var riffBytes2 = exportToRiff(reloadedMatch1!);
+      var riffBytes2 = exportToRiff(reloadedMatch1);
       var validationResult2 = validator.validate(riffBytes2);
       expect(validationResult2.isOk(), isTrue, reason: "Second export should be valid");
       var importedMatch2 = importFromRiff(riffBytes2);

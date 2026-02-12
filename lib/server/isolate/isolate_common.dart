@@ -65,6 +65,7 @@ class IsolateCommon {
     _log.i("Init isolate receive port listener set up");
     initIsolateReceivePort.listen(initReceivePortHandler);
 
+    // ignore: unused_local_variable
     var managerIsolate = await Isolate.spawn(
       IsolateManagerServer.entrypoint,
       IsolateStartData(

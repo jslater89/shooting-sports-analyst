@@ -9,7 +9,6 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/fantasy.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
-import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -67,6 +66,7 @@ class FantasyProcessor {
   ///
   /// Returns true for success, false for failure.
   static Future<bool> processMonth(League league, LeagueSeason season, LeagueMonth month, {bool monthEnding = false}) async {
+    // ignore: unused_local_variable
     var db = AnalystDatabase();
 
     // 1. Get matches from the league's project occurring during the month.

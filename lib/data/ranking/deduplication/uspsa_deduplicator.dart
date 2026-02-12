@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/standard_dedu
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+// ignore: unused_element
 var _log = SSALogger("USPSADeduplicator");
 
 /// USPSAMemberNumber is a wrapper around USPSA member number strings that

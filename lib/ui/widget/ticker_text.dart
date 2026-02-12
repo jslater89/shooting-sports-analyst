@@ -33,6 +33,7 @@ import 'package:flutter/material.dart';
 import 'package:fading_edge_scrollview/fading_edge_scrollview.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger("TickerTextController");
 
 class TickerTextController extends ChangeNotifier {
@@ -64,6 +65,7 @@ class TickerTextController extends ChangeNotifier {
   }
 }
 
+// ignore: unused_element
 var _wLog = SSALogger("TickerTextWidget");
 
 class TickerText extends StatefulWidget {

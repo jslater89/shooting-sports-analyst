@@ -264,6 +264,7 @@ extension FutureMatchDatabase on AnalystDatabase {
     NamePartsQuery? nameQuery;
     NameSortQuery? nameSortQuery;
     DateQuery? dateQuery;
+    // ignore: unused_local_variable
     SportQuery? sportQuery;
 
     for(var e in elements) {

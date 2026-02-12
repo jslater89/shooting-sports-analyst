@@ -265,8 +265,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<ShooterRating> _ratings = [];
 
   Widget _ratingView() {
-    final backgroundColor = Theme.of(context).colorScheme.secondary;
-
     if(!initialized) {
       _log.w("No match selected!");
       return Container();

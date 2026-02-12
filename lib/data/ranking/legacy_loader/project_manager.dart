@@ -147,6 +147,7 @@ class RatingProjectManager {
   }
 }
 
+// ignore: unused_element
 const _sportKey = "sport";
 const _nameKey = "name";
 const _combineLocapKey = "combineLocap";

@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+// ignore: unused_element
 final _log = SSALogger("PredictionGameDb");
 
 extension PredictionGameExtension on AnalystDatabase {

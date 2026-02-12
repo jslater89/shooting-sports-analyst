@@ -7,6 +7,7 @@
 import 'package:shooting_sports_analyst/data/help/help_directory.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger("HelpTopicRegistry");
 
 /// A top level registry for all help topics, allowing searching and

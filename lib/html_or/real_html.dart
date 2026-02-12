@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
+// ignore: deprecated_member_use
 import 'dart:html';
 import 'dart:io';
 
@@ -68,10 +69,18 @@ class Controller extends ControlInterface {
 
   @override
   Future<bool> saveFile(String defaultName, String fileContents) {
-    return launch("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
+    var uri = Uri.tryParse("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
+    if(uri == null) {
+      return Future.value(false);
+    }
+    return launchUrl(uri);
   }
 
   Future<bool> saveBuffer(String defaultName, List<int> buffer) {
-    return launch("data:application/octet-stream;base64,${base64Encode(buffer)}");
+    var uri = Uri.tryParse("data:application/octet-stream;base64,${base64Encode(buffer)}");
+    if(uri == null) {
+      return Future.value(false);
+    }
+    return launchUrl(uri);
   }
 }

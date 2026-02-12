@@ -57,10 +57,10 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
   }
 
-  RelativeScore get _relativeScore {
-    if(widget.stageScore != null) return widget.stageScore!;
-    else return widget.matchScore!;
-  }
+  // RelativeScore get _relativeScore {
+  //   if(widget.stageScore != null) return widget.stageScore!;
+  //   else return widget.matchScore!;
+  // }
 
   MatchEntry get _shooter {
     if(widget.stageScore != null) return widget.stageScore!.shooter;

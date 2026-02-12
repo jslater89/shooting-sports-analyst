@@ -169,6 +169,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
+  bool _canceled = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,23 +178,26 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
         title: Text("Loading..."),
       ),
       body: PopScope(
-        canPop: false,
-        onPopInvoked: (_didPop) async {
-          var confirm = await ConfirmDialog.show(
-            context,
-            title: "Cancel loading?",
-            width: 500,
-            content: Text("Are you sure you want to cancel loading? If you cancel during rating calculation, it "
-            "may result in an inconsistent database state, and require a full recalculation."),
-            negativeButtonLabel: "CONTINUE LOADING",
-            positiveButtonLabel: "CANCEL LOADING",
-            barrierDismissible: false,
-          );
+        canPop: _canceled,
+        onPopInvokedWithResult: (didPop, _result) async {
+          if(!_canceled) {
+            var confirm = await ConfirmDialog.show(
+              context,
+              title: "Cancel loading?",
+              width: 500,
+              content: Text("Are you sure you want to cancel loading? If you cancel during rating calculation, it "
+              "may result in an inconsistent database state, and require a full recalculation."),
+              negativeButtonLabel: "CONTINUE LOADING",
+              positiveButtonLabel: "CANCEL LOADING",
+              barrierDismissible: false,
+            );
 
-          if(confirm ?? false) {
-            // The loader will cancel itself at the next opportunity
-            // and return an error.
-            loader.cancel();
+            if(confirm ?? false) {
+              // The loader will cancel itself at the next opportunity
+              // and return an error.
+              loader.cancel();
+              _canceled = true;
+            }
           }
         },
         child: _matchLoadingIndicator()

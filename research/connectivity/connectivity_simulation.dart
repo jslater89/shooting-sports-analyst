@@ -1106,6 +1106,7 @@ void analyzeConnectivity(
   }
 }
 
+// ignore: unused_element
 void _printCompetitorDetail(Competitor competitor, Map<int, Match> matches) {
   print("\nCompetitor ${competitor.shooterId}:");
   print("Connectivity Score: ${competitor.connectivityScore.toStringAsFixed(1)}");

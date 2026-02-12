@@ -42,17 +42,13 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/route/competitors_map.dart';
-import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/color_legend.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
-import 'package:shooting_sports_analyst/ui/widget/us_data_map.dart';
-import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("ResultPage");
@@ -343,8 +339,6 @@ class _ResultPageState extends State<ResultPage> {
       case SortMode.fantasyPoints:
         scores.sortByFantasyPoints(fantasyScores: _fantasyScores);
         break;
-      default:
-        _log.e("Unknown sort type $s");
     }
   }
 
@@ -844,9 +838,9 @@ class _ResultPageState extends State<ResultPage> {
       ),
     );
 
-    return RawKeyboardListener(
-      onKey: (RawKeyEvent e) {
-        if(e is RawKeyDownEvent) {
+    return KeyboardListener(
+      onKeyEvent: (KeyEvent e) {
+        if(e is KeyDownEvent) {
           if (_appFocus!.hasPrimaryFocus) {
             // n.b.: 40 logical pixels is two rows
             if(e.logicalKey == LogicalKeyboardKey.arrowLeft) {

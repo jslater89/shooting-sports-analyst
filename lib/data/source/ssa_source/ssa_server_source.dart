@@ -6,7 +6,6 @@
 
 import "dart:convert";
 
-import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/auth/auth_provider.dart";
 import "package:shooting_sports_analyst/api/miff/miff.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";

@@ -242,6 +242,7 @@ class OldRatingHistory {
     return RatingResult.ok();
   }
 
+  // ignore: unused_element, unused_element_parameter
   void _raterForGroup(List<PracticalMatch> matches, OldRaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     throw UnimplementedError("OldRatingHistory._raterForGroup is no longer implemented");
   }

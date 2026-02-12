@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_rating_lin
 import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_squadding.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 
+// ignore: unused_element
 final _log = SSALogger("MatchPrepPage");
 
 /// A match prep page displays details of a match prep. It has controls for showing

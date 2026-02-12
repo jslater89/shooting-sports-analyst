@@ -185,6 +185,7 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
     return ParetoFrontChart(tuner: widget.tuner, fX: f1, fY: f2, highlight: widget.highlight);
   }
 
+  // ignore: unused_element
   Widget _totErrVsOrdPlot() {
     var f1 = EloEvaluator.evaluationFunctions.entries.firstWhere((f) => f.key == "totErr").value;
     var f2 = EloEvaluator.evaluationFunctions.entries.firstWhere((f) => f.key == "ord").value;

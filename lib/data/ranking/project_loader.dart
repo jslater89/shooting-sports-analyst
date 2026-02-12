@@ -10,7 +10,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
-import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -394,6 +393,7 @@ class RatingProjectLoader {
     _canceled = true;
   }
 
+  // ignore: unused_element
   Future<Result<void, RatingProjectLoadError>> _addMatch(ShootingMatch match) {
     return _addMatches([match]);
   }

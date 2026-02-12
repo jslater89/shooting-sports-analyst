@@ -7,7 +7,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/source/classifiers/classifier_import.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -110,15 +109,5 @@ class IcoreClassifierRecord {
       memberNumber: memberNumber,
       time: time!,
     );
-  }
-}
-
-extension _MaybeParse on DateFormat {
-  DateTime? tryParse(String input) {
-    try {
-      return parse(input);
-    } catch (e) {
-      return null;
-    }
   }
 }

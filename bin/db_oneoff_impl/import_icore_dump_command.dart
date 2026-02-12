@@ -1,11 +1,9 @@
 import 'dart:io';
 
 import 'package:dart_console/dart_console.dart';
-import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/classifiers/classifier_import.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/source/classifiers/icore_export_converter.dart';

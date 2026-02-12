@@ -959,7 +959,7 @@ class MemberNumberTypeColumn extends StatelessWidget {
 }
 
 class _DedupLink extends StatelessWidget {
-  const _DedupLink({super.key, required this.deduplicator, required this.number, required this.collision});
+  const _DedupLink({required this.deduplicator, required this.number, required this.collision});
 
   final ShooterDeduplicator deduplicator;
   final String number;

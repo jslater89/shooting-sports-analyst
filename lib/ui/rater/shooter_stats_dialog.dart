@@ -37,6 +37,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+// ignore: unused_element
 final _log = SSALogger("ShooterStatsDialog");
 
 final NumberFormat _separatedNumberFormat = NumberFormat("#,###");
@@ -548,14 +549,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     double chartMaximum;
 
     if(maximumMinimum != null) {
-      chartMinimum = min(minimumMaximum!, minWithError - 50);
+      chartMinimum = min(maximumMinimum, minWithError - 50);
     }
     else {
       chartMinimum = minWithError - 50;
     }
 
     if(minimumMaximum != null) {
-      chartMaximum = max(minimumMaximum!, maxWithError + 50);
+      chartMaximum = max(minimumMaximum, maxWithError + 50);
     }
     else {
       chartMaximum = maxWithError + 50;
@@ -1013,7 +1014,7 @@ class _StatefulContainerState extends State<_StatefulContainer> {
   Widget build(BuildContext context) {
     var bgColor = ThemeColors.onBackgroundColor(context);
     return Container(
-      color: highlighted ? bgColor.withOpacity(0.1) : null,
+      color: highlighted ? bgColor.withValues(alpha: 0.1) : null,
       child: widget.child,
     );
   }

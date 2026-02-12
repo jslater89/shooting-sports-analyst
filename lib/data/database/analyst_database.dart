@@ -9,9 +9,7 @@ import 'dart:io';
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
-import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
-import 'package:shooting_sports_analyst/data/database/migrations.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
@@ -39,7 +37,6 @@ import 'package:shooting_sports_analyst/data/database/schema/server/role.dart';
 import 'package:shooting_sports_analyst/data/database/schema/server/session.dart';
 import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -810,6 +807,7 @@ class AnalystDatabase {
     return query;
   }
 
+  // ignore: unused_element
   Query<DateTime> _buildMatchLastUpdatedQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
 
@@ -850,6 +848,7 @@ class AnalystDatabase {
     return query;
   }
 
+  // ignore: unused_element_parameter
   (MatchQueryElement?, Iterable<MatchQueryElement>, List<SortProperty>, Sort) _buildMatchQueryElements(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     NameSortQuery? nameSortQuery;

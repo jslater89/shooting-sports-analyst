@@ -390,7 +390,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   @override
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds() async {
-    return DataSourceResult.ok(matchPointers.map((m) => m.localDbId).whereNotNull().toList());
+    return DataSourceResult.ok(matchPointers.map((m) => m.localDbId).nonNulls.toList());
   }
 
   @override
@@ -537,7 +537,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       });
     }
 
-    project.groups = [...builtinGroups.whereNotNull(), ...customGroups];
+    project.groups = [...builtinGroups.nonNulls, ...customGroups];
 
     project.matchPointers = (json["matchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     project.filteredMatchPointers = (json["filteredMatchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();

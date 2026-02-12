@@ -6,7 +6,6 @@
 
 import 'dart:math' show sqrt, pow, min;
 
-import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';

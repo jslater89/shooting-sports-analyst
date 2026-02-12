@@ -7,7 +7,6 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
@@ -106,7 +105,7 @@ class RatingProjectRollback {
     await callback(progress: 0, total: 1, state: RollbackState.updatingMatches);
     // Find matches after the rollback date.
     var matches = project.matchPointers.where((match) => match.date!.isAfter(rollbackDate)).toList();
-    var matchIds = matches.map((match) => match.sourceIds.first).whereNotNull().toList();
+    var matchIds = matches.map((match) => match.sourceIds.first).nonNulls.toList();
     if(matchIds.length != matches.length) {
       // Shouldn't happen, but log it just in case.
       _log.w("${matches.length - matchIds.length} matches had no local ID and were not rolled back");

@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/util.dart';
 export 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 export 'package:shooting_sports_analyst/data/sport/scoring/match_scoring.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger("Scoring");
 
 /// A bare relative score is a relative score without any attached shooter.

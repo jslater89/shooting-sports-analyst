@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:io';
-
 import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:html/parser.dart';
@@ -164,7 +162,6 @@ Future<RegistrationResult> getRegistrations(
   }
 
   // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
-  var urlParts = url.split("/");
   var matchId = extractMatchIdFromUrl(url);
   if(matchId.isEmpty) {
     _log.w("No match ID found in $url");

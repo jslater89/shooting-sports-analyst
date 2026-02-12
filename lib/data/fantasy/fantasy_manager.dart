@@ -46,6 +46,7 @@ class FantasyManager {
       startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
     }
 
+    // ignore: unused_local_variable
     var season = LeagueSeason(
       startDate: startDate,
       endDate: endDate,

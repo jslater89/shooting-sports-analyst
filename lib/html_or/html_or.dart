@@ -59,7 +59,11 @@ class HtmlOr {
   }
 
   static void openLink(String url) {
-    launch(url);
+    var uri = Uri.tryParse(url);
+    if(uri == null) {
+      return;
+    }
+    launchUrl(uri);
   }
 
   static bool get needsProxy => controller.needsProxy;

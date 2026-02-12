@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/help/entries/about_help.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 
@@ -21,8 +20,8 @@ class EmptyScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    var size = MediaQuery.of(context).size;
+    // final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    // var size = MediaQuery.of(context).size;
     final primaryColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).colorScheme.surface;
     var animation = operationInProgress! ?

@@ -6,7 +6,6 @@
 
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
@@ -122,7 +121,7 @@ class RatingProjectSettings {
     Map<String, List<Division>> recognizedDivisions = {};
     var recDivJson = (encodedProject[_recognizedDivisionsKey] ?? <String, dynamic>{}) as Map<String, dynamic>;
     for(var key in recDivJson.keys) {
-      var divisions = ((recDivJson[key] ?? []) as List<dynamic>).map((s) => sport.divisions.lookupByName(s as String)).whereNotNull();
+      var divisions = ((recDivJson[key] ?? []) as List<dynamic>).map((s) => sport.divisions.lookupByName(s as String)).nonNulls;
       recognizedDivisions[key] = []..addAll(divisions);
     }
 

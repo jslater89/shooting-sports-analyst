@@ -119,11 +119,11 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
                           children: [
                             Expanded(
                               child: DropdownMenu<String>(
-                                dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                                dropdownMenuEntries: widget.memberNumbers.map((e) =>
                                   DropdownMenuEntry(
                                     value: e,
                                     label: e,
-                                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: WidgetStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
                                   )
                                 ).toList(),
                                 controller: sourceController,
@@ -177,11 +177,11 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
                   ),
                   const SizedBox(width: 10),
                   DropdownMenu<String>(
-                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                    dropdownMenuEntries: widget.memberNumbers.map((e) =>
                       DropdownMenuEntry(
                         value: e,
                         label: e,
-                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: WidgetStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
                       )
                     ).toList(),
                     controller: targetController,

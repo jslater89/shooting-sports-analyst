@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:stack_trace/stack_trace.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger.consoleOnly("LoggerInternal");
 
 // We will log at trace level until config is loaded, at which
@@ -44,6 +45,7 @@ class _SSALogFilter extends LogFilter {
 }
 
 extension _LevelComparison on Level {
+  // ignore: unused_element
   bool operator >(Level other) {
     return Level.values.indexOf(this) > Level.values.indexOf(other);
   }
@@ -52,10 +54,13 @@ extension _LevelComparison on Level {
     return Level.values.indexOf(this) >= Level.values.indexOf(other);
   }
 
+
+  // ignore: unused_element
   bool operator <(Level other) {
     return Level.values.indexOf(this) < Level.values.indexOf(other);
   }
 
+  // ignore: unused_element
   bool operator <=(Level other) {
     return Level.values.indexOf(this) <= Level.values.indexOf(other);
   }
@@ -357,7 +362,7 @@ class SSALogger extends LogPrinter {
 
   static String _translateLevel(Level l) {
     switch(l) {
-      case Level.trace || Level.verbose:
+      case Level.trace:
         return "VERBOSE";
       case Level.debug:
         return " DEBUG ";
@@ -367,9 +372,9 @@ class SSALogger extends LogPrinter {
         return " WARN  ";
       case Level.error:
         return " ERROR ";
-      case Level.fatal || Level.wtf:
+      case Level.fatal:
         return "  WTF  ";
-      case Level.off || Level.nothing:
+      case Level.off:
         return "unused";
       default:
         return "impossible";

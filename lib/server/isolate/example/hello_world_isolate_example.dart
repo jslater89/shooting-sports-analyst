@@ -7,7 +7,6 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_client.dart';
 import 'package:shooting_sports_analyst/server/isolate/example/hello_world_isolate_server.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
-import 'package:shooting_sports_analyst/server/isolate/isolate_manager.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
 
@@ -20,6 +19,7 @@ void main() async {
 
   // Create the ports for the init isolate and the logger isolate.
   var initIsolateReceivePort = ReceivePort();
+  // ignore: unused_local_variable
   var initIsolateSendPort = initIsolateReceivePort.sendPort;
 
   var loggerReceivePort = ReceivePort();
@@ -51,16 +51,20 @@ void main() async {
   );
 
   // Spawn the server isolate. Its helper will register with the manager isolate.
+  // ignore: unused_local_variable
   var helloWorldServerIsolate = await Isolate.spawn(HelloWorldServer.entrypoint, initData.copyWithId(HelloWorldServer.id));
 
   await serverIsolateStartupCompleter.future;
   _log.i("All server isolate startups complete");
 
   // Spawn the client isolates. They will use their own isolate's IsolateManagerClient to connect to the server isolate.
+  // ignore: unused_local_variable
   var helloWorldClientIsolate1 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client1"));
+  // ignore: unused_local_variable
   var helloWorldClientIsolate2 = await Isolate.spawn(HelloWorldIsolateClient.entrypoint, initData.copyWithId("hello_client2"));
 
   var mainIsolateData = initData.copyWithId("main");
+  // ignore: unused_local_variable
   var mainIsolateClient = await HelloWorldIsolateClient.startOnCurrentIsolate(mainIsolateData, mainIsolate: true);
   _log.i("Server and client isolates spawned");
 }

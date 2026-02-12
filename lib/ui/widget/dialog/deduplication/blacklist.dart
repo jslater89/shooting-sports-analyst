@@ -104,11 +104,11 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   DropdownMenu<String>(
-                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                    dropdownMenuEntries: widget.memberNumbers.map((e) =>
                       DropdownMenuEntry(
                         value: e,
                         label: e,
-                        style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                        style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: WidgetStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
                       )
                     ).toList(),
                     controller: sourceController,
@@ -126,11 +126,11 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                   ),
                   const SizedBox(width: 10),
                   DropdownMenu<String>(
-                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                    dropdownMenuEntries: widget.memberNumbers.map((e) =>
                       DropdownMenuEntry(
                         value: e,
                         label: e,
-                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: WidgetStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
                       )
                     ).toList(),
                     controller: targetController,

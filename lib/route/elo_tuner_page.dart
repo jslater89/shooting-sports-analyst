@@ -162,6 +162,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
   }
 
   EvaluationProgressUpdate? lastUpdate;
+  // ignore: unused_element
   void _updateUi(EvaluationProgressUpdate update) {
     setState(() {
       lastUpdate = update;

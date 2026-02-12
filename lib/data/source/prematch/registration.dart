@@ -6,7 +6,6 @@
 
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
-import 'package:shooting_sports_analyst/data/source/search.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 

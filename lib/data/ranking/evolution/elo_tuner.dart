@@ -307,6 +307,7 @@ class EloTuner {
     _log.d("After breeding, ${currentPopulation.length} prey");
   }
 
+  // ignore: unused_element
   EloSettings _pickFrom(List<EloEvaluator> evaluators, weightThresholds, [EloSettings? exclude]) {
     double roll = _r.nextDouble();
     for(int i = 0; i < evaluators.length; i++) {
@@ -321,6 +322,7 @@ class EloTuner {
     return evaluators[evaluators.length - 2].settings;
   }
 
+  // ignore: unused_element
   List<double> _calculateWeights(int count) {
     List<double> nonNormalized = [];
     for(int i = 0; i < count; i++) {
