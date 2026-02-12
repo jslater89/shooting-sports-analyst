@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("DbShooterRatingEntity");
 
@@ -73,6 +74,9 @@ mixin EmbeddedDbShooterRatingEntity {
 
   @ignore
   DbShooterRating? _cachedRating;
+
+  @ignore
+  int get key => combineHashList64([projectId.stableHash64, groupUuid.stableHash64, memberNumber.stableHash64]);
 
   /// Gets the shooter rating of interest for the given project and group.
   DbShooterRating? getShooterRatingSync(AnalystDatabase db) {

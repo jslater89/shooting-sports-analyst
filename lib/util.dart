@@ -279,6 +279,10 @@ extension StableStringHash on String {
 
     return hash;
   }
+
+  /// Alias for [stableHash] for consistency with other stable hash functions, although
+  /// String stableHash is already 64-bit.
+  int get stableHash64 => stableHash;
 }
 
 extension StableIntHash on int {

@@ -7,11 +7,14 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:data/data.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -250,6 +253,36 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
     double maxOverall = double.negativeInfinity;
     double minOverall = double.infinity;
+
+    var allSorted = widget.statistics.allRatings.sorted((a, b) => a.compareTo(b));
+    var allLen = allSorted.length;
+    var allMin = allSorted.first;
+    var allMax = allSorted.last;
+
+    var scaler = StandardizedMaximumScaler(
+      info: RatingScalerInfo(
+        minRating: allMin,
+        maxRating: allMax,
+        top2PercentAverage: 0,
+        ratingDistribution: WeibullDistribution(1, 1),
+        ratingMean: 0,
+        ratingStdDev: 0,
+      ),
+      scaleMax: 2000,
+      scaleMin: 0,
+    );
+    var allQ1 = allSorted[(allLen * .25).floor()];
+    var allMedian = allSorted[allLen ~/ 2];
+    var allQ3 = allSorted[min(allLen - 1, (allLen * .75).floor())];
+    _log.i("All min: ${scaler.scaleRating(allMin).round()}");
+    _log.i("All Q1: ${scaler.scaleRating(allQ1).round()}");
+    _log.i("All median: ${scaler.scaleRating(allMedian).round()}");
+    _log.i("All Q3: ${scaler.scaleRating(allQ3).round()}");
+    _log.i("All 90th percentile: ${scaler.scaleRating(allSorted[(allLen * .9).floor()]).round()}");
+    _log.i("All 95th percentile: ${scaler.scaleRating(allSorted[(allLen * .95).floor()]).round()}");
+    _log.i("All 99th percentile: ${scaler.scaleRating(allSorted[(allLen * .99).floor()]).round()}");
+    _log.i("All 99.5th percentile: ${scaler.scaleRating(allSorted[(allLen * .995).floor()]).round()}");
+    _log.i("All max: ${scaler.scaleRating(allMax).round()}");
 
     for(var cls in widget.sport.classifications.values) {
       var ratings = widget.statistics.ratingsByClass[cls]!;

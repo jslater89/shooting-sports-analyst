@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/help/entries/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
@@ -27,7 +28,6 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_heat_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -231,6 +231,21 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           }
         ),
         actions: [
+          Tooltip(
+            message: "Export match heat",
+            child: IconButton(
+              icon: Icon(Icons.save_alt),
+              onPressed: () {
+                List<String> lines = [];
+                lines.add("Match, Date, Top 10% Average Rating, Median Rating, Average Classification, Match Size");
+                for(var heat in _matchHeat.values) {
+                  var safeName = heat.matchPointer.name.replaceAll('"', "'");
+                  lines.add('"${safeName}",${heat.matchPointer.date?.toIso8601String() ?? "(no date)"},${heat.weightedTopTenPercentAverageRating},${heat.weightedMedianRating},${heat.weightedClassificationStrength},${heat.rawCompetitorCount}');
+                }
+                HtmlOr.saveFile("match-heat-${_project!.name.safeFilename()}.csv", lines.join("\n"));
+              }
+            ),
+          ),
           IconButton(
             onPressed: () async {
               var confirmed = await ConfirmDialog.show(
@@ -287,7 +302,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                   message: "Highlight matches",
                   child: IconButton(
                     onPressed: () async {
-                      var pointers = await MatchPointerChooserDialog.showMultiple(context: context, matches: _project!.matchPointers);
+                      var pointers = await MatchPointerChooserDialog.showMultiple(context: context, matches: _project!.matchPointers, selectDateRange: true);
                       if(pointers != null) {
                         _highlightedMatches = pointers;
                         setState(() {

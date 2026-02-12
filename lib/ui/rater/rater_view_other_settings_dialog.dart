@@ -145,7 +145,7 @@ enum RatingScalerType {
   RatingScaler? scaler() {
     switch(this) {
       case RatingScalerType.standardizedMaximum:
-        return StandardizedMaximumScaler(info: RatingScalerInfo.empty());
+        return StandardizedMaximumScaler(scaleMax: 2000, scaleMin: 0, info: RatingScalerInfo.empty());
       case RatingScalerType.top2PercentAverage:
         return Top2PercentAverageScaler(info: RatingScalerInfo.empty());
       case RatingScalerType.distributionPercentile:

@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/date_range_picker_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("MatchDatabaseChooserDialog");
 
@@ -23,6 +25,7 @@ class MatchPointerChooserDialog extends StatefulWidget {
     this.helpText,
     this.multiple = false,
     this.showIds = false,
+    this.selectDateRange = false,
   }) : super(key: key);
 
   final bool showIds;
@@ -30,6 +33,7 @@ class MatchPointerChooserDialog extends StatefulWidget {
   final List<MatchPointer> matches;
   final String? helpText;
   final bool multiple;
+  final bool selectDateRange;
 
   @override
   State<MatchPointerChooserDialog> createState() => _MatchPointerChooserDialogState();
@@ -40,8 +44,10 @@ class MatchPointerChooserDialog extends StatefulWidget {
     bool showStats = false,
     String? helpText,
     bool showIds = false,
+    bool selectDateRange = false,
   }) {
     return showDialog(context: context, builder: (context) => MatchPointerChooserDialog(
+      selectDateRange: selectDateRange,
       showIds: showIds,
       showStats: showStats,
       matches: matches,
@@ -63,6 +69,7 @@ class MatchPointerChooserDialog extends StatefulWidget {
       matches: matches,
       helpText: helpText,
       multiple: false,
+      selectDateRange: false,
     ), barrierDismissible: false);
   }
 }
@@ -168,6 +175,20 @@ class _MatchPointerChooserDialogState extends State<MatchPointerChooserDialog> {
                     setState(() {
                       selectedMatches.addAll(searchedMatches);
                     });
+                  },
+                ),
+                if(widget.selectDateRange) TextButton(
+                  child: Text("SELECT DATE RANGE"),
+                  onPressed: () async {
+                    var result = await SSADateRangePickerDialog.show(context, startLimit: practicalShootingZeroDate, endLimit: DateTime.now());
+                    switch(result) {
+                      case null:
+                        break;
+                      case (DateTime start, DateTime end):
+                        setState(() {
+                          selectedMatches = searchedMatches.where((m) => m.date != null && m.date!.isAfter(start) && m.date!.isBefore(end)).toSet();
+                        });
+                    }
                   },
                 ),
               ],
