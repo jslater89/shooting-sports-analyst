@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_select_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -155,8 +156,8 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
       );
     }
     else {
-      return WillPopScope(
-        onWillPop: () async {
+      return ConfirmPopScope(
+        onPopRequested: () async {
           // Show confirmation dialog
           final result = await showDialog<bool>(
             context: context,

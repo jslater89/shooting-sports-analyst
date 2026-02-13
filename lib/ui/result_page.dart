@@ -43,6 +43,7 @@ import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/route/competitors_map.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
@@ -879,8 +880,8 @@ class _ResultPageState extends State<ResultPage> {
       },
       autofocus: true,
       focusNode: _appFocus!,
-      child: WillPopScope(
-        onWillPop: () async {
+      child: ConfirmPopScope(
+        onPopRequested: () async {
           if(kIsWeb) {
             SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
               label: "Shooting Sports Analyst",

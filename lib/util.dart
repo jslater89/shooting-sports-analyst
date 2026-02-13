@@ -315,6 +315,7 @@ int combineHashes(int hash, int value) {
   return hash ^ (hash >> 6);
 }
 
+// ignore: deprecated_member_use_from_same_package
 /// 64-bit combine of two hashes. Same guarantees as [combineHashes] but full
 /// 64-bit positive range (0 .. 2^63-1) for use as a database key.
 int combineHashes64(int hash, int value) {
@@ -336,6 +337,7 @@ int combineHashList(List<int> hashes) {
   return hashes.fold(0, combineHashes);
 }
 
+// ignore: deprecated_member_use_from_same_package
 /// 64-bit combine of a list of hashes. Same as [combineHashList] but full
 /// 64-bit range; order of hashes matters.
 int combineHashList64(List<int> hashes) {

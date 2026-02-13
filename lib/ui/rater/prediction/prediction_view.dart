@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
+import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
@@ -70,18 +71,15 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        var confirm = await showDialog<bool>(context: context, builder: (context) =>
+    return ConfirmPopScope(
+      onPopRequested: () async {
+        return await showDialog<bool>(context: context, builder: (context) =>
           ConfirmDialog(
             title: "Return to ratings?",
             content: Text("If you leave this page, you will need to recalculate predictions to view it again."),
             positiveButtonLabel: "LEAVE",
             negativeButtonLabel: "STAY",
-          )
-        );
-
-        return confirm ?? false;
+          )) ?? false;
       },
       child: ChangeNotifierProvider<PredictionViewModel>.value(
         value: predictionViewModel,

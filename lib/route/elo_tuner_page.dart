@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/solution_space_chart.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
+import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 // import 'package:shooting_sports_analyst/data/ranking/evolution/l2s_data.dart' as l2s;
 // import 'package:shooting_sports_analyst/data/ranking/evolution/wpa_data.dart' as wpa;
@@ -171,8 +172,8 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
+    return ConfirmPopScope(
+      onPopRequested: () async {
         var quit = await showDialog<bool>(context: context, builder: (context) =>
           ConfirmDialog(
             title: "Quit?",

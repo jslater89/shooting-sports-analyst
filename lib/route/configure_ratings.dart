@@ -69,6 +69,7 @@ import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart'
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
+import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
@@ -260,8 +261,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return ConfirmPopScope(
+      onPopRequested: () async {
         if(_loadedProject != null) {
           await _saveProject(_loadedProject!.name, onPop: true);
         }
