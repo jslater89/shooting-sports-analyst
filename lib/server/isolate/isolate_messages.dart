@@ -55,8 +55,15 @@ class IsolateRegistrationRequest extends ClientRequest {
   final String destinationIsolateId;
   /// The send port that connects to the isolate's receive port.
   final SendPort sendPort;
+  /// Whether to fail if the isolate is already registered.
+  final bool failOnDuplicateRegistration;
 
-  IsolateRegistrationRequest({required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort}) : id = IsolateMessage.generateId();
+  IsolateRegistrationRequest({
+    required this.sourceIsolateId,
+    required this.destinationIsolateId,
+    required this.sendPort,
+    this.failOnDuplicateRegistration = true,
+  }) : id = IsolateMessage.generateId();
 }
 
 /// A response to a [IsolateRegistrationRequest].

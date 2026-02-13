@@ -55,16 +55,16 @@ class IsolateMatchCacheClient implements MatchCache {
   }
 
   @override
-  Future<void> cache(ShootingMatch match) {
-    return isolateManagerClient.sendCommand<_CacheCommand, _AckResponse>(
+  Future<void> cache(ShootingMatch match) async {
+    await isolateManagerClient.sendCommand<_CacheCommand, _IsolateMatchCacheServerResponse>(
       isolateId: IsolateMatchCacheServer.id,
       command: _CacheCommand(match: match)
     );
   }
 
   @override
-  FutureOr<void> clear() {
-    return isolateManagerClient.sendCommand<_ClearCommand, _AckResponse>(
+  Future<void> clear() async {
+    await isolateManagerClient.sendCommand<_ClearCommand, _IsolateMatchCacheServerResponse>(
       isolateId: IsolateMatchCacheServer.id,
       command: _ClearCommand()
     );
@@ -115,15 +115,22 @@ class IsolateMatchCacheClient implements MatchCache {
   }
 
   @override
-  FutureOr<void> remove(int id) {
-    return isolateManagerClient.sendCommand<_RemoveCommand, _AckResponse>(
+  Future<void> remove(int id) async {
+    await isolateManagerClient.sendCommand<_RemoveCommand, _IsolateMatchCacheServerResponse>(
       isolateId: IsolateMatchCacheServer.id,
       command: _RemoveCommand(id: id)
     );
   }
 
-  static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {bool mainIsolate = true}) async {
-    var managerClient = await IsolateCommon.setupClient(startData, mainIsolate: mainIsolate);
+  static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {
+    bool mainIsolate = true,
+    bool failOnDuplicateRegistration = true,
+  }) async {
+    var managerClient = await IsolateCommon.setupClient(
+      startData,
+      mainIsolate: mainIsolate,
+      failOnDuplicateRegistration: failOnDuplicateRegistration,
+    );
     var client = IsolateMatchCacheClient(managerClient);
     await client.clientReady;
 

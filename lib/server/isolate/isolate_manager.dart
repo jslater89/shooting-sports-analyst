@@ -52,7 +52,21 @@ class IsolateManagerServer {
     }
     else if(message is IsolateRegistrationRequest) {
       if(_sendPorts.containsKey(message.sourceIsolateId)) {
-        throw Exception("Isolate ${message.sourceIsolateId} already registered");
+        if(message.failOnDuplicateRegistration) {
+          throw Exception("Isolate ${message.sourceIsolateId} already registered");
+        }
+        else {
+          _log.w("Isolate ${message.sourceIsolateId} already registered, skipping registration");
+          // Send a response to the client so that it receives registration info and doesn't
+          // wait forever for the command to complete.
+          message.sendPort.send(IsolateRegistrationResponse(
+            id: message.id,
+            sourceIsolateId: id,
+            destinationIsolateId: message.sourceIsolateId,
+            sendPort: _receivePort.sendPort,
+          ));
+          return;
+        }
       }
 
       // Save the client's send port.

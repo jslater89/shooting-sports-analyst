@@ -8,6 +8,8 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_client.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_manager.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 
@@ -102,6 +104,14 @@ class ServerIsolateHelper<C, R> {
       _log.w("Received incorrect client command type: ${message.runtimeType}");
       _log.i("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
       _clientSendPorts[message.sourceIsolateId]!.send(null);
+    }
+    else if(message is ServerResponse || message is IsolateConnectionResponse) {
+      // A client on the same isolate as this sent a message and got a response, which
+      // we should forward to the client manager.
+      if(IsolateCommon.verboseLogging) {
+        _log.v("(fwd) ${message.sourceIsolateId} -> ${message.destinationIsolateId}: ${message.runtimeType} (${message.id})");
+      }
+      IsolateManagerClient.instance?.handleMessage(message);
     }
     else {
       _log.w("Received unexpected message from client isolate: ${message.runtimeType}");

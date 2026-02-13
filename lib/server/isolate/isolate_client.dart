@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_manager.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 
@@ -43,6 +44,8 @@ class IsolateManagerClient {
   final SendPort _managerSendPort;
   /// The receive port from all isolates.
   late final ReceivePort _serverReceivePort;
+  /// Whether to fail if the isolate is already registered with the manager isolate.
+  final bool failOnDuplicateRegistration;
 
   /// A map of isolate IDs to send ports used to send messages to those isolate IDs.
   final Map<String, SendPort> _serverSendPorts = {};
@@ -54,15 +57,16 @@ class IsolateManagerClient {
   Map<int, Completer<ServerResponse?>> _commandCompleters = {};
 
   static IsolateManagerClient? _instance;
-  factory IsolateManagerClient(String isolateId, SendPort managerSendPort) {
+  static IsolateManagerClient? get instance => _instance;
+  factory IsolateManagerClient(String isolateId, SendPort managerSendPort, {bool failOnDuplicateRegistration = true}) {
     if(_instance == null) {
-      _instance = IsolateManagerClient._(isolateId, managerSendPort);
+      _instance = IsolateManagerClient._(isolateId, managerSendPort, failOnDuplicateRegistration: failOnDuplicateRegistration);
       IsolateMessage.seedRandom(isolateId.hashCode);
     }
     return _instance!;
   }
 
-  IsolateManagerClient._(this.thisIsolateId, this._managerSendPort) {
+  IsolateManagerClient._(this.thisIsolateId, this._managerSendPort, {this.failOnDuplicateRegistration = true}) {
     _serverReceivePort = ReceivePort();
     _serverReceivePort.listen(_listen);
     _registerWithServer();
@@ -74,6 +78,7 @@ class IsolateManagerClient {
       sourceIsolateId: thisIsolateId,
       destinationIsolateId: IsolateManagerServer.id,
       sendPort: _serverReceivePort.sendPort,
+      failOnDuplicateRegistration: failOnDuplicateRegistration,
     );
     _commandCompleters[request.id] = Completer();
     _managerSendPort.send(request);
@@ -81,6 +86,13 @@ class IsolateManagerClient {
     _commandCompleters.remove(request.id);
     _readyCompleter.complete(true);
     return response;
+  }
+
+  /// Manually handle a message received for this isolate. This is useful for handling
+  /// messages when a given isolate is both a server and a client: IsolateServerHelper
+  /// will forward messages to this method if the isolate has an IsolateManagerClient instance.
+  void handleMessage(IsolateManagerMessage message) {
+    _listen(message);
   }
 
   /// Handle messages received on the client's receive port.
@@ -91,6 +103,9 @@ class IsolateManagerClient {
   /// - [IsolateConnectionResponse]: Contains the server isolate's receive port after connection
   /// - [ServerResponse]: Contains the result of a command sent to a server isolate
   Future<void> _listen(dynamic message) async {
+    if(IsolateCommon.verboseLogging) {
+      _log.v("${message.sourceIsolateId} -> $thisIsolateId: ${message.runtimeType} (${message.id})");
+    }
     if(message is! IsolateManagerMessage) {
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
@@ -172,6 +187,9 @@ class IsolateManagerClient {
       destinationIsolateId: isolateId,
       data: command,
     );
+    if(IsolateCommon.verboseLogging) {
+      _log.v("$thisIsolateId -> $isolateId: ClientCommand<${command.runtimeType}> (${request.id})");
+    }
     _commandCompleters[request.id] = Completer();
     _serverSendPorts[isolateId]!.send(request);
     var response = await _commandCompleters[request.id]!.future;
@@ -179,6 +197,16 @@ class IsolateManagerClient {
     if(response == null) {
       throw Exception("No response from server isolate $isolateId");
     }
-    return response as ServerResponse<R>;
+    try {
+      var typedResponse = response as ServerResponse<R>;
+      if(IsolateCommon.verboseLogging) {
+        _log.v("completed command ${request.id}: ${typedResponse.data.runtimeType} (${typedResponse.id})");
+      }
+      return typedResponse;
+    }
+    catch(e) {
+      _log.e("Error casting response: $e");
+      return null;
+    }
   }
 }
