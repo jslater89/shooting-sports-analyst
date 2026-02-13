@@ -7,6 +7,8 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/match/migration_result.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
@@ -84,6 +86,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         await project.ratings.save();
       }
     });
+    notifyEntityChange(EntityType.ratingProject, project.id);
     return project;
   }
 
@@ -109,6 +112,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         project.ratings.saveSync();
       }
     });
+    notifyEntityChange(EntityType.ratingProject, project.id);
     return project;
   }
 
@@ -119,7 +123,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   Future<bool> deleteRatingProject(DbRatingProject project, {ProgressCallback? progressCallback}) async {
     int ratingCount = project.ratings.countSync();
     // clear all linked shooter ratings
-    return isar.writeTxn(() async {
+    var result = await isar.writeTxn(() async {
       if(!project.ratings.isLoaded) {
         await project.ratings.load();
         for(var (i, rating) in project.ratings.indexed) {
@@ -134,6 +138,11 @@ extension RatingProjectDatabase on AnalystDatabase {
 
       return isar.dbRatingProjects.delete(project.id);
     });
+
+    if(result) {
+      notifyEntityChange(EntityType.ratingProject, project.id);
+    }
+    return result;
   }
 
   Future<bool> _innerDeleteShooterRating(DbShooterRating rating) async {

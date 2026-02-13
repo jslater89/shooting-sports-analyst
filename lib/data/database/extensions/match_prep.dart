@@ -6,6 +6,8 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
@@ -121,6 +123,8 @@ extension MatchPrepDatabase on AnalystDatabase {
         await predictionSet.algorithmPredictions.save();
       }
     }
+
+    notifyEntityChange(EntityType.matchPrep, matchPrep.id);
     return matchPrep;
   }
 
@@ -130,6 +134,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       // sync recursively saves
       isar.matchPreps.putSync(matchPrep);
     });
+    notifyEntityChange(EntityType.matchPrep, matchPrep.id);
     return matchPrep;
   }
 

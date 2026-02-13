@@ -9,6 +9,8 @@ import 'dart:io';
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
+import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
@@ -96,6 +98,9 @@ class AnalystDatabase {
     try {
       isar = await Isar.open(
         [
+          // General/utility collections
+          EntityChangeSchema,
+
           // Rating-related collections
           DbShootingMatchSchema,
           StandaloneDbMatchEntrySchema,
@@ -609,6 +614,7 @@ class AnalystDatabase {
     // For least confusion
     match.databaseId = dbMatch.id;
     await MatchCache.instance.cache(match);
+    notifyEntityChange(EntityType.match, dbMatch.id);
     return Result.ok(dbMatch);
   }
 
@@ -648,6 +654,7 @@ class AnalystDatabase {
     // This is unawaited async, but we probably won't immediately need
     // the result again.
     MatchCache.instance.cache(match);
+    notifyEntityChange(EntityType.match, dbMatch.id);
     return Result.ok(dbMatch);
   }
 

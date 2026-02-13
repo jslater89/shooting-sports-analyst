@@ -6,6 +6,8 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/match/future_match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
@@ -80,6 +82,7 @@ extension FutureMatchDatabase on AnalystDatabase {
     } catch(e) {
       return Result.err(StringError("Failed to save future match: $e"));
     }
+    notifyEntityChange(EntityType.futureMatch, match.id);
     return Result.ok(null);
   }
 
@@ -130,6 +133,7 @@ extension FutureMatchDatabase on AnalystDatabase {
         match.dbMatch.saveSync();
       }
     });
+    notifyEntityChange(EntityType.futureMatch, match.id);
   }
 
   Future<List<FutureMatch>> getFutureMatchesByName(String name) async {
@@ -194,9 +198,18 @@ extension FutureMatchDatabase on AnalystDatabase {
 
   /// Delete a future match by its internal ID.
   Future<void> deleteFutureMatch(int id) async {
-    await isar.writeTxn(() async {
+    var match = await getFutureMatchById(id);
+    if(match == null) {
+      return;
+    }
+    var deleted = await isar.writeTxn(() async {
+      await match.registrations.filter().deleteAll();
+      await match.mappings.filter().deleteAll();
       await isar.futureMatchs.delete(id);
     });
+    if(deleted) {
+      notifyEntityChange(EntityType.futureMatch, id);
+    }
   }
 
   Query<FutureMatch> _buildFutureMatchQuery(List<FutureMatchQueryElement> elements, {
