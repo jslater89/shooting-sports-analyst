@@ -131,7 +131,7 @@ Future<void> main(List<String> args) async {
     // FindMiffTestMatchesCommand(db),
     //EloInflationAnalysisCommand(db),
     //SpeedAccuracyBifectaCommand(db),
-    //TiesCommand(db),
+    TiesCommand(db),
     ImportMatchCommand(db),
     // CheckLocationProportionCommand(db),
     // StateShootersCommand(db),
