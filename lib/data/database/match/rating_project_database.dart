@@ -190,7 +190,7 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   /// Retrieves a known shooter rating from the database.
   ///
-  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// if [useCache] is true, [syncRatingCache] will be checked for
   /// a cached rating before querying the database.
   Future<DbShooterRating> knownShooter({
     required DbRatingProject project,
@@ -206,7 +206,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
   ///
-  /// If [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// If [useCache] is true, [syncRatingCache] will be checked for
   /// a cached rating before querying the database.
   ///
   /// If [onlyCache] is true, the cache will be checked, but no database query will be made.
@@ -223,9 +223,8 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool saveToCache = true,
   }) async {
     if(useCache) {
-      var cachedRating = lookupCachedRating(project, group, memberNumber);
+      var cachedRating = await lookupCachedRating(project, group, memberNumber);
       if(cachedRating != null) {
-        loadedShooterRatingCacheHits++;
         return cachedRating;
       }
       if(onlyCache) {
@@ -240,9 +239,8 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirst();
       if(rating != null) {
         if(saveToCache) {
-          cacheRating(project, group, rating);
+          await cacheRating(project, group, rating);
         }
-        loadedShooterRatingCacheMisses++;
         return rating;
       }
     }
@@ -253,8 +251,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
       if(rating != null && saveToCache) {
-        loadedShooterRatingCacheMisses++;
-        cacheRating(project, group, rating);
+        await cacheRating(project, group, rating);
       }
       return rating;
     }
@@ -264,7 +261,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
   ///
-  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// if [useCache] is true, [syncRatingCache] will be checked for
   /// a cached rating before querying the database. If [onlyCache] is true,
   /// the cache will be checked, but no database query will be made.
   DbShooterRating? maybeKnownShooterSync({
@@ -277,9 +274,8 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool saveToCache = true,
   }) {
     if(useCache) {
-      var cachedRating = lookupCachedRating(project, group, memberNumber);
+      var cachedRating = lookupCachedRatingSync(project, group, memberNumber);
       if(cachedRating != null) {
-        loadedShooterRatingCacheHits++;
         return cachedRating;
       }
       if(onlyCache) {
@@ -294,9 +290,8 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirstSync();
       if(rating != null) {
         if(saveToCache) {
-          cacheRating(project, group, rating);
+          cacheRatingSync(project, group, rating);
         }
-        loadedShooterRatingCacheMisses++;
         return rating;
       }
     }
@@ -307,8 +302,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirstSync();
       if(rating != null && saveToCache) {
-        loadedShooterRatingCacheMisses++;
-        cacheRating(project, group, rating);
+        cacheRatingSync(project, group, rating);
       }
       return rating;
     }

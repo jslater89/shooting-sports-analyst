@@ -20,7 +20,7 @@ final _log = SSALogger("HelloWorldIsolateExample");
 void main() async {
   var provider = ServerDebugProvider();
   FlutterOrNative.debugModeProvider = provider;
-  FlutterOrNative.serverModeProvider = provider;
+  FlutterOrNative.isolateModeProvider = provider;
 
   // Create the ports for the init isolate and the logger isolate.
   var initIsolateReceivePort = ReceivePort();

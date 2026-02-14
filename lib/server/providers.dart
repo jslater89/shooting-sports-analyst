@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 
-class ServerDebugProvider implements DebugModeProvider, ServerModeProvider {
+class ServerDebugProvider implements DebugModeProvider, IsolateModeProvider {
   @override
   bool get kDebugMode => true;
 
@@ -18,12 +18,12 @@ class ServerDebugProvider implements DebugModeProvider, ServerModeProvider {
   bool get kReleaseMode => false;
 
   @override
-  bool get kServerMode => _isServer;
+  bool get kMultiIsolateMode => _isMultiIsolate;
 
-  bool _isServer = true;
+  bool _isMultiIsolate = true;
 
-  ServerDebugProvider({bool isServer = true}) {
-    _isServer = isServer;
+  ServerDebugProvider({bool isMultiIsolate = true}) {
+    _isMultiIsolate = isMultiIsolate;
   }
 }
 

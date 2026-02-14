@@ -44,7 +44,7 @@ abstract interface class MatchCache {
   static MatchCache? _instance;
   static HydratedMatchCache? _inMemoryInstance;
   static MatchCache get instance {
-    var serverMode = FlutterOrNative.serverModeProvider.kServerMode;
+    var serverMode = FlutterOrNative.isolateModeProvider.kMultiIsolateMode;
     if(_instance == null) {
       if(serverMode) {
         _log.i("Server mode: using isolate match cache");

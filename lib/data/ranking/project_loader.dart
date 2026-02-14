@@ -370,9 +370,6 @@ class RatingProjectLoader {
     var result = await _addMatches(hydratedMatches);
     if(result.isErr()) return Result.errFrom(result);
 
-    _log.i("Cache hits: ${db.loadedShooterRatingCacheHits}");
-    _log.i("Cache misses: ${db.loadedShooterRatingCacheMisses}");
-
     host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
     timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
 

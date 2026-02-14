@@ -22,8 +22,8 @@ final _log = SSALogger("Server");
 Future<void> main() async {
   print("Starting server.");
   // True only for multi-isolate servers
-  var serverModeProvider = ServerDebugProvider(isServer: false);
-  FlutterOrNative.serverModeProvider = serverModeProvider;
+  var serverModeProvider = ServerDebugProvider(isMultiIsolate: false);
+  FlutterOrNative.isolateModeProvider = serverModeProvider;
   FlutterOrNative.debugModeProvider = serverModeProvider;
   FlutterOrNative.machineFingerprintProvider = DartOnlyMachineFingerprinter();
 
