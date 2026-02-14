@@ -119,6 +119,55 @@ class IsolateConnectionResponse extends ClientResponse {
   IsolateConnectionResponse({required this.id, required this.sourceIsolateId, required this.destinationIsolateId, required this.sendPort});
 }
 
+/// A request to subscribe to broadcast messages from a server isolate.
+///
+/// The client must be connected to the server isolate already to subscribe to broadcast messages.
+///
+/// [sourceIsolateId] specifies the isolate to subscribe to.
+/// [destinationIsolateId] specifies the isolate to subscribe to.
+/// [status] specifies the desired subscription status—[subscribed] to receive broadcast messages, or [unsubscribed] to stop receiving broadcast messages.
+///
+/// [T] is the expected type of the broadcast message. Servers should reject requests
+/// with unexpected types.
+class IsolateBroadcastSubscribeRequest<T> extends ClientRequest {
+  @override
+  final int id;
+  final String sourceIsolateId;
+  final String destinationIsolateId;
+  final IsolateBroadcastSubscriptionStatus status;
+
+  IsolateBroadcastSubscribeRequest({
+    required this.sourceIsolateId,
+    required this.destinationIsolateId,
+    this.status = IsolateBroadcastSubscriptionStatus.subscribed,
+  }) : id = IsolateMessage.generateId();
+}
+
+enum IsolateBroadcastSubscriptionStatus {
+  subscribed,
+  unsubscribed,
+}
+
+/// A response to a [IsolateBroadcastSubscribeRequest].
+///
+/// [sourceIsolateId] specifies the isolate that is subscribed to broadcast messages.
+/// [destinationIsolateId] specifies the isolate that is subscribed to broadcast messages.
+/// [status] specifies the actual subscription status after the request was processed.
+class IsolateBroadcastSubscribeResponse extends ClientResponse {
+  @override
+  final int id;
+  final String sourceIsolateId;
+  final String destinationIsolateId;
+  final IsolateBroadcastSubscriptionStatus status;
+
+  IsolateBroadcastSubscribeResponse({
+    required this.id,
+    required this.sourceIsolateId,
+    required this.destinationIsolateId,
+    required this.status,
+  });
+}
+
 /// A command from a client isolate to a server isolate.
 ///
 /// [sourceIsolateId] is the ID of the client isolate that sent the command.
@@ -167,4 +216,13 @@ class IsolateStartData {
   IsolateStartData copyWithId(String newIsolateId) {
     return IsolateStartData(isolateId: newIsolateId, logPort: logPort, initPort: initPort, managerPort: managerPort);
   }
+}
+
+/// A broadcast message from a server isolate to a client isolate.
+///
+/// [T] is the type of the broadcast message.
+/// [sourceIsolateId] is the ID of the server isolate that sent the broadcast.
+/// [data] is the data of the broadcast.
+class ServerBroadcast<T> extends ServerResponse<T> {
+  ServerBroadcast({required super.sourceIsolateId, required super.data}) : super(id: 0, destinationIsolateId: "broadcast");
 }

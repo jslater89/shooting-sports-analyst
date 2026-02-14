@@ -26,6 +26,7 @@ class IsolateCommon {
   static void setup(IsolateStartData startData, {bool mainIsolate = false}) {
     if(!mainIsolate) {
       FlutterOrNative.debugModeProvider = ServerDebugProvider();
+      FlutterOrNative.isolateModeProvider = ServerDebugProvider();
       SSALogger.setupSendPort(startData.logPort, isolateName: startData.isolateId);
     }
     managerSendPort = startData.managerPort;

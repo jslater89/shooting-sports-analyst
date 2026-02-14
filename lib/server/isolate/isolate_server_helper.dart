@@ -62,8 +62,21 @@ class ServerIsolateHelper<C, R> {
     _receivePort.listen(_listen);
   }
 
-  void _listen(dynamic message) async{
+  ServerIsolateHelper._internal({
+    required this.isolateId,
+    required this.commandHandler,
+  });
+
+  void _overrideListener({required Future<void> Function(dynamic message) listener}) {
+    _listener = listener;
+    _receivePort.listen(_listener!);
+  }
+
+  Future<void> Function(dynamic message)? _listener;
+
+  void _listen(dynamic message) async {
     if(message is! IsolateManagerMessage) {
+      _log.e("Invalid message type: ${message.runtimeType}");
       throw Exception("Invalid message type: ${message.runtimeType}");
     }
 
@@ -139,5 +152,68 @@ class ServerIsolateHelper<C, R> {
     await _registeredCompleter.future;
 
     startData.initPort.send(StartupCompleteResponse(sourceIsolateId: isolateId));
+  }
+}
+
+/// A helper for server isolates that handles communication with client isolates,
+/// and additionally supports sending broadcast messages of type [B].
+///
+/// [C] is the client command data type for this server isolate.
+/// [R] is the server response data type for this server isolate.
+/// [B] is the broadcast message data type for this server isolate.
+class BroadcastServerIsolateHelper<C, R, B> extends ServerIsolateHelper<C, R> {
+  BroadcastServerIsolateHelper({required String isolateId, required ServerCommandHandler<C, R> commandHandler}) : super._internal(isolateId: isolateId, commandHandler: commandHandler) {
+    super._overrideListener(listener: _listen);
+  }
+
+  Set<String> _broadcastSubscribers = {};
+
+  Future<void> _listen(dynamic message) async {
+    if(message is IsolateBroadcastSubscribeRequest<B>) {
+      if(message.status == IsolateBroadcastSubscriptionStatus.subscribed) {
+        _broadcastSubscribers.add(message.sourceIsolateId);
+        _log.i("Client ${message.sourceIsolateId} subscribed to broadcast from server isolate $isolateId");
+      }
+      else {
+        _broadcastSubscribers.remove(message.sourceIsolateId);
+        _log.i("Client ${message.sourceIsolateId} unsubscribed from broadcast from server isolate $isolateId");
+      }
+      var response = IsolateBroadcastSubscribeResponse(
+        id: message.id,
+        sourceIsolateId: isolateId,
+        destinationIsolateId: message.sourceIsolateId,
+        status: message.status,
+      );
+      _clientSendPorts[message.sourceIsolateId]!.send(response);
+    }
+    else if(message is IsolateBroadcastSubscribeResponse) {
+      _log.e("Client ${message.sourceIsolateId} requested broadcasts of incompatible type ${message.runtimeType}");
+      _clientSendPorts[message.sourceIsolateId]!.send(
+        IsolateBroadcastSubscribeResponse(
+          id: message.id,
+          sourceIsolateId: isolateId,
+          destinationIsolateId: message.sourceIsolateId,
+          status: IsolateBroadcastSubscriptionStatus.unsubscribed,
+        )
+      );
+    }
+    else {
+      _log.v("Broadcast helper forwarding message ${message.runtimeType} to main helper");
+      super._listen(message);
+    }
+  }
+
+  Future<void> sendBroadcast(B message) async {
+    for(var subscriber in _broadcastSubscribers) {
+      _clientSendPorts[subscriber]!.send(ServerBroadcast(sourceIsolateId: isolateId, data: message));
+    }
+  }
+
+  void subscribeToBroadcast(String isolateId) {
+    _broadcastSubscribers.add(isolateId);
+  }
+
+  void unsubscribeFromBroadcast(String isolateId) {
+    _broadcastSubscribers.remove(isolateId);
   }
 }

@@ -119,6 +119,14 @@ class IsolateManagerClient {
       _log.i("Connected to server isolate ${message.sourceIsolateId}");
       _commandCompleters[message.id]!.complete(null);
     }
+    else if(message is IsolateBroadcastSubscribeResponse) {
+      _log.i("Subscribed to broadcast from server isolate ${message.sourceIsolateId}");
+      _commandCompleters[message.id]!.complete(null);
+    }
+    else if(message is ServerBroadcast) {
+      _log.i("Received broadcast from server isolate ${message.sourceIsolateId}");
+      _broadcastHandlers[message.sourceIsolateId]?.call(message);
+    }
     else if(message is ServerResponse) {
       _commandCompleters[message.id]!.complete(message);
     }
@@ -128,6 +136,9 @@ class IsolateManagerClient {
     }
     _commandCompleters.remove(message.id);
   }
+
+  /// A map of server isolate IDs to broadcast handlers.
+  Map<String, BroadcastHandler> _broadcastHandlers = {};
 
   /// Connect to a server isolate.
   ///
@@ -162,6 +173,66 @@ class IsolateManagerClient {
     await _commandCompleters[request.id]!.future;
     _commandCompleters.remove(request.id);
     return _serverSendPorts[isolateId]!;
+  }
+
+  /// Subscribe to a broadcast from a server isolate.
+  ///
+  /// [isolateId] specifies the server isolate to subscribe to.
+  /// [handler] is the handler to call when a broadcast is received.
+  ///
+  /// Returns the subscription status.
+  Future<void> subscribeToBroadcast<T>({
+    required String isolateId,
+    required BroadcastHandler<T> handler,
+  }) async {
+    if(!_registered) {
+      throw Exception("Isolate not registered with IsolateManagerServer");
+    }
+    if(!_serverSendPorts.containsKey(isolateId)) {
+      throw Exception("Server isolate $isolateId not found");
+    }
+    _broadcastHandlers[isolateId] = (message) async {
+      if(message is! ServerBroadcast<T>) {
+        _log.e("Invalid broadcast message type: ${message.runtimeType}");
+        return;
+      }
+      await handler(message.data);
+    };
+    var request = IsolateBroadcastSubscribeRequest<T>(
+      sourceIsolateId: thisIsolateId,
+      destinationIsolateId: isolateId,
+      status: IsolateBroadcastSubscriptionStatus.subscribed,
+    );
+    _commandCompleters[request.id] = Completer();
+    _serverSendPorts[isolateId]!.send(request);
+    await _commandCompleters[request.id]!.future;
+    _commandCompleters.remove(request.id);
+  }
+
+  /// Unsubscribe from a broadcast from a server isolate.
+  ///
+  /// [isolateId] specifies the server isolate to unsubscribe from.
+  ///
+  /// Returns the subscription status.
+  Future<void> unsubscribeFromBroadcast<T>({
+    required String isolateId,
+  }) async {
+    if(!_registered) {
+      throw Exception("Isolate not registered with IsolateManagerServer");
+    }
+    if(!_serverSendPorts.containsKey(isolateId)) {
+      throw Exception("Server isolate $isolateId not found");
+    }
+    _broadcastHandlers.remove(isolateId);
+    var request = IsolateBroadcastSubscribeRequest<T>(
+      sourceIsolateId: thisIsolateId,
+      destinationIsolateId: isolateId,
+      status: IsolateBroadcastSubscriptionStatus.unsubscribed,
+    );
+    _commandCompleters[request.id] = Completer();
+    _serverSendPorts[isolateId]!.send(request);
+    await _commandCompleters[request.id]!.future;
+    _commandCompleters.remove(request.id);
   }
 
   /// Send a command to a server isolate.
@@ -210,3 +281,5 @@ class IsolateManagerClient {
     }
   }
 }
+
+typedef BroadcastHandler<T> = Future<void> Function(T);
