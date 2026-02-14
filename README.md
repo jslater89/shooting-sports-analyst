@@ -33,14 +33,6 @@ to be hacking on at the moment.
 
 ## Developer Notes
 
-### Multi-Isolate Rating Cache
-
-Recent rating cache changes added an isolate-aware cache path for server-style multi-isolate work.
-
-- For module-level details, see `lib/data/cache/ratings/README.md`.
-- In multi-isolate mode, synchronous rating cache helpers in `AnalystDatabase` intentionally fall back
-  to no-op/null behavior, and callers must use the isolate-based cache flow.
-
 ### Windows and Linux
 Run the appropriate script for your platform.
 

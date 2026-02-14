@@ -184,7 +184,7 @@ class RatingProjectLoader {
     this.skipDeduplication = skipDeduplication;
 
     await MatchCache.instance.clear();
-    db.clearLoadedShooterRatingCache();
+    db.invalidateProjectRatingCache(project.id);
     timings.reset();
 
     // Convert DB fixed-length list to editable list

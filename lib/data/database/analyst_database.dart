@@ -185,57 +185,23 @@ class AnalystDatabase {
     return isar.writeTxnSync(txn, silent: silent);
   }
 
-  // For lookupCachedRating and cacheRating, rename to ...Sync and return null in multi-isolate
-  // contexts, then use FutureOr for the async versions, use them wherever possible, and prefer
-  // the async versions wherever feasible (speed will be almost the same either way).
+
 
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
   /// inserted, updated, or read.
-  Future<DbShooterRating?> lookupCachedRating(DbRatingProject project, RatingGroup group, String memberNumber) async {
+  DbShooterRating? lookupCachedRating(DbRatingProject project, RatingGroup group, String memberNumber) {
     return RatingCache.instance.lookupRating(project.id, group, memberNumber);
   }
 
-  Future<void> cacheRating(DbRatingProject project, RatingGroup group, DbShooterRating rating) async {
-    await RatingCache.instance.cacheRating(project.id, group, rating);
+  void cacheRating(DbRatingProject project, RatingGroup group, DbShooterRating rating) {
+    RatingCache.instance.cacheRating(project.id, group, rating);
   }
-  Future<void> clearLoadedShooterRatingCache() async {
-    await RatingCache.instance.clear();
+  void invalidateProjectRatingCache(int projectId) {
+    RatingCache.instance.invalidateProject(projectId);
   }
-
-  /// Synchronous rating cache lookup for single-isolate contexts.
-  ///
-  /// In multi-isolate mode, this intentionally returns `null` because sync,
-  /// process-local cache access is not isolate-safe. Use the async
-  /// isolate-backed cache path instead, or fall back on the database (which
-  /// is isolate-safe).
-  DbShooterRating? lookupCachedRatingSync(DbRatingProject project, RatingGroup group, String memberNumber) {
-    if(FlutterOrNative.isolateModeProvider.kMultiIsolateMode) {
-      return null;
-    }
-    return RatingCache.inMemoryInstance.lookupRating(project.id, group, memberNumber);
-  }
-
-  /// Synchronous rating cache write for single-isolate contexts.
-  ///
-  /// In multi-isolate mode, this intentionally does nothing. Use the async
-  /// isolate-backed cache path instead.
-  void cacheRatingSync(DbRatingProject project, RatingGroup group, DbShooterRating rating) {
-    if(FlutterOrNative.isolateModeProvider.kMultiIsolateMode) {
-      return;
-    }
-    RatingCache.inMemoryInstance.cacheRating(project.id, group, rating);
-  }
-
-  /// Synchronous rating cache clear for single-isolate contexts.
-  ///
-  /// In multi-isolate mode, this intentionally does nothing. Use the async
-  /// isolate-backed cache path instead.
-  void clearLoadedShooterRatingCacheSync() {
-    if(FlutterOrNative.isolateModeProvider.kMultiIsolateMode) {
-      return;
-    }
-    RatingCache.inMemoryInstance.clear();
+  void clearLoadedShooterRatingCache() {
+    RatingCache.instance.clear();
   }
 
   /// The standard match query: index on name if present or date if not.

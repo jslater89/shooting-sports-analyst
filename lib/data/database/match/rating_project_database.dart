@@ -239,7 +239,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirst();
       if(rating != null) {
         if(saveToCache) {
-          await cacheRating(project, group, rating);
+          cacheRating(project, group, rating);
         }
         return rating;
       }
@@ -251,7 +251,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
       if(rating != null && saveToCache) {
-        await cacheRating(project, group, rating);
+        cacheRating(project, group, rating);
       }
       return rating;
     }
@@ -261,9 +261,8 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
   ///
-  /// if [useCache] is true, [syncRatingCache] will be checked for
-  /// a cached rating before querying the database. If [onlyCache] is true,
-  /// the cache will be checked, but no database query will be made.
+  /// if [useCache] is true, the rating cache will be checked for
+  /// a cached rating before querying the database.
   DbShooterRating? maybeKnownShooterSync({
     required DbRatingProject project,
     required RatingGroup group,
@@ -274,7 +273,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool saveToCache = true,
   }) {
     if(useCache) {
-      var cachedRating = lookupCachedRatingSync(project, group, memberNumber);
+      var cachedRating = lookupCachedRating(project, group, memberNumber);
       if(cachedRating != null) {
         return cachedRating;
       }
@@ -290,7 +289,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirstSync();
       if(rating != null) {
         if(saveToCache) {
-          cacheRatingSync(project, group, rating);
+          cacheRating(project, group, rating);
         }
         return rating;
       }
@@ -302,7 +301,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirstSync();
       if(rating != null && saveToCache) {
-        cacheRatingSync(project, group, rating);
+        cacheRating(project, group, rating);
       }
       return rating;
     }
