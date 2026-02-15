@@ -27,8 +27,8 @@ extension EntityChangesExtension on AnalystDatabase {
   }
 
   /// Notify the database that an entity has changed.
-  void notifyEntityChange(EntityType entityType, int entityId) {
-    isar.writeTxn(() async {
+  Future<void> notifyEntityChange(EntityType entityType, int entityId) async {
+    return isar.writeTxn(() async {
       await isar.entityChanges.put(EntityChange(entityId: entityId, entityType: entityType, timestamp: DateTime.now()));
     });
   }

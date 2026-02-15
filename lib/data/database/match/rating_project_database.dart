@@ -86,7 +86,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         await project.ratings.save();
       }
     });
-    notifyEntityChange(EntityType.ratingProject, project.id);
+    await notifyEntityChange(EntityType.ratingProject, project.id);
     return project;
   }
 

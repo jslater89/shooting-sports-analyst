@@ -39,9 +39,9 @@ class MemoryRatingCache implements RatingCache {
   @override
   void invalidateProject(int projectId) {
     if(lru != null) {
-      for(var group in _cache[projectId]!.keys) {
-        for(var n in _cache[projectId]![group]!.keys) {
-          var rating = _cache[projectId]![group]![n];
+      for(var group in _cache[projectId]?.keys ?? <RatingGroup>[]) {
+        for(var n in _cache[projectId]?[group]?.keys ?? <String>[]) {
+          var rating = _cache[projectId]?[group]?[n];
           if(rating == null) continue;
           var key = MemoryRatingCacheLruKey(projectId: projectId, group: group, memberNumbers: rating.allPossibleMemberNumbers.toList());
           lru!.remove(key);
