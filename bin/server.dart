@@ -4,11 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
+
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/dart_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/matches/match_service.dart';
@@ -26,6 +29,10 @@ Future<void> main() async {
   FlutterOrNative.isolateModeProvider = serverModeProvider;
   FlutterOrNative.debugModeProvider = serverModeProvider;
   FlutterOrNative.machineFingerprintProvider = DartOnlyMachineFingerprinter();
+
+  // Use an LRU match cache for this isolate.
+  final lruSize = int.tryParse(Platform.environment["MATCH_LRU_SIZE"] ?? "250") ?? 250;
+  HydratedMatchCache(useLru: true, lruCapacity: lruSize);
 
   var configLoader = ConfigLoader();
   await configLoader.readyFuture;

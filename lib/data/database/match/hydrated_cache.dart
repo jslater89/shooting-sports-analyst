@@ -4,15 +4,28 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import "package:shooting_sports_analyst/data/cache/lru_tracker.dart";
 import "package:shooting_sports_analyst/data/cache/match/match_cache.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/util.dart";
 
 class HydratedMatchCache implements MatchCache {
-  static final HydratedMatchCache _instance = HydratedMatchCache._internal();
-  factory HydratedMatchCache() => _instance;
-  HydratedMatchCache._internal();
+  static HydratedMatchCache? _instance;
+
+  factory HydratedMatchCache({bool useLru = false, int lruCapacity = 250}) {
+    if (_instance == null || (_instance!.lru == null && useLru)) {
+      _instance = useLru
+          ? HydratedMatchCache._withLru(LruTracker<int>(capacity: lruCapacity))
+          : HydratedMatchCache._internal();
+    }
+    return _instance!;
+  }
+
+  HydratedMatchCache._internal() : lru = null;
+  HydratedMatchCache._withLru(this.lru);
+
+  final LruTracker<int>? lru;
 
   final Map<int, ShootingMatch> _cache = {};
   final Map<int, DateTime?> _matchUpdatedAt = {};
@@ -21,13 +34,31 @@ class HydratedMatchCache implements MatchCache {
   @override
   bool ready() => true;
 
+  void _evictId(int id) {
+    _cache.remove(id);
+    _matchUpdatedAt.remove(id);
+    final toRemove = _sourceIdCache.entries
+        .where((e) => e.value.databaseId == id)
+        .map((e) => e.key)
+        .toList();
+    for (final key in toRemove) {
+      _sourceIdCache.remove(key);
+    }
+  }
+
   @override
   void cache(ShootingMatch match) {
-    if(match.databaseId != null) {
+    if (match.databaseId != null) {
+      if (lru != null) {
+        final evicted = lru!.record(match.databaseId!);
+        if (evicted != null) {
+          _evictId(evicted);
+        }
+      }
       _cache[match.databaseId!] = match;
       _matchUpdatedAt[match.databaseId!] = match.sourceLastUpdated;
     }
-    for(var id in match.sourceIds) {
+    for (var id in match.sourceIds) {
       _sourceIdCache[id] = match;
     }
   }
@@ -36,12 +67,20 @@ class HydratedMatchCache implements MatchCache {
 
   @override
   void remove(int id) {
-    _cache.remove(id);
+    if (lru != null) {
+      lru!.remove(id);
+    }
+    _evictId(id);
   }
 
   @override
   void clear() {
+    if (lru != null) {
+      lru!.clear();
+    }
     _cache.clear();
+    _matchUpdatedAt.clear();
+    _sourceIdCache.clear();
   }
 
   @override
@@ -53,7 +92,13 @@ class HydratedMatchCache implements MatchCache {
       // Null doesn't get any special treatment; old null and new null returns
       // the cached value, while old non-null and new null or old null and new non-null
       // will rehydrate/update the cache.
-      if(_cache[match.id]!.sourceLastUpdated == match.sourceLastUpdated) {
+      if (_cache[match.id]!.sourceLastUpdated == match.sourceLastUpdated) {
+        if (lru != null) {
+          final evicted = lru!.record(match.id);
+          if (evicted != null) {
+            _evictId(evicted);
+          }
+        }
         return Result.ok(_cache[match.id]!);
       }
     }
@@ -66,10 +111,16 @@ class HydratedMatchCache implements MatchCache {
   }
 
   Result<ShootingMatch, ResultErr> getById(int id, {DateTime? sourceLastUpdated}) {
-    if(_cache.containsKey(id)) {
+    if (_cache.containsKey(id)) {
       var match = _cache[id]!;
-      if(sourceLastUpdated != null && match.sourceLastUpdated != sourceLastUpdated) {
+      if (sourceLastUpdated != null && match.sourceLastUpdated != sourceLastUpdated) {
         return Result.err(StringError("cached match outdated"));
+      }
+      if (lru != null) {
+        final evicted = lru!.record(id);
+        if (evicted != null) {
+          _evictId(evicted);
+        }
       }
       return Result.ok(match);
     }
@@ -78,10 +129,16 @@ class HydratedMatchCache implements MatchCache {
 
   @override
   Result<ShootingMatch, ResultErr> getBySourceId(String sourceId, {DateTime? sourceLastUpdated}) {
-    if(_sourceIdCache.containsKey(sourceId)) {
+    if (_sourceIdCache.containsKey(sourceId)) {
       var match = _sourceIdCache[sourceId]!;
-      if(sourceLastUpdated != null && match.sourceLastUpdated != sourceLastUpdated) {
+      if (sourceLastUpdated != null && match.sourceLastUpdated != sourceLastUpdated) {
         return Result.err(StringError("cached match outdated"));
+      }
+      if (lru != null && match.databaseId != null) {
+        final evicted = lru!.record(match.databaseId!);
+        if (evicted != null) {
+          _evictId(evicted);
+        }
       }
       return Result.ok(match);
     }
