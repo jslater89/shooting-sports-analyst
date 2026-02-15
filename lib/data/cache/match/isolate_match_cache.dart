@@ -5,6 +5,7 @@
  */
 
 import "dart:async";
+import "dart:io";
 import "dart:isolate";
 
 import "package:shooting_sports_analyst/data/cache/match/match_cache.dart";
@@ -147,12 +148,19 @@ class IsolateMatchCacheServer {
   late final ServerIsolateHelper<_IsolateMatchCacheServerCommand, _IsolateMatchCacheServerResponse> serverHelper;
   final db = AnalystDatabase();
 
-  final HydratedMatchCache cache = HydratedMatchCache();
+  late final HydratedMatchCache cache;
 
   IsolateMatchCacheServer({
     required this.receivePort
   }) {
     serverHelper = ServerIsolateHelper(isolateId: id, commandHandler: _commandHandler);
+    final matchLruSizeString = Platform.environment["MATCH_LRU_SIZE"] ?? "";
+    final matchLruSize = int.tryParse(matchLruSizeString);
+    cache = HydratedMatchCache(useLru: matchLruSize != null, lruCapacity: matchLruSize ?? 250);
+    if(matchLruSize != null) {
+      _log.i("Using LRU match cache with size $matchLruSize");
+    }
+
   }
 
   Future<_IsolateMatchCacheServerResponse> _commandHandler(_IsolateMatchCacheServerCommand command) async {
