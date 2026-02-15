@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/db_entities.dart';
@@ -53,6 +54,10 @@ class DbWager {
 
   /// The transaction that recorded the refund, for a voided wager.
   final refundTransaction = IsarLink<PredictionGameTransaction>();
+
+  @Index(type: IndexType.hashElements)
+  /// The member numbers of the subjects of the wager.
+  List<String> get subjectMemberNumbers => legs.map((leg) => leg.subjectMemberNumbers).flattenedToSet.toList();
 
   /// Whether this is a parlay.
   bool get isParlay => legs.length > 1;
@@ -264,6 +269,12 @@ class DbPrediction {
   /// The underdog for a spread prediction, or null otherwise.
   DbPredictionTarget? underdog;
 
+  /// The member numbers of the subjects of the prediction.
+  List<String> get subjectMemberNumbers => [
+    ...target.knownMemberNumbers,
+    if(underdog != null) ...underdog!.knownMemberNumbers,
+  ];
+
   // TODO: replicate on hydrated wagers
   // and/or move to utility function so it's not duplicated
   /// Evaluate the prediction against the map of given scores (from member number to RelativeMatchScore).
@@ -372,12 +383,15 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   @override
   String memberNumber;
 
+  List<String> knownMemberNumbers;
+
   DbPredictionTarget({
     this.projectId = -1,
     this.groupUuid = "",
     this.firstName = "",
     this.lastName = "",
     this.memberNumber = "",
+    this.knownMemberNumbers = const [],
   });
 
   factory DbPredictionTarget.fromShooterRating(ShooterRating shooter) {
@@ -385,6 +399,7 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
       projectId: shooter.wrappedRating.project.value!.id,
       groupUuid: shooter.wrappedRating.group.value!.uuid,
       memberNumber: shooter.memberNumber,
+      knownMemberNumbers: [...shooter.knownMemberNumbers],
       firstName: shooter.firstName,
       lastName: shooter.lastName,
     );

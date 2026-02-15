@@ -51,6 +51,45 @@ Confidence = 10 (low)
 
 The low-confidence estimate will move more when new evidence (bets) arrives.
 
+### Principled Setting of α and β
+
+Beyond tuning α and β by trial and error, we can tie them to the model and data:
+
+**1. Effective sample size.** Set α = P×N_eff and β = (1−P)×N_eff so the prior has mean P and "as much weight as N_eff observations." The Monte Carlo runs 10,000 trials, so one option is N_eff = 10,000, giving a very strong prior (bets barely move the line). That is usually too strong because the model is misspecified and its inputs (ratings, sigma, trend) are uncertain. So use a smaller effective N, e.g. N_eff = 10,000 / k with k > 1 (e.g. k = 100 → N_eff = 100), and tune k via backtests (Brier score, calibration, or house edge) rather than α and β directly.
+
+**2. Rating history (recommended).** Use the amount of rating history for the shooter(s) in the market: less history ⇒ more uncertainty ⇒ smaller α+β ⇒ bets move the line more.
+
+- **Single-shooter market** (e.g. "Max 1st–3rd"): use that shooter's match count (or stage count).
+- **Two-shooter market** (e.g. spread): use the **minimum** (or geometric mean) of the two shooters' history so the weaker link drives confidence.
+
+Formula:
+
+```
+N_eff = clamp(N_min, N_min + scale × history_count, N_max)
+α = P × N_eff
+β = (1 − P) × N_eff
+```
+
+- **N_min**: floor so the prior is never useless (e.g. 20).
+- **N_max**: cap so the prior is never rigid (e.g. 150).
+- **scale**: so that "typical" veterans yield N_eff in the 50–100 range (tune from backtests).
+
+Example (place market, one shooter):
+
+```dart
+int? matchCount = shooterRating.matchCount;  // from ShooterRating
+double historyCount = (matchCount ?? 0).toDouble();
+double nEff = (nMin + scale * historyCount).clamp(nMin.toDouble(), nMax.toDouble());
+double alpha = modelP * nEff;
+double beta = (1.0 - modelP) * nEff;
+```
+
+**3. Variance from the Monte Carlo.** The Monte Carlo is a binomial with N = 10,000; its estimate P̂ has variance P(1−P)/10,000. We could set (α, β) by matching the Beta mean and variance to (P, σ²) (method of moments), then optionally scale (α, β) down so one sharp bet can still move the line by a desired amount.
+
+**4. Calibration / empirical Bayes.** If we have historical predictions and outcomes, we can bin by predicted P, estimate empirical variance of outcomes, and fit an effective N (or α, β) so the prior variance reflects observed miscalibration. Most principled statistically but requires prediction-vs-outcome data.
+
+**Recommendation:** Use **rating history** to set N_eff, then α = P×N_eff and β = (1−P)×N_eff. That gives one main lever (history → confidence) instead of two arbitrary numbers, and aligns with the idea that thin history should reduce confidence.
+
 ### Bayesian Update Rule
 
 When a player places a bet, we update:
@@ -223,20 +262,99 @@ The sharp player's late, large bet moved the line by 7 moneyline points.
 
 ### The Problem
 
-Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th.
+Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th. We need to propagate wager signals across related markets without requiring exact market matching.
 
-### Similarity Function
+### Cross-Market Update Algorithm
 
-Define similarity between markets:
+For every wager we process, the flow is:
+
+1. **Calculate raw odds from the prediction engine (Monte Carlo).**
+   This gives the model prior (α, β from N_eff and P) and baseline odds before wager-based adjustment.
+
+2. **Find related markets.**
+   Minimally: markets that share the same subject (same shooter for place/percentage; same shooter pair for spread). Optionally restrict to same prediction type. No need for a continuous "similarity score" to link markets—same subject is sufficient.
+
+3. **Determine direction.**
+   For each related market, decide whether the wager adds to **alpha** (pulls P up) or **beta** (pulls P down). Overlap matters for place (overlapping ranges → same direction → add to alpha; disjoint e.g. 1st-3rd vs 10th-20th → opposite → add to beta). Range size can play a role. For percentage: same side of the line (above vs below) gives direction. For spread: which side. So we use overlap and outcome consistency to choose alpha vs beta, not to scale strength.
+
+4. **Set effect strength from relative odds (plus player adjustments).**
+   The odds at which the bet was placed—not a structural similarity score—drive how strongly we update. A bet on a long shot (e.g. +4000 for "A 1st-3rd") is a strong conviction signal: existing long shots that get action should pull probability in the direction of "this long shot is more likely." So strength = (bet weight from conviction × skill × time) × f(odds), where f(odds) reflects the longness of the odds (e.g. decimal odds or 1/implied P). The same subject links the markets; the odds (and player weight) determine the size of the update.
+
+**Summary:** Link = same subject. Direction = overlap / outcome consistency (alpha vs beta). Strength = relative odds + player adjustments. Exact structural similarity (Jaccard, percentage distance) is not required.
+
+### Link: Same Subject
+
+We do **not** need a continuous similarity function to decide *whether* to propagate. Same subject is sufficient:
+
+- **Place or percentage on one shooter:** same shooter (e.g. same `memberNumber`) links all that shooter's markets.
+- **Spread:** same two shooters (target + underdog) link spread markets.
+
+Example: a wager on "A 1st-3rd" at +4000 and a market "A 10th-20th" at +110 are linked because both are about shooter A. We then use direction (opposite: disjoint place ranges) and odds (the +4000 bet is a strong signal) to update the 10th-20th market (add to beta there).
+
+### Direction
+
+For each related market we must choose: add to **alpha** (increase P) or **beta** (decrease P).
+
+- **Place:** Overlap and range matter. Overlapping place ranges (e.g. 1st-3rd and 1st-5th) → same direction → add to alpha on the other market. Disjoint ranges (e.g. 1st-3rd vs 10th-20th) → opposite → add to beta on the other market. Range size can refine (e.g. narrow vs wide).
+- **Percentage:** Same direction (both "above X%" or both "below X%") → add to alpha. Opposite (above vs below) → add to beta.
+- **Spread:** Same side (favorite covers vs underdog covers) → add to alpha; opposite side → add to beta.
+
+So overlap (and type) is used for **direction only**, not as the multiplier for effect strength.
+
+### Effect Strength: Relative Odds
+
+Signal strength comes from **odds** (and player weight), not from a structural similarity score:
+
+- Long odds on the bet (+4000) = strong conviction that this outcome is more likely than the line implies → large update (in the chosen direction) to related markets.
+- The relative odds between the bet market and the target market can also scale the update (e.g. how much probability mass is shared or how complementary the outcomes are).
+
+So: "Existing long shots [that get action] should tend to pull the probability in the direction of 'this long shot is more likely.'" The longness of the odds is what makes that pull strong.
+
+### Cross-Market Update (Procedure)
+
+When a bet is placed:
+
+1. Compute bet weight (conviction × skill × time decay × base weight).
+2. Find all markets with the same subject (and optionally same type).
+3. For each related market: compute direction (add to alpha vs beta) from overlap/outcome consistency.
+4. For each: compute effect strength from odds (e.g. f(decimal odds or implied P)) and apply `accumulatedAlpha += strength` or `accumulatedBeta += strength` accordingly.
+
+```dart
+void updateAcrossMarkets({
+  required DbPrediction betMarket,
+  required List<MarketState> allMarkets,
+  required double betWeight,
+  required double betImpliedP,
+  // Optional: odds-based strength multiplier (long odds => stronger)
+  double oddsStrengthMultiplier(double impliedP) => 1.0 / impliedP.clamp(0.01, 1.0),
+}) {
+  for (var market in allMarkets) {
+    if (!sameSubject(betMarket, market.prediction)) continue;
+
+    bool addToAlpha = sameDirection(betMarket, market.prediction);
+    double strength = betWeight * oddsStrengthMultiplier(betImpliedP);
+
+    if (addToAlpha) {
+      market.accumulatedAlpha += strength;
+    } else {
+      market.accumulatedBeta += strength;
+    }
+  }
+}
+```
+
+**Example:** Wager on "A 1st-3rd" at +4000 (implied P ≈ 2.4%), weight = 2.0, odds multiplier 1/0.024 ≈ 41.7 → strength ≈ 83.4. All markets for shooter A are updated: same-direction (e.g. "A 1st-5th") get alpha += 83.4; opposite-direction (e.g. "A 10th-20th") get beta += 83.4. No similarity threshold; same subject is the link.
+
+### Direction and Overlap (Reference)
+
+The following helpers can be used to implement **direction** (same vs opposite) for place, percentage, and spread. They are not used as effect-strength multipliers; odds drive strength.
 
 ```dart
 double calculateSimilarity(DbPrediction market1, DbPrediction market2) {
-  // Different shooters: very low similarity
   if (market1.target.memberNumber != market2.target.memberNumber) {
-    return 0.1;  // small similarity for general market sentiment
+    return 0.1;  // no link (or small for cross-shooter sentiment)
   }
 
-  // Same shooter, same prediction type
   if (market1.type == market2.type) {
     switch (market1.type) {
       case DbPredictionType.place:
@@ -250,17 +368,15 @@ double calculateSimilarity(DbPrediction market1, DbPrediction market2) {
     }
   }
 
-  // Same shooter, different prediction types
-  return 0.3;  // moderate similarity
+  return 0.3;  // same shooter, different prediction types
 }
 
+// Use overlap to determine same vs opposite direction for place (0 = disjoint → opposite)
 double _placeSimilarity(DbPrediction m1, DbPrediction m2) {
-  // Exact match
   if (m1.bestPlace == m2.bestPlace && m1.worstPlace == m2.worstPlace) {
     return 1.0;
   }
 
-  // Calculate overlap
   int overlapStart = max(m1.bestPlace!, m2.bestPlace!);
   int overlapEnd = min(m1.worstPlace!, m2.worstPlace!);
   int overlapSize = max(0, overlapEnd - overlapStart + 1);
@@ -268,66 +384,28 @@ double _placeSimilarity(DbPrediction m1, DbPrediction m2) {
   int m1Size = m1.worstPlace! - m1.bestPlace! + 1;
   int m2Size = m2.worstPlace! - m2.bestPlace! + 1;
 
-  // Jaccard similarity: intersection / union
   int unionSize = m1Size + m2Size - overlapSize;
-  return overlapSize / unionSize;
+  return overlapSize / unionSize;  // Jaccard: 0 = disjoint (opposite), 1 = same
 }
 
 double _percentageSimilarity(DbPrediction m1, DbPrediction m2) {
-  // Must be same direction (both above or both below)
-  if (m1.abovePercentage != m2.abovePercentage) return 0.3;
+  if (m1.abovePercentage != m2.abovePercentage) return 0.3;  // opposite direction
 
-  // Distance between percentages
   double diff = (m1.percentage! - m2.percentage!).abs();
-
-  // Exponential decay: e^(-20 × diff)
-  // 1% difference = 0.82 similarity
-  // 5% difference = 0.37 similarity
-  // 10% difference = 0.14 similarity
   return exp(-20 * diff);
 }
 
 double _spreadSimilarity(DbPrediction m1, DbPrediction m2) {
-  // Must involve same two shooters
   if (m1.target.memberNumber != m2.target.memberNumber) return 0.1;
   if (m1.underdog?.memberNumber != m2.underdog?.memberNumber) return 0.1;
+  if (m1.favoriteCovers != m2.favoriteCovers) return 0.3;  // opposite direction
 
-  // Must be same direction (both favorite covers or both underdog covers)
-  if (m1.favoriteCovers != m2.favoriteCovers) return 0.3;
-
-  // Distance between spreads
   double diff = (m1.percentage! - m2.percentage!).abs();
   return exp(-15 * diff);
 }
 ```
 
-### Cross-Market Update
-
-When a bet is placed on one market, update all similar markets:
-
-```dart
-void updateAcrossMarkets({
-  required DbPrediction targetMarket,
-  required List<MarketState> allMarkets,
-  required double betWeight,
-  double similarityThreshold = 0.2,
-}) {
-  for (var market in allMarkets) {
-    double similarity = calculateSimilarity(targetMarket, market.prediction);
-
-    if (similarity >= similarityThreshold) {
-      // Apply weighted update
-      market.accumulatedAlpha += betWeight * similarity;
-    }
-  }
-}
-```
-
-**Example**: Bet on "Max Michel 1st-3rd" (weight = 2.0)
-- "Max Michel 1st-5th" (similarity = 0.75): α += 1.5
-- "Max Michel 1st place" (similarity = 0.50): α += 1.0
-- "Max Michel 4th-6th" (similarity = 0.15): no update (below threshold)
-- "Bob Vogel 1st-3rd" (similarity = 0.10): no update
+Use overlap (e.g. Jaccard == 0 for place → opposite) and above/below or favorite/underdog to set `sameDirection`; do not use these scores as the effect-strength multiplier.
 
 ## Risk Management
 
@@ -465,19 +543,19 @@ void reverseBet({
 ### Performance Optimization
 
 For large numbers of markets:
-1. **Index by shooter**: Group markets by target shooter for faster similarity lookups
+1. **Index by subject**: Group markets by shooter (or shooter pair for spreads) for faster same-subject lookups
 2. **Lazy evaluation**: Only recalculate odds when they're viewed/needed
 3. **Batch updates**: Process multiple bets before recalculating all affected markets
-4. **Cache similarity**: Store similarity matrix for frequently compared markets
+4. **Cache direction**: Optionally cache same/opposite direction per market pair if direction checks are expensive
 
 ## Tunable Parameters Summary
 
 | Parameter | Recommended | Conservative | Aggressive | Description |
 |-----------|-------------|--------------|------------|-------------|
-| **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets |
+| **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets. Prefer setting via N_eff from rating history (see "Principled Setting of α and β"). |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
 | **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
-| **Similarity Threshold** | 0.2 | 0.3 | 0.1 | Minimum similarity for cross-market updates |
+| **Odds strength multiplier** | 1/implied P | — | — | Long odds ⇒ stronger cross-market update. Link is same subject; no similarity threshold. |
 | **Max Movement** | 20% | 10% | 30% | Maximum probability shift from model |
 | **Min Bets for Skill** | 10 | 20 | 5 | Minimum resolved bets to apply skill multiplier |
 
@@ -487,14 +565,14 @@ For large numbers of markets:
 
 1. **Basic updates**: Single bet moves probability correctly
 2. **Weight calculation**: All factors (conviction, skill, time) combine properly
-3. **Similarity function**: Known similar/dissimilar markets scored correctly
+3. **Direction and same-subject**: Same-subject markets updated; direction (alpha vs beta) correct for overlapping vs disjoint outcomes
 4. **Bounds checking**: Probabilities stay in [0, 1], max movement enforced
 5. **Reversibility**: Voiding a bet returns to previous state
 
 ### Integration Tests
 
 1. **Multiple bets**: Sequential bets accumulate correctly
-2. **Cross-market**: Bet on one market affects similar markets
+2. **Cross-market**: Bet on one market affects same-subject markets; direction and strength from odds
 3. **Player learning**: As player's accuracy changes, future bets weighted differently
 4. **Time progression**: Old bets decay as match approaches
 
@@ -597,9 +675,9 @@ class BayesianOddsManager {
     required MatchPrep matchPrep,
     required double baseWeight,
     required double lambda,
-    required double similarityThreshold,
+    required double betImpliedP,
   }) {
-    // Calculate bet weight
+    // Calculate bet weight (conviction × skill × time)
     double weight = calculateBetWeight(
       wager: wager,
       player: player,
@@ -608,6 +686,9 @@ class BayesianOddsManager {
       lambda: lambda,
     );
 
+    // Odds-based strength: long odds => stronger cross-market signal
+    double strength = weight * (1.0 / betImpliedP.clamp(0.01, 1.0));
+
     // Update primary market
     String marketKey = _getMarketKey(wager.legs.first);
     MarketBayesianState state = _getOrCreateState(marketKey, wager);
@@ -615,17 +696,19 @@ class BayesianOddsManager {
     state.totalBetsProcessed++;
     state.lastUpdated = DateTime.now();
 
-    // Update similar markets
+    // Update same-subject markets (direction from overlap/outcome consistency)
+    var betPrediction = _getMarketPrediction(marketKey);
     for (var entry in marketStates.entries) {
       if (entry.key == marketKey) continue;
 
-      double similarity = calculateSimilarity(
-        wager.legs.first,
-        _getMarketPrediction(entry.key),
-      );
+      var otherPrediction = _getMarketPrediction(entry.key);
+      if (!sameSubject(betPrediction, otherPrediction)) continue;
 
-      if (similarity >= similarityThreshold) {
-        entry.value.accumulatedAlpha += weight * similarity;
+      bool addToAlpha = sameDirection(betPrediction, otherPrediction);
+      if (addToAlpha) {
+        entry.value.accumulatedAlpha += strength;
+      } else {
+        entry.value.accumulatedBeta += strength;
       }
     }
   }
@@ -670,7 +753,7 @@ class BayesianOddsManager {
     return marketStates.putIfAbsent(key, () {
       var prob = wager.wagerProbability;
       return MarketBayesianState(
-        modelAlpha: 65.0,  // TODO: calculate from model confidence
+        modelAlpha: 65.0,  // TODO: set from N_eff and model P (see "Principled Setting of α and β"), e.g. P*nEff, (1-P)*nEff using shooter rating history
         modelBeta: 35.0,
         lastUpdated: DateTime.now(),
       );

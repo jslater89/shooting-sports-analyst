@@ -13,6 +13,8 @@ import 'package:shooting_sports_analyst/data/cache/ratings/rating_cache.dart';
 import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/migrations/add_subjects_to_wagers.dart';
+import 'package:shooting_sports_analyst/data/database/migrations/migration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
@@ -27,6 +29,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.da
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/migration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
@@ -102,6 +105,7 @@ class AnalystDatabase {
         [
           // General/utility collections
           EntityChangeSchema,
+          MigrationRecordSchema,
 
           // Rating-related collections
           DbShootingMatchSchema,
@@ -173,6 +177,10 @@ class AnalystDatabase {
 
       // TODO: fantasy initialization here
     });
+
+    for(var migration in Migration.availableMigrations) {
+      await migration.checkAndApply(this);
+    }
 
     _readyCompleter.complete();
   }
