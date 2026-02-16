@@ -10,6 +10,7 @@ import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/dart_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
+import 'package:shooting_sports_analyst/data/cache/constants.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
@@ -31,8 +32,10 @@ Future<void> main() async {
   FlutterOrNative.machineFingerprintProvider = DartOnlyMachineFingerprinter();
 
   // Use an LRU match cache for this isolate.
-  final lruSize = int.tryParse(Platform.environment["MATCH_LRU_SIZE"] ?? "250") ?? 250;
-  HydratedMatchCache(useLru: true, lruCapacity: lruSize);
+  final matchLruSize = int.tryParse(Platform.environment[matchLruSizeEnv] ?? "250") ?? 250;
+  HydratedMatchCache(useLru: true, lruCapacity: matchLruSize);
+
+  _log.i("Using LRU cache: match=$matchLruSize");
 
   var configLoader = ConfigLoader();
   await configLoader.readyFuture;

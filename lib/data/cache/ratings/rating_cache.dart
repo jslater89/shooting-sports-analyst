@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:shooting_sports_analyst/data/cache/constants.dart';
 import 'package:shooting_sports_analyst/data/cache/lru_tracker.dart';
 import 'package:shooting_sports_analyst/data/cache/ratings/memory_rating_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -32,7 +33,7 @@ abstract interface class RatingCache {
   static RatingCache? _instance;
 
   static RatingCache get instance {
-    final lruSizeString = Platform.environment["RATING_LRU_SIZE"] ?? "";
+    final lruSizeString = Platform.environment[ratingLruSizeEnv] ?? "";
     final lruSize = int.tryParse(lruSizeString);
     final lru = lruSize != null ? LruTracker<MemoryRatingCacheLruKey>(capacity: lruSize) : null;
     var multiIsolateMode = FlutterOrNative.isolateModeProvider.kMultiIsolateMode;
