@@ -31,5 +31,6 @@ abstract class Migration {
 
   static List<Migration> availableMigrations = [
     AddSubjectsToWagers(),
+    FixWagerTransactions(),
   ];
 }

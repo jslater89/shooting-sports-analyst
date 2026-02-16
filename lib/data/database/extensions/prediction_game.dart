@@ -305,7 +305,7 @@ extension PredictionGameExtension on AnalystDatabase {
       }
     });
 
-    if(createWagerTransaction) {
+    if(createWagerTransaction && wager.wagerTransaction.value == null) {
       var transaction = PredictionGameTransaction(
         type: PredictionGameTransactionType.wager,
         amount: wager.amount,
@@ -332,7 +332,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
-    if(createWagerTransaction) {
+    if(createWagerTransaction && wager.wagerTransaction.value == null) {
       var transaction = PredictionGameTransaction(
         type: PredictionGameTransactionType.wager,
         amount: wager.amount,

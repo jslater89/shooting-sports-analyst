@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:shooting_sports_analyst/data/cache/constants.dart';
@@ -8,6 +7,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
+// ignore: unused_element
 final _log = SSALogger("RatingCache");
 
 /// Mode-aware interface for shooter rating cache access.
