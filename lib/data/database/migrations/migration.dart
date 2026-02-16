@@ -3,6 +3,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/migrations/add_subjects_to_wagers.dart';
 import 'package:shooting_sports_analyst/data/database/schema/migration.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("Migrations");
 
@@ -26,6 +27,9 @@ abstract class Migration {
         await db.isar.migrationRecords.put(record);
       });
       _log.i("Applied migration ${record.name}");
+    }
+    else {
+      _log.v("Migration ${record.name} was already applied at ${programmerYmdHmFormat.format(existing.applied)}");
     }
   }
 
