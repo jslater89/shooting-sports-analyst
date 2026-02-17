@@ -172,6 +172,15 @@ class _FilterDialogState extends State<FilterDialog> {
             }
           },
         ),
+      for(var cat in _filters.sport.categories.values)
+        CheckboxListTile(
+          title: Text(cat.name),
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _filters.categories[cat],
+          onChanged: (bool? value) {
+            _updateFilter(_filters.categories, cat, value);
+          },
+        ),
     ];
   }
 

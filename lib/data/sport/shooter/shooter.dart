@@ -79,6 +79,10 @@ class Shooter {
 
   @ignore
   AgeCategory? ageCategory;
+
+  @ignore
+  List<CompetitorCategory> categories = [];
+
   bool female = false;
 
   Shooter({
@@ -90,6 +94,7 @@ class Shooter {
     this.rawLocation,
     this.female = false,
     this.ageCategory,
+    this.categories = const [],
   }) {
     if(memberNumber.isNotEmpty) {
       this.memberNumber = memberNumber;
@@ -117,6 +122,7 @@ class Shooter {
     this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
     this.allPossibleMemberNumbers = {}..addAll(other.allPossibleMemberNumbers);
     this.ageCategory = other.ageCategory;
+    this.categories = other.categories;
     this.female = other.female;
     this.region = other.region;
     this.regionSubdivision = other.regionSubdivision;
@@ -170,6 +176,7 @@ class MatchEntry extends Shooter {
     required super.lastName,
     super.memberNumber,
     super.ageCategory,
+    super.categories,
     super.region,
     super.regionSubdivision,
     super.rawLocation,
@@ -210,6 +217,7 @@ class MatchEntry extends Shooter {
       classification: classification,
       female: female,
       ageCategory: ageCategory,
+      categories: categories,
       squad: squad,
       sourceId: sourceId,
     );

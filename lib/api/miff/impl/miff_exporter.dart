@@ -82,7 +82,7 @@ class MiffExporter implements AbstractMiffExporter {
 
     return {
       "format": "miff",
-      "version": "1.1",
+      "version": "1.2",
       "match": matchJson,
     };
   }
@@ -227,6 +227,9 @@ class MiffExporter implements AbstractMiffExporter {
     }
     if (shooter.ageCategory != null) {
       shooterJson["ageCategory"] = shooter.ageCategory!.name;
+    }
+    if (shooter.categories.isNotEmpty) {
+      shooterJson["categories"] = shooter.categories.map((c) => c.name).toList();
     }
     if (shooter.region != null) {
       shooterJson["region"] = shooter.region;

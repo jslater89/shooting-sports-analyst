@@ -256,6 +256,7 @@ class ShootingMatch implements SourceIdsProvider {
       squads: filters.squads,
       ladyOnly: filters.femaleOnly,
       ageCategories: filters.activeAgeCategories.toList(),
+      categories: filters.activeCategories.toList(),
     );
   }
 
@@ -272,6 +273,7 @@ class ShootingMatch implements SourceIdsProvider {
     List<int>? squads,
     bool ladyOnly = false,
     List<AgeCategory>? ageCategories,
+    List<CompetitorCategory>? categories,
   }) {
     List<MatchEntry> filteredShooters = [];
 
@@ -302,6 +304,14 @@ class ShootingMatch implements SourceIdsProvider {
 
     if(ageCategories != null && ageCategories.isNotEmpty) {
       filteredShooters.retainWhere((s) => ageCategories.contains(s.ageCategory));
+    }
+
+    if(categories != null && categories.isNotEmpty) {
+      filteredShooters.retainWhere((s) {
+        return categories.any(
+          (c) =>s.categories.contains(c)
+        );
+      });
     }
 
     if(squads != null && squads.isNotEmpty) {

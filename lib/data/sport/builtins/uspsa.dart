@@ -110,6 +110,10 @@ final uspsaSport = Sport(
     const AgeCategory(name: "Super Senior"),
     const AgeCategory(name: "Distinguished Senior")
   ],
+  categories: [
+    const CompetitorCategory(name: "Law Enforcement", alternateNames: ["LE", "Law"]),
+    const CompetitorCategory(name: "Military", alternateNames: ["MIL"]),
+  ],
   powerFactors: [
     PowerFactor("Major",
       shortName: "Maj",

@@ -27,6 +27,8 @@ class FilterSet {
   late Map<PowerFactor, bool> powerFactors;
   @JsonKey(toJson: ageCategoryMapToJson, includeToJson: true, includeFromJson: false)
   late Map<AgeCategory, bool> ageCategories;
+  @JsonKey(toJson: categoryMapToJson, includeToJson: true, includeFromJson: false)
+  late Map<CompetitorCategory, bool> categories;
   List<int> squads = [];
   List<int> knownSquads;
 
@@ -36,6 +38,7 @@ class FilterSet {
     classifications = {};
     powerFactors = {};
     ageCategories = {};
+    categories = {};
 
     for (Division d in sport.divisions.values) {
       this.divisions[d] = !empty;
@@ -53,6 +56,10 @@ class FilterSet {
       ageCategories[c] = false;
     }
 
+    for (CompetitorCategory c in sport.categories.values) {
+      categories[c] = false;
+    }
+
     for(var d in divisions ?? []) {
       this.divisions[d] = true;
     }
@@ -66,6 +73,7 @@ class FilterSet {
   Iterable<Classification> get activeClassifications => classifications.keys.where((c) => classifications[c] ?? false);
   Iterable<PowerFactor> get activePowerFactors => powerFactors.keys.where((f) => powerFactors[f] ?? false);
   Iterable<AgeCategory> get activeAgeCategories => ageCategories.keys.where((c) => ageCategories[c] ?? false);
+  Iterable<CompetitorCategory> get activeCategories => categories.keys.where((c) => categories[c] ?? false);
 
   static Map<Division, bool> divisionListToMap(Sport sport, List<Division> divisions) {
     Map<Division, bool> map = {};
@@ -93,6 +101,10 @@ class FilterSet {
 
     var ageCategoryMap = json['ageCategories'] as Map<String, dynamic>;
     set.ageCategories = ageCategoryMapFromJson(set.sport, ageCategoryMap);
+
+    var categoryMap = json['categories'] as Map<String, dynamic>;
+    set.categories = categoryMapFromJson(set.sport, categoryMap);
+
     return set;
   }
 
@@ -110,7 +122,8 @@ class FilterSet {
     && activeDivisions.isEmpty
     && activeClassifications.isEmpty
     && activePowerFactors.isEmpty
-    && activeAgeCategories.isEmpty;
+    && activeAgeCategories.isEmpty
+    && activeCategories.isEmpty;
 }
 
 enum FilterMode {

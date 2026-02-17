@@ -4,6 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import "dart:convert";
+import "dart:io";
+
 import "package:flutter_test/flutter_test.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_exporter.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_importer.dart";
@@ -109,6 +112,60 @@ void main() {
         // Compare: first import -> second import
         expectMatchesEqual(importedMatch2, importedMatch1, reason: "Match $matchId second import");
       }
+    });
+
+    test("Import and export preserve shooter categories", () async {
+      var minimalMiffJson = {
+        "format": "miff",
+        "version": "1.2",
+        "match": {
+          "name": "Categories Test Match",
+          "date": "2024-06-01",
+          "sport": "uspsa",
+          "stages": [
+            {
+              "id": 1,
+              "name": "Stage 1",
+              "scoring": {"type": "hitFactor"},
+            },
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "Jane",
+              "lastName": "Shooter",
+              "memberNumber": "A99999",
+              "powerFactor": "Major",
+              "categories": ["Law Enforcement", "Military"],
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 1},
+                  "penaltyEvents": {},
+                },
+              },
+            },
+          ],
+        },
+      };
+      var miffBytes = gzip.encode(utf8.encode(jsonEncode(minimalMiffJson)));
+
+      var validationResult = validator.validate(miffBytes);
+      expect(validationResult.isOk(), isTrue, reason: "Minimal MIFF with categories should be valid");
+
+      var importedMatch = importFromMiff(miffBytes);
+      expect(importedMatch.shooters.length, equals(1));
+      var shooter = importedMatch.shooters.first;
+      expect(shooter.categories.length, equals(2));
+      expect(shooter.categories.map((c) => c.name).toList(), equals(["Law Enforcement", "Military"]));
+
+      var exportedBytes = await exportToMiff(importedMatch);
+      var reimportedMatch = importFromMiff(exportedBytes);
+      expect(reimportedMatch.shooters.length, equals(1));
+      expect(
+        reimportedMatch.shooters.first.categories.map((c) => c.name).toList(),
+        equals(["Law Enforcement", "Military"]),
+      );
     });
 
     test("Validator: valid MIFF files pass validation", () async {
@@ -279,6 +336,120 @@ void main() {
       var result = validator.validateJson(json);
       expect(result.isErr(), isTrue);
       expect(result.unwrapErr().message, contains("shooters"));
+    });
+
+    test("Validator: shooter with categories (valid)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.2",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "Jane",
+              "lastName": "Shooter",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "categories": ["Law Enforcement", "Military"],
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 1},
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: shooter categories must be array of strings", () {
+      var validator = MiffValidator();
+      var baseMatch = {
+        "name": "Test",
+        "date": "2024-01-01",
+        "sport": "uspsa",
+        "stages": [
+          {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+        ],
+        "shooters": [
+          {
+            "id": 1,
+            "firstName": "Jane",
+            "lastName": "Shooter",
+            "memberNumber": "A123",
+            "powerFactor": "Major",
+            "scores": {
+              "1": {
+                "time": 10.0,
+                "targetEvents": {"A": 1},
+                "penaltyEvents": {}
+              }
+            }
+          }
+        ]
+      };
+      var jsonNotArray = {
+        "format": "miff",
+        "version": "1.2",
+        "match": Map<String, dynamic>.from(baseMatch)
+          ..["shooters"] = [
+            {
+              "id": 1,
+              "firstName": "Jane",
+              "lastName": "Shooter",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "categories": "Law Enforcement",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 1},
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ],
+      };
+      var result1 = validator.validateJson(jsonNotArray);
+      expect(result1.isErr(), isTrue);
+      expect(result1.unwrapErr().message, contains("categories"));
+
+      var jsonElementNotString = {
+        "format": "miff",
+        "version": "1.2",
+        "match": Map<String, dynamic>.from(baseMatch)
+          ..["shooters"] = [
+            {
+              "id": 1,
+              "firstName": "Jane",
+              "lastName": "Shooter",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "categories": ["Law Enforcement", 42],
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 1},
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ],
+      };
+      var result2 = validator.validateJson(jsonElementNotString);
+      expect(result2.isErr(), isTrue);
+      expect(result2.unwrapErr().message, contains("categories"));
     });
 
     test("Validator: duplicate stage IDs", () {
@@ -1049,6 +1220,11 @@ void expectShootersEqual(MatchEntry actual, MatchEntry expected, {String? reason
   expect(actual.division?.name, equals(expected.division?.name), reason: reason != null ? "$reason: division" : "division");
   expect(actual.classification?.name, equals(expected.classification?.name), reason: reason != null ? "$reason: classification" : "classification");
   expect(actual.ageCategory?.name, equals(expected.ageCategory?.name), reason: reason != null ? "$reason: age category" : "age category");
+  expect(
+    actual.categories.map((c) => c.name).toList(),
+    equals(expected.categories.map((c) => c.name).toList()),
+    reason: reason != null ? "$reason: categories" : "categories",
+  );
   expect(actual.sourceId, equals(expected.sourceId), reason: reason != null ? "$reason: source ID" : "source ID");
 
   // Compare scores

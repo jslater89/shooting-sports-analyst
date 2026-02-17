@@ -585,6 +585,18 @@ class MiffValidator implements AbstractMiffValidator {
       return StringError("Field 'ageCategory' must be a string");
     }
 
+    if (json.containsKey("categories")) {
+      var categories = json["categories"];
+      if (categories is! List) {
+        return StringError("Field 'categories' must be an array");
+      }
+      for (var i = 0; i < categories.length; i++) {
+        if (categories[i] is! String) {
+          return StringError("Field 'categories' must contain only strings");
+        }
+      }
+    }
+
     if (json.containsKey("region") && json["region"] is! String) {
       return StringError("Field 'region' must be a string");
     }

@@ -377,6 +377,18 @@ class MiffImporter implements AbstractMiffImporter {
         return Result.err(StringError("Unknown power factor: $powerFactorName"));
       }
 
+      var categoryNames = List<String>.from(json["categories"] ?? []);
+      var categories = <CompetitorCategory>[];
+      if (sport.hasCategories) {
+        for (var name in categoryNames) {
+          var category = sport.categories.lookupByName(name);
+          if (category == null) {
+            return Result.err(StringError("bad category: $firstName $lastName $name"));
+          }
+          categories.add(category);
+        }
+      }
+
       var shooter = MatchEntry(
         entryId: entryId,
         firstName: firstName,
@@ -386,6 +398,7 @@ class MiffImporter implements AbstractMiffImporter {
         division: sport.hasDivisions ? sport.divisions.lookupByName(json["division"] as String?) : null,
         classification: sport.hasClassifications ? sport.classifications.lookupByName(json["classification"] as String?) : null,
         ageCategory: sport.ageCategories.lookupByName(json["ageCategory"] as String?),
+        categories: categories,
         female: json["female"] as bool? ?? false,
         reentry: json["reentry"] as bool? ?? false,
         dq: json["dq"] as bool? ?? false,

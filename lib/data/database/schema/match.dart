@@ -513,6 +513,7 @@ abstract class DbMatchEntryBase {
   String? divisionName;
   String? classificationName;
   String? ageCategoryName;
+  List<String> categoryNames;
   List<DbRawScore> scores;
   DbMatchScore? precalculatedScore;
   String? sourceId;
@@ -535,6 +536,7 @@ abstract class DbMatchEntryBase {
     this.divisionName,
     this.classificationName,
     this.ageCategoryName,
+    this.categoryNames = const [],
     this.scores = const [],
     this.precalculatedScore,
     this.sourceId,
@@ -577,6 +579,7 @@ class StandaloneDbMatchEntry extends DbMatchEntryBase {
     super.divisionName,
     super.classificationName,
     super.ageCategoryName,
+    super.categoryNames,
     super.scores,
     super.precalculatedScore,
     super.sourceId,
@@ -598,6 +601,7 @@ class StandaloneDbMatchEntry extends DbMatchEntryBase {
     divisionName: entry.division?.name,
     classificationName: entry.classification?.name,
     ageCategoryName: entry.ageCategory?.name,
+    categoryNames: entry.categories.map((c) => c.name).toList(),
     scores: entry.scores.keys.map((stage) {
       return DbRawScore.from(stage.stageId, entry.scores[stage]!);
     }).toList(),
@@ -621,6 +625,7 @@ class StandaloneDbMatchEntry extends DbMatchEntryBase {
       divisionName: divisionName,
       classificationName: classificationName,
       ageCategoryName: ageCategoryName,
+      categoryNames: categoryNames,
       scores: scores,
       precalculatedScore: precalculatedScore,
       sourceId: sourceId,
@@ -646,6 +651,7 @@ class DbMatchEntry extends DbMatchEntryBase {
     super.divisionName,
     super.classificationName,
     super.ageCategoryName,
+    super.categoryNames,
     super.squad,
     super.scores,
     super.precalculatedScore,
@@ -670,6 +676,7 @@ class DbMatchEntry extends DbMatchEntryBase {
       divisionName: entry.division?.name,
       classificationName: entry.classification?.name,
       ageCategoryName: entry.ageCategory?.name,
+      categoryNames: entry.categories.map((c) => c.name).toList(),
       scores: entry.scores.keys.map((stage) {
         return DbRawScore.from(stage.stageId, entry.scores[stage]!);
       }).toList(),
@@ -714,6 +721,18 @@ class DbMatchEntry extends DbMatchEntryBase {
     var firstError = hydratedScores.values.firstWhereOrNull((element) => element.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
+    List<CompetitorCategory> categories = [];
+    if(sport.hasCategories) {
+      for(var categoryName in categoryNames) {
+        var category = sport.categories.lookupByName(categoryName);
+        if(category == null) {
+          _log.v("Unknown category: $categoryName");
+          continue;
+        }
+        categories.add(category);
+      }
+    }
+
     return Result.ok(MatchEntry(
       entryId: entryId,
       firstName: firstName,
@@ -729,6 +748,7 @@ class DbMatchEntry extends DbMatchEntryBase {
       division: division,
       classification: classification,
       ageCategory: category,
+      categories: categories,
       scores: hydratedScores.map((stage, result) => MapEntry(stage, result.unwrap())),
       sourceId: sourceId,
     )

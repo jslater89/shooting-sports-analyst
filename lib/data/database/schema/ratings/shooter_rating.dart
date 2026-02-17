@@ -110,6 +110,11 @@ class DbShooterRating extends Shooter with DbSportEntity {
   AgeCategory? get ageCategory => sport.ageCategories.lookupByName(ageCategoryName);
   set ageCategory(AgeCategory? value) => ageCategoryName = value?.name;
 
+  List<String> categoryNames = [];
+  @ignore
+  List<CompetitorCategory> get categories => sport.categories.lookupByNameList(categoryNames);
+  set categories(List<CompetitorCategory> value) => categoryNames = value.map((c) => c.name).toList();
+
   String? lastClassificationName;
 
   @ignore

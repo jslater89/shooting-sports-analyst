@@ -1,6 +1,6 @@
 # Match Interchange File Format (MIFF) Specification
 
-## Version 1.1
+## Version 1.2
 
 The Match Interchange File Format (`.miff` or `.miff.gz`) is an open standard for exchanging match score data across platforms and applications in practical shooting sports. This format uses JSON as its underlying data structure, compressed with gzip for efficient storage and transfer. The format is designed to be compact, easily parseable, and self-describing.
 
@@ -11,7 +11,7 @@ MIFF files are gzip-compressed JSON documents. When decompressed, the JSON has t
 ```json
 {
   "format": "miff",
-  "version": "1.1",
+  "version": "1.2",
   "match": { ... }
 }
 ```
@@ -200,6 +200,7 @@ Represents a competitor's entry in the match.
 | `division` | string | No | Division name (if sport has divisions) |
 | `classification` | string | No | Classification name (if sport has classifications) |
 | `ageCategory` | string | No | Age category name (if applicable) |
+| `categories` | array[string] | No | Non-age, non-gender category names (e.g. "Law Enforcement", "Military"). Omit or use an empty array if none. |
 | `region` | string | No | Normalized region code (typically ISO-3166 country code) |
 | `regionSubdivision` | string | No | Normalized region subdivision code (typically ISO-3166 state/province code) |
 | `rawLocation` | string | No | Raw location string from source data |
@@ -366,7 +367,7 @@ This indicates a score where the total points and/or final time are directly spe
 ```json
 {
   "format": "miff",
-  "version": "1.1",
+  "version": "1.2",
   "match": {
     "name": "2024 Area 4 Championship",
     "date": "2024-05-15",
@@ -406,6 +407,7 @@ This indicates a score where the total points and/or final time are directly spe
         "powerFactor": "Major",
         "division": "Limited",
         "classification": "GM",
+        "categories": ["Law Enforcement"],
         "scores": {
           "1": {
             "time": 12.45,
@@ -429,7 +431,7 @@ This example shows a stage with variable X-ring events (common in ICORE):
 ```json
 {
   "format": "miff",
-  "version": "1.1",
+  "version": "1.2",
   "match": {
     "name": "2024 ICORE Regional",
     "date": "2024-06-10",
@@ -482,7 +484,7 @@ This example shows a shooter with a score that has been edited, with the previou
 ```json
 {
   "format": "miff",
-  "version": "1.1",
+  "version": "1.2",
   "match": {
     "name": "2024 Local Match",
     "date": "2024-06-01",
@@ -527,7 +529,7 @@ In this example, the shooter's score on stage 1 was originally 12.67 seconds wit
 
 ## Versioning
 
-The format version is specified in the `version` field. This specification describes version 1.1.
+The format version is specified in the `version` field. This specification describes version 1.2.
 
 The specification version number uses two-place semantic versioning. Changes to the minor version
 number (the second element) will always be backward compatible, such that a 1.0 parser will always

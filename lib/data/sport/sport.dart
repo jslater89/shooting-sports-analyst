@@ -58,6 +58,11 @@ class Sport {
   /// Leave this empty if the sport does not recognize age categories.
   final Map<String, AgeCategory> ageCategories;
 
+  /// The non-age, non-gender categories in this sport.
+  ///
+  /// Leave this empty if the sport does not recognize non-age, non-gender categories.
+  final Map<String, CompetitorCategory> categories;
+
   /// Sort modes that are meaningful for this sport.
   final List<SortMode> resultSortModes;
 
@@ -90,6 +95,7 @@ class Sport {
   bool get hasDivisionFallback => divisions.values.any((element) => element.fallback);
   bool get hasClassifications => classifications.length > 0;
   bool get hasAgeCategories => ageCategories.length > 0;
+  bool get hasCategories => categories.length > 0;
   bool get hasClassificationFallback => classifications.values.any((element) => element.fallback);
   bool get hasEventLevels => eventLevels.length > 0;
 
@@ -121,6 +127,7 @@ class Sport {
     List<Division> divisions = const [],
     List<MatchLevel> eventLevels = const [],
     List<AgeCategory> ageCategories = const [],
+    List<CompetitorCategory> categories = const [],
     required List<PowerFactor> powerFactors,
     SportDisplaySettings? displaySettings,
     /// The power factor to use when generating default display settings.
@@ -145,7 +152,8 @@ class Sport {
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
         powerFactors = Map.fromEntries(powerFactors.map((e) => MapEntry(e.name, e))),
         eventLevels = Map.fromEntries(eventLevels.map((e) => MapEntry(e.name, e))),
-        ageCategories = Map.fromEntries(ageCategories.map((e) => MapEntry(e.name, e))) {
+        ageCategories = Map.fromEntries(ageCategories.map((e) => MapEntry(e.name, e))),
+        categories = Map.fromEntries(categories.map((e) => MapEntry(e.name, e))) {
     if(displaySettings != null) {
       this.displaySettings = displaySettings;
     }
@@ -374,6 +382,10 @@ extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
     return this.values.lookupByName(name, fallback: fallback);
   }
 
+  List<T> lookupByNameList(List<String> names, {bool fallback = true}) {
+    return names.map((name) => lookupByName(name, fallback: fallback)).nonNulls.toList();
+  }
+
   bool containsAll(List<String> values) {
     return !values.any((v) => lookupByName(v) == null);
   }
@@ -513,6 +525,7 @@ enum SportType {
       this == dynamicTimePlusPointsDown;
 }
 
+/// A category of competitor specifically for age.
 class AgeCategory extends NameLookupEntity {
   final String name;
   final List<String> alternateNames;
@@ -527,6 +540,30 @@ class AgeCategory extends NameLookupEntity {
   String get shortName => name;
 
   const AgeCategory({
+    required this.name, this.alternateNames = const [],
+  });
+
+  @override
+  String toString() {
+    return displayName;
+  }
+}
+
+/// Competitor categories that filter by neither age nor gender.
+class CompetitorCategory extends NameLookupEntity {
+  final String name;
+  final List<String> alternateNames;
+
+  @override
+  bool get fallback => false;
+
+  @override
+  String get longName => name;
+
+  @override
+  String get shortName => name;
+
+  const CompetitorCategory({
     required this.name, this.alternateNames = const [],
   });
 

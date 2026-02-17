@@ -228,6 +228,7 @@ class _ResultPageState extends State<ResultPage> {
       ladyOnly: _filters.femaleOnly,
       squads: _filters.squads,
       ageCategories: _filters.ageCategories.keys.where((element) => _filters.ageCategories[element]!).toList(),
+      categories: _filters.categories.keys.where((element) => _filters.categories[element]!).toList(),
     );
     return filteredShooters;
   }

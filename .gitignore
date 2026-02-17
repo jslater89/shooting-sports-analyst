@@ -67,6 +67,7 @@ sorted-elo-settings*.txt
 base.apk.cache/
 research/**/output.txt
 config.toml
+config.ssaservers.toml
 ui_config.toml
 db/
 local**

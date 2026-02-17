@@ -42,10 +42,16 @@ Map<PowerFactor, bool> powerFactorMapFromJson(Sport sport, Map<String, dynamic> 
 
 Map<String, bool> ageCategoryMapToJson(Map<AgeCategory, bool> ageCategories) {
   return ageCategories.map((key, value) => MapEntry(key.name, value));
-} 
+}
 
 Map<AgeCategory, bool> ageCategoryMapFromJson(Sport sport, Map<String, dynamic> ageCategories) {
   return ageCategories.map((key, value) => MapEntry(sport.ageCategories.lookupByName(key)!, value as bool));
 }
 
+Map<String, bool> categoryMapToJson(Map<CompetitorCategory, bool> categories) {
+  return categories.map((key, value) => MapEntry(key.name, value));
+}
 
+Map<CompetitorCategory, bool> categoryMapFromJson(Sport sport, Map<String, dynamic> categories) {
+  return categories.map((key, value) => MapEntry(sport.categories.lookupByName(key)!, value as bool));
+}
