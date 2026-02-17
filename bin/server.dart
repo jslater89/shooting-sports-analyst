@@ -15,17 +15,19 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/server/matches/match_service.dart';
-import 'package:shooting_sports_analyst/server/matches/registration_service.dart';
-import 'package:shooting_sports_analyst/server/middleware/logger_middleware.dart';
+import 'package:shooting_sports_analyst/server/embedded.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
-import 'package:shooting_sports_analyst/version.dart';
 
 final _log = SSALogger("Server");
 
 Future<void> main() async {
-  print("Starting server.");
-  // True only for multi-isolate servers
+  print("Starting API server.");
+
+  await startServerStandalone();
+}
+
+/// Start the SSA API server in standalone mode, as a single-isolate-in-process server.
+Future<void> startServerStandalone() async {
   var serverModeProvider = ServerDebugProvider(isMultiIsolate: false);
   FlutterOrNative.isolateModeProvider = serverModeProvider;
   FlutterOrNative.debugModeProvider = serverModeProvider;
@@ -43,7 +45,6 @@ Future<void> main() async {
   var configProvider = ServerConfigProvider(configLoader.config);
   initLogger(configLoader.config, configProvider);
 
-
   _log.i("Initialized logger.");
 
   var database = AnalystDatabase();
@@ -53,25 +54,5 @@ Future<void> main() async {
 
   final authServer = SSAAuthServer();
   await authServer.setupKeys();
-  shelfRun(() => init(authServer));
-}
-
-Handler init(SSAAuthServer authServer) {
-  final app = Router().plus;
-  app.use(createLoggerMiddleware());
-  app.get("/", (request) => "Shooting Sports Analyst API ${VersionInfo.version}");
-
-  // var leagueService = LeagueService([createLoggerMiddleware()]);
-  // app.mount("/league", leagueService.router);
-
-  var authService = AuthService.withServer(authServer, [createLoggerMiddleware()]);
-  app.mount("/auth", authService.router);
-
-  var matchService = MatchService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
-  app.mount("/match", matchService.router);
-
-  var registrationService = RegistrationService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
-  app.mount("/registration", registrationService.router);
-
-  return app.call;
+  await shelfRun(() => initApiServer(authServer));
 }
