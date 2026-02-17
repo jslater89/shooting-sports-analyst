@@ -17,10 +17,11 @@ final _log = SSALogger("EmbeddedServer");
 
 class EmbeddedServerStartData {
   IsolateStartData startData;
+  bool devMode;
   String? bindAddress;
   int? bindPort;
 
-  EmbeddedServerStartData({required this.startData, this.bindAddress, this.bindPort});
+  EmbeddedServerStartData({required this.startData, required this.devMode, this.bindAddress, this.bindPort});
 }
 
 /// Start the SSA API server in embedded mode, as an isolate in a multi-isolate server.
@@ -51,6 +52,7 @@ void startServerEmbedded(EmbeddedServerStartData startData) async {
   await shelfRun(() => initApiServer(authServer),
     defaultBindAddress: startData.bindAddress ?? "0.0.0.0",
     defaultBindPort: startData.bindPort ?? 8081,
+    defaultEnableHotReload: startData.devMode,
   );
 }
 
