@@ -6,10 +6,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class RatingFilterDialog extends StatefulWidget {
-  RatingFilterDialog({Key? key, required RatingFilters filters}) : this.filters = RatingFilters.copy(filters), super(key: key);
+  RatingFilterDialog({Key? key, required this.sport, required RatingFilters filters}) : this.filters = RatingFilters.copy(filters), super(key: key);
 
+  final Sport sport;
   final RatingFilters filters;
 
   @override
@@ -36,7 +38,18 @@ class _RatingFilterDialogState extends State<RatingFilterDialog> {
               title: Text("Lady"),
               controlAffinity: ListTileControlAffinity.leading,
             ),
-            for(var category in ShooterCategory.values)
+            for(var ageCategory in widget.sport.ageCategories.values)
+              CheckboxListTile(
+                value: widget.filters.ageCategories[ageCategory] ?? false,
+                onChanged: (v) {
+                  setState(() {
+                    if(v != null) widget.filters.ageCategories[ageCategory] = v;
+                  });
+                },
+                title: Text(ageCategory.displayName),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            for(var category in widget.sport.categories.values)
               CheckboxListTile(
                 value: widget.filters.categories[category] ?? false,
                 onChanged: (v) {
@@ -44,7 +57,7 @@ class _RatingFilterDialogState extends State<RatingFilterDialog> {
                     if(v != null) widget.filters.categories[category] = v;
                   });
                 },
-                title: Text(category.displayString()),
+                title: Text(category.displayName),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
           ],
@@ -69,18 +82,26 @@ class _RatingFilterDialogState extends State<RatingFilterDialog> {
 }
 
 class RatingFilters {
+  Sport sport;
   bool ladyOnly;
-  Map<ShooterCategory, bool> categories;
+  Map<AgeCategory, bool> ageCategories;
+  Map<CompetitorCategory, bool> categories;
 
   RatingFilters({
+    required this.sport,
     required this.ladyOnly,
+    this.ageCategories = const {},
     this.categories = const {},
   });
 
-  List<ShooterCategory> get activeCategories =>
+  List<AgeCategory> get activeAgeCategories =>
+    ageCategories.keys.where((c) => ageCategories[c] ?? false).toList();
+  List<CompetitorCategory> get activeCategories =>
     categories.keys.where((c) => categories[c] ?? false).toList();
 
   RatingFilters.copy(RatingFilters other) :
+      sport = other.sport,
       ladyOnly = other.ladyOnly,
+      ageCategories = {}..addAll(other.ageCategories),
       categories = {}..addAll(other.categories);
 }

@@ -224,9 +224,15 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.female);
     }
 
+    if(widget.filters.activeAgeCategories.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) =>
+          r.ageCategory != null && widget.filters.activeAgeCategories.contains(r.ageCategory));
+    }
+
     if(widget.filters.activeCategories.isNotEmpty) {
       sortedRatings = sortedRatings.where((r) =>
-          r.ageCategory != null && widget.filters.activeCategories.contains(r.ageCategory));
+          r.categories.any((c) => widget.filters.activeCategories.contains(c))
+      );
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {

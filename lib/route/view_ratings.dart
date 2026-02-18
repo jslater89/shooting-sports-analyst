@@ -77,7 +77,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late TextEditingController _maxDaysController;
   int _minRatings = 0;
   int _maxDays = 365;
-  RatingFilters _filters = RatingFilters(ladyOnly: false);
+  late RatingFilters _filters;
   List<RatingSet> _ratingSets = [];
 
   List<RatingGroup> activeTabs = [];
@@ -180,6 +180,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
     _selectedMatch = (await _latestMatch.unwrap().hydrate()).unwrap();
     _sport = await widget.dataSource.getSport().unwrap();
+    _filters = RatingFilters(sport: _sport, ladyOnly: false);
     _tabController = TabController(
         length: activeTabs.length,
         vsync: this,
@@ -453,7 +454,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       icon: Icon(Icons.filter_list),
                       onPressed: () async {
                         var filters = await showDialog(context: context, builder: (context) =>
-                          RatingFilterDialog(filters: _filters),
+                          RatingFilterDialog(sport: _sport, filters: _filters),
                         );
 
                         if(filters != null) {
