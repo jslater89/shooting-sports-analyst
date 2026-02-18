@@ -105,6 +105,7 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
     this.wrappedRating.lastClassification = lastClassification;
     this.wrappedRating.division = division;
     this.wrappedRating.ageCategory = ageCategory;
+    this.wrappedRating.categories = categories;
     this.wrappedRating.female = female;
     this.wrappedRating.rating = 0.0;
     this.wrappedRating.error = 0.0;

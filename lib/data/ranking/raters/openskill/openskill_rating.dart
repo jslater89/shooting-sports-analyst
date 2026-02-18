@@ -53,6 +53,7 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
     this.wrappedRating.lastClassification = lastClassification;
     this.wrappedRating.division = division;
     this.wrappedRating.ageCategory = ageCategory;
+    this.wrappedRating.categories = categories;
     this.wrappedRating.female = female;
     this.wrappedRating.rating = 0.0;
     this.wrappedRating.rawConnectivity = 0.0;

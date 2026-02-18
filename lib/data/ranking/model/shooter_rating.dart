@@ -47,6 +47,9 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   AgeCategory? get ageCategory => wrappedRating.ageCategory;
   set ageCategory(AgeCategory? c) => wrappedRating.ageCategory = c;
 
+  List<CompetitorCategory> get categories => wrappedRating.categories;
+  set categories(List<CompetitorCategory> c) => wrappedRating.categories = c;
+
   bool get female => wrappedRating.female;
   set female(bool f) => wrappedRating.female = f;
 
@@ -563,10 +566,8 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     return history;
   }
 
-  void copyVitalsFrom(covariant ShooterRating other) {
-    this.firstName = other.firstName;
-    this.lastName = other.lastName;
-    this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
+  void copyVitalsFrom(covariant Shooter other) {
+    super.copyVitalsFrom(other);
   }
 
   ShooterRating(MatchEntry shooter, {
