@@ -131,6 +131,18 @@ class DbWager {
     return results;
   }
 
+  /// Get preexisting resolution information for the wager's legs.
+  ///
+  /// This will throw if any legs do not have resolution information.
+  /// Check with [hasResolutionInformation] before calling this method.
+  Map<DbPrediction, ResolutionInformation> getResolutionInformation() {
+    Map<DbPrediction, ResolutionInformation> results = {};
+    for(var leg in legs) {
+      results[leg] = leg.resolutionInformation!;
+    }
+    return results;
+  }
+
   @ignore
   String get descriptiveString {
     if(isParlay) {
