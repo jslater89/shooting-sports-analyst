@@ -351,17 +351,17 @@ class DbPrediction {
 
     if(type.hasUnderdog) {
       this.resolutionInformation = ResolutionInformation.fromScores(
-        actualScore: actualScore!,
-        predictionSetScore: predictionSetScore!,
-        actualUnderdogScore: actualUnderdogScore!,
-        predictionSetUnderdogScore: predictionSetUnderdogScore!,
+        actualScore: actualScore,
+        predictionSetScore: predictionSetScore,
+        actualUnderdogScore: actualUnderdogScore,
+        predictionSetUnderdogScore: predictionSetUnderdogScore,
       );
       return this.resolutionInformation!;
     }
     else {
       this.resolutionInformation = ResolutionInformation.fromScore(
-        actualScore: actualScore!,
-        predictionSetScore: predictionSetScore!,
+        actualScore: actualScore,
+        predictionSetScore: predictionSetScore,
       );
       return this.resolutionInformation!;
     }
@@ -378,6 +378,25 @@ class DbPrediction {
     if(resolutionInformation == null) {
       throw StateError("Resolution information not built for prediction: ${descriptiveString}");
     }
+
+    // Misses if: target not in actual, or target not in predictions
+    if(mode == WagerEvaluationMode.actualScores) {
+      if(!resolutionInformation!.targetInActualScores) {
+        return false;
+      }
+      if(type.hasUnderdog && !(resolutionInformation!.underdogInActualScores ?? false)) {
+        return false;
+      }
+    }
+    else if(mode == WagerEvaluationMode.predictionSetScores) {
+      if(!resolutionInformation!.targetInSetScores) {
+        return false;
+      }
+      if(type.hasUnderdog && !(resolutionInformation!.underdogInSetScores ?? false)) {
+        return false;
+      }
+    }
+
     switch(type) {
       case DbPredictionType.place:
         var targetScore = mode == WagerEvaluationMode.actualScores ?
@@ -636,14 +655,30 @@ enum DbWagerStatus {
 /// Contains both the actual and prediction set scores for the wager.
 @embedded
 class ResolutionInformation {
+  /// Whether the target is in the actual scores.
+  bool targetInActualScores;
+  /// Whether the target is in the prediction set scores.
+  bool targetInSetScores;
+  /// The actual place of the target.
   int actualPlace;
+  /// The place of the target in the prediction set scores.
   int predictionSetPlace;
+  /// The actual ratio of the target.
   double actualRatio;
+  /// The ratio of the target in the prediction set scores.
   double predictionSetRatio;
 
+  /// Whether the underdog is in the actual scores.
+  bool? underdogInActualScores;
+  /// Whether the underdog is in the prediction set scores.
+  bool? underdogInSetScores;
+  /// The actual place of the underdog.
   int? actualUnderdogPlace;
+  /// The place of the underdog in the prediction set scores.
   int? predictionSetUnderdogPlace;
+  /// The actual ratio of the underdog.
   double? actualUnderdogRatio;
+  /// The ratio of the underdog in the prediction set scores.
   double? predictionSetUnderdogRatio;
 
   ResolutionInformation({
@@ -655,31 +690,41 @@ class ResolutionInformation {
     this.predictionSetUnderdogPlace,
     this.actualUnderdogRatio,
     this.predictionSetUnderdogRatio,
+    this.targetInActualScores = false,
+    this.targetInSetScores = false,
+    this.underdogInActualScores = false,
+    this.underdogInSetScores = false,
   });
 
   ResolutionInformation.fromScore({
-    required RelativeMatchScore actualScore,
-    required RelativeMatchScore predictionSetScore,
+    required RelativeMatchScore? actualScore,
+    required RelativeMatchScore? predictionSetScore,
   }) :
-    actualPlace = actualScore.place,
-    predictionSetPlace = predictionSetScore.place,
-    actualRatio = actualScore.ratio,
-    predictionSetRatio = predictionSetScore.ratio;
+    actualPlace = actualScore?.place ?? -1,
+    predictionSetPlace = predictionSetScore?.place ?? -1,
+    actualRatio = actualScore?.ratio ?? 0.0,
+    predictionSetRatio = predictionSetScore?.ratio ?? 0.0,
+    targetInActualScores = actualScore != null,
+    targetInSetScores = predictionSetScore != null;
 
   ResolutionInformation.fromScores({
-    required RelativeMatchScore actualScore,
-    required RelativeMatchScore predictionSetScore,
-    required RelativeMatchScore actualUnderdogScore,
-    required RelativeMatchScore predictionSetUnderdogScore,
+    required RelativeMatchScore? actualScore,
+    required RelativeMatchScore? predictionSetScore,
+    required RelativeMatchScore? actualUnderdogScore,
+    required RelativeMatchScore? predictionSetUnderdogScore,
   }) :
-    actualPlace = actualScore.place,
-    predictionSetPlace = predictionSetScore.place,
-    actualRatio = actualScore.ratio,
-    predictionSetRatio = predictionSetScore.ratio,
-    actualUnderdogPlace = actualUnderdogScore.place,
-    predictionSetUnderdogPlace = predictionSetUnderdogScore.place,
-    actualUnderdogRatio = actualUnderdogScore.ratio,
-    predictionSetUnderdogRatio = predictionSetUnderdogScore.ratio;
+    actualPlace = actualScore?.place ?? -1,
+    predictionSetPlace = predictionSetScore?.place ?? -1,
+    actualRatio = actualScore?.ratio ?? 0.0,
+    predictionSetRatio = predictionSetScore?.ratio ?? 0.0,
+    actualUnderdogPlace = actualUnderdogScore?.place ?? -1,
+    predictionSetUnderdogPlace = predictionSetUnderdogScore?.place ?? -1,
+    actualUnderdogRatio = actualUnderdogScore?.ratio ?? 0.0,
+    predictionSetUnderdogRatio = predictionSetUnderdogScore?.ratio ?? 0.0,
+    targetInActualScores = actualScore != null,
+    targetInSetScores = predictionSetScore != null,
+    underdogInActualScores = actualUnderdogScore != null,
+    underdogInSetScores = predictionSetUnderdogScore != null;
 }
 
 enum WagerEvaluationMode {

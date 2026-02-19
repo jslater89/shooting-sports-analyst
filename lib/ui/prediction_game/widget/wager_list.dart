@@ -344,26 +344,35 @@ class _WagerListState extends State<WagerList> {
 
       var scoreText = "";
 
-      var mainTargetName = prediction.target.lastName;
-      // var mainDogName = prediction.underdog!.lastName;
+      if(resolutionInformation.targetInActualScores) {
+        var mainTargetName = prediction.target.lastName;
+        // var mainDogName = prediction.underdog!.lastName;
 
-      var mainRatio = resolutionInformation.actualRatio;
-      var mainDogRatio = resolutionInformation.actualUnderdogRatio!;
-      var mainSpread = mainRatio - mainDogRatio;
-      mainSpread = -mainSpread;
-      var positiveSign = mainSpread > 0 ? "+" : "";
+        var mainRatio = resolutionInformation.actualRatio;
+        var mainDogRatio = resolutionInformation.actualUnderdogRatio!;
+        var mainSpread = mainRatio - mainDogRatio;
+        mainSpread = -mainSpread;
+        var positiveSign = mainSpread > 0 ? "+" : "";
 
-      scoreText += "Main: $mainTargetName $positiveSign${mainSpread.asPercentage(decimals: 2, includePercent: true)}";
+        scoreText += "Main: $mainTargetName $positiveSign${mainSpread.asPercentage(decimals: 2, includePercent: true)}";
+      }
+      else {
+        scoreText += "Main: (missing scores)";
+      }
 
-
-      var predictionSetTargetName = prediction.target.lastName;
-      // var predictionSetDogName = prediction.underdog!.lastName;
-      var predictionSetRatio = resolutionInformation.predictionSetRatio;
-      var predictionSetDogRatio = resolutionInformation.predictionSetUnderdogRatio!;
-      var predictionSetSpread = predictionSetRatio - predictionSetDogRatio;
-      predictionSetSpread = -predictionSetSpread;
-      positiveSign = predictionSetSpread > 0 ? "+" : "";
-      scoreText += "${separator}Set: $predictionSetTargetName $positiveSign${predictionSetSpread.asPercentage(decimals: 2, includePercent: true)}";
+      if(resolutionInformation.targetInSetScores) {
+        var predictionSetTargetName = prediction.target.lastName;
+        // var predictionSetDogName = prediction.underdog!.lastName;
+        var predictionSetRatio = resolutionInformation.predictionSetRatio;
+        var predictionSetDogRatio = resolutionInformation.predictionSetUnderdogRatio!;
+        var predictionSetSpread = predictionSetRatio - predictionSetDogRatio;
+        predictionSetSpread = -predictionSetSpread;
+        var positiveSign = predictionSetSpread > 0 ? "+" : "";
+        scoreText += "${separator}Set: $predictionSetTargetName $positiveSign${predictionSetSpread.asPercentage(decimals: 2, includePercent: true)}";
+      }
+      else {
+        scoreText += "${separator}Set: (missing scores)";
+      }
 
       return scoreText;
     }
@@ -372,19 +381,32 @@ class _WagerListState extends State<WagerList> {
       var predictionSetRatio = resolutionInformation.predictionSetRatio;
       var mainPlace = resolutionInformation.actualPlace;
       var predictionSetPlace = resolutionInformation.predictionSetPlace;
-      var scoreText = "Main: ";
       var decimals = mainRatio == 1.0 ? 0 : 2;
-      if(includeLastNames) {
-        scoreText += "${prediction.target.lastName} ";
-      }
-      scoreText += "${mainPlace.ordinalPlace} (${mainRatio.asPercentage(decimals: decimals, includePercent: true)})";
+      var scoreText = "";
 
-      decimals = predictionSetRatio == 1.0 ? 0 : 2;
-      scoreText += "${separator}Set: ";
-      if(includeLastNames) {
-        scoreText += "${prediction.target.lastName} ";
+
+      if(resolutionInformation.targetInActualScores) {
+        scoreText += "Main: ";
+        if(includeLastNames) {
+          scoreText += "${prediction.target.lastName} ";
+        }
+        scoreText += "${mainPlace.ordinalPlace} (${mainRatio.asPercentage(decimals: decimals, includePercent: true)})";
       }
-      scoreText += "${predictionSetPlace.ordinalPlace} (${predictionSetRatio.asPercentage(decimals: decimals, includePercent: true)})";
+      else {
+        scoreText += "Main: (missing scores)";
+      }
+
+      if(resolutionInformation.targetInSetScores) {
+        decimals = predictionSetRatio == 1.0 ? 0 : 2;
+        scoreText += "${separator}Set: ";
+        if(includeLastNames) {
+          scoreText += "${prediction.target.lastName} ";
+        }
+        scoreText += "${predictionSetPlace.ordinalPlace} (${predictionSetRatio.asPercentage(decimals: decimals, includePercent: true)})";
+      }
+      else {
+        scoreText += "${separator}Set: (missing scores)";
+      }
 
       return scoreText;
     }
