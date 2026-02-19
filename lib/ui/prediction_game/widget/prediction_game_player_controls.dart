@@ -60,7 +60,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
   @override
   void initState() {
     var model = context.read<PredictionGameManagerModel>();
-    validMatchPreps = model.getMatchPrepsSync(futureOnly: true, hasPredictionsOnly: true);
+    validMatchPreps = model.getMatchPrepsSync(futureOnly: false, hasPredictionsOnly: true);
     if(validMatchPreps.isNotEmpty) {
       _selectMatchPrep(model, validMatchPreps.first);
     }

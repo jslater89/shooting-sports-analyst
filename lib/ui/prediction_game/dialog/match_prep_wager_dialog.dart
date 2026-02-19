@@ -49,7 +49,7 @@ class _MatchPrepWagerDialogState extends State<MatchPrepWagerDialog> {
             height: MediaQuery.of(context).size.height * 0.8,
             width: MediaQuery.of(context).size.width * 0.9,
             child: ChangeNotifierProvider.value(value: wagerModel, child: WagerList(
-              trailingWidth: 200,
+              trailingWidth: 300,
             )),
           ),
           actions: [

@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
@@ -67,6 +68,9 @@ class DbWager {
   @ignore
   bool get isResolved => status.isResolved;
 
+  @ignore
+  bool get hasResolutionInformation => legs.every((leg) => leg.resolutionInformation != null);
+
   /// If this is a parlay, the probability of the parlay.
   /// (If it's a single leg, the probability is in the prediction.)
   DbProbability? parlayProbability;
@@ -102,10 +106,27 @@ class DbWager {
   /// Evaluate the legs of the wager against the given scores.
   ///
   /// Returns a map of the legs to their evaluation results.
-  Map<DbPrediction, bool> evaluateLegs(Map<String, RelativeMatchScore> scores) {
+  ///
+  /// [mode] determines whether to use the actual or prediction set scores.
+  ///
+  /// [buildResolutionInformation] must have been called for the wager (or
+  /// its legs individually) before calling this method.
+  Map<DbPrediction, bool> evaluateLegs(WagerEvaluationMode mode) {
     Map<DbPrediction, bool> results = {};
     for(var leg in legs) {
-      results[leg] = leg.evaluate(scores);
+      results[leg] = leg.evaluate(mode);
+    }
+    return results;
+  }
+
+  /// Build the resolution information for the wager's legs.
+  Map<DbPrediction, ResolutionInformation> buildResolutionInformation(WagerScores scores) {
+    Map<DbPrediction, ResolutionInformation> results = {};
+    for(var leg in legs) {
+      results[leg] = leg.buildResolutionInformation(
+        actualScores: scores.scores,
+        predictionSetScores: scores.predictionSetScores,
+      );
     }
     return results;
   }
@@ -269,41 +290,122 @@ class DbPrediction {
   /// The underdog for a spread prediction, or null otherwise.
   DbPredictionTarget? underdog;
 
+  /// The resolution information for the prediction.
+  ResolutionInformation? resolutionInformation;
+
   /// The member numbers of the subjects of the prediction.
   List<String> get subjectMemberNumbers => [
     ...target.knownMemberNumbers,
     if(underdog != null) ...underdog!.knownMemberNumbers,
   ];
 
+  /// Build the resolution information for the prediction.
+  ResolutionInformation buildResolutionInformation({
+    required Map<String, RelativeMatchScore> actualScores,
+    required Map<String, RelativeMatchScore> predictionSetScores,
+  }) {
+    RelativeMatchScore? actualScore;
+    RelativeMatchScore? predictionSetScore;
+    RelativeMatchScore? actualUnderdogScore;
+    RelativeMatchScore? predictionSetUnderdogScore;
+
+    actualScore = actualScores[target.memberNumber];
+    predictionSetScore = predictionSetScores[target.memberNumber];
+    if(actualScore == null) {
+      for(var n in target.knownMemberNumbers) {
+        actualScore = actualScores[n];
+        if(actualScore != null) {
+          break;
+        }
+      }
+    }
+    if(predictionSetScore == null) {
+      for(var n in target.knownMemberNumbers) {
+        predictionSetScore = predictionSetScores[n];
+        if(predictionSetScore != null) {
+          break;
+        }
+      }
+    }
+
+    if(type.hasUnderdog) {
+      actualUnderdogScore = actualScores[underdog!.memberNumber];
+      predictionSetUnderdogScore = predictionSetScores[underdog!.memberNumber];
+      if(actualUnderdogScore == null) {
+        for(var n in underdog!.knownMemberNumbers) {
+          actualUnderdogScore = actualScores[n];
+          if(actualUnderdogScore != null) {
+            break;
+          }
+        }
+      }
+      if(predictionSetUnderdogScore == null) {
+        for(var n in underdog!.knownMemberNumbers) {
+          predictionSetUnderdogScore = predictionSetScores[n];
+          if(predictionSetUnderdogScore != null) {
+            break;
+          }
+        }
+      }
+    }
+
+    if(type.hasUnderdog) {
+      this.resolutionInformation = ResolutionInformation.fromScores(
+        actualScore: actualScore!,
+        predictionSetScore: predictionSetScore!,
+        actualUnderdogScore: actualUnderdogScore!,
+        predictionSetUnderdogScore: predictionSetUnderdogScore!,
+      );
+      return this.resolutionInformation!;
+    }
+    else {
+      this.resolutionInformation = ResolutionInformation.fromScore(
+        actualScore: actualScore!,
+        predictionSetScore: predictionSetScore!,
+      );
+      return this.resolutionInformation!;
+    }
+  }
+
   // TODO: replicate on hydrated wagers
   // and/or move to utility function so it's not duplicated
-  /// Evaluate the prediction against the map of given scores (from member number to RelativeMatchScore).
-  bool evaluate(Map<String, RelativeMatchScore> scores) {
+  /// Evaluate the prediction against the given type of score, retrieved from
+  /// the resolution information.
+  ///
+  /// [buildResolutionInformation] must have been called for the prediction.
+  /// [mode] determines whether to use the actual or prediction set scores.
+  bool evaluate(WagerEvaluationMode mode) {
+    if(resolutionInformation == null) {
+      throw StateError("Resolution information not built for prediction: ${descriptiveString}");
+    }
     switch(type) {
       case DbPredictionType.place:
-        var targetScore = scores[target.memberNumber];
-        if(targetScore == null) {
-          return false;
-        }
-        return targetScore.place >= bestPlace! && targetScore.place <= worstPlace!;
+        var targetScore = mode == WagerEvaluationMode.actualScores ?
+          resolutionInformation!.actualPlace :
+          resolutionInformation!.predictionSetPlace;
+
+        return targetScore >= bestPlace! && targetScore <= worstPlace!;
       case DbPredictionType.percentage:
-        var targetScore = scores[target.memberNumber];
-        if(targetScore == null) {
-          return false;
-        }
+        var targetScore = mode == WagerEvaluationMode.actualScores ?
+          resolutionInformation!.actualRatio :
+          resolutionInformation!.predictionSetRatio;
         if(abovePercentage) {
-          return targetScore.ratio >= percentage!;
+          return targetScore >= percentage!;
         }
         else {
-          return targetScore.ratio <= percentage!;
+          return targetScore <= percentage!;
         }
       case DbPredictionType.spread:
-        var targetScore = scores[target.memberNumber];
-        var underdogScore = scores[underdog!.memberNumber];
-        if(targetScore == null || underdogScore == null) {
+        var targetScore = mode == WagerEvaluationMode.actualScores ?
+          resolutionInformation!.actualRatio :
+          resolutionInformation!.predictionSetRatio;
+        var underdogScore = mode == WagerEvaluationMode.actualScores ?
+          resolutionInformation!.actualUnderdogRatio :
+          resolutionInformation!.predictionSetUnderdogRatio;
+        if(underdogScore == null) {
           return false;
         }
-        var actualSpread = targetScore.ratio - underdogScore.ratio;
+        var actualSpread = targetScore - underdogScore;
         if(favoriteCovers) {
           return actualSpread >= percentage!;
         }
@@ -510,6 +612,8 @@ enum DbPredictionType {
   place,
   percentage,
   spread;
+
+  bool get hasUnderdog => this == DbPredictionType.spread;
 }
 
 enum DbWagerStatus {
@@ -525,4 +629,60 @@ enum DbWagerStatus {
   /// Whether this wager is closed.
   bool get isResolved => this != pending;
   bool get isOpen => this == pending;
+}
+
+/// Statistics etc. used to determine the resolution of a wager.
+///
+/// Contains both the actual and prediction set scores for the wager.
+@embedded
+class ResolutionInformation {
+  int actualPlace;
+  int predictionSetPlace;
+  double actualRatio;
+  double predictionSetRatio;
+
+  int? actualUnderdogPlace;
+  int? predictionSetUnderdogPlace;
+  double? actualUnderdogRatio;
+  double? predictionSetUnderdogRatio;
+
+  ResolutionInformation({
+    this.actualPlace = -1,
+    this.predictionSetPlace = -1,
+    this.actualRatio = 0.0,
+    this.predictionSetRatio = 0.0,
+    this.actualUnderdogPlace,
+    this.predictionSetUnderdogPlace,
+    this.actualUnderdogRatio,
+    this.predictionSetUnderdogRatio,
+  });
+
+  ResolutionInformation.fromScore({
+    required RelativeMatchScore actualScore,
+    required RelativeMatchScore predictionSetScore,
+  }) :
+    actualPlace = actualScore.place,
+    predictionSetPlace = predictionSetScore.place,
+    actualRatio = actualScore.ratio,
+    predictionSetRatio = predictionSetScore.ratio;
+
+  ResolutionInformation.fromScores({
+    required RelativeMatchScore actualScore,
+    required RelativeMatchScore predictionSetScore,
+    required RelativeMatchScore actualUnderdogScore,
+    required RelativeMatchScore predictionSetUnderdogScore,
+  }) :
+    actualPlace = actualScore.place,
+    predictionSetPlace = predictionSetScore.place,
+    actualRatio = actualScore.ratio,
+    predictionSetRatio = predictionSetScore.ratio,
+    actualUnderdogPlace = actualUnderdogScore.place,
+    predictionSetUnderdogPlace = predictionSetUnderdogScore.place,
+    actualUnderdogRatio = actualUnderdogScore.ratio,
+    predictionSetUnderdogRatio = predictionSetUnderdogScore.ratio;
+}
+
+enum WagerEvaluationMode {
+  actualScores,
+  predictionSetScores;
 }

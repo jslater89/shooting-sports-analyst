@@ -42,7 +42,7 @@ class _WagerListState extends State<WagerList> {
   bool _loadingScores = false;
   String? _matchPrepName;
   ShootingMatch? _matchResult;
-  Map<DbWager, WagerScores>? _relevantScoresMap;
+  Map<int, WagerScores>? _relevantScoresMap;
 
   @override
   void initState() {
@@ -76,7 +76,8 @@ class _WagerListState extends State<WagerList> {
         matches[wager] = _matchResult!;
       }
     }
-    _relevantScoresMap = await _model.managerModel.manager.getAllRelevantScores(_model.wagers, matches: matches);
+    Map<DbWager, WagerScores> relevantScores = await _model.managerModel.manager.getAllRelevantScores(_model.wagers, matches: matches);
+    _relevantScoresMap = Map.fromEntries(relevantScores.entries.map((e) => MapEntry(e.key.id, e.value)));
     setState(() {
       _loadingScores = false;
     });
@@ -177,14 +178,20 @@ class _WagerListState extends State<WagerList> {
         bool hitsOnPredictionSetResult = false;
         Map<DbPrediction, bool>? legResults;
         Map<DbPrediction, bool>? predictionSetLegResults;
-        WagerScores? relevantScores = _relevantScoresMap?[wager];
-        if(_matchResult != null && relevantScores != null) {
-          legResults = wager.evaluateLegs(relevantScores.scores);
-          predictionSetLegResults = wager.evaluateLegs(relevantScores.predictionSetScores);
+        var relevantScores = _relevantScoresMap?[wager.id];
+        if(_matchResult != null && relevantScores != null && !wager.hasResolutionInformation) {
+          wager.buildResolutionInformation(_relevantScoresMap![wager.id]!);
+        }
+
+        if(wager.hasResolutionInformation) {
+          legResults = wager.evaluateLegs(WagerEvaluationMode.actualScores);
+          predictionSetLegResults = wager.evaluateLegs(WagerEvaluationMode.predictionSetScores);
+
           hitsOnMainResult = legResults.entries.every((e) => e.value);
           hitsOnPredictionSetResult = predictionSetLegResults.entries.every((e) => e.value);
         }
-        if(model.showScores && relevantScores != null) {
+
+        if(model.showScores) {
           if(wager.isParlay) {
             var hitLegs = legResults!.entries.where((e) => e.value).length;
             var predictionSetHitLegs = predictionSetLegResults!.entries.where((e) => e.value).length;
@@ -192,14 +199,14 @@ class _WagerListState extends State<WagerList> {
             var legText = "Parlay: $hitLegs/$totalLegs - $predictionSetHitLegs/$totalLegs";
             List<String> tooltipElements = [];
             for(var prediction in wager.legs) {
-              tooltipElements.add(wagerScoreString(prediction, relevantScores, includeLastNames: true, separator: " - "));
+              tooltipElements.add(wagerScoreString(prediction, includeLastNames: true, separator: " - "));
             }
             var tooltipText = tooltipElements.join("\n");
             trailing.add(Tooltip(message: tooltipText, child: Text(legText)));
           }
           else {
             var prediction = wager.legs.first;
-            var scoreText = wagerScoreString(prediction, relevantScores);
+            var scoreText = wagerScoreString(prediction);
             trailing.add(Text(scoreText));
           }
         }
@@ -328,64 +335,57 @@ class _WagerListState extends State<WagerList> {
     }
   }
 
-  String wagerScoreString(DbPrediction prediction, WagerScores relevantScores, {bool includeLastNames = false, String separator = "\n"}) {
+  String wagerScoreString(DbPrediction prediction, {bool includeLastNames = false, String separator = "\n"}) {
+    var resolutionInformation = prediction.resolutionInformation;
+    if(resolutionInformation == null) {
+      return "(missing scores)";
+    }
     if(prediction.type == DbPredictionType.spread) {
-      var mainTargetScore = relevantScores.scores[prediction.target.memberNumber];
-      var mainDogScore = relevantScores.scores[prediction.underdog!.memberNumber];
-      var predictionSetMainTargetScore = relevantScores.predictionSetScores[prediction.target.memberNumber];
-      var predictionSetMainDogScore = relevantScores.predictionSetScores[prediction.underdog!.memberNumber];
+
       var scoreText = "";
 
-      if(mainTargetScore != null && mainDogScore != null) {
-        var mainTargetName = prediction.target.lastName;
-        // var mainDogName = prediction.underdog!.lastName;
+      var mainTargetName = prediction.target.lastName;
+      // var mainDogName = prediction.underdog!.lastName;
 
-        var mainRatio = mainTargetScore.ratio;
-        var mainDogRatio = mainDogScore.ratio;
-        var mainSpread = mainRatio - mainDogRatio;
-        mainSpread = -mainSpread;
-        var positiveSign = mainSpread > 0 ? "+" : "";
+      var mainRatio = resolutionInformation.actualRatio;
+      var mainDogRatio = resolutionInformation.actualUnderdogRatio!;
+      var mainSpread = mainRatio - mainDogRatio;
+      mainSpread = -mainSpread;
+      var positiveSign = mainSpread > 0 ? "+" : "";
 
-        scoreText += "$mainTargetName $positiveSign${mainSpread.asPercentage(decimals: 2, includePercent: true)}";
-      }
-      else {
-        scoreText += "(missing scores)";
-      }
+      scoreText += "Main: $mainTargetName $positiveSign${mainSpread.asPercentage(decimals: 2, includePercent: true)}";
 
-      if(predictionSetMainTargetScore != null && predictionSetMainDogScore != null) {
-        var predictionSetTargetName = prediction.target.lastName;
-        // var predictionSetDogName = prediction.underdog!.lastName;
-        var predictionSetRatio = predictionSetMainTargetScore.ratio;
-        var predictionSetDogRatio = predictionSetMainDogScore.ratio;
-        var predictionSetSpread = predictionSetRatio - predictionSetDogRatio;
-        predictionSetSpread = -predictionSetSpread;
-        var positiveSign = predictionSetSpread > 0 ? "+" : "";
-        scoreText += "\n$predictionSetTargetName $positiveSign${predictionSetSpread.asPercentage(decimals: 2, includePercent: true)}";
-      }
-      else {
-        scoreText += "\n(missing scores)";
-      }
+
+      var predictionSetTargetName = prediction.target.lastName;
+      // var predictionSetDogName = prediction.underdog!.lastName;
+      var predictionSetRatio = resolutionInformation.predictionSetRatio;
+      var predictionSetDogRatio = resolutionInformation.predictionSetUnderdogRatio!;
+      var predictionSetSpread = predictionSetRatio - predictionSetDogRatio;
+      predictionSetSpread = -predictionSetSpread;
+      positiveSign = predictionSetSpread > 0 ? "+" : "";
+      scoreText += "${separator}Set: $predictionSetTargetName $positiveSign${predictionSetSpread.asPercentage(decimals: 2, includePercent: true)}";
+
       return scoreText;
     }
     else {
-      var mainScore = relevantScores.scores[prediction.target.memberNumber];
-      var predictionSetScore = relevantScores.predictionSetScores[prediction.target.memberNumber];
-      var scoreText = "";
-      if(mainScore != null) {
-        var decimals = mainScore.ratio == 1.0 ? 0 : 2;
-        if(includeLastNames) {
-          scoreText += "${prediction.target.lastName} ";
-        }
-        scoreText += "${mainScore.place.ordinalPlace} (${mainScore.ratio.asPercentage(decimals: decimals, includePercent: true)})";
+      var mainRatio = resolutionInformation.actualRatio;
+      var predictionSetRatio = resolutionInformation.predictionSetRatio;
+      var mainPlace = resolutionInformation.actualPlace;
+      var predictionSetPlace = resolutionInformation.predictionSetPlace;
+      var scoreText = "Main: ";
+      var decimals = mainRatio == 1.0 ? 0 : 2;
+      if(includeLastNames) {
+        scoreText += "${prediction.target.lastName} ";
       }
-      if(predictionSetScore != null) {
-        var decimals = predictionSetScore.ratio == 1.0 ? 0 : 2;
-        scoreText += separator;
-        if(includeLastNames) {
-          scoreText += "${prediction.target.lastName} ";
-        }
-        scoreText += "${predictionSetScore.place.ordinalPlace} (${predictionSetScore.ratio.asPercentage(decimals: decimals, includePercent: true)})";
+      scoreText += "${mainPlace.ordinalPlace} (${mainRatio.asPercentage(decimals: decimals, includePercent: true)})";
+
+      decimals = predictionSetRatio == 1.0 ? 0 : 2;
+      scoreText += "${separator}Set: ";
+      if(includeLastNames) {
+        scoreText += "${prediction.target.lastName} ";
       }
+      scoreText += "${predictionSetPlace.ordinalPlace} (${predictionSetRatio.asPercentage(decimals: decimals, includePercent: true)})";
+
       return scoreText;
     }
   }

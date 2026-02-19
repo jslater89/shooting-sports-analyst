@@ -322,7 +322,15 @@ class PredictionGameManager {
 
   /// Resolve a wager with the given status, creating a payout or refund transaction
   /// as necessary and updating the wager player's balance.
-  Future<void> resolveWager(DbWager wager, DbWagerStatus status) async {
+  Future<Result<DbWager, WagerResolutionError>> resolveWager(DbWager wager, DbWagerStatus status) async {
+    if(wager.status.isResolved) {
+      return Result.err(WagerResolutionError.alreadyResolved);
+    }
+
+    if(!wager.hasResolutionInformation) {
+      return Result.err(WagerResolutionError.noResolutionInformation);
+    }
+
     wager.status = status;
 
     double playerBalanceChange = 0;
@@ -377,11 +385,20 @@ class PredictionGameManager {
     }
     await db.saveWager(wager, saveLinks: true, createWagerTransaction: false);
     await loadPredictionGame();
+    return Result.ok(wager);
   }
 
   /// Resolve a wager with the given status, creating a payout or refund transaction
   /// as necessary and updating the wager player's balance.
-  void resolveWagerSync(DbWager wager, DbWagerStatus status) {
+  Result<DbWager, WagerResolutionError> resolveWagerSync(DbWager wager, DbWagerStatus status) {
+    if(wager.status.isResolved) {
+      return Result.err(WagerResolutionError.alreadyResolved);
+    }
+
+    if(!wager.hasResolutionInformation) {
+      return Result.err(WagerResolutionError.noResolutionInformation);
+    }
+
     wager.status = status;
     double playerBalanceChange = 0;
     if(status == DbWagerStatus.won) {
@@ -414,6 +431,7 @@ class PredictionGameManager {
     }
     db.saveWagerSync(wager, createWagerTransaction: false);
     loadPredictionGameSync();
+    return Result.ok(wager);
   }
 
   // ======================
@@ -752,4 +770,17 @@ class WagerScores {
   Map<String, RelativeMatchScore> predictionSetScores = {};
 
   WagerScores({required this.wager});
+}
+
+enum WagerResolutionError implements ResultErr {
+  alreadyResolved,
+  noResolutionInformation,
+  unknown;
+
+  @override
+  String get message => switch(this) {
+    alreadyResolved => "Wager already resolved",
+    noResolutionInformation => "Wager has no resolution information",
+    unknown => "Unknown error",
+  };
 }
