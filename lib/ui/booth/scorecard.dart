@@ -353,6 +353,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   ScrollPhysics innerScrollPhysics = const ClampingScrollPhysics();
   ScrollController horizontalScrollController = ScrollController();
+  ScrollController verticalScrollController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
@@ -461,6 +462,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   Widget _buildTableWithScrollbar() {
     return Scrollbar(
+      thumbVisibility: true,
       controller: horizontalScrollController,
       child: _buildTable(),
     );
@@ -471,81 +473,86 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
 
-    return TableView.builder(
-      horizontalDetails: ScrollableDetails.horizontal(
-        physics: innerScrollPhysics,
-        controller: horizontalScrollController,
-      ),
-      verticalDetails: ScrollableDetails.vertical(
-        physics: innerScrollPhysics,
-      ),
-      // all non-chrono stages, plus initial columns for competitor name and total
-      columnCount: match.stages.where((s) => !(s.scoring is IgnoredScoring)).length + 2,
-      // all displayed shooters, plus header row
-      rowCount: sc.displayedShooters.length + 1,
-      // pin the competitor name and total columns
-      pinnedColumnCount: 2,
-      // pin the header row
-      pinnedRowCount: 1,
-      cellBuilder: (context, vicinity) {
-        if(vicinity.row == 0) {
-          return _buildHeaderCell(context, vicinity, match);
-        }
-        else {
-          return _buildScoreCell(context, vicinity, match);
-        }
-      },
-      columnBuilder: (column) {
-        TableSpanExtent extent;
-        TableSpanDecoration? decoration;
+    return Scrollbar(
+      thumbVisibility: true,
+      controller: verticalScrollController,
+      child: TableView.builder(
+        horizontalDetails: ScrollableDetails.horizontal(
+          physics: innerScrollPhysics,
+          controller: horizontalScrollController,
+        ),
+        verticalDetails: ScrollableDetails.vertical(
+          physics: innerScrollPhysics,
+          controller: verticalScrollController,
+        ),
+        // all non-chrono stages, plus initial columns for competitor name and total
+        columnCount: match.stages.where((s) => !(s.scoring is IgnoredScoring)).length + 2,
+        // all displayed shooters, plus header row
+        rowCount: sc.displayedShooters.length + 1,
+        // pin the competitor name and total columns
+        pinnedColumnCount: 2,
+        // pin the header row
+        pinnedRowCount: 1,
+        cellBuilder: (context, vicinity) {
+          if(vicinity.row == 0) {
+            return _buildHeaderCell(context, vicinity, match);
+          }
+          else {
+            return _buildScoreCell(context, vicinity, match);
+          }
+        },
+        columnBuilder: (column) {
+          TableSpanExtent extent;
+          TableSpanDecoration? decoration;
 
-        if(column == 0) {
-          extent = FixedTableSpanExtent(_shooterColumnWidth * sc.tableTextSize.fontSizeFactor);
-        }
-        else {
-          extent = FixedTableSpanExtent(_stageColumnWidth * sc.tableTextSize.fontSizeFactor);
-        }
+          if(column == 0) {
+            extent = FixedTableSpanExtent(_shooterColumnWidth * sc.tableTextSize.fontSizeFactor);
+          }
+          else {
+            extent = FixedTableSpanExtent(_stageColumnWidth * sc.tableTextSize.fontSizeFactor);
+          }
 
-        // Vertical line after the 'total' column.
-        if(column == 1) {
-          decoration = TableSpanDecoration(
-            border: TableSpanBorder(
-              trailing: BorderSide(
-                color: ThemeColors.onBackgroundColor(context),
-                width: 1 * uiScaleFactor,
-              ),
-            ),
-          );
-        }
-
-        return TableSpan(
-          extent: extent,
-          backgroundDecoration: decoration,
-        );
-      },
-      rowBuilder: (row) {
-        if(row == 0) {
-          return TableSpan(
-            extent: FixedTableSpanExtent(_headerHeight * sc.tableTextSize.fontSizeFactor),
-            backgroundDecoration: TableSpanDecoration(
+          // Vertical line after the 'total' column.
+          if(column == 1) {
+            decoration = TableSpanDecoration(
               border: TableSpanBorder(
                 trailing: BorderSide(
                   color: ThemeColors.onBackgroundColor(context),
                   width: 1 * uiScaleFactor,
                 ),
               ),
-            ),
-          );
-        }
-        else {
+            );
+          }
+
           return TableSpan(
-            extent: FixedTableSpanExtent(_scoreRowHeight * sc.tableTextSize.fontSizeFactor),
-            backgroundDecoration: TableSpanDecoration(
-              color: ThemeColors.backgroundColor(context, rowIndex: row),
-            ),
+            extent: extent,
+            backgroundDecoration: decoration,
           );
-        }
-      },
+        },
+        rowBuilder: (row) {
+          if(row == 0) {
+            return TableSpan(
+              extent: FixedTableSpanExtent(_headerHeight * sc.tableTextSize.fontSizeFactor),
+              backgroundDecoration: TableSpanDecoration(
+                border: TableSpanBorder(
+                  trailing: BorderSide(
+                    color: ThemeColors.onBackgroundColor(context),
+                    width: 1 * uiScaleFactor,
+                  ),
+                ),
+              ),
+            );
+          }
+          else {
+            return TableSpan(
+              extent: FixedTableSpanExtent(_scoreRowHeight * sc.tableTextSize.fontSizeFactor),
+              backgroundDecoration: TableSpanDecoration(
+                color: ThemeColors.backgroundColor(context, rowIndex: row),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 
