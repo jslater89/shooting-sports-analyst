@@ -50,6 +50,7 @@ extension _LevelComparison on Level {
     return Level.values.indexOf(this) > Level.values.indexOf(other);
   }
 
+  // ignore: unused_element
   bool operator >=(Level other) {
     return Level.values.indexOf(this) >= Level.values.indexOf(other);
   }

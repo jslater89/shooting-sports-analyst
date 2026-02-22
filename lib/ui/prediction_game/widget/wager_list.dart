@@ -179,11 +179,15 @@ class _WagerListState extends State<WagerList> {
         Map<DbPrediction, bool>? legResults;
         Map<DbPrediction, bool>? predictionSetLegResults;
         var relevantScores = _relevantScoresMap?[wager.id];
-        if(_matchResult != null && relevantScores != null && !wager.hasResolutionInformation) {
-          wager.buildResolutionInformation(_relevantScoresMap![wager.id]!);
+        final matchLastUpdated = _matchResult?.sourceLastUpdated ?? DateTime.now();
+        if(_matchResult != null && relevantScores != null && !wager.resolutionInformationValid(matchLastUpdated: matchLastUpdated)) {
+          wager.buildResolutionInformation(
+            scores: relevantScores,
+            scoresTimestamp: matchLastUpdated,
+          );
         }
 
-        if(wager.hasResolutionInformation) {
+        if(wager.resolutionInformationValid(matchLastUpdated: matchLastUpdated)) {
           legResults = wager.evaluateLegs(WagerEvaluationMode.actualScores);
           predictionSetLegResults = wager.evaluateLegs(WagerEvaluationMode.predictionSetScores);
 

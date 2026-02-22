@@ -71,6 +71,16 @@ class DbWager {
   @ignore
   bool get hasResolutionInformation => legs.every((leg) => leg.resolutionInformation != null);
 
+  bool resolutionInformationValid({required DateTime matchLastUpdated}) {
+    if(!hasResolutionInformation) {
+      return false;
+    }
+    return legs.every((leg) =>
+      leg.resolutionInformation!.scoresTimestamp.isAtSameMomentAs(matchLastUpdated)
+      || leg.resolutionInformation!.scoresTimestamp.isAfter(matchLastUpdated)
+    );
+  }
+
   /// If this is a parlay, the probability of the parlay.
   /// (If it's a single leg, the probability is in the prediction.)
   DbProbability? parlayProbability;
@@ -120,10 +130,14 @@ class DbWager {
   }
 
   /// Build the resolution information for the wager's legs.
-  Map<DbPrediction, ResolutionInformation> buildResolutionInformation(WagerScores scores) {
+  Map<DbPrediction, ResolutionInformation> buildResolutionInformation({
+    required WagerScores scores,
+    required DateTime scoresTimestamp,
+  }) {
     Map<DbPrediction, ResolutionInformation> results = {};
     for(var leg in legs) {
       results[leg] = leg.buildResolutionInformation(
+        scoresTimestamp: scoresTimestamp,
         actualScores: scores.scores,
         predictionSetScores: scores.predictionSetScores,
       );
@@ -313,6 +327,7 @@ class DbPrediction {
 
   /// Build the resolution information for the prediction.
   ResolutionInformation buildResolutionInformation({
+    required DateTime scoresTimestamp,
     required Map<String, RelativeMatchScore> actualScores,
     required Map<String, RelativeMatchScore> predictionSetScores,
   }) {
@@ -363,6 +378,7 @@ class DbPrediction {
 
     if(type.hasUnderdog) {
       this.resolutionInformation = ResolutionInformation.fromScores(
+        scoresTimestamp: scoresTimestamp,
         actualScore: actualScore,
         predictionSetScore: predictionSetScore,
         actualUnderdogScore: actualUnderdogScore,
@@ -372,6 +388,7 @@ class DbPrediction {
     }
     else {
       this.resolutionInformation = ResolutionInformation.fromScore(
+        scoresTimestamp: scoresTimestamp,
         actualScore: actualScore,
         predictionSetScore: predictionSetScore,
       );
@@ -693,6 +710,9 @@ class ResolutionInformation {
   /// The ratio of the underdog in the prediction set scores.
   double? predictionSetUnderdogRatio;
 
+  /// The time of the scores.
+  DateTime scoresTimestamp;
+
   ResolutionInformation({
     this.actualPlace = -1,
     this.predictionSetPlace = -1,
@@ -706,9 +726,11 @@ class ResolutionInformation {
     this.targetInSetScores = false,
     this.underdogInActualScores = false,
     this.underdogInSetScores = false,
-  });
+    DateTime? scoresTimestamp,
+  }) : scoresTimestamp = scoresTimestamp ?? practicalShootingZeroDate;
 
   ResolutionInformation.fromScore({
+    required this.scoresTimestamp,
     required RelativeMatchScore? actualScore,
     required RelativeMatchScore? predictionSetScore,
   }) :
@@ -720,6 +742,7 @@ class ResolutionInformation {
     targetInSetScores = predictionSetScore != null;
 
   ResolutionInformation.fromScores({
+    required this.scoresTimestamp,
     required RelativeMatchScore? actualScore,
     required RelativeMatchScore? predictionSetScore,
     required RelativeMatchScore? actualUnderdogScore,

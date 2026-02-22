@@ -49,6 +49,8 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:string_similarity/string_similarity.dart';
 
+//ignore_for_file: experimental_member_use
+
 var _log = SSALogger("AnalystDb");
 
 class AnalystDatabase {

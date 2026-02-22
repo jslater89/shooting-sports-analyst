@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class RatingFilterDialog extends StatefulWidget {
