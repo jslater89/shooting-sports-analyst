@@ -307,7 +307,7 @@ class _MyAppState extends State<MyApp> {
     final elevatedButtonPadding = EdgeInsets.symmetric(horizontal: 12 * config.uiScaleFactor, vertical: 6 * config.uiScaleFactor);
     final lightTheme = ThemeData(
       appBarTheme: AppBarTheme(
-        color: lightColorScheme.secondary,
+        backgroundColor: lightColorScheme.secondary,
         iconTheme: iconTheme.copyWith(color: lightColorScheme.onSecondary),
         actionsIconTheme: iconTheme.copyWith(color: lightColorScheme.onSecondary),
         titleTextStyle: TextStyle(
@@ -344,7 +344,7 @@ class _MyAppState extends State<MyApp> {
     );
     var darkTheme = ThemeData(
       appBarTheme: AppBarTheme(
-        color: darkColorScheme.secondary,
+        backgroundColor: darkColorScheme.secondary,
         iconTheme: iconTheme.copyWith(color: darkColorScheme.onSecondary),
         actionsIconTheme: iconTheme.copyWith(color: darkColorScheme.onSecondary),
         titleTextStyle: TextStyle(

@@ -121,7 +121,7 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
       mainAxisSize: MainAxisSize.min,
       children: [
         DropdownButtonFormField<MatchPredictionMode>(
-          value: settings.predictionMode,
+          initialValue: settings.predictionMode,
           decoration: const InputDecoration(labelText: "Prediction mode"),
           items: MatchPredictionMode.dropdownValues(widget.ratingsContext != null).map((mode) => DropdownMenuItem(
             value: mode,
@@ -135,7 +135,7 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
           },
         ),
         DropdownButtonFormField<TableTextSize>(
-          value: settings.tableTextSize,
+          initialValue: settings.tableTextSize,
           decoration: const InputDecoration(labelText: "Table text size"),
           items: TableTextSize.values.map((size) => DropdownMenuItem(
             value: size,

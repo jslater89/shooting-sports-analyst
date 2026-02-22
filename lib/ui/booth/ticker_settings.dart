@@ -277,7 +277,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: _editedCriterion.type.typeName,
+              initialValue: _editedCriterion.type.typeName,
               items: [
                 DropdownMenuItem(value: ExtremeScore.extremeScoreName, child: Text("Extreme score")),
                 DropdownMenuItem(value: MatchLeadChange.matchLeadChangeName, child: Text("Match lead change")),
@@ -303,7 +303,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
             ),
             SizedBox(height: 16),
             DropdownButtonFormField<TickerPriority>(
-              value: _editedCriterion.priority,
+              initialValue: _editedCriterion.priority,
               items: TickerPriority.values.map((priority) {
                 return DropdownMenuItem(
                   value: priority,

@@ -219,7 +219,7 @@ class ExtremeScore extends TickerEventType {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: aboveAverage && !belowAverage ? "above" :
+              initialValue: aboveAverage && !belowAverage ? "above" :
                      belowAverage && !aboveAverage ? "below" : "both",
               items: [
                 DropdownMenuItem(value: "above", child: Text("Above average")),

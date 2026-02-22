@@ -316,7 +316,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
           ],
         ),
         DropdownButtonFormField<MatchPredictionMode>(
-          value: scorecard.predictionMode,
+          initialValue: scorecard.predictionMode,
           decoration: const InputDecoration(labelText: "Prediction mode"),
           items: MatchPredictionMode.dropdownValues(widget.ratingsContext != null).map((mode) => DropdownMenuItem(
             value: mode,
