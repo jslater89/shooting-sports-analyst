@@ -112,7 +112,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         project.ratings.saveSync();
       }
     });
-    notifyEntityChange(EntityType.ratingProject, project.id);
+    notifyEntityChangeSync(EntityType.ratingProject, project.id);
     return project;
   }
 
@@ -140,7 +140,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
 
     if(result) {
-      notifyEntityChange(EntityType.ratingProject, project.id);
+      await notifyEntityChange(EntityType.ratingProject, project.id);
     }
     return result;
   }

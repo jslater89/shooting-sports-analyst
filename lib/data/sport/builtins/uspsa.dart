@@ -18,7 +18,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _uspsaPenalties = [
   const ScoringEvent("Procedural", shortName: "P", pointChange: -10, alternateNames: ["Proc"], sortOrder: 100),
-  const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5, sortOrder: 101),
+  const ScoringEvent("Overtime shot", shortName: "OS", alternateNames: ["OTS"], pointChange: -5, sortOrder: 101),
 ];
 
 // Too bad, 'not for score' shooters, you're in Open now

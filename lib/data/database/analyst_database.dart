@@ -655,7 +655,7 @@ class AnalystDatabase {
     // This is unawaited async, but we probably won't immediately need
     // the result again.
     MatchCache.instance.cache(match);
-    notifyEntityChange(EntityType.match, dbMatch.id);
+    notifyEntityChangeSync(EntityType.match, dbMatch.id);
     return Result.ok(dbMatch);
   }
 

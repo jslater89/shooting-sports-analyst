@@ -33,6 +33,13 @@ extension EntityChangesExtension on AnalystDatabase {
     });
   }
 
+  /// Notify the database that an entity has changed synchronously.
+  void notifyEntityChangeSync(EntityType entityType, int entityId) {
+    isar.writeTxnSync(() {
+      isar.entityChanges.putSync(EntityChange(entityId: entityId, entityType: entityType, timestamp: DateTime.now()));
+    });
+  }
+
   /// Get an entity change by its entity type and id.
   Future<EntityChange?> getEntityChange(EntityType entityType, int entityId) async {
     return await isar.entityChanges.where().entityIdEntityTypeEqualTo(entityId, entityType).findFirst();

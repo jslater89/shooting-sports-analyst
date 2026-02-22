@@ -135,7 +135,7 @@ extension FutureMatchDatabase on AnalystDatabase {
         match.dbMatch.saveSync();
       }
     });
-    notifyEntityChange(EntityType.futureMatch, match.id);
+    notifyEntityChangeSync(EntityType.futureMatch, match.id);
   }
 
   Future<List<FutureMatch>> getFutureMatchesByName(String name) async {

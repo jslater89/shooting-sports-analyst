@@ -134,7 +134,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       // sync recursively saves
       isar.matchPreps.putSync(matchPrep);
     });
-    notifyEntityChange(EntityType.matchPrep, matchPrep.id);
+    notifyEntityChangeSync(EntityType.matchPrep, matchPrep.id);
     return matchPrep;
   }
 

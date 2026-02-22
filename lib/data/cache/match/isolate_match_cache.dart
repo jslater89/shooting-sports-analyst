@@ -190,25 +190,30 @@ class IsolateMatchCacheServer {
       case _GetByDbIdCommand(id: var matchId, sourceLastUpdated: var sourceLastUpdated):
         if(cache.contains(matchId)) {
           var result = cache.getById(matchId, sourceLastUpdated: sourceLastUpdated);
-          var match = result.unwrap();
-          _log.v("Cache hit, returning match: ${match.name}");
-          return _MatchResponse(match: result.unwrap());
-        }
-        else {
-          _log.v("Cache miss, loading from database");
-          var match = await db.getMatch(matchId);
-          if(match == null) {
-            return _ErrorResponse(message: "Match not found");
+          if(result.isOk()) {
+            var match = result.unwrap();
+            _log.v("Cache hit, returning match: ${match.name}");
+            return _MatchResponse(match: result.unwrap());
           }
-          var hydrated = await match.hydrate();
-          if(hydrated.isErr()) {
-            return _ErrorResponse(message: "Failed to hydrate match: ${hydrated.unwrapErr().message}");
+          else {
+            _log.w("Cache contains ID, but failed to get match: ${result.unwrapErr().message}");
           }
-          var hydratedMatch = hydrated.unwrap();
-          cache.cache(hydratedMatch);
-          _log.v("Cached match: ${hydratedMatch.name}");
-          return _MatchResponse(match: hydratedMatch);
         }
+
+        _log.v("Cache miss, loading from database");
+        var match = await db.getMatch(matchId);
+        if(match == null) {
+          return _ErrorResponse(message: "Match not found");
+        }
+        var hydrated = await match.hydrate();
+        if(hydrated.isErr()) {
+          return _ErrorResponse(message: "Failed to hydrate match: ${hydrated.unwrapErr().message}");
+        }
+        var hydratedMatch = hydrated.unwrap();
+        cache.cache(hydratedMatch);
+        _log.v("Cached match: ${hydratedMatch.name}");
+        return _MatchResponse(match: hydratedMatch);
+
 
       case _GetBySourceIdCommand(sourceId: var sourceId, sourceLastUpdated: var sourceLastUpdated):
         var result = cache.getBySourceId(sourceId, sourceLastUpdated: sourceLastUpdated);
