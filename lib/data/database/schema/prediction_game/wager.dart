@@ -711,7 +711,11 @@ class ResolutionInformation {
   double? predictionSetUnderdogRatio;
 
   /// The time of the scores.
-  DateTime scoresTimestamp;
+  DateTime? dbScoresTimestamp;
+  DateTime get scoresTimestamp => dbScoresTimestamp ?? practicalShootingZeroDate;
+  set scoresTimestamp(DateTime value) {
+    dbScoresTimestamp = value;
+  }
 
   ResolutionInformation({
     this.actualPlace = -1,
@@ -726,14 +730,15 @@ class ResolutionInformation {
     this.targetInSetScores = false,
     this.underdogInActualScores = false,
     this.underdogInSetScores = false,
-    DateTime? scoresTimestamp,
-  }) : scoresTimestamp = scoresTimestamp ?? practicalShootingZeroDate;
+    this.dbScoresTimestamp,
+  });
 
   ResolutionInformation.fromScore({
-    required this.scoresTimestamp,
+    required DateTime scoresTimestamp,
     required RelativeMatchScore? actualScore,
     required RelativeMatchScore? predictionSetScore,
   }) :
+    dbScoresTimestamp = scoresTimestamp,
     actualPlace = actualScore?.place ?? -1,
     predictionSetPlace = predictionSetScore?.place ?? -1,
     actualRatio = actualScore?.ratio ?? 0.0,
@@ -742,12 +747,13 @@ class ResolutionInformation {
     targetInSetScores = predictionSetScore != null;
 
   ResolutionInformation.fromScores({
-    required this.scoresTimestamp,
+    required DateTime scoresTimestamp,
     required RelativeMatchScore? actualScore,
     required RelativeMatchScore? predictionSetScore,
     required RelativeMatchScore? actualUnderdogScore,
     required RelativeMatchScore? predictionSetUnderdogScore,
   }) :
+    dbScoresTimestamp = scoresTimestamp,
     actualPlace = actualScore?.place ?? -1,
     predictionSetPlace = predictionSetScore?.place ?? -1,
     actualRatio = actualScore?.ratio ?? 0.0,
