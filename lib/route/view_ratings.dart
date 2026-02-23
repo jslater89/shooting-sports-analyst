@@ -208,6 +208,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(reportText),
+          persist: false,
           action: SnackBarAction(
             label: "VIEW",
             onPressed: () {

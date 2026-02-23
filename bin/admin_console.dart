@@ -27,7 +27,9 @@ DbRatingProject? _ratingContext;
 late final AnalystDatabase _database;
 
 Future<void> main() async {
-  FlutterOrNative.debugModeProvider = ServerDebugProvider();
+  final serverDebugProvider = ServerDebugProvider(isMultiIsolate: false);
+  FlutterOrNative.debugModeProvider = serverDebugProvider;
+  FlutterOrNative.isolateModeProvider = serverDebugProvider;
   SSALogger.consoleOutput = false;
 
   var console = Console();
@@ -432,6 +434,12 @@ Future<void> _calculateRatingProject(Console console, List<MenuArgumentValue> ar
     },
     deduplicationCallback: (group, deduplicationResult) async {
       console.print("Detected deduplication, ignoring");
+      for(var collision in deduplicationResult) {
+        console.print("Collision: ${collision.deduplicatorName}, ${collision.memberNumbers.keys.join(", ")}");
+        console.print("Causes: ${collision.causes.map((e) => e.runtimeType).join(", ")}");
+        console.print("Proposed Actions: ${collision.proposedActions.map((e) => e.runtimeType).join(", ")}");
+        console.print("");
+      }
       return Result.ok([]);
     },
     unableToAppendCallback: (lastUsedMatches, newMatches) async {
