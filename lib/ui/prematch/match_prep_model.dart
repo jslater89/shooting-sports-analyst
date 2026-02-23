@@ -73,8 +73,12 @@ class MatchPrepPageModel extends ChangeNotifier {
     List<DbAlgorithmPrediction> dbPredictions = [];
     for(var group in predictions.keys) {
       for(var prediction in predictions[group]!) {
-        var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
-        dbPredictions.add(dbPrediction);
+        try {
+          var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
+          dbPredictions.add(dbPrediction);
+        } catch(e) {
+          _log.e("Error dehydrating prediction for ${prediction.shooter.name}", error: e);
+        }
       }
     }
 

@@ -69,6 +69,13 @@ class PractiscoreHitFactorReportParser extends MatchSource<HitFactorMatchType, I
 
   late final PSWebMatchSearchSource searchSource = PSWebMatchSearchSource(downloadSourceCode: code);
 
+  @override
+  bool get degraded => true;
+  @override
+  String? get degradedReason => "PractiScore has strictly limited access to their systems. "
+    "If you would like access to PractiScore results in Shooting Sports Analyst, please politely "
+    "ask for PractiScore's cooperation with us at support@practiscore.com.";
+
   bool get canSearch => true;
   Future<Result<List<MatchSearchResult<HitFactorMatchType>>, MatchSourceError>> findMatches(String search) async {
     var searchHits = await searchSource.searchByName(search, sportFilter: [sport]);

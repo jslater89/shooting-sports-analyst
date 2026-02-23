@@ -10,10 +10,10 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/help/entries/welcome_80_help.dart';
+import 'package:shooting_sports_analyst/data/source/prematch/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
-import 'package:shooting_sports_analyst/data/source/source.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
@@ -25,7 +25,7 @@ import 'package:shooting_sports_analyst/route/prediction_game_list_page.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_or_future_match_source_chooser_dialog.dart';
 
 var _log = SSALogger("HomePage");
 
@@ -314,18 +314,24 @@ class _HomePageState extends State<HomePage> {
 
       GestureDetector(
         onTap: () async {
-          MatchSource source;
-          ShootingMatch match;
-
-          var response = await showDialog(context: context, builder: (context) => MatchSourceChooserDialog(sources: MatchSourceRegistry().sources));
+          var response = await MatchOrFutureMatchSourceChooserDialog.show(
+            context: context,
+            matchSources: MatchSourceRegistry().sources,
+            futureMatchSources: FutureMatchSourceRegistry().sources,
+          );
           if(response == null) {
             return;
           }
-
-          (source, match) = response;
-
-          _log.i("Displaying match ${match.sourceIds} with ${source.code}");
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PractiscoreResultPage(match: match, sourceId: source.code)));
+          var matchOrFutureMatch = response;
+          if(matchOrFutureMatch.isMatch()) {
+            var (source, match) = matchOrFutureMatch.unwrapMatch();
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => PractiscoreResultPage(match: match, sourceId: source.code)));
+          }
+          else {
+            var futureMatch = matchOrFutureMatch.unwrapFutureMatch();
+            await AnalystDatabase().saveFutureMatch(futureMatch);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Downloaded future match ${futureMatch.eventName}")));
+          }
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,

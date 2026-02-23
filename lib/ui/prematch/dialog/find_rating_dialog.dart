@@ -65,6 +65,8 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
   List<ShooterRating> results = [];
   bool searching = false;
 
+  bool suffixSearch = true;
+
   @override
   void initState() {
     super.initState();
@@ -83,6 +85,7 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
       group: widget.group,
       name: value,
       limit: 50,
+      searchMode: suffixSearch ? FindShooterSearchMode.endsWith : FindShooterSearchMode.contains,
     );
     results = dbResults.map((e) => widget.project.wrapDbRatingSync(e)).toList();
     results.sort((a, b) => b.rating.compareTo(a.rating));
@@ -113,15 +116,37 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
             if(registrationInfo != null) Text(registrationInfo),
             Text("Enter a name or part of a name to find a rating. Up to 50 results are shown. For very common "
             "names, you may need to use a more specific query."),
-            TextFormField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: "Search term",
-                suffix: searching ?
-                  CircularProgressIndicator() :
-                  IconButton(icon: Icon(Icons.search), onPressed: () => _search(searchController.text)),
-              ),
-              onFieldSubmitted: (value) => !searching ? _search(value) : null,
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search term",
+                      suffix: searching ?
+                        CircularProgressIndicator() :
+                        IconButton(icon: Icon(Icons.search), onPressed: () => _search(searchController.text)),
+                    ),
+                    onFieldSubmitted: (value) => !searching ? _search(value) : null,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 4 * uiScaleFactor,
+                  children: [
+                    Checkbox(value: suffixSearch, onChanged: (value) {
+                      setState(() {
+                        suffixSearch = value ?? true;
+                      });
+                    }),
+                    GestureDetector(child: Text("Ends with?"), onTap: () {
+                      setState(() {
+                        suffixSearch = !suffixSearch;
+                      });
+                    }),
+                  ],
+                )
+              ],
             ),
             Expanded(child: ListView.builder(
               itemBuilder: (context, index) {

@@ -7,13 +7,12 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
-import 'package:shooting_sports_analyst/data/source/source_ui.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/widget/match_source_chooser.dart';
 
-class MatchSourceChooserDialog extends StatefulWidget {
+class MatchSourceChooserDialog extends StatelessWidget {
   const MatchSourceChooserDialog({
     Key? key,
     this.hintText,
@@ -39,7 +38,32 @@ class MatchSourceChooserDialog extends StatefulWidget {
   final void Function(ShootingMatch)? onMatchDownloaded;
 
   @override
-  State<MatchSourceChooserDialog> createState() => _MatchSourceChooserDialogState();
+  Widget build(BuildContext context) {
+    var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    var defaultSource = sources.firstWhereOrNull((e) => e.code == SSAServerMatchSource.ssaServerCode);
+    return AlertDialog(
+      title: Text(title ?? "Find a match"),
+      content: SizedBox(
+        width: 900 * scaleFactor,
+        height: 600 * scaleFactor,
+        child: MatchSourceChooser(
+          sources: sources,
+          defaultSource: defaultSource,
+          initialSearch: initialSearch,
+          onMatchSelected: (result) {
+            Navigator.of(context).pop(result);
+          },
+          onMatchDownloaded: onMatchDownloaded,
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: Text("CANCEL"),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
+    );
+  }
 
   static Future<(MatchSource, ShootingMatch)?> show(
     BuildContext context,
@@ -61,86 +85,5 @@ class MatchSourceChooserDialog extends StatefulWidget {
         onMatchDownloaded: onMatchDownloaded,
       ),
     );
-  }
-}
-
-class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
-  // final TextEditingController _urlController = TextEditingController();
-
-  String? errorText;
-  late MatchSource source;
-
-  @override
-  void initState() {
-    super.initState();
-    source = widget.sources.first;
-    var lastUsedSourceCode = AnalystDatabase().getPreferencesSync().lastUsedSourceCode;
-    if(lastUsedSourceCode != null) {
-      var maybeSource = widget.sources.firstWhereOrNull((e) => e.code == lastUsedSourceCode);
-      if(maybeSource != null) {
-        source = maybeSource;
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    return AlertDialog(
-      title: Text(widget.title ?? "Find a match"),
-      content: SizedBox(
-        width: 900 * scaleFactor,
-        height: 600 * scaleFactor,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            DropdownButton(
-              items: widget.sources.map((e) => DropdownMenuItem(
-                child: Text(e.name),
-                value: e,
-              )).toList(),
-              onChanged: (s) {
-                if(s != null) {
-                  var prefs = AnalystDatabase().getPreferencesSync();
-                  prefs.lastUsedSourceCode = s.code;
-                  AnalystDatabase().savePreferencesSync(prefs);
-                  setState(() {
-                    source = s;
-                  });
-                }
-              },
-              value: source,
-            ),
-            Divider(),
-            Expanded(child:
-              SourceUI.forSource(source).getDownloadMatchUIFor(
-                source: source,
-                onMatchSelected: (match) {
-                  submit(match);
-                },
-                onMatchDownloaded: widget.onMatchDownloaded,
-                onError: (error) {
-                  showDialog(context: context, builder: (context) => AlertDialog(
-                    title: Text("Match source error"),
-                    content: Text(error.message),
-                  ));
-                },
-                initialSearch: widget.initialSearch,
-              )
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          child: Text("CANCEL"),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ],
-    );
-  }
-
-  void submit(ShootingMatch match) {
-    Navigator.of(context).pop((source, match));
   }
 }

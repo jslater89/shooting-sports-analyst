@@ -47,6 +47,12 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   bool get canSearch;
   List<SportType> get supportedSports;
 
+  /// Whether the functionality of this source is degraded.
+  bool get degraded => false;
+  /// A user-readable reason for why the source is degraded.
+  /// If [degraded] is false, this should be null.
+  String? get degradedReason => null;
+
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
   Future<Result<List<MatchSearchResult<T>>, MatchSourceError>> findMatches(String search);

@@ -338,17 +338,31 @@ extension RatingProjectDatabase on AnalystDatabase {
     required DbRatingProject project,
     required RatingGroup group,
     required String name,
+    FindShooterSearchMode searchMode = FindShooterSearchMode.contains,
     int limit = 10,
   }) {
     if(name.length < 3) {
       return Future.value([]);
     }
     var processedName = ShooterDeduplicator.processNameString(name);
-    return project.ratings.filter()
-      .group((q) => q.uuidEqualTo(group.uuid))
-      .deduplicatorNameContains(processedName)
-      .limit(limit)
-      .findAll();
+    var query = project.ratings.filter()
+      .group((q) => q.uuidEqualTo(group.uuid));
+
+    switch(searchMode) {
+      case FindShooterSearchMode.contains:
+        query = query.deduplicatorNameContains(processedName);
+        break;
+      case FindShooterSearchMode.startsWith:
+        query = query.deduplicatorNameStartsWith(processedName);
+        break;
+      case FindShooterSearchMode.endsWith:
+        query = query.deduplicatorNameEndsWith(processedName);
+        break;
+      case FindShooterSearchMode.exact:
+        query = query.deduplicatorNameEqualTo(processedName);
+        break;
+    }
+    return query.limit(limit).findAll();
   }
 
   /// Find shooter ratings by partial name.
@@ -1199,4 +1213,11 @@ class NameSort extends RatingProjectSort {
 class LastUpdatedSort extends RatingProjectSort {
   final bool desc;
   const LastUpdatedSort({required this.desc});
+}
+
+enum FindShooterSearchMode {
+  contains,
+  startsWith,
+  endsWith,
+  exact,
 }

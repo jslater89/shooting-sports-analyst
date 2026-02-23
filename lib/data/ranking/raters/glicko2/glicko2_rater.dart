@@ -376,17 +376,19 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       return [];
     }
     else if(ratings.length == 1) {
-      return [
-        AlgorithmPrediction(
-          shooter: ratings[0],
-          mean: 1.0,
-          sigma: 0.0,
-          settings: settings,
-          algorithm: this,
-          meanRatio: 1.0,
-          oneSigmaRatio: 0.0,
-        ),
-      ];
+      var prediction = AlgorithmPrediction(
+        shooter: ratings[0],
+        mean: 1.0,
+        sigma: 0.0,
+        settings: settings,
+        algorithm: this,
+        meanRatio: 1.0,
+        oneSigmaRatio: 0.0,
+      );
+      prediction.lowPlace = 1;
+      prediction.highPlace = 1;
+      prediction.medianPlace = 1;
+      return [prediction];
     }
     // Step 0: calculate initial expected scores for each competitor against all other competitors,
     // and sort by number of expected scores above 0.5, then average expected scores. This should
