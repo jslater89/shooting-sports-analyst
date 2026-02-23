@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/widget/future_match_source_chooser.dart';
+import 'package:shooting_sports_analyst/ui/widget/keepalive_tab.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_source_chooser.dart';
 
 class MatchOrFutureMatchSourceChooserDialog extends StatefulWidget {
@@ -62,12 +63,25 @@ class _MatchOrFutureMatchSourceChooserDialogState extends State<MatchOrFutureMat
   late TabController _tabController;
 
   MatchSource? _defaualtMatchSource;
+  late String _helpText;
 
   @override
   void initState() {
     super.initState();
     _defaualtMatchSource = widget.matchSources.firstWhereOrNull((e) => e.code == SSAServerMatchSource.ssaServerCode);
     _tabController = TabController(length: 2, vsync: this);
+    _helpText = _getHelpText();
+    _tabController.addListener(() {
+      setState(() {
+        _helpText = _getHelpText();
+      });
+    });
+  }
+
+  String _getHelpText() {
+    return _tabController.index == 0
+      ? "Selecting a match will open it for viewing."
+      : "Selecting a future match will download it and save it for use in creating match preps.";
   }
 
 
@@ -81,6 +95,7 @@ class _MatchOrFutureMatchSourceChooserDialogState extends State<MatchOrFutureMat
         height: 800 * scaleFactor,
         child: Column(
           children: [
+            Text(_helpText),
             SizedBox(
               height: 50 * scaleFactor,
               child: TabBar(
@@ -95,27 +110,31 @@ class _MatchOrFutureMatchSourceChooserDialogState extends State<MatchOrFutureMat
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 8 * scaleFactor),
-                    child: MatchSourceChooser(
-                      sources: widget.matchSources,
-                      defaultSource: _defaualtMatchSource,
-                      initialSearch: widget.initialSearch,
-                      onMatchSelected: (result) {
-                        Navigator.of(context).pop(MatchOrFutureMatch.match(result.$1, result.$2));
-                      },
-                      onMatchDownloaded: widget.onMatchDownloaded,
+                  KeepAliveTab(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 8 * scaleFactor),
+                      child: MatchSourceChooser(
+                        sources: widget.matchSources,
+                        defaultSource: _defaualtMatchSource,
+                        initialSearch: widget.initialSearch,
+                        onMatchSelected: (result) {
+                          Navigator.of(context).pop(MatchOrFutureMatch.match(result.$1, result.$2));
+                        },
+                        onMatchDownloaded: widget.onMatchDownloaded,
+                      ),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(top: 8 * scaleFactor),
-                    child: FutureMatchSourceChooser(
-                      sources: widget.futureMatchSources,
-                      initialSearch: widget.initialSearch,
-                      onMatchDownloaded: widget.onFutureMatchDownloaded,
-                      onMatchSelected: (match) {
-                        Navigator.of(context).pop(MatchOrFutureMatch.futureMatch(match));
-                      },
+                  KeepAliveTab(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 8 * scaleFactor),
+                      child: FutureMatchSourceChooser(
+                        sources: widget.futureMatchSources,
+                        initialSearch: widget.initialSearch,
+                        onMatchDownloaded: widget.onFutureMatchDownloaded,
+                        onMatchSelected: (match) {
+                          Navigator.of(context).pop(MatchOrFutureMatch.futureMatch(match));
+                        },
+                      ),
                     ),
                   ),
                 ],

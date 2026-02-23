@@ -51,6 +51,7 @@ class _FutureMatchSourceChooserState extends State<FutureMatchSourceChooser> {
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
+        Text("Select a match source", style: Theme.of(context).textTheme.labelSmall),
         DropdownButton(
           items: widget.sources.map((e) => DropdownMenuItem(
             child: Text(e.name),

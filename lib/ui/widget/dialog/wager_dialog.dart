@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
@@ -91,6 +92,7 @@ class _WagerDialogState extends State<WagerDialog> {
   Parlay? _parlay;
 
   Map<ShooterRating, AlgorithmPrediction> _shootersToPredictions = {};
+  Map<RatingGroup, int> _competitorCountsByGroup = {};
   Map<ShooterRating, WagerIneligibilityReason> _ineligibleCompetitors = {};
 
   @override
@@ -98,6 +100,7 @@ class _WagerDialogState extends State<WagerDialog> {
     super.initState();
     for(var prediction in widget.predictions) {
       _shootersToPredictions[prediction.shooter] = prediction;
+      _competitorCountsByGroup.increment(prediction.shooter.group);
     }
     _updateIneligibleCompetitors();
   }
@@ -109,7 +112,7 @@ class _WagerDialogState extends State<WagerDialog> {
     }
     _ineligibleCompetitors.clear();
     for(var prediction in widget.predictions) {
-      var ineligibilityReason = widget.game?.checkValidity(prediction);
+      var ineligibilityReason = widget.game?.checkValidity(prediction, competitorCount: _competitorCountsByGroup[prediction.shooter.group]!);
       if(ineligibilityReason != null) {
         _ineligibleCompetitors[prediction.shooter] = ineligibilityReason;
       }

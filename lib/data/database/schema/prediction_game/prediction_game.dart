@@ -116,7 +116,7 @@ class PredictionGame {
   });
 
   /// Check if a competitor is eligible for a wager.
-  WagerIneligibilityReason? checkValidity(AlgorithmPrediction prediction) {
+  WagerIneligibilityReason? checkValidity(AlgorithmPrediction prediction, {required int competitorCount}) {
     var ratingStageCount = prediction.shooter.stageCount;
     var ratingMatchCount = prediction.shooter.matchCount;
     var lastActivity = prediction.shooter.lastSeen;
@@ -133,6 +133,9 @@ class PredictionGame {
     }
     if(maximumWagerableRatingAgeDays != null && daysSinceLastActivity > maximumWagerableRatingAgeDays!) {
       return WagerIneligibilityReason.staleRating;
+    }
+    if(competitorCount < minimumCompetitorsRequired) {
+      return WagerIneligibilityReason.insufficientCompetitorsInGroup;
     }
 
     return null;
