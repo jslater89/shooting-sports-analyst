@@ -258,176 +258,264 @@ P_new = 67.139/102.139 = 0.6573
 
 The sharp player's late, large bet moved the line by 7 moneyline points.
 
-## Market Similarity and Cross-Market Adjustment
+## Cross-Market Adjustment via Distribution Shift
 
 ### The Problem
 
-Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th. We need to propagate wager signals across related markets without requiring exact market matching.
+Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th. When generating odds for any market, we need to incorporate evidence from all previous bets on the same shooter.
 
-### Cross-Market Update Algorithm
+### Architectural Model: Compute on Demand
 
-For every wager we process, the flow is:
+We do **not** maintain persistent per-market states that are mutated as bets arrive. Instead, odds for any market are computed fresh from the raw bet history when needed. Accepted bets are never retroactively repriced — each bet is locked at the odds displayed at the time it was placed. But every accepted bet becomes evidence that shifts the line for all **future** odds generation, including for the same market (standard line movement).
 
-1. **Calculate raw odds from the prediction engine (Monte Carlo).**
-   This gives the model prior (α, β from N_eff and P) and baseline odds before wager-based adjustment.
+The flow when generating odds for a market:
 
-2. **Find related markets.**
-   Minimally: markets that share the same subject (same shooter for place/percentage; same shooter pair for spread). Optionally restrict to same prediction type. No need for a continuous "similarity score" to link markets—same subject is sufficient.
+1. Start with the MC model distribution for the shooter.
+2. Gather all previously accepted bets on any market for the same subject.
+3. Compute the cumulative implied distribution shift (δ) from those bets.
+4. Evaluate P(requested market) under the shifted distribution.
+5. Apply house edge → display odds.
 
-3. **Determine direction.**
-   For each related market, decide whether the wager adds to **alpha** (pulls P up) or **beta** (pulls P down). Overlap matters for place (overlapping ranges → same direction → add to alpha; disjoint e.g. 1st-3rd vs 10th-20th → opposite → add to beta). Range size can play a role. For percentage: same side of the line (above vs below) gives direction. For spread: which side. So we use overlap and outcome consistency to choose alpha vs beta, not to scale strength.
+If the bettor accepts, their bet joins the evidence pool for all future odds.
 
-4. **Set effect strength from relative odds (plus player adjustments).**
-   The odds at which the bet was placed—not a structural similarity score—drive how strongly we update. A bet on a long shot (e.g. +4000 for "A 1st-3rd") is a strong conviction signal: existing long shots that get action should pull probability in the direction of "this long shot is more likely." So strength = (bet weight from conviction × skill × time) × f(odds), where f(odds) reflects the longness of the odds (e.g. decimal odds or 1/implied P). The same subject links the markets; the odds (and player weight) determine the size of the update.
+### Market Linking: Same Subject
 
-**Summary:** Link = same subject. Direction = overlap / outcome consistency (alpha vs beta). Strength = relative odds + player adjustments. Exact structural similarity (Jaccard, percentage distance) is not required.
+We do **not** need a continuous similarity function to decide *whether* to consider a bet. Same subject is sufficient:
 
-### Link: Same Subject
+- **Place or percentage on one shooter:** same shooter (e.g. same `memberNumber`) links all that shooter's bets.
+- **Spread:** same two shooters (target + underdog) link spread bets.
 
-We do **not** need a continuous similarity function to decide *whether* to propagate. Same subject is sufficient:
+### The Key Insight
 
-- **Place or percentage on one shooter:** same shooter (e.g. same `memberNumber`) links all that shooter's markets.
-- **Spread:** same two shooters (target + underdog) link spread markets.
+A bet is not just evidence about one specific outcome range — it is evidence that the **entire finish distribution is shifted** in a particular direction. A bet on "John Smith 1st-10th" at long odds when the model expects him at ~27th doesn't just say "1st-10th is more likely." It says "the true distribution is shifted toward better finishes than the model thinks."
 
-Example: a wager on "A 1st-3rd" at +4000 and a market "A 10th-20th" at +110 are linked because both are about shooter A. We then use direction (opposite: disjoint place ranges) and odds (the +4000 bet is a strong signal) to update the 10th-20th market (add to beta there).
+This shift affects every market for that shooter. The question is: by how much?
 
-### Direction
+A naive approach would use heuristics (overlap, proximity to model center, odds-based multipliers) to estimate the effect on each market. But these heuristics get the shape systematically wrong. The actual probability change from a distribution shift peaks near the **center of the distribution** (where the PDF is densest), not in the tails. A linear proximity factor that increases with distance from the model center over-weights tail markets and under-weights the markets that are actually most affected.
 
-For each related market we must choose: add to **alpha** (increase P) or **beta** (decrease P).
+Since the Monte Carlo simulation data is available during odds generation, we can compute the exact effect by shifting the MC samples directly. This replaces direction heuristics, proximity factors, and odds multipliers with a single, principled calculation.
 
-- **Place:** Overlap and range matter. Overlapping place ranges (e.g. 1st-3rd and 1st-5th) → same direction → add to alpha on the other market. Disjoint ranges (e.g. 1st-3rd vs 10th-20th) → opposite → add to beta on the other market. Range size can refine (e.g. narrow vs wide).
-- **Percentage:** Same direction (both "above X%" or both "below X%") → add to alpha. Opposite (above vs below) → add to beta.
-- **Spread:** Same side (favorite covers vs underdog covers) → add to alpha; opposite side → add to beta.
+### Computing the Cumulative Distribution Shift (δ)
 
-So overlap (and type) is used for **direction only**, not as the multiplier for effect strength.
+The Monte Carlo simulation produces N samples (e.g. 10,000) for each shooter. For a place market, each sample is a finish position:
 
-### Effect Strength: Relative Odds
+```
+Trial 1: finished 23rd
+Trial 2: finished 31st
+Trial 3: finished 18th
+...
+Trial 10000: finished 27th
+```
 
-Signal strength comes from **odds** (and player weight), not from a structural similarity score:
+The model probability for any prediction is just a count: `P_model(1st-10th) = (trials finishing 1st-10th) / 10000`.
 
-- Long odds on the bet (+4000) = strong conviction that this outcome is more likely than the line implies → large update (in the chosen direction) to related markets.
-- The relative odds between the bet market and the target market can also scale the update (e.g. how much probability mass is shared or how complementary the outcomes are).
+We model the cumulative bet evidence as a **location shift**: slide every sample by a constant δ.
 
-So: "Existing long shots [that get action] should tend to pull the probability in the direction of 'this long shot is more likely.'" The longness of the odds is what makes that pull strong.
+```
+shifted_finish(trial_i) = original_finish(trial_i) - δ    // for place (lower = better)
+shifted_pct(trial_i)    = original_pct(trial_i) + δ       // for percentage (higher = better)
+```
 
-### Cross-Market Update (Procedure)
+Prior bets for a shooter will typically span multiple distinct markets (the combinatorial space of place ranges, percentage thresholds, and spreads is large enough that exact duplicates are rare). Each market's cumulative posterior implies a shift. We find the single δ that best fits all posteriors simultaneously, via weighted least squares:
 
-When a bet is placed:
+```
+For each market M that has bets:
+  totalWeight(M) = Σ weight_i for all bets on M
+  P_posterior(M) = (modelAlpha(M) + totalWeight(M)) / (N_eff + totalWeight(M))
 
-1. Compute bet weight (conviction × skill × time decay × base weight).
-2. Find all markets with the same subject (and optionally same type).
-3. For each related market: compute direction (add to alpha vs beta) from overlap/outcome consistency.
-4. For each: compute effect strength from odds (e.g. f(decimal odds or implied P)) and apply `accumulatedAlpha += strength` or `accumulatedBeta += strength` accordingly.
+Find δ that minimizes:
+  Σ  totalWeight(M) × (P_shifted(M, δ) - P_posterior(M))²
+over all markets M that have bets
+```
+
+where `totalWeight(M)` is the sum of bet weights on market M, so markets with more/stronger bets get more say in determining δ. This is a 1D optimization over a smooth objective — golden section search works well.
 
 ```dart
-void updateAcrossMarkets({
-  required DbPrediction betMarket,
-  required List<MarketState> allMarkets,
-  required double betWeight,
-  required double betImpliedP,
-  // Optional: odds-based strength multiplier (long odds => stronger)
-  double oddsStrengthMultiplier(double impliedP) => 1.0 / impliedP.clamp(0.01, 1.0),
+/// Finds the distribution shift δ that best fits all market posteriors.
+///
+/// [sortedSamples]: MC finish positions, pre-sorted ascending.
+/// [marketPosteriors]: for each market with bets, its posterior P and total bet weight.
+/// [marketPredicates]: for each market, a function testing if a shifted sample satisfies it.
+double findCumulativeShift({
+  required List<double> sortedSamples,
+  required Map<String, ({double posteriorP, double totalWeight})> marketPosteriors,
+  required Map<String, bool Function(double)> marketPredicates,
+  double searchLo = -30.0,
+  double searchHi = 30.0,
 }) {
-  for (var market in allMarkets) {
-    if (!sameSubject(betMarket, market.prediction)) continue;
+  int N = sortedSamples.length;
 
-    bool addToAlpha = sameDirection(betMarket, market.prediction);
-    double strength = betWeight * oddsStrengthMultiplier(betImpliedP);
-
-    if (addToAlpha) {
-      market.accumulatedAlpha += strength;
-    } else {
-      market.accumulatedBeta += strength;
+  double objective(double delta) {
+    double error = 0.0;
+    for (var entry in marketPosteriors.entries) {
+      var predicate = marketPredicates[entry.key]!;
+      int count = 0;
+      for (var sample in sortedSamples) {
+        if (predicate(sample - delta)) count++;
+      }
+      double shiftedP = count / N;
+      double diff = shiftedP - entry.value.posteriorP;
+      error += entry.value.totalWeight * diff * diff;
     }
+    return error;
   }
+
+  // Golden section search (or ternary search) to minimize the objective
+  double gr = (sqrt(5) + 1) / 2;
+  double a = searchLo, b = searchHi;
+  double c = b - (b - a) / gr;
+  double d = a + (b - a) / gr;
+
+  for (int i = 0; i < 50; i++) {
+    if ((b - a).abs() < 0.001) break;
+    if (objective(c) < objective(d)) {
+      b = d;
+    }
+    else {
+      a = c;
+    }
+    c = b - (b - a) / gr;
+    d = a + (b - a) / gr;
+  }
+  return (a + b) / 2;
 }
 ```
 
-**Example:** Wager on "A 1st-3rd" at +4000 (implied P ≈ 2.4%), weight = 2.0, odds multiplier 1/0.024 ≈ 41.7 → strength ≈ 83.4. All markets for shooter A are updated: same-direction (e.g. "A 1st-5th") get alpha += 83.4; opposite-direction (e.g. "A 10th-20th") get beta += 83.4. No similarity threshold; same subject is the link.
+**Example:** Three bets on John Smith — one on 1st-10th (weight 2.13), one on 12th-16th (weight 0.8), and one on 1st-5th (weight 0.3). All three posteriors imply a shift toward better finishes. The golden section search finds the δ that best reconciles all three, weighted by bet strength.
 
-### Direction and Overlap (Reference)
+**When posteriors conflict** (e.g. a bet on 1st-10th and a bet on 35th-40th pointing in opposite directions), the weighted least squares naturally compromises, with heavier-bet markets dominating.
 
-The following helpers can be used to implement **direction** (same vs opposite) for place, percentage, and spread. They are not used as effect-strength multipliers; odds drive strength.
+**Note on fractional positions:** When δ = 1.5, a trial originally at 11th becomes 9.5th, which is inside the 1st-10th range. Use `threshold + 0.5` as the boundary (e.g. a sample at 10.5 or below counts as "10th or better") to keep the counting smooth.
+
+### Generating Odds Under the Shifted Distribution
+
+Once δ is computed, generating odds for any market is straightforward: count how many shifted samples satisfy the market's predicate.
 
 ```dart
-double calculateSimilarity(DbPrediction market1, DbPrediction market2) {
-  if (market1.target.memberNumber != market2.target.memberNumber) {
-    return 0.1;  // no link (or small for cross-shooter sentiment)
+/// Generates the adjusted probability for a requested market, incorporating
+/// all prior bet evidence for this shooter.
+double getAdjustedProbability({
+  required List<double> sortedSamples,
+  required double delta,
+  required bool Function(double) satisfiesMarket,
+  required double modelP,
+  double maxMovementFraction = 0.20,
+}) {
+  int N = sortedSamples.length;
+  int count = 0;
+  for (var sample in sortedSamples) {
+    if (satisfiesMarket(sample - delta)) count++;
   }
+  double shiftedP = count / N;
 
-  if (market1.type == market2.type) {
-    switch (market1.type) {
-      case DbPredictionType.place:
-        return _placeSimilarity(market1, market2);
-
-      case DbPredictionType.percentage:
-        return _percentageSimilarity(market1, market2);
-
-      case DbPredictionType.spread:
-        return _spreadSimilarity(market1, market2);
-    }
-  }
-
-  return 0.3;  // same shooter, different prediction types
-}
-
-// Use overlap to determine same vs opposite direction for place (0 = disjoint → opposite)
-double _placeSimilarity(DbPrediction m1, DbPrediction m2) {
-  if (m1.bestPlace == m2.bestPlace && m1.worstPlace == m2.worstPlace) {
-    return 1.0;
-  }
-
-  int overlapStart = max(m1.bestPlace!, m2.bestPlace!);
-  int overlapEnd = min(m1.worstPlace!, m2.worstPlace!);
-  int overlapSize = max(0, overlapEnd - overlapStart + 1);
-
-  int m1Size = m1.worstPlace! - m1.bestPlace! + 1;
-  int m2Size = m2.worstPlace! - m2.bestPlace! + 1;
-
-  int unionSize = m1Size + m2Size - overlapSize;
-  return overlapSize / unionSize;  // Jaccard: 0 = disjoint (opposite), 1 = same
-}
-
-double _percentageSimilarity(DbPrediction m1, DbPrediction m2) {
-  if (m1.abovePercentage != m2.abovePercentage) return 0.3;  // opposite direction
-
-  double diff = (m1.percentage! - m2.percentage!).abs();
-  return exp(-20 * diff);
-}
-
-double _spreadSimilarity(DbPrediction m1, DbPrediction m2) {
-  if (m1.target.memberNumber != m2.target.memberNumber) return 0.1;
-  if (m1.underdog?.memberNumber != m2.underdog?.memberNumber) return 0.1;
-  if (m1.favoriteCovers != m2.favoriteCovers) return 0.3;  // opposite direction
-
-  double diff = (m1.percentage! - m2.percentage!).abs();
-  return exp(-15 * diff);
+  double maxMove = modelP * maxMovementFraction;
+  return shiftedP.clamp(modelP - maxMove, modelP + maxMove);
 }
 ```
 
-Use overlap (e.g. Jaccard == 0 for place → opposite) and above/below or favorite/underdog to set `sameDirection`; do not use these scores as the effect-strength multiplier.
+This is the same computation whether the requested market has prior bets on it or not. A bet on 1st-10th naturally moves the odds for 12th-16th, for 1st-10th itself (line movement), and for 35th-40th — all from the same δ, all with the correct magnitude.
+
+### Worked Example: Place Markets (End-to-End)
+
+**Setup:** John Smith, model expects ~27.5th finish. N = 10,000 MC trials. N_eff = 100.
+
+**Prior bets:**
+- Bet A: "John Smith 1st-10th", sharp player, late, weight = 2.13
+- Bet B: "John Smith 1st-5th", moderate player, weight = 0.5
+
+**Step 1 — Compute posteriors for markets with bets:**
+```
+1st-10th: P_model = 0.012 → P_posterior = (0.012 × 100 + 2.13) / (100 + 2.13) = 0.0326
+1st-5th:  P_model = 0.003 → P_posterior = (0.003 × 100 + 0.50) / (100 + 0.50) = 0.0080
+```
+
+Both posteriors point toward better finishes, so they're consistent.
+
+**Step 2 — Find δ:** Golden section search minimizes the weighted error across both posteriors. Finds δ ≈ 1.8 positions (model expected ~27.5th, implied ~25.7th).
+
+**Step 3 — Generate odds for any requested market under the shifted distribution:**
+
+| Requested Market | P_model | P_shifted | Change |
+|---|---|---|---|
+| 1st-5th | 0.003 | 0.008 | +0.005 (line moved) |
+| 1st-10th | 0.012 | 0.033 | +0.021 (line moved) |
+| 12th-16th | 0.045 | 0.058 | **+0.013** |
+| 20th-25th | 0.220 | 0.240 | **+0.020** (largest change) |
+| 25th-30th | 0.280 | 0.272 | **-0.008** |
+| 35th-40th | 0.110 | 0.098 | **-0.012** |
+
+Key observations:
+
+- **Line movement works naturally.** A new bettor asking for odds on 1st-10th or 1st-5th sees updated probabilities. Their bets were the evidence that moved the line.
+- **Direction is automatic.** Markets on the "better" side of the model center get positive shifts; markets on the "worse" side get negative. No direction heuristic needed.
+- **Strength has the right shape.** The largest positive change is at 20th-25th — just on the "better" side of the model mode, where the PDF is densest. The bet targets (1st-10th, 1st-5th), despite having the direct evidence, have smaller absolute changes because the tail is thin.
+- **Disjoint-but-same-side works correctly.** 12th-16th has no overlap with either bet range, but still gets a positive shift because the distribution shift moves mass into that range.
+- **Works for any distribution shape.** Skewed, multimodal, heavy-tailed — the MC samples represent the actual distribution.
+
+### Worked Example: Percentage Markets
+
+**Setup:** Jane Doe, model expects ~75th percentile. N = 10,000 MC trials. N_eff = 100.
+
+**Prior bets:**
+- Bet A: "above 95%", sharp player, weight = 1.5
+- Bet B: "above 90%", moderate player, weight = 0.4
+
+**Step 1 — Compute posteriors:**
+```
+above 95%: P_model = 0.018 → P_posterior = (0.018 × 100 + 1.5) / (100 + 1.5) = 0.033
+above 90%: P_model = 0.052 → P_posterior = (0.052 × 100 + 0.4) / (100 + 0.4) = 0.056
+```
+
+Both point upward — consistent.
+
+**Step 2 — Find δ:** Golden section search finds δ ≈ 1.2 percentage points upward (model expected ~75%, implied ~76.2%).
+
+**Step 3 — Generate odds for any requested market:**
+
+| Requested Market | P_model | P_shifted | Change |
+|---|---|---|---|
+| Above 95% | 0.018 | 0.033 | +0.015 (line moved) |
+| Above 90% | 0.052 | 0.072 | **+0.020** |
+| Above 85% | 0.125 | 0.155 | **+0.030** |
+| Above 80% | 0.290 | 0.325 | **+0.035** (largest!) |
+| Below 70% | 0.195 | 0.172 | **-0.023** |
+| Below 60% | 0.085 | 0.070 | **-0.015** |
+
+**Above 80%** sees the largest change because it's near the model's mode where the PDF is densest. Below 60% gets a stronger penalty than below 70%, because it's further from the model center on the "wrong" side.
+
+### Why This Replaces Proximity Heuristics
+
+A linear proximity factor (increasing with distance from the model center toward the bet) gets the strength allocation systematically wrong:
+
+| Target | True Change (from distribution shift) | Linear Proximity (old) |
+|---|---|---|
+| >80% (near model mode) | **+0.035** (largest) | 0.25 (weak) |
+| >85% | +0.030 | 0.50 (moderate) |
+| >90% | +0.020 | 0.75 (strong) |
+| >95% (bet target) | +0.015 | 1.00 (strongest) |
+
+The linear heuristic gives the most weight to the market that changes the *least*, and the least weight to the market that changes the *most*.
+
+The distribution shift replaces four separate heuristics (direction, proximity, odds multiplier, per-type helpers) with a single principled calculation that:
+
+- Gets direction right automatically (sign of change)
+- Gets strength right automatically (peaks where the PDF is densest)
+- Handles all prediction types uniformly (place, percentage, spread — just different predicates on the MC samples)
+- Handles non-normal distributions natively (the MC samples represent the actual distribution)
+- Absorbs the odds multiplier (a long-odds bet produces a bigger posterior shift, which produces a larger δ, which produces larger changes across all markets)
+
+The only remaining heuristic is the bet weight (conviction × skill × time decay × base weight), which is appropriate — it represents the *quality of the evidence*, while the distribution shift represents *what the evidence implies*.
 
 ## Risk Management
 
 ### Maximum Odds Movement
 
-Protect against over-adjustment:
+Protect against over-adjustment. After computing P_shifted from the shifted MC distribution, clamp the movement relative to the model probability:
 
 ```dart
-double getAdjustedProbability({
-  required double modelAlpha,
-  required double modelBeta,
-  required double accumulatedAlpha,
-  required double accumulatedBeta,
-  double maxMovementFraction = 0.20,
-}) {
-  double modelProb = modelAlpha / (modelAlpha + modelBeta);
-  double rawNewProb = (modelAlpha + accumulatedAlpha) /
-                      (modelAlpha + modelBeta + accumulatedAlpha + accumulatedBeta);
-
-  // Limit movement to ±20% of model probability
-  double maxMove = modelProb * maxMovementFraction;
-  return rawNewProb.clamp(modelProb - maxMove, modelProb + maxMove);
+double clampMovement(double modelP, double shiftedP, {double maxMovementFraction = 0.20}) {
+  double maxMove = modelP * maxMovementFraction;
+  return shiftedP.clamp(modelP - maxMove, modelP + maxMove);
 }
 ```
 
@@ -477,76 +565,35 @@ double adjustedWeight = baseWeight * exposureMultiplier;
 
 ### Decay Over Time
 
-Reset accumulated evidence as match approaches:
+The bet weighting function already includes time decay (bets placed further from the match get lower weight). In the compute-on-demand model, this decay is applied naturally when bet weights are computed during odds generation — old bets automatically contribute less evidence to δ as the match approaches.
 
-**Option A**: Full reset at match start
-```dart
-// At match start, reset accumulated evidence
-accumulatedAlpha = 0.0;
-accumulatedBeta = 0.0;
-```
-
-**Option B**: Gradual decay
-```dart
-// Each day, decay accumulated evidence by 5%
-accumulatedAlpha *= 0.95;
-accumulatedBeta *= 0.95;
-```
-
-**Recommendation**: Use Option A for simplicity.
+At match start, all bets become irrelevant (the match is happening). No explicit reset is needed; the time decay drives old bets' weights toward zero.
 
 ## Implementation Considerations
 
 ### Data Storage
 
-Add to `DbWager` or create new `MarketState` class:
+No persistent per-market Bayesian state is needed. The inputs to odds generation are:
 
-```dart
-@embedded
-class MarketBayesianState {
-  // Model's base confidence
-  double modelAlpha;
-  double modelBeta;
+1. **MC samples per shooter** (pre-sorted by finish position and by percentage), generated at simulation time.
+2. **Accepted bet history** — each bet stores its market (prediction), bet weight, and acceptance timestamp.
+3. **N_eff per shooter** — derived from rating history (see "Principled Setting of α and β").
 
-  // Accumulated evidence from bets
-  double accumulatedAlpha = 0.0;
-  double accumulatedBeta = 0.0;
-
-  // Metadata
-  DateTime lastUpdated;
-  int totalBetsProcessed = 0;
-}
-```
-
-### Recalculation Triggers
-
-Recalculate odds when:
-1. New bet is placed (immediate update)
-2. Bet is voided/removed (reverse the update)
-3. Player's accuracy changes significantly (retroactive adjustment?)
-4. Time-based: daily recalculation as match approaches
+Odds are computed from scratch on demand. Caching δ per shooter is optional (invalidate when a new bet for that shooter is accepted).
 
 ### Bet Removal/Voiding
 
-If a bet is voided, reverse its impact:
-
-```dart
-void reverseBet({
-  required MarketState market,
-  required double betWeight,
-}) {
-  market.accumulatedAlpha -= betWeight;
-  market.accumulatedAlpha = max(0, market.accumulatedAlpha);  // floor at 0
-}
-```
+Since odds are computed from the raw bet history, voiding a bet is trivial: mark it as voided so it's excluded from future odds generation. No state to reverse, no floating-point drift. The next odds request for that shooter will naturally reflect the reduced evidence.
 
 ### Performance Optimization
 
-For large numbers of markets:
-1. **Index by subject**: Group markets by shooter (or shooter pair for spreads) for faster same-subject lookups
-2. **Lazy evaluation**: Only recalculate odds when they're viewed/needed
-3. **Batch updates**: Process multiple bets before recalculating all affected markets
-4. **Cache direction**: Optionally cache same/opposite direction per market pair if direction checks are expensive
+The compute-on-demand model recomputes δ each time odds are requested, but the cost is modest:
+
+1. **Pre-sort MC samples** by finish position (and by percentage) per shooter at simulation time.
+2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations of binary search for single-market case). Each iteration scans the sorted samples: O(N) per iteration, O(15N) total. For N = 10,000, this is ~150,000 comparisons.
+3. **Evaluating P_shifted** for the requested market is one pass over the shifted samples: O(N).
+4. **Cache δ per shooter**: Since δ only changes when a new bet is accepted for that shooter, cache the result and invalidate on new bets. This reduces repeated odds requests (e.g. browsing a market list) to O(N) per market rather than recomputing δ each time.
+5. **Index bets by subject**: Group accepted bets by shooter for fast lookup during odds generation.
 
 ## Tunable Parameters Summary
 
@@ -555,26 +602,30 @@ For large numbers of markets:
 | **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets. Prefer setting via N_eff from rating history (see "Principled Setting of α and β"). |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
 | **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
-| **Odds strength multiplier** | 1/implied P | — | — | Long odds ⇒ stronger cross-market update. Link is same subject; no similarity threshold. |
-| **Max Movement** | 20% | 10% | 30% | Maximum probability shift from model |
+| **Max Movement** | 20% | 10% | 30% | Maximum probability shift from model P |
 | **Min Bets for Skill** | 10 | 20 | 5 | Minimum resolved bets to apply skill multiplier |
 
 ## Testing Strategy
 
 ### Unit Tests
 
-1. **Basic updates**: Single bet moves probability correctly
-2. **Weight calculation**: All factors (conviction, skill, time) combine properly
-3. **Direction and same-subject**: Same-subject markets updated; direction (alpha vs beta) correct for overlapping vs disjoint outcomes
-4. **Bounds checking**: Probabilities stay in [0, 1], max movement enforced
-5. **Reversibility**: Voiding a bet returns to previous state
+1. **Weight calculation**: All factors (conviction, skill, time) combine properly
+2. **Single-market δ**: Binary search converges to correct δ for known MC distributions. Verify with a simple uniform or Gaussian sample set where the answer is analytically known.
+3. **Multi-market δ**: Golden section search finds the δ that best fits multiple market posteriors simultaneously. Verify with consistent and conflicting posteriors.
+4. **Cross-market direction**: Same-subject markets get correct sign (positive for same-side, negative for opposite-side). Verify that disjoint-but-same-side ranges get positive changes (e.g. bet on 1st-10th increases P for 12th-16th when model expects ~27th).
+5. **Cross-market shape**: Probability changes peak near the model mode, not in the tail. For a symmetric distribution, the largest change should be near the model center, not near the bet target.
+6. **Line movement**: A bet on a market shifts that same market's odds for the next request.
+7. **Bounds checking**: Probabilities stay in [0, 1], max movement enforced
+8. **Voiding**: Voiding a bet and regenerating odds returns to model probabilities
 
 ### Integration Tests
 
-1. **Multiple bets**: Sequential bets accumulate correctly
-2. **Cross-market**: Bet on one market affects same-subject markets; direction and strength from odds
-3. **Player learning**: As player's accuracy changes, future bets weighted differently
-4. **Time progression**: Old bets decay as match approaches
+1. **Multiple bets, same market**: Cumulative bet weights produce a single larger δ. Verify equivalent to processing bets individually.
+2. **Multiple bets, different markets**: δ optimization reconciles multiple posteriors. Verify direction consistency.
+3. **Probability conservation**: After applying δ, verify that the total probability mass across mutually exclusive markets remains close to the original sum (location shift preserves total mass).
+4. **Place, percentage, and spread**: Verify the distribution shift works for all three prediction types with realistic MC sample distributions.
+5. **Player learning**: As player's accuracy changes, future bets weighted differently
+6. **Time progression**: Old bets decay as match approaches
 
 ### Validation Strategy
 
@@ -662,110 +713,287 @@ double calculateBetWeight({
 }
 ```
 
-### Complete Update Function
+### Complete Odds Generation Function
 
 ```dart
-class BayesianOddsManager {
-  // Per-market state
-  Map<String, MarketBayesianState> marketStates = {};
+class OddsGenerator {
+  /// MC samples per shooter, pre-sorted ascending.
+  Map<String, List<double>> sortedFinishSamples = {};
+  Map<String, List<double>> sortedPercentageSamples = {};
 
-  void processBet({
-    required DbWager wager,
-    required PredictionGamePlayer player,
-    required MatchPrep matchPrep,
-    required double baseWeight,
-    required double lambda,
-    required double betImpliedP,
+  /// Cached δ per shooter. Invalidate when a new bet is accepted for that shooter.
+  Map<String, double> _cachedDelta = {};
+
+  /// Generates adjusted odds for a requested market, incorporating all prior bets.
+  PredictionProbability generateOdds({
+    required DbPrediction requestedMarket,
+    required List<DbWager> priorBets, // all accepted, non-voided bets for this subject
+    required double nEff,             // from shooter rating history
+    required double houseEdge,
+    double maxMovementFraction = 0.20,
+    double baseWeight = 10.0,
+    double lambda = 0.10,
   }) {
-    // Calculate bet weight (conviction × skill × time)
-    double weight = calculateBetWeight(
-      wager: wager,
-      player: player,
-      matchDate: matchPrep.matchDate,
-      baseWeight: baseWeight,
-      lambda: lambda,
-    );
+    String shooterKey = requestedMarket.target.memberNumber;
+    List<double> samples = _getSamples(requestedMarket, shooterKey);
+    int N = samples.length;
 
-    // Odds-based strength: long odds => stronger cross-market signal
-    double strength = weight * (1.0 / betImpliedP.clamp(0.01, 1.0));
+    // Model probability (no bet evidence)
+    int modelCount = 0;
+    for (var sample in samples) {
+      if (_satisfies(sample, requestedMarket)) modelCount++;
+    }
+    double modelP = modelCount / N;
 
-    // Update primary market
-    String marketKey = _getMarketKey(wager.legs.first);
-    MarketBayesianState state = _getOrCreateState(marketKey, wager);
-    state.accumulatedAlpha += weight;
-    state.totalBetsProcessed++;
-    state.lastUpdated = DateTime.now();
+    if (priorBets.isEmpty) {
+      return PredictionProbability(modelP, houseEdge: houseEdge);
+    }
 
-    // Update same-subject markets (direction from overlap/outcome consistency)
-    var betPrediction = _getMarketPrediction(marketKey);
-    for (var entry in marketStates.entries) {
-      if (entry.key == marketKey) continue;
+    // Compute δ (use cache if available)
+    double delta = _cachedDelta[shooterKey] ??
+        _computeDelta(priorBets, samples, N, nEff, baseWeight, lambda);
+    _cachedDelta[shooterKey] = delta;
 
-      var otherPrediction = _getMarketPrediction(entry.key);
-      if (!sameSubject(betPrediction, otherPrediction)) continue;
+    // Evaluate P under the shifted distribution
+    int shiftedCount = 0;
+    for (var sample in samples) {
+      double shifted = _applyShift(sample, delta, requestedMarket);
+      if (_satisfies(shifted, requestedMarket)) shiftedCount++;
+    }
+    double shiftedP = shiftedCount / N;
 
-      bool addToAlpha = sameDirection(betPrediction, otherPrediction);
-      if (addToAlpha) {
-        entry.value.accumulatedAlpha += strength;
-      } else {
-        entry.value.accumulatedBeta += strength;
+    double maxMove = modelP * maxMovementFraction;
+    double adjustedP = shiftedP.clamp(modelP - maxMove, modelP + maxMove);
+
+    return PredictionProbability(adjustedP, houseEdge: houseEdge);
+  }
+
+  /// Computes the cumulative δ from all prior bets for a shooter.
+  double _computeDelta(
+    List<DbWager> bets,
+    List<double> samples,
+    int N,
+    double nEff,
+    double baseWeight,
+    double lambda,
+  ) {
+    // Group bets by market and sum weights
+    var marketWeights = <String, ({DbPrediction prediction, double totalWeight})>{};
+
+    for (var wager in bets) {
+      var prediction = wager.legs.first;
+      String key = _marketKey(prediction);
+      double weight = calculateBetWeight(
+        wager: wager,
+        player: wager.player,
+        matchDate: wager.matchDate,
+        baseWeight: baseWeight,
+        lambda: lambda,
+      );
+
+      if (marketWeights.containsKey(key)) {
+        var existing = marketWeights[key]!;
+        marketWeights[key] = (
+          prediction: existing.prediction,
+          totalWeight: existing.totalWeight + weight,
+        );
+      }
+      else {
+        marketWeights[key] = (prediction: prediction, totalWeight: weight);
       }
     }
-  }
 
-  PredictionProbability getAdjustedProbability(
-    String marketKey,
-    PredictionProbability modelProbability,
-    {double maxMovementFraction = 0.20}
-  ) {
-    MarketBayesianState? state = marketStates[marketKey];
-    if (state == null) {
-      return modelProbability;  // no adjustments yet
+    // Compute posterior for each market, then find best-fit δ
+    var posteriors = <String, ({double posteriorP, double totalWeight})>{};
+    for (var entry in marketWeights.entries) {
+      double modelP = _countSatisfying(samples, entry.value.prediction) / N;
+      double posteriorP = (modelP * nEff + entry.value.totalWeight) /
+          (nEff + entry.value.totalWeight);
+      posteriors[entry.key] = (
+        posteriorP: posteriorP,
+        totalWeight: entry.value.totalWeight,
+      );
     }
 
-    double totalAlpha = state.modelAlpha + state.accumulatedAlpha;
-    double totalBeta = state.modelBeta + state.accumulatedBeta;
-    double adjustedProb = totalAlpha / (totalAlpha + totalBeta);
-
-    // Apply max movement limit
-    double modelProb = state.modelAlpha / (state.modelAlpha + state.modelBeta);
-    double maxMove = modelProb * maxMovementFraction;
-    adjustedProb = adjustedProb.clamp(
-      modelProb - maxMove,
-      modelProb + maxMove,
+    return findCumulativeShift(
+      sortedSamples: samples,
+      marketPosteriors: posteriors,
+      marketPredicates: {
+        for (var entry in marketWeights.entries)
+          entry.key: (double v) => _satisfies(v, entry.value.prediction),
+      },
     );
 
-    return PredictionProbability(
-      adjustedProb,
-      houseEdge: modelProbability.houseEdge,
-      worstPossibleOdds: modelProbability.worstPossibleOdds,
-      bestPossibleOdds: modelProbability.bestPossibleOdds,
-    );
+  int _countSatisfying(List<double> samples, DbPrediction p) {
+    int count = 0;
+    for (var s in samples) {
+      if (_satisfies(s, p)) count++;
+    }
+    return count;
   }
 
-  // Helper methods
-  String _getMarketKey(DbPrediction prediction) {
-    // Create unique key for market
-    return "${prediction.target.memberNumber}_${prediction.type}_${prediction.bestPlace}_${prediction.worstPlace}_${prediction.percentage}";
+  List<double> _getSamples(DbPrediction p, String shooterKey) {
+    switch (p.type) {
+      case DbPredictionType.place:
+        return sortedFinishSamples[shooterKey]!;
+      case DbPredictionType.percentage:
+        return sortedPercentageSamples[shooterKey]!;
+      case DbPredictionType.spread:
+        return sortedFinishSamples[shooterKey]!;
+    }
   }
 
-  MarketBayesianState _getOrCreateState(String key, DbWager wager) {
-    return marketStates.putIfAbsent(key, () {
-      var prob = wager.wagerProbability;
-      return MarketBayesianState(
-        modelAlpha: 65.0,  // TODO: set from N_eff and model P (see "Principled Setting of α and β"), e.g. P*nEff, (1-P)*nEff using shooter rating history
-        modelBeta: 35.0,
-        lastUpdated: DateTime.now(),
-      );
-    });
+  double _applyShift(double sample, double delta, DbPrediction p) {
+    return sample - delta * _shiftSign(p);
   }
 
-  DbPrediction _getMarketPrediction(String key) {
-    // TODO: Parse key back to prediction
-    throw UnimplementedError();
+  double _shiftSign(DbPrediction p) {
+    switch (p.type) {
+      case DbPredictionType.place:
+        return 1.0;  // positive δ → subtract from finish → better finish
+      case DbPredictionType.percentage:
+        return -1.0; // positive δ → add to percentage → higher percentage
+      case DbPredictionType.spread:
+        return 1.0;
+    }
+  }
+
+  bool _satisfies(double value, DbPrediction p) {
+    switch (p.type) {
+      case DbPredictionType.place:
+        return value >= (p.bestPlace! - 0.5) && value <= (p.worstPlace! + 0.5);
+      case DbPredictionType.percentage:
+        if (p.abovePercentage) return value >= p.percentage!;
+        return value < p.percentage!;
+      case DbPredictionType.spread:
+        // TODO: implement spread satisfaction check
+        throw UnimplementedError();
+    }
+  }
+
+  String _marketKey(DbPrediction p) {
+    return "${p.target.memberNumber}_${p.type}_"
+           "${p.bestPlace}_${p.worstPlace}_${p.percentage}";
+  }
+
+  void invalidateCache(String shooterKey) {
+    _cachedDelta.remove(shooterKey);
   }
 }
 ```
+
+---
+
+## Appendix: Deriving Spread Odds from Individual Percentage Signals
+
+### The Opportunity
+
+A spread prediction like "A beats B by ≥5%" is fundamentally a claim about the *difference* between two shooters' percentage finishes. We may have direct evidence about that spread from prior spread bets on the same pair. But we may also have indirect evidence: separate percentage bets on shooter A and shooter B individually. A bet on "A above 90%" and a bet on "B below 70%" both imply that A's margin over B is likely larger than the model thinks — even though neither bet mentions the spread explicitly.
+
+### Sketch of the Approach
+
+The MC simulation already produces paired samples — each trial has a finish percentage for every shooter. So for shooters A and B, we have 10,000 paired (pctA, pctB) tuples, from which we can derive 10,000 spread samples: `spreadSample_i = pctA_i - pctB_i`.
+
+**Direct spread evidence** works the same as place or percentage: prior spread bets on the A-vs-B pair produce posteriors, we find a δ_spread that shifts the spread samples to match, and we evaluate the requested spread market under the shifted spread distribution.
+
+**Indirect evidence from individual percentage bets** is the interesting part. Bets on A's percentage imply a δ_A (shift in A's percentage distribution). Bets on B's percentage imply a δ_B. These individual shifts propagate to the spread:
+
+```
+shifted_spread_i = (pctA_i + δ_A) - (pctB_i + δ_B)
+                 = spreadSample_i + (δ_A - δ_B)
+```
+
+So the net effect on the spread is `δ_A - δ_B`. If bets say A is better than the model thinks (δ_A > 0) and B is worse (δ_B < 0), the spread widens by δ_A + |δ_B|. If both are shifted upward, the spread effect partially cancels.
+
+### Combining Direct and Indirect Evidence
+
+When generating odds for a spread market on A vs B:
+
+1. Compute δ_A from all prior percentage bets on A (the standard golden section search).
+2. Compute δ_B from all prior percentage bets on B.
+3. Compute δ_spread_direct from all prior spread bets on the A-vs-B pair.
+4. The total spread shift is some combination of the direct and indirect signals.
+
+The simplest combination: `δ_spread_total = δ_spread_direct + (δ_A - δ_B)`. This treats the individual percentage shifts and the direct spread evidence as independent, which is approximately correct when the bettors placing percentage bets and spread bets are different people with different information.
+
+A more careful combination would use the same weighted-least-squares framework, fitting a single δ_spread to the posteriors from both direct spread bets *and* the implied spread shift from individual percentage posteriors. The individual percentage evidence would enter as an additional constraint with weight proportional to the total bet weight behind δ_A and δ_B.
+
+### Open Questions
+
+- **Double-counting.** If someone bets on "A above 90%" and also on "A beats B by ≥10%", both bets carry information about A's percentage. The percentage bet's δ_A already reflects that bettor's view of A; the spread bet's δ_spread_direct also partly reflects it. Simply summing the signals may overcount. One mitigation: weight the indirect signal lower (e.g. 0.5×) to discount potential overlap.
+- **Correlation.** The MC samples are already paired (A and B's finishes in each trial are correlated by the simulated match conditions). Shifting A's marginal distribution while holding B fixed may slightly distort the correlation structure. For small δ values this is negligible; for large shifts it may matter.
+- **Place bets as inputs.** Place bets on A or B also carry information about their strength, which could in principle feed into spread calculations. The mapping is less direct (place → percentage requires the MC joint distribution), but the same framework could accommodate it by computing δ_place for each shooter and deriving the implied percentage shift from the shifted MC samples.
+
+## Appendix: Unified Signal Propagation Across Market Types
+
+### Motivation
+
+Currently, each market type (place, percentage, spread) computes its δ independently from bets on that type. But all three types describe the same underlying reality: a shooter's performance in a match. A place bet on "A finishes 1st-10th" carries information about A's percentage finish, because finishing 20th instead of 26th *necessarily* means a better percentage than the model predicted for 26th place. The MC simulation already encodes these relationships — each trial has a finish position, a percentage, and (implicitly) a spread against every other shooter. The question is whether we can let evidence flow across types.
+
+### The Core Idea: Shift in One Domain Implies a Shift in the Other
+
+The MC trials are the bridge. Each trial for shooter A has both a finish position and a percentage:
+
+```
+Trial 1: finished 23rd, 78.2%
+Trial 2: finished 31st, 71.5%
+Trial 3: finished 18th, 82.1%
+...
+```
+
+These are jointly sampled — a trial where A finishes 18th also has a specific percentage that's consistent with finishing 18th in that simulated field. When we compute a δ_place (shifting finish positions), the MC samples let us observe what that shift implies for percentage.
+
+**Concrete example:** A's model expects ~26th. Place bets imply δ_place ≈ 6 positions (implied ~20th). We shift A's finish samples by 6. Now look at the percentage that goes with the shifted samples — the trials where the original finish was around 26th (now shifted to ~20th) had percentages around 74-76%. But the trials where the original finish was around 20th (now shifted to ~14th) had percentages around 80-82%. The shifted distribution's mean percentage is higher than the unshifted one. That implied percentage shift can be measured directly from the MC samples:
+
+```
+mean_pct_unshifted = mean of all pctA_i
+mean_pct_shifted   = mean of pctA_i for trials where (finishA_i - δ_place) ≈ new expected finish
+
+implied_δ_pct ≈ mean_pct_shifted - mean_pct_unshifted
+```
+
+More precisely, since each MC trial is a complete snapshot of the match, shifting the finish position and reading off the percentage that corresponds to the new position gives us the cross-domain mapping for free.
+
+### A Rough Unified Flow
+
+When generating odds for any market on shooter A:
+
+1. **Gather all bets on A** across all types (place, percentage, spread involving A).
+2. **Compute type-specific posteriors** — group bets by type, sum weights, compute posteriors within each type as before.
+3. **Convert to a common signal.** Use the MC joint distribution to translate each type's evidence into a shift in a common underlying quantity. The natural common quantity is **percentage** (or equivalently, the shooter's latent strength), since:
+   - Percentage bets give δ_pct directly.
+   - Place bets give δ_place, which implies a δ_pct via the MC joint distribution (shift the finish samples, observe the corresponding percentage shift).
+   - Spread bets give δ_spread for a pair, which implies a δ_pct for each shooter in the pair (though with some ambiguity about how to split the shift between A and B).
+4. **Combine the converted signals** into a single δ_pct for the shooter, e.g. via weighted average of the implied δ_pct from each type, weighted by total bet weight behind each.
+5. **Generate odds** for the requested market by applying the unified δ_pct (converted back to the target type's domain via the MC samples if needed).
+
+### Why Percentage as the Common Signal
+
+Percentage is the most natural common currency because:
+
+- It's a continuous, per-shooter quantity (unlike place, which is relative to the field and discrete).
+- It maps cleanly to strength — a better shooter has a higher expected percentage.
+- Spread is literally a difference of two percentages, so `δ_spread = δ_pct_A - δ_pct_B` falls out naturally (as described in the previous appendix).
+- Place can be derived from percentage given the field (a higher percentage implies a better place, with the mapping defined by the MC joint distribution of the full field).
+
+Place could also work as the common signal, but the discreteness and field-dependence make it slightly less clean. The choice may depend on implementation convenience.
+
+### Complexity and When It Matters
+
+Unified propagation is most valuable when:
+
+- A shooter has bets across multiple types (e.g. both place and percentage bets) — the evidence reinforces.
+- Spread bets exist alongside individual percentage bets on the involved shooters — the spread appendix case.
+- A shooter has many place bets but someone requests a percentage market (or vice versa).
+
+It matters less when bets are sparse or concentrated in a single type, since there's nothing to propagate across.
+
+### Open Questions
+
+- **Mapping fidelity.** The place → percentage mapping via MC samples is approximate (the MC is a finite sample of the joint distribution). With 10,000 trials this is likely fine, but worth validating.
+- **Split ambiguity for spreads.** A spread bet on "A beats B by ≥5%" could mean A is better than expected, B is worse, or both. Without additional evidence, the simplest assumption is to split the shift equally (each gets half the δ_spread), but if individual percentage bets exist for one or both shooters, those can anchor the split.
+- **Computational cost.** Computing δ per type and then converting is cheap (MC sample lookups). The unified weighted average is O(1) on top of the per-type δ searches. So this adds negligible cost.
+- **Double-counting (same concern as spread appendix).** If someone places both a place bet and a percentage bet on the same shooter, both signals carry related information. Weighting the unified signal needs care to avoid overcounting. A conservative approach: use the *maximum* rather than the sum of implied δ_pct from different types, or discount secondary types by a factor < 1.
 
 ---
 
