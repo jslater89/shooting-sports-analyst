@@ -99,7 +99,7 @@ extension MatchPrepDatabase on AnalystDatabase {
     return getMatchPrepForProjectAndMatchIds(project.id, match.matchId);
   }
 
-  /// Get a match prep for a specific project and match, if one exists, synchronously.
+  /// Get a match prep for a specific project and match, if one exists, synchronously.S
   MatchPrep? getMatchPrepForProjectAndMatchSync(DbRatingProject project, FutureMatch match) {
     return getMatchPrepForProjectAndMatchIdsSync(project.id, match.matchId);
   }
@@ -124,7 +124,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       }
     }
 
-    notifyEntityChange(EntityType.matchPrep, matchPrep.id);
+    await notifyEntityChange(EntityType.matchPrep, matchPrep.id);
     return matchPrep;
   }
 
@@ -151,6 +151,7 @@ extension MatchPrepDatabase on AnalystDatabase {
         await predictionSet.algorithmPredictions.save();
       }
     });
+    await notifyEntityChange(EntityType.matchPrep, predictionSet.matchPrepId);
     return predictionSet;
   }
 
@@ -159,6 +160,7 @@ extension MatchPrepDatabase on AnalystDatabase {
     isar.writeTxnSync(() {
       isar.predictionSets.putSync(predictionSet);
     });
+    notifyEntityChangeSync(EntityType.matchPrep, predictionSet.matchPrepId);
   }
 
   Future<void> deletePredictionSet(PredictionSet predictionSet) async {
@@ -166,6 +168,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       await predictionSet.algorithmPredictions.filter().deleteAll();
       await isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAll();
     });
+    await notifyEntityChange(EntityType.matchPrep, predictionSet.matchPrepId);
   }
 
   void deletePredictionSetSync(PredictionSet predictionSet) {
@@ -173,6 +176,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       predictionSet.algorithmPredictions.filter().deleteAllSync();
       isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAllSync();
     });
+    notifyEntityChangeSync(EntityType.matchPrep, predictionSet.matchPrepId);
   }
 
   Future<void> saveAlgorithmPrediction(DbAlgorithmPrediction prediction, {bool saveLinks = true}) async {

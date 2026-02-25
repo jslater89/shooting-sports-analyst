@@ -38,6 +38,9 @@ class IsolateCommon {
   /// [startData] is the [IsolateStartData] for the current isolate.
   /// [mainIsolate] is whether the current isolate is the main isolate. If mainIsolate is false,
   /// the setup process will redirect logging to the main isolate via the [SendPort] in [startData.logPort].
+  /// [failOnDuplicateRegistration] is whether to fail if the isolate is already registered with the manager isolate.
+  /// This should generally be true, except in cases where an isolate will register as both a server and a client.
+  /// In the latter case, it should register as a server first.
   ///
   /// Returns the [IsolateManagerClient] for the current isolate.
   static Future<IsolateManagerClient> setupClient(IsolateStartData startData, {

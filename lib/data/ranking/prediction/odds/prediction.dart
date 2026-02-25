@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -17,11 +18,13 @@ abstract class UserPrediction {
   PredictionProbability calculateProbability(
     Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     {
+      MonteCarloSimulationResult? simulationResult,
       Random? random,
       double disasterChance = 0.01,
       double? houseEdge,
       double bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
       double worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
+      int trials = 10000,
     });
 
   UserPrediction({
@@ -81,20 +84,24 @@ class PlacePrediction extends UserPrediction {
   PredictionProbability calculateProbability(
     Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     {
+      MonteCarloSimulationResult? simulationResult,
       Random? random,
       double disasterChance = 0.01,
       double? houseEdge,
       double bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
       double worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
+      int trials = 10000,
     }) {
     return PredictionProbability.fromPlacePrediction(
       this,
       shootersToPredictions,
+      simulationResult: simulationResult,
       random: random,
       disasterChance: disasterChance,
       houseEdge: houseEdge,
       bestPossibleOdds: bestPossibleOdds,
       worstPossibleOdds: worstPossibleOdds,
+      trials: trials,
     );
   }
 
@@ -140,19 +147,23 @@ class PercentagePrediction extends UserPrediction {
   PredictionProbability calculateProbability(
     Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     {
+      MonteCarloSimulationResult? simulationResult,
       Random? random,
       double disasterChance = 0.01,
       double? houseEdge,
       double bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
       double worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
+      int trials = 10000,
     }) {
     return PredictionProbability.fromPercentagePrediction(
       this, shootersToPredictions,
+      simulationResult: simulationResult,
       random: random,
       disasterChance: disasterChance,
       houseEdge: houseEdge,
       bestPossibleOdds: bestPossibleOdds,
       worstPossibleOdds: worstPossibleOdds,
+      trials: trials,
     );
   }
 
@@ -205,18 +216,24 @@ class PercentageSpreadPrediction extends UserPrediction {
   PredictionProbability calculateProbability(
     Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     {
+      MonteCarloSimulationResult? simulationResult,
+      MonteCarloSimulationResult? underdogSimulationResult,
       Random? random,
       double disasterChance = 0.01,
       double? houseEdge,
       double bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
       double worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
+      int trials = 10000,
     }) {
     return PredictionProbability.fromPercentageSpreadPrediction(this, shootersToPredictions,
+      favoriteSimulationResult: simulationResult,
+      underdogSimulationResult: underdogSimulationResult,
       random: random,
       disasterChance: disasterChance,
       houseEdge: houseEdge,
       bestPossibleOdds: bestPossibleOdds,
       worstPossibleOdds: worstPossibleOdds,
+      trials: trials,
     );
   }
 

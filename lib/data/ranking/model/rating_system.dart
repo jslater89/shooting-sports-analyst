@@ -309,10 +309,12 @@ class PredictionSettings {
   /// A multiplier for the prediction's sigma value when calculating place probabilities, default 2.0.
   final double placeSigmaMultiplier;
 
-  /// A multiplier for the prediction's sigma value when calculating percent probabilities, default 2.0.
+  /// A multiplier for the prediction's sigma value when calculating percent probabilities, default 2.0. Unused in
+  /// favor of [placeSigmaMultiplier].
   final double percentSigmaMultiplier;
 
-  /// A multiplier for the prediction's sigma value when calculating spread probabilities, default 2.0.
+  /// A multiplier for the prediction's sigma value when calculating spread probabilities, default 2.0. Unused in
+  /// favor of [placeSigmaMultiplier].
   final double spreadSigmaMultiplier;
 
   PredictionSettings({

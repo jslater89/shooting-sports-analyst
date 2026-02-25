@@ -10,15 +10,21 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_cache.dart';
+import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("WagerDialog");
 
 /// Result of a [WagerDialog]. It will be either a list of independent wagers or a parlay.
 ///
@@ -41,6 +47,7 @@ class WagerDialog extends StatefulWidget {
     super.key,
     this.game,
     required this.predictions,
+    required this.predictionSetId,
     required this.matchId,
     this.title,
     this.roundToMoneyline = false,
@@ -54,11 +61,13 @@ class WagerDialog extends StatefulWidget {
   final String? title;
   final String? helpText;
   final String matchId;
+  final int? predictionSetId;
   final List<AlgorithmPrediction> predictions;
 
   static Future<WagerDialogResult?> show(BuildContext context, {
     required List<AlgorithmPrediction> predictions,
     required String matchId,
+    int? predictionSetId,
     String? title,
     bool roundToMoneyline = false,
     double? availableBalance,
@@ -70,6 +79,7 @@ class WagerDialog extends StatefulWidget {
       builder: (context) => WagerDialog(
         predictions: predictions,
         matchId: matchId,
+        predictionSetId: predictionSetId,
         title: title,
         roundToMoneyline: roundToMoneyline,
         availableBalance: availableBalance,
@@ -94,6 +104,8 @@ class _WagerDialogState extends State<WagerDialog> {
   Map<ShooterRating, AlgorithmPrediction> _shootersToPredictions = {};
   Map<RatingGroup, int> _competitorCountsByGroup = {};
   Map<ShooterRating, WagerIneligibilityReason> _ineligibleCompetitors = {};
+
+  final lruCache = MonteCarloSimulationCache(capacity: 100);
 
   @override
   void initState() {
@@ -142,27 +154,81 @@ class _WagerDialogState extends State<WagerDialog> {
     }
     Wager wager;
     var newPrediction = newWager.prediction;
-    if(bestPossibleOdds != null) {
-      wager = Wager(
-        prediction: newPrediction,
-        probability: newPrediction.calculateProbability(
-          _shootersToPredictions,
-          bestPossibleOdds: bestPossibleOdds,
-          random: Random(widget.matchId.stableHash),
-        ),
-        amount: newWager.amount,
+    List<MonteCarloSimulationLruKey> cacheKeys = [];
+    List<MonteCarloSimulationLruKey> underdogCacheKeys = [];
+
+    MonteCarloSimulationResult? simulationResult;
+    MonteCarloSimulationResult? underdogSimulationResult;
+
+    const int trials = 12500;
+
+    // We can only use the simulation cache if we have a prediction set ID.
+    final predictionSetId = widget.predictionSetId;
+    if(predictionSetId != null) {
+      for(var number in newPrediction.shooter.knownMemberNumbers) {
+        cacheKeys.add(MonteCarloSimulationLruKey(
+          predictionSetId: predictionSetId,
+          memberNumber: number,
+          trials: trials,
+        ));
+      }
+
+      simulationResult = lruCache.lookup(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
+
+      if(newPrediction is PercentageSpreadPrediction) {
+        for(var number in newPrediction.underdog.knownMemberNumbers) {
+          underdogCacheKeys.add(MonteCarloSimulationLruKey(
+            predictionSetId: predictionSetId,
+            memberNumber: number,
+            trials: trials,
+          ));
+        }
+
+        underdogSimulationResult = lruCache.lookup(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
+      }
+    }
+
+    if(newPrediction is PercentageSpreadPrediction) {
+      _log.v("Cache hits: ${simulationResult != null}/${underdogSimulationResult != null}");
+    }
+    else {
+      _log.v("Cache hits: ${simulationResult != null}");
+    }
+
+    PredictionProbability probability;
+    if(newPrediction is PercentageSpreadPrediction) {
+      probability = newPrediction.calculateProbability(
+        _shootersToPredictions,
+        simulationResult: simulationResult,
+        underdogSimulationResult: underdogSimulationResult,
+        random: Random(widget.matchId.stableHash),
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        trials: trials,
       );
     }
     else {
-      wager = Wager(
-        prediction: newPrediction,
-        probability: newPrediction.calculateProbability(
-          _shootersToPredictions,
-          random: Random(widget.matchId.stableHash),
-        ),
-        amount: newWager.amount,
+      probability = newPrediction.calculateProbability(
+        _shootersToPredictions,
+        simulationResult: simulationResult,
+        random: Random(widget.matchId.stableHash),
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        trials: trials,
       );
     }
+
+    if(probability.ranOwnSimulation && predictionSetId != null) {
+      lruCache.cache(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
+      if(newPrediction is PercentageSpreadPrediction) {
+        lruCache.cache(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
+      }
+    }
+
+    wager = Wager(
+      prediction: newPrediction,
+      probability: probability,
+      amount: newWager.amount,
+    );
+
 
     if(index == -1) {
       _legs.add(wager);
