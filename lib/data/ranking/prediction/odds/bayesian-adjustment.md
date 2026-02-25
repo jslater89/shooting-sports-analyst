@@ -321,14 +321,15 @@ Prior bets for a shooter will typically span multiple distinct markets (the comb
 ```
 For each market M that has bets:
   totalWeight(M) = Σ weight_i for all bets on M
+  modelAlpha(M)  = P_model(M) × N_eff
   P_posterior(M) = (modelAlpha(M) + totalWeight(M)) / (N_eff + totalWeight(M))
 
 Find δ that minimizes:
-  Σ  totalWeight(M) × (P_shifted(M, δ) - P_posterior(M))²
+  Σ  totalWeight(M) × (P_shifted(M, Lδ) - P_posterior(M))²
 over all markets M that have bets
 ```
 
-where `totalWeight(M)` is the sum of bet weights on market M, so markets with more/stronger bets get more say in determining δ. This is a 1D optimization over a smooth objective — golden section search works well.
+`modelAlpha(M)` is simply the α of the Beta prior for market M: the model probability times the effective sample size. Together with `modelBeta(M) = (1 − P_model(M)) × N_eff`, these form the Beta(α, β) prior whose mean is P_model(M) and whose total confidence is N_eff (see "Principled Setting of α and β" above). `totalWeight(M)` is the sum of bet weights on market M, so markets with more/stronger bets get more say in determining δ. This is a 1D optimization over a smooth objective — golden section search works well.
 
 ```dart
 /// Finds the distribution shift δ that best fits all market posteriors.
@@ -399,7 +400,7 @@ double getAdjustedProbability({
   required double delta,
   required bool Function(double) satisfiesMarket,
   required double modelP,
-  double maxMovementFraction = 0.20,
+  double maxLogitShift = 1.0,
 }) {
   int N = sortedSamples.length;
   int count = 0;
@@ -408,8 +409,7 @@ double getAdjustedProbability({
   }
   double shiftedP = count / N;
 
-  double maxMove = modelP * maxMovementFraction;
-  return shiftedP.clamp(modelP - maxMove, modelP + maxMove);
+  return clampMovement(modelP, shiftedP, maxLogitShift: maxLogitShift);
 }
 ```
 
@@ -510,18 +510,50 @@ The only remaining heuristic is the bet weight (conviction × skill × time deca
 
 ### Maximum Odds Movement
 
-Protect against over-adjustment. After computing P_shifted from the shifted MC distribution, clamp the movement relative to the model probability:
+Protect against over-adjustment. After computing P_shifted from the shifted MC distribution, clamp the movement.
+
+A naive linear clamp (`maxMove = modelP × fraction`) breaks at extreme probabilities: for a long-shot market with P = 0.01, a 20% cap allows only ±0.002 of movement — the line is effectively frozen. But long-shot bets carry high informational content (the bettor is risking a lot relative to expected return), so they should have *more* room to move, not less.
+
+The fix is to clamp symmetrically in **log-odds space**. The logit transform `logit(p) = ln(p / (1 − p))` maps probabilities to the real line, where a fixed-width band has uniform meaning across the probability range: a shift of 1 logit unit roughly doubles or halves the odds ratio, regardless of baseline probability.
 
 ```dart
-double clampMovement(double modelP, double shiftedP, {double maxMovementFraction = 0.20}) {
-  double maxMove = modelP * maxMovementFraction;
-  return shiftedP.clamp(modelP - maxMove, modelP + maxMove);
+double _logit(double p) => log(p / (1.0 - p));
+double _sigmoid(double x) => 1.0 / (1.0 + exp(-x));
+
+double clampMovement(double modelP, double shiftedP, {double maxLogitShift = 1.0}) {
+  double modelLogit = _logit(modelP);
+  double lower = _sigmoid(modelLogit - maxLogitShift);
+  double upper = _sigmoid(modelLogit + maxLogitShift);
+  return shiftedP.clamp(lower, upper);
 }
 ```
 
-**Example**: Model says P = 0.60
-- Maximum adjusted probability: 0.72 (60% + 20%)
-- Minimum adjusted probability: 0.48 (60% - 20%)
+The `maxLogitShift` parameter controls how far the odds can move. A value of 1.0 means the odds ratio can roughly double or halve. The allowed range in probability space:
+
+| modelP | Allowed range | Absolute width |
+|--------|---------------|----------------|
+| 0.01   | [0.004, 0.027] | 0.023 |
+| 0.05   | [0.019, 0.125] | 0.106 |
+| 0.50   | [0.269, 0.731] | 0.462 |
+| 0.95   | [0.875, 0.981] | 0.106 |
+| 0.99   | [0.973, 0.996] | 0.023 |
+
+Key properties:
+- **Symmetric**: P = 0.05 and P = 0.95 get the same absolute width (0.106).
+- **Long shots can move**: P = 0.01 gets a range of [0.004, 0.027], not the frozen [0.008, 0.012] of a linear 20% clamp.
+- **Favorites can't exceed 1.0**: The sigmoid naturally stays in (0, 1).
+- **Single tunable parameter**: `maxLogitShift` has uniform meaning across the probability range — "how many doublings/halvings of the odds ratio are allowed?"
+
+Compare to the linear clamp (`maxMove = modelP × 0.20`):
+
+| modelP | Log-odds range | Linear 20% range |
+|--------|---------------|-------------------|
+| 0.01   | [0.004, 0.027] | [0.008, 0.012] |
+| 0.05   | [0.019, 0.125] | [0.040, 0.060] |
+| 0.50   | [0.269, 0.731] | [0.400, 0.600] |
+| 0.95   | [0.875, 0.981] | [0.760, 1.000] |
+
+The linear clamp over-restricts long shots and over-permits near-certainties.
 
 ### Exposure Limits
 
@@ -565,9 +597,7 @@ double adjustedWeight = baseWeight * exposureMultiplier;
 
 ### Decay Over Time
 
-The bet weighting function already includes time decay (bets placed further from the match get lower weight). In the compute-on-demand model, this decay is applied naturally when bet weights are computed during odds generation — old bets automatically contribute less evidence to δ as the match approaches.
-
-At match start, all bets become irrelevant (the match is happening). No explicit reset is needed; the time decay drives old bets' weights toward zero.
+The bet weighting function already includes time decay (bets placed further from the match get lower weight). In the compute-on-demand model, this decay is applied naturally when bet weights are computed during odds generation — old bets always contribute less to δ.
 
 ## Implementation Considerations
 
@@ -595,6 +625,22 @@ The compute-on-demand model recomputes δ each time odds are requested, but the 
 4. **Cache δ per shooter**: Since δ only changes when a new bet is accepted for that shooter, cache the result and invalidate on new bets. This reduces repeated odds requests (e.g. browsing a market list) to O(N) per market rather than recomputing δ each time.
 5. **Index bets by subject**: Group accepted bets by shooter for fast lookup during odds generation.
 
+### Reusing MC Samples Across Prediction Sets
+
+As registrations change, the MC simulation may be re-run with a different field, producing a new set of samples. Wagers placed against an older prediction set were priced using the old samples. When computing δ for odds generation, it is acceptable to use the **most recent** MC samples even though some wagers targeted a slightly different field, provided the registration changes are modest (a few adds/drops in a typical field of 50–200 shooters).
+
+**Why this works:**
+
+- **Percentage markets** are the most robust, because a shooter's percentage finish is mostly determined by their own stage performance, not by who else is shooting. A few registration changes barely affect the percentage distribution.
+- **Place markets** are slightly more sensitive, since adding a strong competitor pushes expected finishes down by roughly one position. But for small field changes this is a sub-position effect — well within the MC simulation's own sampling noise.
+- **Spread markets** depend on two specific shooters' relative performance, which is mostly independent of the rest of the field.
+
+The δ optimization finds a *relative* shift ("bets say this shooter is about 2 positions better than the model thinks"). That relative signal transfers well to a nearly-identical field even if the absolute sample values differ slightly.
+
+**When it breaks down:** If a registration change adds or removes a *direct competitor* at a similar skill level — someone expected in the same 5-position band as the subject — that could shift the subject's distribution by several positions, making the stale samples a poor proxy. Even then, the δ will be directionally correct but may be slightly miscalibrated in magnitude.
+
+**Recommendation:** Reuse the most recent MC samples for δ computation. Invalidate only when a new simulation is actually run (i.e., when registrations change enough to trigger a re-simulation). The error from slightly stale samples is much smaller than the inherent model uncertainty, and rerunning the simulation on every odds request would be prohibitively expensive.
+
 ## Tunable Parameters Summary
 
 | Parameter | Recommended | Conservative | Aggressive | Description |
@@ -602,7 +648,7 @@ The compute-on-demand model recomputes δ each time odds are requested, but the 
 | **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets. Prefer setting via N_eff from rating history (see "Principled Setting of α and β"). |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
 | **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
-| **Max Movement** | 20% | 10% | 30% | Maximum probability shift from model P |
+| **Max Logit Shift** | 1.0 | 0.5 | 1.5 | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement." |
 | **Min Bets for Skill** | 10 | 20 | 5 | Minimum resolved bets to apply skill multiplier |
 
 ## Testing Strategy
@@ -730,7 +776,7 @@ class OddsGenerator {
     required List<DbWager> priorBets, // all accepted, non-voided bets for this subject
     required double nEff,             // from shooter rating history
     required double houseEdge,
-    double maxMovementFraction = 0.20,
+    double maxLogitShift = 1.0,
     double baseWeight = 10.0,
     double lambda = 0.10,
   }) {
@@ -762,8 +808,7 @@ class OddsGenerator {
     }
     double shiftedP = shiftedCount / N;
 
-    double maxMove = modelP * maxMovementFraction;
-    double adjustedP = shiftedP.clamp(modelP - maxMove, modelP + maxMove);
+    double adjustedP = clampMovement(modelP, shiftedP, maxLogitShift: maxLogitShift);
 
     return PredictionProbability(adjustedP, houseEdge: houseEdge);
   }
@@ -858,11 +903,15 @@ class OddsGenerator {
     }
   }
 
-  bool _satisfies(double value, DbPrediction p) {
+  bool _satisfies(double value, DbPrediction p, {int? fieldSize}) {
     switch (p.type) {
       case DbPredictionType.place:
+        if(value < 0.5) value = 0.5;
+        if(fieldSize != null && value > fieldSize + 0.5) value = fieldSize + 0.5;
         return value >= (p.bestPlace! - 0.5) && value <= (p.worstPlace! + 0.5);
       case DbPredictionType.percentage:
+        if(value < 0) value = 0;
+        if(value > 1) value = 1;
         if (p.abovePercentage) return value >= p.percentage!;
         return value < p.percentage!;
       case DbPredictionType.spread:
