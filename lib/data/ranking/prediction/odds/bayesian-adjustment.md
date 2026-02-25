@@ -615,7 +615,7 @@ No persistent per-market Bayesian state is needed. The inputs to odds generation
 2. **Accepted bet history** — each bet stores its market (prediction), bet weight, and acceptance timestamp.
 3. **N_eff per shooter** — derived from rating history (see "Principled Setting of α and β").
 
-Odds are computed from scratch on demand. Caching δ per shooter is optional (invalidate when a new bet for that shooter is accepted).
+Odds are computed from scratch on demand, with δ cached per shooter (see "Caching δ Per Shooter" below).
 
 ### Bet Removal/Voiding
 
@@ -628,8 +628,104 @@ The compute-on-demand model recomputes δ each time odds are requested, but the 
 1. **Pre-sort MC samples** by finish position (and by percentage) per shooter at simulation time.
 2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations of binary search for single-market case). Each iteration scans the sorted samples: O(N) per iteration, O(15N) total. For N = 10,000, this is ~150,000 comparisons.
 3. **Evaluating P_shifted** for the requested market is one pass over the shifted samples: O(N).
-4. **Cache δ per shooter**: Since δ only changes when a new bet is accepted for that shooter, cache the result and invalidate on new bets. This reduces repeated odds requests (e.g. browsing a market list) to O(N) per market rather than recomputing δ each time.
+4. **Cache δ per shooter**: See "Caching δ Per Shooter" below.
 5. **Index bets by subject**: Group accepted bets by shooter for fast lookup during odds generation.
+
+### Caching δ Per Shooter
+
+δ for a given shooter is a function of (all prior bets on that shooter, MC samples, N_eff) — none of which depend on the market being requested. This means δ can be computed once and reused for all market evaluations on that shooter until new evidence arrives.
+
+Since δ entries are small (a double, a timestamp, and a few links) and rarely looked up, they belong in the database rather than an in-memory cache. This gives persistence across restarts, lets us link entries to the wagers and shooter ratings that produced them, and naturally accumulates a history for line-movement visualization.
+
+**Schema:**
+
+```dart
+@collection
+class ShooterDelta with DbShooterRatingEntity {
+  Id id = Isar.autoIncrement;
+
+  /// The δ value (distribution shift).
+  double delta;
+
+  @enumerated
+  MarketType type;
+
+  /// When this δ was computed.
+  DateTime computedAt;
+
+  /// The timestamp of the most recent bet included in this δ computation.
+  DateTime lastBetTimestamp;
+
+  /// The match prep this δ is associated with.
+  final matchPrep = IsarLink<MatchPrep>();
+
+  /// The prediction game this δ is associated with.
+  final game = IsarLink<PredictionGame>();
+
+  /// The wagers that contributed to this δ.
+  final contributingWagers = IsarLinks<DbWager>();
+
+  /// The IDs of the wagers that contributed to this δ.
+  ///
+  /// This allows fast lookup of deltas by wager.
+  @Index()
+  List<int> contributingWagerIds = [];
+
+  @Index()
+  String shooterKey;
+
+  ShooterDelta({
+    required this.delta,
+    required this.computedAt,
+    required this.lastBetTimestamp,
+    required this.shooterKey,
+  });
+}
+
+enum MarketType {
+  place,
+  percentage;
+  // Spread bets are decomposed into percentage signals, so no separate
+  // spread type is needed. See "Spread Bets as Percentage Signals."
+  // Future: unified (place ↔ percentage propagation).
+}
+```
+
+**Cache lookup flow:**
+
+```
+On odds request for shooter S in match M:
+  entry = db.shooterDeltas
+    .filter()
+    .shooterKeyEqualTo(S)
+    .sortByComputedAtDesc()
+    .findFirstSync()
+
+  if entry != null:
+    latestBet = most recent accepted bet for S in M
+    if latestBet == null || latestBet.created <= entry.lastBetTimestamp:
+      → use entry.delta (cache hit)
+    else:
+      → recompute δ, write new entry (new bet invalidated it)
+  else:
+    → compute δ, write new entry
+```
+
+This reduces repeated odds requests (e.g. browsing a market list, or multiple users viewing the same shooter) to O(N) per market (one pass over MC samples to evaluate the predicate) rather than O(15N × M) to recompute δ each time.
+
+**Invalidation:** No explicit invalidation is needed — the timestamp comparison handles staleness. Old entries stay in the DB as history. When the MC simulation is re-run (new registration set), either write a new δ entry (the next odds request will recompute against the new samples) or mark a simulation boundary for the line-movement chart.
+
+**Line-movement visualization:**
+
+Since every δ computation writes a new entry (rather than overwriting), the DB naturally accumulates a history of how δ evolved as bets arrived. To render a line-movement chart for a specific market:
+
+1. Query all `ShooterDelta` entries for the shooter, ordered by `computedAt`.
+2. For each entry, evaluate the market's predicate against the current MC samples shifted by that entry's δ.
+3. Plot the resulting probability series over time.
+
+Each entry's `contributingWagers` link lets the chart annotate which bet(s) caused each line movement. The `shooterRating` link provides context for tooltips (shooter name, rating at the time).
+
+**Note on MC simulation changes:** If the simulation is re-run (new registration set), historical δ values were computed against different samples. The δ *direction* is still meaningful (see "Reusing MC Samples Across Prediction Sets"), but evaluating old δ values against new samples may produce slightly different probabilities. For the line-movement chart, this is acceptable — mark simulation boundaries with a visual indicator and note that pre-boundary values are approximate.
 
 ### Reusing MC Samples Across Prediction Sets
 
@@ -679,7 +775,7 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 3. **Probability conservation**: After applying δ, verify that the total probability mass across mutually exclusive markets remains close to the original sum (location shift preserves total mass).
 4. **Place, percentage, and spread**: Verify the distribution shift works for all three prediction types with realistic MC sample distributions.
 5. **Player learning**: As player's accuracy changes, future bets weighted differently
-6. **Time progression**: Old bets decay as match approaches
+6. **Time progression**: Old bets have less predictive strength
 
 ### Validation Strategy
 
@@ -907,7 +1003,8 @@ class OddsGenerator {
       case DbPredictionType.percentage:
         return -1.0; // positive δ → add to percentage → higher percentage
       case DbPredictionType.spread:
-        return 1.0;
+        throw ArgumentError("Spread bets should be decomposed into percentage "
+            "signals before δ computation. See 'Spread Bets as Percentage Signals'.");
     }
   }
 
@@ -923,8 +1020,8 @@ class OddsGenerator {
         if (p.abovePercentage) return value >= p.percentage!;
         return value < p.percentage!;
       case DbPredictionType.spread:
-        // TODO: implement spread satisfaction check
-        throw UnimplementedError();
+        throw ArgumentError("Spread bets should be decomposed into percentage "
+            "signals before δ computation. See 'Spread Bets as Percentage Signals'.");
     }
   }
 
@@ -941,53 +1038,163 @@ class OddsGenerator {
 
 ---
 
-## Appendix: Deriving Spread Odds from Individual Percentage Signals
+## Appendix: Spread Bets as Percentage Signals
 
-### The Opportunity
+### The Idea
 
-A spread prediction like "A beats B by ≥5%" is fundamentally a claim about the *difference* between two shooters' percentage finishes. We may have direct evidence about that spread from prior spread bets on the same pair. But we may also have indirect evidence: separate percentage bets on shooter A and shooter B individually. A bet on "A above 90%" and a bet on "B below 70%" both imply that A's margin over B is likely larger than the model thinks — even though neither bet mentions the spread explicitly.
+A spread prediction like "A beats B by ≥5%" is fundamentally a claim about the *difference* between two shooters' percentage finishes. Rather than maintaining a separate δ type for spreads (which requires a two-shooter key, a separate optimization pass, and its own cache entries), we decompose each spread bet into two weak **percentage signals** — one for each shooter — and let them flow into the existing per-shooter percentage δ framework.
 
-### Sketch of the Approach
+This eliminates the need for a separate spread delta type. Every δ is single-shooter, and spread odds are derived from the combination of two individual percentage deltas.
 
-The MC simulation already produces paired samples — each trial has a finish percentage for every shooter. So for shooters A and B, we have 10,000 paired (pctA, pctB) tuples, from which we can derive 10,000 spread samples: `spreadSample_i = pctA_i - pctB_i`.
+### Decomposition via Virtual Percentage Markets
 
-**Direct spread evidence** works the same as place or percentage: prior spread bets on the A-vs-B pair produce posteriors, we find a δ_spread that shifts the spread samples to match, and we evaluate the requested spread market under the shifted spread distribution.
+A spread bet "A beats B by ≥X%" with weight `w` implies:
+- A's percentage is higher than the model thinks (positive signal)
+- B's percentage is lower than the model thinks (negative signal)
 
-**Indirect evidence from individual percentage bets** is the interesting part. Bets on A's percentage imply a δ_A (shift in A's percentage distribution). Bets on B's percentage imply a δ_B. These individual shifts propagate to the spread:
+To express this as evidence the percentage δ optimizer can consume, we create **virtual percentage markets** for each shooter. The virtual market threshold is derived from the spread's implied individual requirements, not from the median, so that long-odds spread bets produce stronger signals than short-odds ones.
+
+**Computing the virtual thresholds:**
+
+The model's expected spread is `mean_A - mean_B`. The bet claims the spread should be at least X%. The "excess" beyond the model's expectation is split equally between the two shooters:
 
 ```
-shifted_spread_i = (pctA_i + δ_A) - (pctB_i + δ_B)
-                 = spreadSample_i + (δ_A - δ_B)
+mean_A = mean of sortedPctSamplesA
+mean_B = mean of sortedPctSamplesB
+model_spread = mean_A - mean_B
+
+// For "favorite covers" (A-B ≥ X%):
+excess = spread_threshold - model_spread
+threshold_A = mean_A + excess / 2
+threshold_B = mean_B - excess / 2
+
+Virtual bet for A: "A above threshold_A", weight = w × splitFactor
+Virtual bet for B: "B below threshold_B", weight = w × splitFactor
 ```
 
-So the net effect on the spread is `δ_A - δ_B`. If bets say A is better than the model thinks (δ_A > 0) and B is worse (δ_B < 0), the spread widens by δ_A + |δ_B|. If both are shifted upward, the spread effect partially cancels.
+For "underdog covers" (A-B ≤ X%), the excess flips: `excess = model_spread - spread_threshold`, and the virtual thresholds push A *down* and B *up*.
 
-### Combining Direct and Indirect Evidence
+`splitFactor` (e.g. 0.5) controls how much of the spread signal each shooter receives, discounting for the ambiguity in which shooter is driving the spread.
 
-When generating odds for a spread market on A vs B:
+(Since the MC samples come from normal distributions around each player's expected strength, the mean and median are effectively interchangeable here.)
 
-1. Compute δ_A from all prior percentage bets on A (the standard golden section search).
-2. Compute δ_B from all prior percentage bets on B.
-3. Compute δ_spread_direct from all prior spread bets on the A-vs-B pair.
-4. The total spread shift is some combination of the direct and indirect signals.
+### Why Spread-Derived Thresholds Are Necessary
 
-The simplest combination: `δ_spread_total = δ_spread_direct + (δ_A - δ_B)`. This treats the individual percentage shifts and the direct spread evidence as independent, which is approximately correct when the bettors placing percentage bets and spread bets are different people with different information.
+A naive approach would place the virtual threshold at the model's median (P_model = 0.50) for every spread bet. This loses the odds signal: a near-certainty spread bet and a long-shot spread bet would produce the same posterior shift, despite carrying very different amounts of information.
 
-A more careful combination would use the same weighted-least-squares framework, fitting a single δ_spread to the posteriors from both direct spread bets *and* the implied spread shift from individual percentage posteriors. The individual percentage evidence would enter as an additional constraint with weight proportional to the total bet weight behind δ_A and δ_B.
+With spread-derived thresholds, the P_model of each virtual market reflects the extremity of the spread claim:
+
+**Long-odds spread "A-B ≥ 20%"** (model expects 7% spread, excess = 13%):
+```
+threshold_A = 0.85 + 0.065 = 0.915
+threshold_B = 0.78 - 0.065 = 0.715
+
+P_model("A above 91.5%") ≈ 0.12  (tail of A's distribution)
+P_model("B below 71.5%") ≈ 0.15  (tail of B's distribution)
+→ Posteriors shift substantially → large δ_A, δ_B → spread widens significantly
+```
+
+**Short-odds spread "A-B ≥ 1%"** (model expects 7% spread, excess = -6%):
+```
+threshold_A = 0.85 - 0.03 = 0.82
+threshold_B = 0.78 + 0.03 = 0.81
+
+P_model("A above 82%") ≈ 0.72  (easy side of A's distribution)
+P_model("B below 81%") ≈ 0.68  (easy side of B's distribution)
+→ Posteriors barely move → tiny δ_A, δ_B → spread barely changes
+```
+
+This correctly mirrors how the main Bayesian framework amplifies long-odds bets: a small P_model means `totalWeight` is large relative to `modelAlpha`, so the posterior shifts further from the model.
+
+Key properties:
+
+- **Long-odds spread bets push harder.** The virtual thresholds land in the tails, where P_model is small and the posterior shift is amplified — correctly, because the bettor is asserting something the model considers unlikely.
+- **Short-odds spread bets barely move the line.** The thresholds are on the easy side of the distribution, confirming what the model already believes.
+- **Directionally correct.** "Favorite covers" pushes A up and B down. "Underdog covers" does the opposite.
+- **Combines with real percentage bets.** The virtual markets enter the same WLS optimization as direct percentage bets, naturally reconciling all evidence.
+- **The max-logit-shift clamp** still protects against over-movement from extremely long-odds spread bets.
+
+### Generating Spread Odds from Individual Deltas
+
+To price a spread market "A beats B by ≥X%", compute δ_A and δ_B separately from their respective percentage evidence (including any virtual markets from spread bets), then evaluate the spread predicate on the shifted paired MC samples:
+
+```dart
+double getSpreadProbability({
+  required List<double> pctSamplesA,
+  required List<double> pctSamplesB,
+  required double deltaA,
+  required double deltaB,
+  required double spreadThreshold,
+  required bool favoriteCovers,
+}) {
+  int N = pctSamplesA.length;
+  int count = 0;
+  for (int i = 0; i < N; i++) {
+    double shiftedSpread = (pctSamplesA[i] + deltaA) - (pctSamplesB[i] + deltaB);
+    if (favoriteCovers ? shiftedSpread >= spreadThreshold : shiftedSpread <= spreadThreshold) {
+      count++;
+    }
+  }
+  return count / N;
+}
+```
+
+The MC samples are already paired (each trial simulates the full match), so `pctSamplesA[i]` and `pctSamplesB[i]` are from the same simulated match. Shifting each shooter's marginal by their respective δ and evaluating the spread preserves the correlation structure.
+
+### Evidence Flow
+
+All evidence about a shooter's strength converges into a single δ_pct, regardless of source:
+
+- A direct percentage bet on A → contributes to A's δ_pct directly.
+- A spread bet on A vs B → contributes to A's δ_pct (and B's) via virtual percentage markets at spread-derived thresholds.
+- Multiple spread bets involving A (vs. different opponents) → all contribute to A's δ_pct, reinforcing the signal about A's strength.
+
+This means a shooter who appears in several spread bets accumulates evidence about their individual performance, even if no one has placed a direct percentage bet on them.
+
+### Worked Example
+
+**Setup:** A expected at ~85%, B expected at ~78%. Model spread = 7%. N_eff = 100.
+
+**Bet:** "A beats B by ≥15%", sharp player, weight = 1.8, splitFactor = 0.5.
+
+This is a long-odds bet (model spread is 7%, bet claims ≥15%).
+
+**Decomposition:**
+
+```
+excess = 0.15 - 0.07 = 0.08
+threshold_A = 0.85 + 0.04 = 0.89
+threshold_B = 0.78 - 0.04 = 0.74
+
+w_A = 1.8 × 0.5 = 0.9
+w_B = 1.8 × 0.5 = 0.9
+
+Virtual market for A: "above 89%"
+  P_model("A above 89%") ≈ 0.20  (in the upper tail of A's distribution)
+  P_posterior = (0.20 × 100 + 0.9) / (100 + 0.9) = 20.9 / 100.9 = 0.2072
+
+Virtual market for B: "below 74%"
+  P_model("B below 74%") ≈ 0.22  (in the lower tail of B's distribution)
+  P_posterior = (0.22 × 100 + 0.9) / (100 + 0.9) = 22.9 / 100.9 = 0.2270
+```
+
+The posteriors are meaningfully above P_model (relative shifts of ~3.6% and ~3.2%), producing non-trivial δ values. Compare to a short-odds spread bet on "A-B ≥ 1%" (excess = -0.06), which would place thresholds at 82% and 81% — well inside the fat part of each distribution (P_model ≈ 0.70), producing near-zero posterior shifts.
+
+The δ optimizer for A finds a positive δ_A (A shifts upward). The δ optimizer for B finds a δ_B that shifts B downward. When pricing the spread market, the combined effect widens the spread: `δ_A + |δ_B|`.
 
 ### Open Questions
 
-- **Double-counting.** If someone bets on "A above 90%" and also on "A beats B by ≥10%", both bets carry information about A's percentage. The percentage bet's δ_A already reflects that bettor's view of A; the spread bet's δ_spread_direct also partly reflects it. Simply summing the signals may overcount. One mitigation: weight the indirect signal lower (e.g. 0.5×) to discount potential overlap.
-- **Correlation.** The MC samples are already paired (A and B's finishes in each trial are correlated by the simulated match conditions). Shifting A's marginal distribution while holding B fixed may slightly distort the correlation structure. For small δ values this is negligible; for large shifts it may matter.
-- **Place bets as inputs.** Place bets on A or B also carry information about their strength, which could in principle feed into spread calculations. The mapping is less direct (place → percentage requires the MC joint distribution), but the same framework could accommodate it by computing δ_place for each shooter and deriving the implied percentage shift from the shifted MC samples.
+- **Split ambiguity.** The equal split (splitFactor = 0.5) assumes no knowledge of which shooter drives the spread. If individual percentage bets exist for one shooter, they anchor that shooter's δ, and the spread bet's contribution is additive. A more sophisticated split could use the relative uncertainty of the two shooters (the less-certain shooter gets more of the split), but this adds complexity for a small gain.
+- **Double-counting.** If someone bets both "A above 90%" and "A beats B by ≥10%", both contribute to A's δ_pct. The percentage bet directly; the spread bet via the virtual median market. This isn't exactly double-counting (the virtual market is at the median, not at 90%), but the two signals do carry correlated information. The splitFactor discount (0.5) provides some buffering.
+- **Correlation distortion.** Shifting A and B's marginals independently slightly distorts the joint distribution. The MC samples capture the true correlation (e.g., both do well on the same stages); shifting each marginal treats the shifts as independent. For small δ values this is negligible. For large shifts, the spread probability may be slightly miscalibrated — but the δ values from bet evidence will be small in practice (see "The Core Problem" on liquidity).
 
-## Appendix: Unified Signal Propagation Across Market Types
+## Appendix: Unified Signal Propagation (Place ↔ Percentage)
 
 ### Motivation
 
-Currently, each market type (place, percentage, spread) computes its δ independently from bets on that type. But all three types describe the same underlying reality: a shooter's performance in a match. A place bet on "A finishes 1st-10th" carries information about A's percentage finish, because finishing 20th instead of 26th *necessarily* means a better percentage than the model predicted for 26th place. The MC simulation already encodes these relationships — each trial has a finish position, a percentage, and (implicitly) a spread against every other shooter. The question is whether we can let evidence flow across types.
+With spread bets already decomposed into percentage signals (see previous appendix), the remaining cross-type gap is between **place** and **percentage**. These are computed as separate δ values (δ_place in position units, δ_pct in percentage-point units), but both describe the same underlying reality: a shooter's performance. A place bet on "A finishes 1st-10th" carries information about A's percentage finish, because finishing 20th instead of 26th *necessarily* means a better percentage than the model predicted for 26th place. The question is whether we can let place evidence inform percentage δ and vice versa.
 
-### The Core Idea: Shift in One Domain Implies a Shift in the Other
+### The Cross-Domain Mapping Problem
 
 The MC trials are the bridge. Each trial for shooter A has both a finish position and a percentage:
 
@@ -998,59 +1205,42 @@ Trial 3: finished 18th, 82.1%
 ...
 ```
 
-These are jointly sampled — a trial where A finishes 18th also has a specific percentage that's consistent with finishing 18th in that simulated field. When we compute a δ_place (shifting finish positions), the MC samples let us observe what that shift implies for percentage.
+These are jointly sampled — a trial where A finishes 18th also has a specific percentage that's consistent with finishing 18th in that simulated field. However, the mapping from percentage to place (and vice versa) depends on the entire field's performance in each trial. We don't store the full N_shooters × N_trials matrix, so we can't do the cross-domain lookup directly.
 
-**Concrete example:** A's model expects ~26th. Place bets imply δ_place ≈ 6 positions (implied ~20th). We shift A's finish samples by 6. Now look at the percentage that goes with the shifted samples — the trials where the original finish was around 26th (now shifted to ~20th) had percentages around 74-76%. But the trials where the original finish was around 20th (now shifted to ~14th) had percentages around 80-82%. The shifted distribution's mean percentage is higher than the unshifted one. That implied percentage shift can be measured directly from the MC samples:
+What we *can* observe: after computing δ_place from place bets, the shifted finish distribution has a different mean position. The relationship between position and percentage is encoded in the MC samples — across all 10,000 trials, there's an empirical correlation between finish position and percentage. We can estimate the implied percentage shift from the position shift using this correlation.
+
+### Approximate Conversion via Empirical Slope
+
+Sort the MC trials by finish position. The empirical slope `Δpct/Δplace` around the model's expected finish gives the local conversion factor:
 
 ```
-mean_pct_unshifted = mean of all pctA_i
-mean_pct_shifted   = mean of pctA_i for trials where (finishA_i - δ_place) ≈ new expected finish
-
-implied_δ_pct ≈ mean_pct_shifted - mean_pct_unshifted
+slope ≈ (mean_pct_at_position(model_place - 1) - mean_pct_at_position(model_place + 1)) / 2
+implied_δ_pct ≈ δ_place × slope
 ```
 
-More precisely, since each MC trial is a complete snapshot of the match, shifting the finish position and reading off the percentage that corresponds to the new position gives us the cross-domain mapping for free.
+For a shooter expected at ~26th, if the samples show that moving from 27th to 25th corresponds to a ~1.5 percentage-point increase, then `slope ≈ 0.75 pct/position`, and a δ_place of 2 implies δ_pct ≈ 1.5.
 
-### A Rough Unified Flow
+This is approximate (the slope varies across the distribution, and we're using a linear approximation), but for the small δ values produced by bet evidence, the linear regime is sufficient.
 
-When generating odds for any market on shooter A:
-
-1. **Gather all bets on A** across all types (place, percentage, spread involving A).
-2. **Compute type-specific posteriors** — group bets by type, sum weights, compute posteriors within each type as before.
-3. **Convert to a common signal.** Use the MC joint distribution to translate each type's evidence into a shift in a common underlying quantity. The natural common quantity is **percentage** (or equivalently, the shooter's latent strength), since:
-   - Percentage bets give δ_pct directly.
-   - Place bets give δ_place, which implies a δ_pct via the MC joint distribution (shift the finish samples, observe the corresponding percentage shift).
-   - Spread bets give δ_spread for a pair, which implies a δ_pct for each shooter in the pair (though with some ambiguity about how to split the shift between A and B).
-4. **Combine the converted signals** into a single δ_pct for the shooter, e.g. via weighted average of the implied δ_pct from each type, weighted by total bet weight behind each.
-5. **Generate odds** for the requested market by applying the unified δ_pct (converted back to the target type's domain via the MC samples if needed).
-
-### Why Percentage as the Common Signal
-
-Percentage is the most natural common currency because:
-
-- It's a continuous, per-shooter quantity (unlike place, which is relative to the field and discrete).
-- It maps cleanly to strength — a better shooter has a higher expected percentage.
-- Spread is literally a difference of two percentages, so `δ_spread = δ_pct_A - δ_pct_B` falls out naturally (as described in the previous appendix).
-- Place can be derived from percentage given the field (a higher percentage implies a better place, with the mapping defined by the MC joint distribution of the full field).
-
-Place could also work as the common signal, but the discreteness and field-dependence make it slightly less clean. The choice may depend on implementation convenience.
-
-### Complexity and When It Matters
+### When It Matters
 
 Unified propagation is most valuable when:
 
-- A shooter has bets across multiple types (e.g. both place and percentage bets) — the evidence reinforces.
-- Spread bets exist alongside individual percentage bets on the involved shooters — the spread appendix case.
+- A shooter has bets across both place and percentage types — the evidence reinforces.
 - A shooter has many place bets but someone requests a percentage market (or vice versa).
+- Combined with spread decomposition, a shooter has place bets, percentage bets, and appears in spread bets — all three converge into a single δ_pct.
 
 It matters less when bets are sparse or concentrated in a single type, since there's nothing to propagate across.
 
+### Recommendation
+
+Start with separate δ_place and δ_pct (plus spread decomposition into δ_pct). The cross-type propagation is a refinement that can be added later if backtesting shows meaningful information loss from keeping the types independent. The empirical-slope conversion is cheap to compute but adds a layer of approximation; validate against known MC distributions before relying on it.
+
 ### Open Questions
 
-- **Mapping fidelity.** The place → percentage mapping via MC samples is approximate (the MC is a finite sample of the joint distribution). With 10,000 trials this is likely fine, but worth validating.
-- **Split ambiguity for spreads.** A spread bet on "A beats B by ≥5%" could mean A is better than expected, B is worse, or both. Without additional evidence, the simplest assumption is to split the shift equally (each gets half the δ_spread), but if individual percentage bets exist for one or both shooters, those can anchor the split.
-- **Computational cost.** Computing δ per type and then converting is cheap (MC sample lookups). The unified weighted average is O(1) on top of the per-type δ searches. So this adds negligible cost.
-- **Double-counting (same concern as spread appendix).** If someone places both a place bet and a percentage bet on the same shooter, both signals carry related information. Weighting the unified signal needs care to avoid overcounting. A conservative approach: use the *maximum* rather than the sum of implied δ_pct from different types, or discount secondary types by a factor < 1.
+- **Mapping fidelity.** The slope approximation is linear; the true relationship may be nonlinear, especially in the tails. With 10,000 trials this is likely fine for small δ, but worth validating.
+- **Double-counting.** If someone places both a place bet and a percentage bet on the same shooter, and unified propagation converts the place evidence into a percentage signal, the percentage δ would see both the direct percentage bet and the converted place signal. A conservative approach: discount the converted signal by a factor < 1 (e.g. 0.5×).
+- **Computational cost.** Computing the empirical slope is one pass over sorted MC samples: O(N). The unified conversion is O(1) on top of the per-type δ searches. Negligible cost.
 
 ---
 
