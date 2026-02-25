@@ -196,7 +196,9 @@ double calculateBetWeight({
 - **baseWeight = 10**: Moderate (recommended starting point)
 - **baseWeight = 20**: Aggressive (bets move odds quickly)
 
-## Step-by-Step Example
+## Step-by-Step Example (Conceptual)
+
+The following illustrates how bet weight updates a **single market's** posterior (α, β) and thus that market's implied probability. In the full pipeline we do not persist per-market state: we compute posteriors for every market that has bets, find the single δ that best fits them (see "Cross-Market Adjustment via Distribution Shift"), then evaluate any requested market under the shifted distribution. This example shows the same weight math that feeds into that process.
 
 ### Initial State
 
@@ -754,7 +756,7 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 
 | Parameter | Recommended | Conservative | Aggressive | Description |
 |-----------|-------------|--------------|------------|-------------|
-| **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets. Prefer setting via N_eff from rating history (see "Principled Setting of α and β"). |
+| **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Set via N_eff from rating history (see "Principled Setting of α and β"); higher N_eff = less movement from bets. Do not tune α+β directly. |
 | **N_eff Scale** | 15 | 20 | 10 | Multiplier on (log) history count when computing N_eff. Higher = stiffer prior for experienced shooters. |
 | **N_eff Log Scale** | true | true | true | Use `log(1 + history)` instead of raw history count. Gives diminishing returns from deep history. |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
@@ -831,13 +833,15 @@ Instead of single odds, offer a range:
 
 ## Appendix: Code Snippets
 
+Snippets below are illustrative. Production should store δ in the database (ShooterDelta) per "Caching δ Per Shooter"; the OddsGenerator snippet uses an in-memory map for brevity. For weight calculation, `player` is the wager's user (e.g. `wager.user.value`) and `matchDate` comes from the wager's match context (e.g. `wager.matchPrep.value?.date` or equivalent).
+
 ### Complete Weight Calculation
 
 ```dart
 double calculateBetWeight({
   required DbWager wager,
-  required PredictionGamePlayer player,
-  required DateTime matchDate,
+  required PredictionGamePlayer player,  // e.g. wager.user.value
+  required DateTime matchDate,             // from wager's match prep / game context
   required double baseWeight,
   required double lambda,
   int minBetsForSkill = 10,
@@ -872,13 +876,15 @@ double calculateBetWeight({
 
 ### Complete Odds Generation Function
 
+Conceptually; production should persist δ in ShooterDelta (DB) and invalidate by lastBetTimestamp as in "Caching δ Per Shooter."
+
 ```dart
 class OddsGenerator {
   /// MC samples per shooter, pre-sorted ascending.
   Map<String, List<double>> sortedFinishSamples = {};
   Map<String, List<double>> sortedPercentageSamples = {};
 
-  /// Cached δ per shooter. Invalidate when a new bet is accepted for that shooter.
+  /// Cached δ per shooter (illustrative; use DB ShooterDelta in production). Invalidate when a new bet is accepted for that shooter.
   Map<String, double> _cachedDelta = {};
 
   /// Generates adjusted odds for a requested market, incorporating all prior bets.
@@ -1192,7 +1198,7 @@ The δ optimizer for A finds a positive δ_A (A shifts upward). The δ optimizer
 ### Open Questions
 
 - **Split ambiguity.** The equal split (splitFactor = 0.5) assumes no knowledge of which shooter drives the spread. If individual percentage bets exist for one shooter, they anchor that shooter's δ, and the spread bet's contribution is additive. A more sophisticated split could use the relative uncertainty of the two shooters (the less-certain shooter gets more of the split), but this adds complexity for a small gain.
-- **Double-counting.** If someone bets both "A above 90%" and "A beats B by ≥10%", both contribute to A's δ_pct. The percentage bet directly; the spread bet via the virtual median market. This isn't exactly double-counting (the virtual market is at the median, not at 90%), but the two signals do carry correlated information. The splitFactor discount (0.5) provides some buffering.
+- **Double-counting.** If someone bets both "A above 90%" and "A beats B by ≥10%", both contribute to A's δ_pct. The percentage bet directly; the spread bet via the spread-derived virtual percentage market for A. This isn't exactly double-counting (the virtual market uses the spread-derived threshold, not 90%), but the two signals do carry correlated information. The splitFactor discount (0.5) provides some buffering.
 - **Correlation distortion.** Shifting A and B's marginals independently slightly distorts the joint distribution. The MC samples capture the true correlation (e.g., both do well on the same stages); shifting each marginal treats the shifts as independent. For small δ values this is negligible. For large shifts, the spread probability may be slightly miscalibrated — but the δ values from bet evidence will be small in practice (see "The Core Problem" on liquidity).
 
 ## Appendix: Unified Signal Propagation (Place ↔ Percentage)
