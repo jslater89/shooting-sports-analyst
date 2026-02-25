@@ -43,6 +43,9 @@ class MonteCarloIsolateServer {
       case ClearCommand():
         cache.clear();
         return AckResponse();
+      case PrintCacheStatsCommand():
+        cache.printStats();
+        return AckResponse();
     }
   }
 
@@ -90,6 +93,10 @@ class InvalidatePredictionSetsCommand extends MonteCarloIsolateServerCommand {
 
 class ClearCommand extends MonteCarloIsolateServerCommand {
   const ClearCommand();
+}
+
+class PrintCacheStatsCommand extends MonteCarloIsolateServerCommand {
+  const PrintCacheStatsCommand();
 }
 
 class AckResponse extends MonteCarloIsolateServerResponse {

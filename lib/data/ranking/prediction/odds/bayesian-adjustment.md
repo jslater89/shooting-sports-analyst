@@ -65,21 +65,27 @@ Beyond tuning α and β by trial and error, we can tie them to the model and dat
 Formula:
 
 ```
-N_eff = clamp(N_min, N_min + scale × history_count, N_max)
+N_eff = clamp(N_min, N_min + scale × log(1 + history_count), N_max)
 α = P × N_eff
 β = (1 − P) × N_eff
 ```
 
+The logarithmic scaling reflects diminishing marginal information from additional matches: the 5th match tells you much more about a shooter's ability than the 50th, and the 50th tells you much more than the 200th. Under linear scaling, a 200-match veteran would get a dramatically stiffer prior than a 50-match regular; under log scaling, the difference is modest (`log(201) − log(51) ≈ 1.37`), which better reflects the actual reduction in uncertainty.
+
+This also helps when a well-established shooter has an anomalous stretch (equipment change, injury). Under linear scaling, their deep history creates a near-immovable prior that sharp bettors can barely dent. Under log scaling, the prior is still informed but not a brick wall.
+
 - **N_min**: floor so the prior is never useless (e.g. 20).
 - **N_max**: cap so the prior is never rigid (e.g. 150).
-- **scale**: so that "typical" veterans yield N_eff in the 50–100 range (tune from backtests).
+- **scale**: controls how quickly N_eff grows with history. Tune so that "typical" veterans (30–60 matches) yield N_eff in the 50–100 range. With log scaling, scale values in the 10–25 range are reasonable (e.g. scale = 15: 30 matches → `15 × log(31) ≈ 51.5`, 60 matches → `15 × log(61) ≈ 61.6`).
+- **useLogScale**: whether to apply log scaling (default true). Can be toggled off for comparison during backtesting.
 
 Example (place market, one shooter):
 
 ```dart
 int? matchCount = shooterRating.matchCount;  // from ShooterRating
 double historyCount = (matchCount ?? 0).toDouble();
-double nEff = (nMin + scale * historyCount).clamp(nMin.toDouble(), nMax.toDouble());
+double scaledHistory = useLogScale ? log(1.0 + historyCount) : historyCount;
+double nEff = (nMin + scale * scaledHistory).clamp(nMin.toDouble(), nMax.toDouble());
 double alpha = modelP * nEff;
 double beta = (1.0 - modelP) * nEff;
 ```
@@ -646,6 +652,8 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 | Parameter | Recommended | Conservative | Aggressive | Description |
 |-----------|-------------|--------------|------------|-------------|
 | **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Higher = less movement from bets. Prefer setting via N_eff from rating history (see "Principled Setting of α and β"). |
+| **N_eff Scale** | 15 | 20 | 10 | Multiplier on (log) history count when computing N_eff. Higher = stiffer prior for experienced shooters. |
+| **N_eff Log Scale** | true | true | true | Use `log(1 + history)` instead of raw history count. Gives diminishing returns from deep history. |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
 | **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
 | **Max Logit Shift** | 1.0 | 0.5 | 1.5 | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement." |

@@ -113,6 +113,14 @@ class MonteCarloIsolateClient implements IMonteCarloCache {
     }
   }
 
+  @override
+  Future<void> printStats() async {
+    await isolateManagerClient.sendCommand<PrintCacheStatsCommand, MonteCarloIsolateServerResponse>(
+      isolateId: MonteCarloIsolateServer.id,
+      command: PrintCacheStatsCommand()
+    );
+  }
+
   static Future<MonteCarloIsolateClient> startOnCurrentIsolate(IsolateStartData startData, {
     bool mainIsolate = true,
     bool failOnDuplicateRegistration = true,

@@ -59,6 +59,11 @@ class MonteCarloCache implements IMonteCarloCache {
   Future<void> clear() async {
     return _delegate?.clear();
   }
+
+  @override
+  Future<void> printStats() async {
+    return _delegate?.printStats();
+  }
 }
 
 abstract interface class IMonteCarloCache {
@@ -69,4 +74,5 @@ abstract interface class IMonteCarloCache {
   Future<void> invalidatePredictionSet(int predictionSetId);
   Future<void> invalidateMatchPrep(MatchPrep matchPrep);
   Future<void> clear();
+  Future<void> printStats();
 }

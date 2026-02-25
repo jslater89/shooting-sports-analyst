@@ -29,6 +29,8 @@ abstract interface class RatingCache {
   void invalidateProject(int projectId);
   /// Clears all cached entries.
   void clear();
+  /// Prints statistics about the cache.
+  void printStats();
 
   static RatingCache? _instance;
 

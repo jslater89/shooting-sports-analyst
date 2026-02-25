@@ -2,7 +2,10 @@
 import 'package:shooting_sports_analyst/data/cache/lru_tracker.dart';
 import 'package:shooting_sports_analyst/data/cache/ratings/rating_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MemoryRatingCache");
 
 /// In-process rating cache used for single-isolate execution.
 ///
@@ -10,6 +13,8 @@ import 'package:shooting_sports_analyst/util.dart';
 /// `projectId -> group -> memberNumber -> rating`.
 ///
 /// This cache is not isolate-safe because each isolate has its own memory.
+/// Since we're storing DbShooterRating objects, however, we can't use a single
+/// isolate cache because they're not serializable (IsarLinks contain raw pointers).
 class MemoryRatingCache implements RatingCache {
   MemoryRatingCache() : this.lru = null;
   MemoryRatingCache.withLru(this.lru);
@@ -91,6 +96,15 @@ class MemoryRatingCache implements RatingCache {
       lru!.clear();
     }
     _cache.clear();
+  }
+
+  @override
+  void printStats() {
+    _log.i("cache size: ${_cache.length}");
+    if(lru != null) {
+      _log.i("lru load factor: ${(lru!.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
+      _log.i("lru size: ${lru!.length}");
+    }
   }
 }
 

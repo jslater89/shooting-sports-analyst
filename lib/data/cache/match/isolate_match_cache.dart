@@ -124,6 +124,13 @@ class IsolateMatchCacheClient implements MatchCache {
     );
   }
 
+  Future<void> printStats() async {
+    await isolateManagerClient.sendCommand<_PrintCacheStatsCommand, _IsolateMatchCacheServerResponse>(
+      isolateId: IsolateMatchCacheServer.id,
+      command: _PrintCacheStatsCommand()
+    );
+  }
+
   static Future<IsolateMatchCacheClient> startOnCurrentIsolate(IsolateStartData startData, {
     bool mainIsolate = true,
     bool failOnDuplicateRegistration = true,
@@ -223,6 +230,10 @@ class IsolateMatchCacheServer {
         else {
           return _ErrorResponse(message: result.unwrapErr().message);
         }
+
+      case _PrintCacheStatsCommand():
+        cache.printStats();
+        return _AckResponse();
     }
   }
 
@@ -304,6 +315,10 @@ class _GetBySourceIdCommand extends _IsolateMatchCacheServerCommand {
   final DateTime? sourceLastUpdated;
 
   const _GetBySourceIdCommand({required this.sourceId, this.sourceLastUpdated});
+}
+
+class _PrintCacheStatsCommand extends _IsolateMatchCacheServerCommand {
+  const _PrintCacheStatsCommand();
 }
 
 /// A response from the match cache server isolate to a client isolate.

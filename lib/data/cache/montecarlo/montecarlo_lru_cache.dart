@@ -2,6 +2,10 @@ import 'package:shooting_sports_analyst/data/cache/lru_tracker.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MonteCarloSimulationCache");
 
 /// A cache for Monte Carlo prediction probability simulation results.
 ///
@@ -87,5 +91,11 @@ class MonteCarloSimulationCache {
   void _evictFromLruKey(MonteCarloSimulationLruKey? key) {
     if(key == null) return;
     _cache.remove(key);
+  }
+
+  void printStats() {
+    _log.i("cache size: ${_cache.length}");
+    _log.i("lru load factor: ${(_lru.length / _lru.capacity).asPercentage(decimals: 1, includePercent: true)}");
+    _log.i("lru size: ${_lru.length}");
   }
 }

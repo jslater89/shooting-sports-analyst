@@ -8,7 +8,10 @@ import "package:shooting_sports_analyst/data/cache/lru_tracker.dart";
 import "package:shooting_sports_analyst/data/cache/match/match_cache.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
+import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/util.dart";
+
+final _log = SSALogger("HydratedMatchCache");
 
 class HydratedMatchCache implements MatchCache {
   static HydratedMatchCache? _instance;
@@ -30,6 +33,14 @@ class HydratedMatchCache implements MatchCache {
   final Map<int, ShootingMatch> _cache = {};
   final Map<int, DateTime?> _matchUpdatedAt = {};
   final Map<String, ShootingMatch> _sourceIdCache = {};
+
+  void printStats() {
+    _log.i("cache size: ${_cache.length}");
+    if(lru != null) {
+      _log.i("lru load factor: ${(lru!.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
+      _log.i("lru size: ${lru!.length}");
+    }
+  }
 
   @override
   bool ready() => true;
