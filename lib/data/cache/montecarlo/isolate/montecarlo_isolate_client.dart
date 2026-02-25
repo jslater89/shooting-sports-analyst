@@ -36,7 +36,7 @@ class MonteCarloIsolateClient implements IMonteCarloCache {
     _readyCompleter.complete(true);
   }
 
-  Future<bool> get clientReady => _readyCompleter.future;
+  Future<bool> get ready => _readyCompleter.future;
   final Completer<bool> _readyCompleter = Completer();
 
   final IsolateManagerClient isolateManagerClient;
@@ -115,10 +115,26 @@ class MonteCarloIsolateClient implements IMonteCarloCache {
 
   @override
   Future<void> printStats() async {
-    await isolateManagerClient.sendCommand<PrintCacheStatsCommand, MonteCarloIsolateServerResponse>(
+    final response = await isolateManagerClient.sendCommand<PrintCacheStatsCommand, MonteCarloIsolateServerResponse>(
       isolateId: MonteCarloIsolateServer.id,
       command: PrintCacheStatsCommand()
     );
+
+    if(response == null) {
+      _log.e("No response from server isolate");
+      return;
+    }
+    final data = response.data;
+    if(data is AckResponse) {
+      return;
+    }
+    else if(data is ErrorResponse) {
+      _log.e("Error response from server isolate: ${data.message}");
+      return;
+    }
+    else {
+      _log.e("Invalid response from server isolate: ${data.runtimeType}");
+    }
   }
 
   static Future<MonteCarloIsolateClient> startOnCurrentIsolate(IsolateStartData startData, {
@@ -131,7 +147,7 @@ class MonteCarloIsolateClient implements IMonteCarloCache {
       failOnDuplicateRegistration: failOnDuplicateRegistration,
     );
     var client = MonteCarloIsolateClient(managerClient);
-    await client.clientReady;
+    await client.ready;
     return client;
   }
 }

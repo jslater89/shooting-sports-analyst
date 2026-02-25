@@ -75,61 +75,66 @@ class ServerIsolateHelper<C, R> {
   Future<void> Function(dynamic message)? _listener;
 
   void _listen(dynamic message) async {
-    if(message is! IsolateManagerMessage) {
-      _log.e("Invalid message type: ${message.runtimeType}");
-      throw Exception("Invalid message type: ${message.runtimeType}");
-    }
-
-    if(verboseLogging) {
-      _log.i("${message.runtimeType}: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
-    }
-    if(message is IsolateRegistrationResponse) {
-      _log.i("Registered with manager isolate");
-      // Servers only receive messages from the manager isolate, but
-      // just in case that pattern changes...
-      _clientSendPorts[IsolateManagerServer.id] = message.sendPort;
-      _registeredCompleter.complete(true);
-    }
-    else if(message is IsolateConnectionRequest) {
-      _log.i("Connected to client isolate ${message.sourceIsolateId}");
-      _clientSendPorts[message.sourceIsolateId] = message.sendPort;
-      _clientSendPorts[message.sourceIsolateId]!.send(
-        IsolateConnectionResponse(
-          id: message.id,
-          sourceIsolateId: isolateId,
-          destinationIsolateId: message.sourceIsolateId,
-          sendPort: _receivePort.sendPort,
-        )
-      );
-    }
-    else if(message is ClientCommand<C>) {
-      var response = await commandHandler(message.data);
-      _clientSendPorts[message.sourceIsolateId]!.send(
-        ServerResponse<R>(
-          id: message.id,
-          sourceIsolateId: isolateId,
-          destinationIsolateId: message.sourceIsolateId,
-          data: response,
-        )
-      );
-    }
-    else if(message is ClientCommand) {
-      _log.w("Received incorrect client command type: ${message.runtimeType}");
-      _log.i("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
-      _clientSendPorts[message.sourceIsolateId]!.send(null);
-    }
-    else if(message is ServerResponse || message is IsolateConnectionResponse) {
-      // A client on the same isolate as this sent a message and got a response, which
-      // we should forward to the client manager.
-      if(IsolateCommon.verboseLogging) {
-        _log.v("(fwd) ${message.sourceIsolateId} -> ${message.destinationIsolateId}: ${message.runtimeType} (${message.id})");
+    try {
+      if(message is! IsolateManagerMessage) {
+        _log.e("Invalid message type: ${message.runtimeType}");
+        throw Exception("Invalid message type: ${message.runtimeType}");
       }
-      IsolateManagerClient.instance?.handleMessage(message);
+
+      if(verboseLogging) {
+        _log.i("${message.runtimeType}: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
+      }
+      if(message is IsolateRegistrationResponse) {
+        _log.i("Registered with manager isolate");
+        // Servers only receive messages from the manager isolate, but
+        // just in case that pattern changes...
+        _clientSendPorts[IsolateManagerServer.id] = message.sendPort;
+        _registeredCompleter.complete(true);
+      }
+      else if(message is IsolateConnectionRequest) {
+        _log.i("Connected to client isolate ${message.sourceIsolateId}");
+        _clientSendPorts[message.sourceIsolateId] = message.sendPort;
+        _clientSendPorts[message.sourceIsolateId]!.send(
+          IsolateConnectionResponse(
+            id: message.id,
+            sourceIsolateId: isolateId,
+            destinationIsolateId: message.sourceIsolateId,
+            sendPort: _receivePort.sendPort,
+          )
+        );
+      }
+      else if(message is ClientCommand<C>) {
+        var response = await commandHandler(message.data);
+        _clientSendPorts[message.sourceIsolateId]!.send(
+          ServerResponse<R>(
+            id: message.id,
+            sourceIsolateId: isolateId,
+            destinationIsolateId: message.sourceIsolateId,
+            data: response,
+          )
+        );
+      }
+      else if(message is ClientCommand) {
+        _log.w("Received incorrect client command type: ${message.runtimeType}");
+        _log.i("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
+        _clientSendPorts[message.sourceIsolateId]!.send(null);
+      }
+      else if(message is ServerResponse || message is IsolateConnectionResponse) {
+        // A client on the same isolate as this sent a message and got a response, which
+        // we should forward to the client manager.
+        if(IsolateCommon.verboseLogging) {
+          _log.v("(fwd) ${message.sourceIsolateId} -> ${message.destinationIsolateId}: ${message.runtimeType} (${message.id})");
+        }
+        IsolateManagerClient.instance?.handleMessage(message);
+      }
+      else {
+        _log.w("Received unexpected message from client isolate: ${message.runtimeType}");
+        _log.i("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
+        _clientSendPorts[message.sourceIsolateId]!.send(null);
+      }
     }
-    else {
-      _log.w("Received unexpected message from client isolate: ${message.runtimeType}");
-      _log.i("IsolateMessage: ${message.sourceIsolateId} -> ${message.destinationIsolateId}");
-      _clientSendPorts[message.sourceIsolateId]!.send(null);
+    catch(e, st) {
+      _log.e("Unexpected error in _listen", error: e, stackTrace: st);
     }
   }
 

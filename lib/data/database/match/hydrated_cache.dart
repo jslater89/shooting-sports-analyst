@@ -35,10 +35,11 @@ class HydratedMatchCache implements MatchCache {
   final Map<String, ShootingMatch> _sourceIdCache = {};
 
   void printStats() {
-    _log.i("cache size: ${_cache.length}");
     if(lru != null) {
-      _log.i("lru load factor: ${(lru!.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
-      _log.i("lru size: ${lru!.length}");
+      _log.i("cache entries/size/load factor: ${_cache.length}/${lru!.capacity}/${(_cache.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
+    }
+    else {
+      _log.i("cache size: ${_cache.length}");
     }
   }
 

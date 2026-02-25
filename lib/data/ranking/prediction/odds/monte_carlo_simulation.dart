@@ -35,8 +35,11 @@ MonteCarloSimulationResult runOddsSimulation({
   List<double> percentages = [];
   List<int> places = [];
   for(var i = 0; i < trials; i++) {
+    // A multiplier for expected score to account for a disaster (DQ, gun breaking, squib stage, etc.).
+    // Random number between 0 and 0.5, used to multiply the output expected score.
+    var disasterMagnitude = 1.0;
     if(actualRandom.nextDouble() < disasterChance) {
-      continue;
+      disasterMagnitude = actualRandom.nextDouble() * 0.50;
     }
 
     // Generate a random expected score for this shooter using a normal distribution
@@ -46,7 +49,7 @@ MonteCarloSimulationResult runOddsSimulation({
     var finalSigma = shooterPrediction.oneSigma * placeSigmaMultiplier;
     var actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
     var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
-    var shooterExpectedScore = actualMean + finalSigma * z;
+    var shooterExpectedScore = actualMean + finalSigma * z * disasterMagnitude;
 
     // Generate random expected scores for all other shooters
     var otherExpectedScores = <double>[];
@@ -73,30 +76,29 @@ MonteCarloSimulationResult runOddsSimulation({
         worstRating = otherPred.shooter.rating;
         minimumRatingScore = otherExpectedScore;
       }
-
-      double shooterRatio;
-
-      // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
-      if(shooterPrediction.algorithm.predictionsOutputRatios) {
-        shooterExpectedScore = shooterExpectedScore / bestExpectedScore;
-        minimumRatingScore = minimumRatingScore / bestExpectedScore;
-        bestExpectedScore = 1.0;
-      }
-
-      if(shooterPrediction.algorithm.supportsRatioFloor) {
-        var ratingDelta = bestRating - worstRating;
-        var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
-        var ratioMultiplier = 1.0 - ratioFloor;
-        shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
-      }
-      else if(shooterPrediction.algorithm.predictionsOutputRatios) {
-        shooterRatio = shooterExpectedScore;
-      }
-      else {
-        throw UnsupportedError("Rating system ${shooterPrediction.algorithm} cannot generate percentage predictions");
-      }
-      percentages.add(shooterRatio);
     }
+    double shooterRatio;
+
+    // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
+    if(shooterPrediction.algorithm.predictionsOutputRatios) {
+      shooterExpectedScore = shooterExpectedScore / bestExpectedScore;
+      minimumRatingScore = minimumRatingScore / bestExpectedScore;
+      bestExpectedScore = 1.0;
+    }
+
+    if(shooterPrediction.algorithm.supportsRatioFloor) {
+      var ratingDelta = bestRating - worstRating;
+      var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
+      var ratioMultiplier = 1.0 - ratioFloor;
+      shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+    }
+    else if(shooterPrediction.algorithm.predictionsOutputRatios) {
+      shooterRatio = shooterExpectedScore;
+    }
+    else {
+      throw UnsupportedError("Rating system ${shooterPrediction.algorithm} cannot generate percentage predictions");
+    }
+    percentages.add(shooterRatio);
 
     // Count how many shooters have higher expected scores (higher score = better placement)
     var betterCount = otherExpectedScores.where((score) => score > shooterExpectedScore).length;

@@ -94,8 +94,6 @@ class MonteCarloSimulationCache {
   }
 
   void printStats() {
-    _log.i("cache size: ${_cache.length}");
-    _log.i("lru load factor: ${(_lru.length / _lru.capacity).asPercentage(decimals: 1, includePercent: true)}");
-    _log.i("lru size: ${_lru.length}");
+    _log.i("cache entries/size/load factor: ${_cache.length}/${_lru.capacity}/${(_lru.length / _lru.capacity).asPercentage(decimals: 1, includePercent: true)}");
   }
 }

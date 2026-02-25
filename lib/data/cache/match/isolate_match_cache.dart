@@ -159,7 +159,7 @@ class IsolateMatchCacheServer {
   late final HydratedMatchCache cache;
 
   IsolateMatchCacheServer({
-    required this.receivePort
+    required this.receivePort,
   }) {
     serverHelper = ServerIsolateHelper(isolateId: id, commandHandler: _commandHandler);
     final matchLruSizeString = Platform.environment[matchLruSizeEnv] ?? "";

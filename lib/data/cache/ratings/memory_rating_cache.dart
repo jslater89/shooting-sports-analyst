@@ -17,7 +17,11 @@ final _log = SSALogger("MemoryRatingCache");
 /// isolate cache because they're not serializable (IsarLinks contain raw pointers).
 class MemoryRatingCache implements RatingCache {
   MemoryRatingCache() : this.lru = null;
-  MemoryRatingCache.withLru(this.lru);
+  MemoryRatingCache.withLru(this.lru) {
+    if(lru != null) {
+      _log.i("Using LRU rating cache with size ${lru!.capacity}");
+    }
+  }
   final LruTracker<MemoryRatingCacheLruKey>? lru;
 
   final Map<int, Map<RatingGroup, Map<String, DbShooterRating>>> _cache = {};
@@ -100,10 +104,11 @@ class MemoryRatingCache implements RatingCache {
 
   @override
   void printStats() {
-    _log.i("cache size: ${_cache.length}");
     if(lru != null) {
-      _log.i("lru load factor: ${(lru!.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
-      _log.i("lru size: ${lru!.length}");
+      _log.i("cache entries/size/load factor: ${_cache.length}/${lru!.capacity}/${(_cache.length / lru!.capacity).asPercentage(decimals: 1, includePercent: true)}");
+    }
+    else {
+      _log.i("cache size: ${_cache.length}");
     }
   }
 }

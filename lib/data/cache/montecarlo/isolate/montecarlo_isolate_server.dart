@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'dart:isolate';
 
+import 'package:shooting_sports_analyst/data/cache/constants.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_common.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_messages.dart';
 import 'package:shooting_sports_analyst/server/isolate/isolate_server_helper.dart';
+
+final _log = SSALogger("MonteCarloIsolateServer");
 
 /// A server isolate that wraps a [MonteCarloSimulationCache] and provides an isolate server interface for it.
 ///
@@ -15,16 +19,17 @@ class MonteCarloIsolateServer {
   static const id = "montecarlo-cache";
   final ReceivePort receivePort;
   late final ServerIsolateHelper<MonteCarloIsolateServerCommand, MonteCarloIsolateServerResponse> serverHelper;
-  final db = AnalystDatabase();
 
   late final MonteCarloSimulationCache cache;
 
   MonteCarloIsolateServer({
     required this.receivePort,
-    int capacity = 1000,
   }) {
+    final monteCarloLruSizeString = Platform.environment[monteCarloLruSizeEnv] ?? "";
+    final monteCarloLruSize = int.tryParse(monteCarloLruSizeString);
     serverHelper = ServerIsolateHelper(isolateId: id, commandHandler: _commandHandler);
-    cache = MonteCarloSimulationCache(capacity: capacity);
+    cache = MonteCarloSimulationCache(capacity: monteCarloLruSize ?? 1000);
+    _log.i("Using LRU monte carlo cache with size ${monteCarloLruSize ?? 1000}");
   }
 
   Future<MonteCarloIsolateServerResponse> _commandHandler(MonteCarloIsolateServerCommand command) async {

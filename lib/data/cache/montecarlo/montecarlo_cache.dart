@@ -26,8 +26,8 @@ class MonteCarloCache implements IMonteCarloCache {
   }
 
   @override
-  Future<void> cache(MonteCarloSimulationLruKey key, MonteCarloSimulationResult entry) async {
-    return _delegate?.cache(key, entry);
+  Future<void> cache(MonteCarloSimulationLruKey key, MonteCarloSimulationResult entry, {List<MonteCarloSimulationLruKey> additionalKeys = const []}) async {
+    return _delegate?.cache(key, entry, additionalKeys: additionalKeys);
   }
 
   @override
@@ -67,7 +67,7 @@ class MonteCarloCache implements IMonteCarloCache {
 }
 
 abstract interface class IMonteCarloCache {
-  Future<void> cache(MonteCarloSimulationLruKey key, MonteCarloSimulationResult entry);
+  Future<void> cache(MonteCarloSimulationLruKey key, MonteCarloSimulationResult entry, {List<MonteCarloSimulationLruKey> additionalKeys = const []});
   Future<MonteCarloSimulationResult?> lookup(MonteCarloSimulationLruKey key, {List<MonteCarloSimulationLruKey> additionalKeys = const []});
   Future<void> invalidate(MonteCarloSimulationLruKey key, {List<MonteCarloSimulationLruKey> additionalKeys = const []});
   Future<void> invalidatePredictionSets(List<int> predictionSetIds);
