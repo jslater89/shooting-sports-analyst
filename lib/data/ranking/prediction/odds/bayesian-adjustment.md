@@ -13,7 +13,14 @@ In traditional sports betting, odds follow the money through simple supply/deman
 - **No exact market matching**: "Max Michel 1st-3rd" vs "Max Michel 1st-5th" are similar but distinct
 - **Information signals**: Each bet carries information about the true probability
 
-**Solution**: Use Bayesian updating to treat each bet as evidence that updates our probability estimates in a principled way.
+**Solution**: Use Bayesian updating to treat each bet as evidence that updates our probability estimates in a principled way. When generating odds for a new prediction, the system:
+
+1. **Gathers related markets.** Find all previously accepted bets on the same shooter and market type (place or percentage). Spread bets are decomposed into percentage signals for each involved shooter.
+2. **Computes a posterior for each market.** Each bet has a weight (based on conviction, bettor skill, and timing). For a given market, the sum of all bet weights acts as pseudo-observations in a Beta distribution update: the prior α comes from the Monte Carlo model probability × an effective sample size (N_eff), and the cumulative bet weight is added to α, pulling the posterior probability upward. Heavier total weight on a market (more bets, sharper bettors, larger wagers, closer to match day) moves the posterior further from the model.
+3. **Finds a distribution shift (δ).** Search for the single δ that, when applied to all Monte Carlo trial results for this shooter, best fits the posteriors across all related markets simultaneously (weighted least squares). This δ represents "bets say this shooter is about δ units better/worse than the model thinks," where 'units' are places or percentage points, depending on market type.
+4. **Evaluates the requested prediction under the shifted distribution.** Shift every MC sample by δ, count how many satisfy the requested market's predicate, and derive the adjusted probability. Apply the house edge to produce final odds.
+
+A bet on one market (e.g. "1st-10th") naturally moves the odds for every related market (e.g. "1st-5th", "12th-16th") — correctly, with the right magnitude and direction — because they all share the same δ.
 
 ## Mathematical Foundation
 
