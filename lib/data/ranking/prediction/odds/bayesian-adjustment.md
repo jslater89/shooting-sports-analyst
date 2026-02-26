@@ -123,6 +123,8 @@ For single-sided markets (only betting "for" outcomes):
 β_new = β_old
 ```
 
+All markets in the prediction game are 'for': while a prediction of 15th-last is technically a bet against the subject finishing 1st-14th, it is phrased as a positive prediction rather than a negative one, so we still adjust α.
+
 ## Bet Weighting Function
 
 Not all bets carry equal information. The weight depends on:
@@ -137,11 +139,13 @@ conviction_weight = bet_amount / player_bankroll
 
 **Range**: Typically 0.01 to 0.20 (1% to 20% of bankroll)
 
+'Bankroll' is not always the correct measure. In some cases, players' wager amounts are limited by other factors (like membership tier or perhaps a future cap on wager size far from an event). In those cases, the correct conviction signal is bet amount divided by wager cap.
+
 ### 2. Player Skill Multiplier
 
 ```
-player_accuracy = won_bets / total_resolved_bets
-expected_accuracy = 0.50  // baseline for random player
+player_accuracy = average_probability_of_correct_predictions
+expected_accuracy = probability_of_average_odds
 skill_multiplier = player_accuracy / expected_accuracy
 ```
 
@@ -152,6 +156,8 @@ skill_multiplier = player_accuracy / expected_accuracy
 
 **Minimum sample size**: Require at least 10 resolved bets before applying skill adjustment.
 
+Naively counting successes vs. 50-50 overweights predictions from someone who wins 80% bets at an 80% rate, and underweights predictions from someone who wins 10% bets at a 20% rate—the latter should be the stronger signal.
+
 ### 3. Time Decay
 
 ```
@@ -160,11 +166,11 @@ time_decay = exp(-λ × days_until_match)
 ```
 
 Where λ (lambda) controls decay rate. Suggested values:
-- **λ = 0.05**: Slow decay (30 days out = 22% weight)
-- **λ = 0.10**: Medium decay (30 days out = 5% weight)
-- **λ = 0.15**: Fast decay (30 days out = 1% weight)
+- **λ = 0.01**: Slow decay (30 days out = 75% weight)
+- **λ = 0.02**: Moderate decay (30 days out = 54% weight)
+- **λ = 0.05**: Fast decay (30 days out = 22% weight)
 
-**Rationale**: Bets placed closer to the match incorporate more recent information (form, injuries, practice scores).
+**Rationale**: Bets placed closer to the match incorporate more recent information.
 
 ### 4. Combined Weight
 
@@ -198,7 +204,7 @@ double calculateBetWeight({
 
 ## Step-by-Step Example (Conceptual)
 
-The following illustrates how bet weight updates a **single market's** posterior (α, β) and thus that market's implied probability. In the full pipeline we do not persist per-market state: we compute posteriors for every market that has bets, find the single δ that best fits them (see "Cross-Market Adjustment via Distribution Shift"), then evaluate any requested market under the shifted distribution. This example shows the same weight math that feeds into that process.
+The following illustrates how bet weight updates a **single market's** posterior (α, β) and thus that market's implied probability. In the full pipeline we do not persist per-market state: we compute posteriors for every market that has bets, find the single δ that best fits them (see "Cross-Market Adjustment via Distribution Shift"), then evaluate any requested market under the shifted distribution. This example shows the same weight math that feeds into that process, but since the combinatorics of the prediction game mean we will rarely have substantial action in the same market, the odds adjustment is a toy example of the concept rather than a final product.
 
 ### Initial State
 
@@ -277,16 +283,16 @@ The sharp player's late, large bet moved the line by 7 moneyline points.
 
 ### The Problem
 
-Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th. When generating odds for any market, we need to incorporate evidence from all previous bets on the same shooter.
+Player bets on "Max Michel 1st-3rd" but there's also a market for "Max Michel 1st-5th". These are related: if money suggests Max is more likely to finish 1st-3rd, he's probably also more likely to finish 1st-5th. When generating odds for any market, we need to incorporate evidence from all compatible previous bets on the same shooter. Compatible, at present, means either place, or percentage and spread. See the appendices for thoughts on unifying place and percentage.
 
 ### Architectural Model: Compute on Demand
 
-We do **not** maintain persistent per-market states that are mutated as bets arrive. Instead, odds for any market are computed fresh from the raw bet history when needed. Accepted bets are never retroactively repriced — each bet is locked at the odds displayed at the time it was placed. But every accepted bet becomes evidence that shifts the line for all **future** odds generation, including for the same market (standard line movement).
+We do **not** maintain persistent per-market states that are mutated as bets arrive. Instead, odds for any market are computed fresh from the raw bet history when needed. Accepted bets are never retroactively repriced — each bet is locked at the odds displayed at the time it was placed. But every accepted bet becomes evidence that shifts the line for all **future** odds generation involving its subject.
 
 The flow when generating odds for a market:
 
-1. Start with the MC model distribution for the shooter.
-2. Gather all previously accepted bets on any market for the same subject.
+1. Start with the MC model distribution for the shooter against the current field.
+2. Gather all previously accepted bets on any compatible market for the same subject.
 3. Compute the cumulative implied distribution shift (δ) from those bets.
 4. Evaluate P(requested market) under the shifted distribution.
 5. Apply house edge → display odds.
@@ -295,10 +301,7 @@ If the bettor accepts, their bet joins the evidence pool for all future odds.
 
 ### Market Linking: Same Subject
 
-We do **not** need a continuous similarity function to decide *whether* to consider a bet. Same subject is sufficient:
-
-- **Place or percentage on one shooter:** same shooter (e.g. same `memberNumber`) links all that shooter's bets.
-- **Spread:** same two shooters (target + underdog) link spread bets.
+We do **not** need a continuous similarity function to decide *whether* to consider a bet. Same subject is sufficient. This is trivial in the case of single-competitor markets. We create virtual percentage markets for spread predictions: a spread implies that competitors will finish either above or below their modeled individual percentages, based on their initial modeled separation and the size of the spread.
 
 ### The Key Insight
 
@@ -312,14 +315,14 @@ Since the Monte Carlo simulation data is available during odds generation, we ca
 
 ### Computing the Cumulative Distribution Shift (δ)
 
-The Monte Carlo simulation produces N samples (e.g. 10,000) for each shooter. For a place market, each sample is a finish position:
+The Monte Carlo simulation produces N samples (e.g. 10,000) for each shooter. Each sample is a place and percentage finish against the field:
 
 ```
-Trial 1: finished 23rd
-Trial 2: finished 31st
-Trial 3: finished 18th
+Trial 1: finished 23rd at 81%
+Trial 2: finished 31st at 74%
+Trial 3: finished 18th at 86%
 ...
-Trial 10000: finished 27th
+Trial 10000: finished 27th at 79%
 ```
 
 The model probability for any prediction is just a count: `P_model(1st-10th) = (trials finishing 1st-10th) / 10000`.
@@ -329,11 +332,18 @@ We model the cumulative bet evidence as a **location shift**: slide every sample
 ```
 shifted_finish(trial_i) = original_finish(trial_i) - δ    // for place (lower = better)
 shifted_pct(trial_i)    = original_pct(trial_i) + δ       // for percentage (higher = better)
+
+// note that δ is in units of 'places better or worse' for place predictions and 'percentage points
+// better or worse' for percentage and spread predictions.
 ```
 
-Prior bets for a shooter will typically span multiple distinct markets (the combinatorial space of place ranges, percentage thresholds, and spreads is large enough that exact duplicates are rare). Each market's cumulative posterior implies a shift. We find the single δ that best fits all posteriors simultaneously, via weighted least squares:
+Prior bets for a shooter will typically span multiple distinct markets (the combinatorial space of place ranges, percentage thresholds, and spreads is large enough that exact duplicates are rare). Each market's cumulative posterior implies a shift. We find the single δ that best fits all compatible posteriors simultaneously, via weighted least squares:
 
 ```
+// The below is expressed in terms of markets where each market might be several bets of
+// different weights on the same predicate. The math works equivalently if we consider
+// each bet individually, i.e. weight(B) for one bet instead of totalWeight(M) as the
+// sum of bet weights.
 For each market M that has bets:
   totalWeight(M) = Σ weight_i for all bets on M
   modelAlpha(M)  = P_model(M) × N_eff
@@ -461,11 +471,11 @@ Both posteriors point toward better finishes, so they're consistent.
 
 Key observations:
 
-- **Line movement works naturally.** A new bettor asking for odds on 1st-10th or 1st-5th sees updated probabilities. Their bets were the evidence that moved the line.
+- **Line movement works naturally.** A new bettor asking for odds on 1st-10th or 1st-5th sees updated probabilities. Prior bets were the evidence that moved the line.
 - **Direction is automatic.** Markets on the "better" side of the model center get positive shifts; markets on the "worse" side get negative. No direction heuristic needed.
-- **Strength has the right shape.** The largest positive change is at 20th-25th — just on the "better" side of the model mode, where the PDF is densest. The bet targets (1st-10th, 1st-5th), despite having the direct evidence, have smaller absolute changes because the tail is thin.
+- **Strength has the right shape.** The largest positive change is at 20th-25th — just on the "better" side of the model mode, where the PDF is densest. The bet targets (1st-10th, 1st-5th), despite having the direct evidence, have smaller absolute changes because the tail is thin (although the probabilites change more in relative terms).
 - **Disjoint-but-same-side works correctly.** 12th-16th has no overlap with either bet range, but still gets a positive shift because the distribution shift moves mass into that range.
-- **Works for any distribution shape.** Skewed, multimodal, heavy-tailed — the MC samples represent the actual distribution.
+- **Works for any distribution shape.** Skewed, multimodal, heavy-tailed — the MC samples represent the actual distribution. The only caveat is that bets cannot add uncertainty or width; those come from the model and are not affected by the shift.
 
 ### Worked Example: Percentage Markets
 
@@ -572,47 +582,13 @@ The linear clamp over-restricts long shots and over-permits near-certainties.
 
 ### Exposure Limits
 
-Track total exposure and throttle odds movement when at risk:
+In a real-money context, the house would need to track total exposure (sum of potential payouts minus wager amounts across all open wagers) and throttle odds movement when exposure grows large relative to the house's bankroll. This would work by computing an exposure multiplier that scales down bet weights as exposure increases, making it harder for new bets to move the line when the house is already heavily exposed. The multiplier would apply to `baseWeight` in the bet weighting function.
 
-```dart
-class ExposureManager {
-  double calculateExposure(List<DbWager> openWagers) {
-    double totalExposure = 0.0;
-
-    for (var wager in openWagers) {
-      double potentialPayout = wager.payout();
-      double exposure = potentialPayout - wager.amount;
-      totalExposure += exposure;
-    }
-
-    return totalExposure;
-  }
-
-  double getExposureMultiplier(double exposure, double houseBalance) {
-    double exposureRatio = exposure / houseBalance;
-
-    // No throttling under 10% exposure
-    if (exposureRatio < 0.10) return 1.0;
-
-    // Linear throttling from 10% to 50% exposure
-    if (exposureRatio < 0.50) {
-      return 1.0 - (exposureRatio - 0.10) * 2.0;  // 1.0 down to 0.2
-    }
-
-    // Heavy throttling above 50%
-    return 0.2;
-  }
-}
-```
-
-Apply to bet weight:
-```dart
-double adjustedWeight = baseWeight * exposureMultiplier;
-```
+In our play-money prediction game, this is unnecessary — the house has an effectively unlimited bank, and there is no real financial risk to manage. If a real-money mode were ever added, exposure limits would become important to prevent the house from taking on unbounded liability.
 
 ### Decay Over Time
 
-The bet weighting function already includes time decay (bets placed further from the match get lower weight). In the compute-on-demand model, this decay is applied naturally when bet weights are computed during odds generation — old bets always contribute less to δ.
+The bet weighting function already includes time decay (bets placed further from the match get lower weight). In the compute-on-demand model, this decay is applied naturally when bet weights are computed during odds generation — old bets always contribute less to δ by dint of their timing relative to the match start date.
 
 ## Implementation Considerations
 
@@ -624,7 +600,7 @@ No persistent per-market Bayesian state is needed. The inputs to odds generation
 2. **Accepted bet history** — each bet stores its market (prediction), bet weight, and acceptance timestamp.
 3. **N_eff per shooter** — derived from rating history (see "Principled Setting of α and β").
 
-Odds are computed from scratch on demand, with δ cached per shooter (see "Caching δ Per Shooter" below).
+Odds are computed from scratch on demand; δ can be cached per shooter (see "Caching δ Per Shooter" below).
 
 ### Bet Removal/Voiding
 
@@ -634,11 +610,12 @@ Since odds are computed from the raw bet history, voiding a bet is trivial: mark
 
 The compute-on-demand model recomputes δ each time odds are requested, but the cost is modest:
 
-1. **Pre-sort MC samples** by finish position (and by percentage) per shooter at simulation time.
-2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations of binary search for single-market case). Each iteration scans the sorted samples: O(N) per iteration, O(15N) total. For N = 10,000, this is ~150,000 comparisons.
+1. **MC sample ordering must be preserved** — trial indices must stay aligned across shooters so that spread predictions can compare shooter A's trial _i_ against shooter B's trial _i_. Sorting per-shooter samples by finish position or percentage would destroy this pairing. The samples are simply scanned in trial order.
+2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations of binary search for single-market case). Each iteration scans the samples: O(N) per iteration, O(15N) total. For N = 10,000, this is ~150,000 comparisons.
 3. **Evaluating P_shifted** for the requested market is one pass over the shifted samples: O(N).
-4. **Cache δ per shooter**: See "Caching δ Per Shooter" below.
-5. **Index bets by subject**: Group accepted bets by shooter for fast lookup during odds generation.
+4. **Sorted copies for binary search** — maintaining a sorted copy of each shooter's samples (separate from the trial-ordered originals) would allow O(log N) boundary lookups instead of O(N) linear scans for place and percentage markets, with the break-even at roughly log₂(N) queries (~14 for N = 12,500). Spread markets would still require linear scans on the paired data. At current sample sizes the linear scan completes in microseconds, so this is not worth implementing unless profiling shows the δ search is a bottleneck.
+5. **Cache δ per shooter**: See "Caching δ Per Shooter" below.
+6. **Index bets by subject**: Group accepted bets by shooter for fast lookup during odds generation.
 
 ### Caching δ Per Shooter
 
@@ -750,7 +727,9 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 
 **When it breaks down:** If a registration change adds or removes a *direct competitor* at a similar skill level — someone expected in the same 5-position band as the subject — that could shift the subject's distribution by several positions, making the stale samples a poor proxy. Even then, the δ will be directionally correct but may be slightly miscalibrated in magnitude.
 
-**Recommendation:** Reuse the most recent MC samples for δ computation. Invalidate only when a new simulation is actually run (i.e., when registrations change enough to trigger a re-simulation). The error from slightly stale samples is much smaller than the inherent model uncertainty, and rerunning the simulation on every odds request would be prohibitively expensive.
+**Why using the current samples is the principled choice:** Even if rerunning MC simulations for older prediction sets were computationally free, it would introduce a baseline mismatch. A posterior computed from the old P_model reflects "the old model's estimate, plus bet evidence." If the current model has since moved in the same direction the bet was pointing (e.g., the old model said P = 0.012 for 1st-10th, the current model says P = 0.015), then applying a δ derived from the old posterior to the current samples would overshoot — it would correct for a gap the model has already partially closed on its own. Using the current MC samples as both the prior for posteriors and the distribution being shifted keeps the two in the same "world." The bet's signal ("this shooter is better than the model thinks") is automatically attenuated if the model has moved toward the bettor's view, and amplified if it has moved away.
+
+**Recommendation:** Always use the most recent MC samples for δ computation. Invalidate only when a new simulation is actually run (i.e., when registrations change enough to trigger a re-simulation). The error from slightly stale samples is much smaller than the inherent model uncertainty.
 
 ## Tunable Parameters Summary
 
@@ -1069,7 +1048,7 @@ To express this as evidence the percentage δ optimizer can consume, we create *
 
 **Computing the virtual thresholds:**
 
-The model's expected spread is `mean_A - mean_B`. The bet claims the spread should be at least X%. The "excess" beyond the model's expectation is split equally between the two shooters:
+The model's expected spread is `mean_A - mean_B` (or, given the current implementation, equivalently `median_A - median_B`—estimated performances are normal around the expected strength). The bet claims the spread should be at least X%. The "excess" beyond the model's expectation is split equally between the two shooters:
 
 ```
 mean_A = mean of sortedPctSamplesA
@@ -1195,6 +1174,37 @@ The posteriors are meaningfully above P_model (relative shifts of ~3.6% and ~3.2
 
 The δ optimizer for A finds a positive δ_A (A shifts upward). The δ optimizer for B finds a δ_B that shifts B downward. When pricing the spread market, the combined effect widens the spread: `δ_A + |δ_B|`.
 
+### Worked Example: Underdog Covers
+
+**Setup:** Same as above. A expected at ~85%, B expected at ~78%. Model spread = 7%. N_eff = 100.
+
+**Bet:** "B covers (A-B ≤ 3%)", sharp player, weight = 1.8, splitFactor = 0.5.
+
+This bettor thinks the spread is narrower than the model expects — B will perform closer to A than the 7% gap suggests.
+
+**Decomposition (underdog covers: excess flips):**
+
+```
+excess = model_spread - spread_threshold = 0.07 - 0.03 = 0.04
+threshold_A = mean_A - excess / 2 = 0.85 - 0.02 = 0.83
+threshold_B = mean_B + excess / 2 = 0.78 + 0.02 = 0.80
+
+w_A = 1.8 × 0.5 = 0.9
+w_B = 1.8 × 0.5 = 0.9
+
+Virtual market for A: "below 83%"
+  P_model("A below 83%") ≈ 0.28  (the weaker side of A's distribution)
+  P_posterior = (0.28 × 100 + 0.9) / (100 + 0.9) = 28.9 / 100.9 = 0.2864
+
+Virtual market for B: "above 80%"
+  P_model("B above 80%") ≈ 0.27  (the stronger side of B's distribution)
+  P_posterior = (0.27 × 100 + 0.9) / (100 + 0.9) = 27.9 / 100.9 = 0.2765
+```
+
+Note the direction reversal compared to "favorite covers": the virtual market for A is now *below* the threshold (A performs worse than expected), and for B it's *above* (B performs better than expected). The δ optimizer for A finds a negative δ_A (A shifts downward), and for B finds a positive δ_B (B shifts upward). Both narrow the spread: `|δ_A| + δ_B`.
+
+The posterior shifts here (~2.3% and ~2.4% relative) are smaller than in the favorite-covers example because the thresholds land closer to the model center (P_model ≈ 0.27-0.28 vs. 0.20-0.22), meaning this bet is less extreme relative to the model's expectations. A more aggressive underdog-covers bet like "A-B ≤ 0%" (the underdog wins outright) would push thresholds further into the tails and produce larger shifts.
+
 ### Open Questions
 
 - **Split ambiguity.** The equal split (splitFactor = 0.5) assumes no knowledge of which shooter drives the spread. If individual percentage bets exist for one shooter, they anchor that shooter's δ, and the spread bet's contribution is additive. A more sophisticated split could use the relative uncertainty of the two shooters (the less-certain shooter gets more of the split), but this adds complexity for a small gain.
@@ -1220,7 +1230,7 @@ Trial 3: finished 18th, 82.1%
 
 These are jointly sampled — a trial where A finishes 18th also has a specific percentage that's consistent with finishing 18th in that simulated field. However, the mapping from percentage to place (and vice versa) depends on the entire field's performance in each trial. We don't store the full N_shooters × N_trials matrix, so we can't do the cross-domain lookup directly.
 
-What we *can* observe: after computing δ_place from place bets, the shifted finish distribution has a different mean position. The relationship between position and percentage is encoded in the MC samples — across all 10,000 trials, there's an empirical correlation between finish position and percentage. We can estimate the implied percentage shift from the position shift using this correlation.
+What we *can* observe: after computing δ_place from place bets, the shifted finish distribution has a different mean position. The relationship between position and percentage is encoded in the MC samples — across all 10,000 trials, there's an empirical correlation between finish position and percentage. We can estimate the implied percentage shift from the position shift using this correlation. Note that this mapping is only reliable for reasonably dense fields — in a 10-person match, the position-to-percentage relationship is sparse and noisy (a 1-position shift could correspond to anywhere from 0.5% to 10% depending on who's nearby), so the implied percentage shift would not be trustworthy. In larger fields (50+), the denser packing of competitors makes the empirical correlation much more stable.
 
 ### Approximate Conversion via Empirical Slope
 
@@ -1247,7 +1257,7 @@ It matters less when bets are sparse or concentrated in a single type, since the
 
 ### Recommendation
 
-Start with separate δ_place and δ_pct (plus spread decomposition into δ_pct). The cross-type propagation is a refinement that can be added later if backtesting shows meaningful information loss from keeping the types independent. The empirical-slope conversion is cheap to compute but adds a layer of approximation; validate against known MC distributions before relying on it.
+Start with separate δ_place and δ_pct (plus spread decomposition into δ_pct). The cross-type propagation is a refinement that can be added later if backtesting shows meaningful information loss from keeping the types independent. The empirical-slope conversion is cheap to compute but adds a layer of approximation; validate against known MC distributions before relying on it, and keep the standalone mechanisms around for sparse fields.
 
 ### Open Questions
 
