@@ -1234,16 +1234,17 @@ What we *can* observe: after computing δ_place from place bets, the shifted fin
 
 ### Approximate Conversion via Empirical Slope
 
-Sort the MC trials by finish position. The empirical slope `Δpct/Δplace` around the model's expected finish gives the local conversion factor:
+Sort the MC trials by finish position. The empirical slope `Δpct/Δplace` around the model's expected finish gives the local conversion factor. Since the slope varies across the distribution (steeper in the tails where positions are sparser, shallower near the middle where competitors are densely packed), average the slope at the model position and the shifted position for a better estimate:
 
 ```
-slope ≈ (mean_pct_at_position(model_place - 1) - mean_pct_at_position(model_place + 1)) / 2
-implied_δ_pct ≈ δ_place × slope
+slope_start = (mean_pct_at(model_place - 1) - mean_pct_at(model_place + 1)) / 2
+slope_end   = (mean_pct_at(shifted_place - 1) - mean_pct_at(shifted_place + 1)) / 2
+  where shifted_place = model_place - δ_place
+
+implied_δ_pct ≈ δ_place × (slope_start + slope_end) / 2
 ```
 
-For a shooter expected at ~26th, if the samples show that moving from 27th to 25th corresponds to a ~1.5 percentage-point increase, then `slope ≈ 0.75 pct/position`, and a δ_place of 2 implies δ_pct ≈ 1.5.
-
-This is approximate (the slope varies across the distribution, and we're using a linear approximation), but for the small δ values produced by bet evidence, the linear regime is sufficient.
+For a shooter expected at ~26th with δ_place = 2 (shifted to ~24th), if the slope at 26th is ~0.75 pct/position and the slope at 24th is ~0.80 pct/position, then `implied_δ_pct ≈ 2 × (0.75 + 0.80) / 2 = 1.55`. The trapezoidal average matters most in the tails (where a few positions can span a large percentage gap) and for large δ values; for small δ near the center of the field, the two slopes are nearly identical and the single-point estimate suffices.
 
 ### When It Matters
 
