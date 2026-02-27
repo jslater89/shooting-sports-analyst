@@ -257,14 +257,19 @@ class PredictionGameManager {
   /// If [player] is provided, the wager will be added to that player.
   /// If [limits] is provided, the wager will be checked against the limits. Player must be provided if limits are provided.
   AddWagerResult addWagerSync(DbWager wager, {PredictionGamePlayer? player, PredictionGamePlayerLimits? limits}) {
+    double? maximumWager;
     if(player != null) {
       if(player.balance < wager.amount) {
         return Result.err(AddWagerError.insufficientFunds);
       }
+      maximumWager = player.balance;
     }
     if(limits != null) {
-      if(limits.maxWager != null && limits.maxWager! < wager.amount) {
-        return Result.err(AddWagerError.exceededMaxWager);
+      if(limits.maxWager != null) {
+        if(limits.maxWager! < wager.amount) {
+          return Result.err(AddWagerError.exceededMaxWager);
+        }
+        maximumWager = min(maximumWager ?? double.infinity, limits.maxWager!);
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
@@ -272,6 +277,8 @@ class PredictionGameManager {
         return Result.err(AddWagerError.exceededMaxWagerCount);
       }
     }
+
+    wager.maximumWager = maximumWager;
 
     db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();
