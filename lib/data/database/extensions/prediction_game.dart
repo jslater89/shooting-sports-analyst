@@ -698,6 +698,23 @@ class PredictionLeaderboardEntry {
           totalStake += wager.amount;
         }
         return wonAmount / totalStake;
+
+      case LeaderboardSortMode.sharpness:
+        List<DbWager> closedWagers;
+        if(preloadedWagers != null) {
+          closedWagers = preloadedWagers.where((w) => w.status == DbWagerStatus.won || w.status == DbWagerStatus.lost).toList();
+        }
+        else {
+          closedWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.won).or().statusEqualTo(DbWagerStatus.lost).findAllSync();
+        }
+        List<DbWager> wonWagers = closedWagers.where((w) => w.status == DbWagerStatus.won).toList();
+        if(closedWagers.isEmpty) {
+          return 0.0;
+        }
+        final actualAccuracy = wonWagers.length / closedWagers.length;
+        final expectedAccuracy = closedWagers.map((w) => w.wagerProbability.probability).average;
+        return actualAccuracy / expectedAccuracy;
+
       case LeaderboardSortMode.averageOdds:
         List<DbWager> wagers;
         if(preloadedWagers != null) {
@@ -743,6 +760,10 @@ enum LeaderboardSortMode {
   /// The ratio of successful closed wagers to total closed wagers (except voided wagers).
   accuracy,
 
+  /// The sharpness of the player, expressed as their raw accuracy successful_closed / total_closed,
+  /// divided by the expected number of hits (the average implied probability of all closed wagers).
+  sharpness,
+
   /// The player's profit ratio, defined as the multiple of the player's initial balance that
   /// they have earned from wagers.
   profitRatio,
@@ -760,6 +781,8 @@ enum LeaderboardSortMode {
         return value.toStringAsFixed(2);
       case LeaderboardSortMode.accuracy:
         return value.asPercentage(decimals: 1, includePercent: true);
+      case LeaderboardSortMode.sharpness:
+        return value.toStringAsFixed(3);
       case LeaderboardSortMode.profitRatio:
         return value.toStringAsFixed(3);
       case LeaderboardSortMode.averageOdds:

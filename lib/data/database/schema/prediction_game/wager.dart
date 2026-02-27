@@ -95,6 +95,11 @@ class DbWager {
   /// The amount of the wager.
   double amount;
 
+  /// The maximum wager the player could make at the time this wager was placed. This is
+  /// the lowest of the player's bankroll, the player's tier-specific maximum wager,
+  /// and any time-based wager limits for distance from the match.
+  double? maximumWager;
+
   double payout({bool roundToMoneyline = true}) {
     if(!roundToMoneyline) {
       return amount * wagerProbability.decimalOdds;
