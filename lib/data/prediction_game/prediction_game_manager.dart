@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
@@ -214,14 +216,19 @@ class PredictionGameManager {
   /// If [player] is provided, the wager will be added to that player.
   /// If [limits] is provided, the wager will be checked against the limits. Player must be provided if limits are provided.
   Future<AddWagerResult> addWager(DbWager wager, {PredictionGamePlayer? player, PredictionGamePlayerLimits? limits}) async {
+    double? maximumWager;
     if(player != null) {
       if(player.balance < wager.amount) {
         return Result.err(AddWagerError.insufficientFunds);
       }
+      maximumWager = player.balance;
     }
     if(limits != null) {
-      if(limits.maxWager != null && limits.maxWager! < wager.amount) {
-        return Result.err(AddWagerError.exceededMaxWager);
+      if(limits.maxWager != null) {
+        if(limits.maxWager! < wager.amount) {
+          return Result.err(AddWagerError.exceededMaxWager);
+        }
+        maximumWager = min(maximumWager ?? double.infinity, limits.maxWager!);
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
@@ -229,6 +236,8 @@ class PredictionGameManager {
         return Result.err(AddWagerError.exceededMaxWagerCount);
       }
     }
+
+    wager.maximumWager = maximumWager;
 
     // It's already backlinked to everything else, so we can just save it
     // and its links.
