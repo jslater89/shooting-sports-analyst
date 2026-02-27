@@ -132,14 +132,27 @@ Not all bets carry equal information. The weight depends on:
 ### 1. Bet Size Relative to Bankroll
 
 ```
-conviction_weight = bet_amount / player_bankroll
+raw_conviction = bet_amount / maximum_wager
 ```
+
+where `maximum_wager` is the lowest of the player's balance, their tier max wager, and any time-based limits (stored per wager at placement). Raw conviction is typically 0.01 to 0.20 (1% to 20% of effective bankroll).
 
 **Rationale**: A $100 bet from a $1000 bankroll (10%) shows higher conviction than $10 from $10,000 (0.1%).
 
-**Range**: Typically 0.01 to 0.20 (1% to 20% of bankroll)
+**Log transform and optional clamping.** In practice, many players bet small amounts relative to their bankroll even when confident — e.g., 5 units on a 1000-unit bankroll yields raw conviction 0.005, which nearly zeros the weight. To avoid drowning out small bets entirely, apply a configurable transform before using conviction in the weight formula:
 
-'Bankroll' is not always the correct measure. In some cases, players' wager amounts are limited by other factors (like membership tier or perhaps a future cap on wager size far from an event). In those cases, the correct conviction signal is bet amount divided by wager cap.
+```
+raw_conviction = bet_amount / maximum_wager
+conviction = f(raw_conviction)
+```
+
+Options for `f` (all configurable, or disabled for raw linear conviction):
+
+- **Log transform**: `log(1 + raw_conviction × k) / log(1 + k)`. Raises the floor for small bets while preserving the ordering (larger bets still count more). With `k = 5`, a 0.5% raw conviction maps to ~0.015 instead of 0.005; a 20% raw conviction maps to ~0.65 instead of 0.20. Higher `k` = more aggressive (steeper curve, small bets count relatively more). `k = 0` or disabling = linear (no transform).
+
+- **Minimum floor**: `conviction = max(raw_conviction, floor)`. E.g., `floor = 0.02` ensures even a 1% bet contributes at least 2% of what a max-conviction bet would. Simpler to reason about than the log; can be combined with it (apply floor after transform).
+
+Tune these based on production behavior. If most players bet small regardless of confidence, use an aggressive transform or floor so that bets still move the line. Configurability is important — allow toggling the transform, `k`, and `floor` without code changes.
 
 ### 2. Player Skill Multiplier
 
@@ -177,14 +190,22 @@ Where λ (lambda) controls decay rate. Suggested values:
 ```dart
 double calculateBetWeight({
   required double betAmount,
-  required double playerBankroll,
+  required double maximumWager,
   required double playerAccuracy,
   required double daysUntilMatch,
   double baseWeight = 10.0,
   double lambda = 0.10,
+  double convictionLogK = 0.0,   // 0 = no transform. 5 = moderate, 10+ = aggressive.
+  double convictionFloor = 0.0,  // Optional floor, e.g. 0.02.
 }) {
-  // Bet conviction (0.01 to 0.20 typically)
-  double conviction = betAmount / playerBankroll;
+  double rawConviction = betAmount / maximumWager;
+  double conviction = rawConviction;
+  if (convictionLogK > 0) {
+    conviction = log(1 + rawConviction * convictionLogK) / log(1 + convictionLogK);
+  }
+  if (convictionFloor > 0) {
+    conviction = max(conviction, convictionFloor);
+  }
 
   // Player skill (0.8 to 1.4 typically)
   double skillMultiplier = playerAccuracy / 0.50;
@@ -192,7 +213,6 @@ double calculateBetWeight({
   // Time relevance (0.05 to 1.0)
   double timeDecay = exp(-lambda * daysUntilMatch);
 
-  // Base weight: tunable parameter for overall sensitivity
   return conviction * skillMultiplier * timeDecay * baseWeight;
 }
 ```
@@ -739,6 +759,8 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 | **N_eff Scale** | 15 | 20 | 10 | Multiplier on (log) history count when computing N_eff. Higher = stiffer prior for experienced shooters. |
 | **N_eff Log Scale** | true | true | true | Use `log(1 + history)` instead of raw history count. Gives diminishing returns from deep history. |
 | **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
+| **Conviction Log K** | 0 (off) | 0 | 5–10 | Log transform for conviction; 0 = linear. Use 5+ if players bet small relative to bankroll. See "Bet Size Relative to Bankroll." |
+| **Conviction Floor** | 0 (off) | 0 | 0.02 | Minimum conviction; ensures small bets still move the line. Combine with or instead of log transform. |
 | **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
 | **Max Logit Shift** | 1.0 | 0.5 | 1.5 | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement." |
 | **Min Bets for Skill** | 10 | 20 | 5 | Minimum resolved bets to apply skill multiplier |
@@ -823,11 +845,22 @@ double calculateBetWeight({
   required DateTime matchDate,             // from wager's match prep / game context
   required double baseWeight,
   required double lambda,
+  double convictionLogK = 0.0,
+  double convictionFloor = 0.0,
   int minBetsForSkill = 10,
 }) {
-  // 1. Bet conviction
-  double conviction = wager.amount / player.balance;
-  conviction = conviction.clamp(0.01, 0.50);  // cap at 50% of bankroll
+  // 1. Bet conviction (use wager.maximumWager if stored at placement; fallback to player.balance for legacy)
+  double maxWager = wager.maximumWager ?? player.balance;
+  double rawConviction = wager.amount / maxWager;
+  rawConviction = rawConviction.clamp(0.0, 1.0);
+
+  double conviction = rawConviction;
+  if (convictionLogK > 0) {
+    conviction = log(1 + rawConviction * convictionLogK) / log(1 + convictionLogK);
+  }
+  if (convictionFloor > 0) {
+    conviction = max(conviction, convictionFloor);
+  }
 
   // 2. Player skill
   var resolvedWagers = player.wagers
