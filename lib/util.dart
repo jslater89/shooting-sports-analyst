@@ -724,3 +724,8 @@ extension SecondTimestampUtils on int {
 final uuidRegex = RegExp(
   r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
 );
+
+/// Logarithm in base x.
+double logBase(double x, double base) {
+  return log(x) / log(base);
+}
