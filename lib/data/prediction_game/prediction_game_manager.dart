@@ -342,12 +342,19 @@ class PredictionGameManager {
       baseWeight: 30,
       defaultConviction: 0.75,
     );
-    var delta = await _nonclosureBayesianOddsShift(
+    var result = await _nonclosureBayesianOddsShift(
       config: config,
       subjectHistoryLength: lengthInStages,
       wagers: priorWagers,
       subjectMonteCarlo: subjectMonteCarlo,
     );
+
+    if(!result.success) {
+      _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
+      return 0.0;
+    }
+
+    var delta = result.delta;
 
     if(prediction.type == DbPredictionType.place) {
       _log.i("Bayesian odds shift for place prediction is ${delta.toStringAsFixed(2)}");
@@ -380,7 +387,7 @@ class PredictionGameManager {
     return delta;
   }
 
-  static Future<double> _nonclosureBayesianOddsShift({
+  static Future<BayesianOddsResult> _nonclosureBayesianOddsShift({
     required BayesianOddsConfig config,
     required int subjectHistoryLength,
     required List<BayesianOddsWager> wagers,

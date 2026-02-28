@@ -6,11 +6,6 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wag
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
-import 'package:shooting_sports_analyst/flutter_native_providers.dart';
-import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/server/providers.dart';
-
-final _log = SSALogger("BayesianOddsCalculator");
 
 /// A calculation function for Bayesian odds adjustment, set up to be runnable
 /// with [Isolate.run] (i.e. including only objects that can be sent over
@@ -29,16 +24,14 @@ final _log = SSALogger("BayesianOddsCalculator");
 ///
 /// [subjectMonteCarlo] is the Monte Carlo simulation results for the subject.
 ///
-Future<double> calculateBayesianOddsUpdate({
+Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   /// The configuration for the Bayesian odds update.
   required BayesianOddsConfig config,
   required int subjectHistoryLength,
   required List<BayesianOddsWager> wagers,
   required MonteCarloSimulationResult subjectMonteCarlo,
 }) async {
-  FlutterOrNative.debugModeProvider = ServerDebugProvider(isMultiIsolate: false);
-  FlutterOrNative.isolateModeProvider = ServerDebugProvider(isMultiIsolate: false);
-  SSALogger.fileOutput = false;
+  StringBuffer logBuffer = StringBuffer();
 
   final type = wagers.first.prediction.type;
   for(var wager in wagers) {
@@ -48,9 +41,9 @@ Future<double> calculateBayesianOddsUpdate({
   }
 
   double nEff;
-  _log.v("nEff calculation: ${config.nEffScale} * log(1 + ${subjectHistoryLength}).clamp(${config.nEffMin}, ${config.nEffMax})");
+  logBuffer.writeln("nEff calculation: ${config.nEffScale} * log(1 + ${subjectHistoryLength}).clamp(${config.nEffMin}, ${config.nEffMax})");
   nEff = (config.nEffScale * log(1 + subjectHistoryLength)).clamp(config.nEffMin, config.nEffMax);
-  _log.v("nEff: $nEff");
+  logBuffer.writeln("nEff: $nEff");
 
   final Map<BayesianOddsWager, double> weight = {};
   final Map<BayesianOddsWager, Map<BayesianOddsWager, double>> additionalWeight = {};
@@ -98,7 +91,7 @@ Future<double> calculateBayesianOddsUpdate({
       final similarity = _similarity(wager, otherWager);
       if(similarity == 0.0) continue;
       if(similarity.isNaN) {
-        _log.w("Similarity between ${wager.prediction.toString()} and ${otherWager.prediction.toString()} is NaN.");
+        logBuffer.writeln("Similarity between ${wager.prediction.toString()} and ${otherWager.prediction.toString()} is NaN.");
         continue;
       }
 
@@ -115,8 +108,8 @@ Future<double> calculateBayesianOddsUpdate({
 
   // Calculate the weights and model probabilities for each wager.
   for(var wager in wagers) {
-    _log.v("Initial data for ${wager.prediction.toString()}:");
-    weight[wager] = wager.calculateWeight(config, logComponents: true);
+    logBuffer.writeln("Initial data for ${wager.prediction.toString()}:");
+    weight[wager] = wager.calculateWeight(config, logBuffer: logBuffer);
 
     if(type == DbPredictionType.place) {
       pShifted[wager] = wager.evaluatePlaceAgainstSimulation(monteCarlo: subjectMonteCarlo);
@@ -132,13 +125,13 @@ Future<double> calculateBayesianOddsUpdate({
     alpha[wager] = pShifted[wager]! * nEff;
     pPosterior[wager] = (alpha[wager]! + posteriorWeight) / (nEff + posteriorWeight);
 
-    _log.v("Weight for ${wager.prediction.toString()}: ${weight[wager]!.toStringAsFixed(4)}");
-    _log.v("Weight from nearby wagers: ${additionalWeight[wager]!.entries.map((e) => "${e.key.prediction.toString()}: ${e.value.toStringAsFixed(4)}").join(", ")}");
-    _log.v("Alpha: ${alpha[wager]!.toStringAsFixed(4)}");
-    _log.v("Prior: ${pShifted[wager]!.toStringAsFixed(4)}");
-    _log.v("Posterior: ${pPosterior[wager]!.toStringAsFixed(4)}");
-    _log.v("Initial error: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
-    _log.v("\n");
+    logBuffer.writeln("Weight for ${wager.prediction.toString()}: ${weight[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Weight from nearby wagers: ${additionalWeight[wager]!.entries.map((e) => "${e.key.prediction.toString()}: ${e.value.toStringAsFixed(4)}").join(", ")}");
+    logBuffer.writeln("Alpha: ${alpha[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Prior: ${pShifted[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Posterior: ${pPosterior[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Initial error: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
+    logBuffer.writeln("\n");
   }
 
   // Lo/hi search bounds for the delta calculation, in places or ratio-space percentage points.
@@ -156,7 +149,10 @@ Future<double> calculateBayesianOddsUpdate({
     searchHi: searchHi,
   );
 
-  return delta;
+  return BayesianOddsResult(
+    delta: delta,
+    log: logBuffer.toString(),
+  );
 }
 
 double _similarity(BayesianOddsWager a, BayesianOddsWager b, {double percentSteepness = 20, double percentMaxDistance = 0.05}) {
@@ -166,7 +162,6 @@ double _similarity(BayesianOddsWager a, BayesianOddsWager b, {double percentStee
   else if(a.prediction.type == DbPredictionType.percentage && b.prediction.type == DbPredictionType.percentage) {
     return _percentageSimilarity(a, b, steepness: percentSteepness, maxDistance: percentMaxDistance);
   }
-  _log.w("Similarity calculation between ${a.prediction.toString()} and ${b.prediction.toString()} is not supported.");
   return 0.0;
 }
 
@@ -219,7 +214,8 @@ double _calculateDelta({
   double c = b - (b - a) / gr;
   double d = a + (b - a) / gr;
 
-  for(int i = 0; i < 50; i++) {
+  int i = 0;
+  for(i = 0; i < 50; i++) {
     // _log.v("Iteration $i: a = ${a.toStringAsFixed(4)}, b = ${b.toStringAsFixed(4)}, c = ${c.toStringAsFixed(4)}, d = ${d.toStringAsFixed(4)}");
     if((b - a).abs() < 0.001) break;
 
@@ -249,6 +245,8 @@ double _calculateDelta({
     d = a + (b - a) / gr;
   }
 
+  // _log.v("Bayesian odds shift calculation completed in $i iterations.");
+
   return (a + b) / 2;
 }
 
@@ -258,4 +256,18 @@ double _objective({
   required double weight,
 }) {
   return weight * (pShifted - pPosterior) * (pShifted - pPosterior);
+}
+
+class BayesianOddsResult {
+  final double delta;
+  final bool success;
+  final String errorMessage;
+  final String log;
+
+  BayesianOddsResult({
+    this.success = true,
+    this.errorMessage = "",
+    required this.delta,
+    required this.log,
+  });
 }

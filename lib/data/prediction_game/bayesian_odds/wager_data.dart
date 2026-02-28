@@ -9,8 +9,6 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-final _log = SSALogger("BayesianOddsWager");
-
 /// A prior wager for Bayesian odds calculation.
 class BayesianOddsWager {
   /// The raw amount of the wager.
@@ -50,11 +48,7 @@ class BayesianOddsWager {
     this.useUnderdogResults = false,
   }) : prediction = BayesianOddsPrediction.fromDbPrediction(prediction);
 
-  double calculateWeight(BayesianOddsConfig config, {bool logComponents = false}) {
-    if(_weight != null) {
-      return _weight!;
-    }
-
+  double calculateWeight(BayesianOddsConfig config, {StringBuffer? logBuffer}) {
     // If maxWager is not available, conviction = 1.0.
     final double rawConviction;
     if(maxWager != null) {
@@ -73,10 +67,10 @@ class BayesianOddsWager {
 
     double timeDecay = exp(-config.lambda * daysUntilMatch);
 
-    if(logComponents) {
-      _log.v("Weight -> conviction: ${conviction.toStringAsFixed(4)} (raw: ${rawConviction.toStringAsFixed(4)})");
-      _log.v("Weight -> skill multiplier: ${skillMultiplier.toStringAsFixed(4)}");
-      _log.v("Weight -> time decay: ${timeDecay.toStringAsFixed(4)}");
+    if(logBuffer != null) {
+      logBuffer.writeln("Weight -> conviction: ${conviction.toStringAsFixed(4)} (raw: ${rawConviction.toStringAsFixed(4)})");
+      logBuffer.writeln("Weight -> skill multiplier: ${skillMultiplier.toStringAsFixed(4)}");
+      logBuffer.writeln("Weight -> time decay: ${timeDecay.toStringAsFixed(4)}");
     }
 
     _weight = conviction * skillMultiplier * timeDecay * config.baseWeight;
@@ -151,7 +145,7 @@ class BayesianOddsWager {
     }
 
     final percentage = prediction.percentage!;
-    final abovePercentage = prediction.abovePercentage!;
+    final abovePercentage = prediction.abovePercentage;
 
     int hits = 0;
     int trials = monteCarlo.percentages.length;
@@ -198,6 +192,11 @@ class BayesianOddsWager {
     required PredictionGameManager gm,
     required DbWager dbWager,
 
+    /// The logger to use for logging. BayesianOddsWagers are used in
+    /// multiple isolates, some of which may not have logging infrastructure
+    /// set up. If no logger is provided, no logging will be done.
+    SSALogger? log,
+
     /// The Monte Carlo simulation results for the subject. Required
     /// only if the wager contains a spread leg.
     MonteCarloSimulationResult? subjectMonteCarlo,
@@ -235,7 +234,7 @@ class BayesianOddsWager {
     for(var leg in dbWager.legs) {
       if(leg.type == DbPredictionType.spread) {
         if(subjectMonteCarlo == null || underdogMonteCarlo == null) {
-          _log.w("Missing Monte Carlo simulation results for spread leg ${leg.descriptiveString}");
+          log?.w("Missing Monte Carlo simulation results for spread leg ${leg.descriptiveString}");
           continue;
         }
 
@@ -449,7 +448,7 @@ class BayesianOddsPrediction {
       return "${target.name} ${bestPlace!.ordinalPlace}-${worstPlace!.ordinalPlace}";
     }
     else if(type == DbPredictionType.percentage) {
-      return "${target.name} ${abovePercentage! ? "≥" : "≤"} ${percentage!.asPercentage(decimals: 2, includePercent: true)}";
+      return "${target.name} ${abovePercentage ? "≥" : "≤"} ${percentage!.asPercentage(decimals: 2, includePercent: true)}";
     }
     return "unsupported prediction type: $type";
   }
