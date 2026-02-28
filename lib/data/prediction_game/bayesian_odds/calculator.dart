@@ -56,6 +56,33 @@ Future<double> calculateBayesianOddsUpdate({
   final Map<BayesianOddsWager, double> alpha = {};
   final Map<BayesianOddsWager, double> pPosterior = {};
 
+  // TODO: similarity calculation between wagers
+  /*
+  We do actually need to calculate similarity between wagers, because otherwise we underweight
+  closely-related wagers. Consider two wagers: Smith >= 80%, weight 5. Both of these add
+  5 * (p_shifted - p_posterior) to the error, but p_posterior is the same for both, so optimizing
+  delta for one necessarily optimizes delta for the other. The pair has impact when there are
+  other predictions at play, counting for more in the sum-of-errors calculation, but we're still
+  losing signal—multiple predictions at or near one point should make a bigger hump in the
+  new-information distribution.
+
+  A simple fix is to percolate weight between wagers. Each wager gets a raw and effective
+  weight. For each wager:
+
+  1. Find nearby wagers. For place range wagers, any overlap between ranges will do. For
+  percent wagers, look for within a few percent.
+  2. Each nearby wager adds similarity * nearby_raw_weight / nearby_count to the current
+     wager's effective weight.
+     Similarity can be Jaccard index for place range, and exponential decay for percent.
+  3. The algorithm progresses as normal, using effective weight.
+
+  This adds extra bulk to each prior where there's a stack of them. This knob should perhaps
+  be turned with caution: it makes _every_ prior stronger, which means that large aggregations
+  of wagers pull more strongly than they would in the merged-market case. Perhaps use the
+  raw weight as the multiplier in sum-of-squared-errors, but use the effective weight to calculate
+  the posterior in the prep code.
+  */
+
   // Calculate the weights and model probabilities for each wager.
   for(var wager in wagers) {
     _log.v("Initial data for ${wager.prediction.toString()}:");
