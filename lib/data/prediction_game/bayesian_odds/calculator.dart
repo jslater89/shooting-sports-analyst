@@ -88,7 +88,7 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     for(var otherWager in wagers) {
       if(wager == otherWager) continue;
 
-      final similarity = _similarity(wager, otherWager);
+      final similarity = _similarity(wager, otherWager, config);
       if(similarity == 0.0) continue;
       if(similarity.isNaN) {
         logBuffer.writeln("Similarity between ${wager.prediction.toString()} and ${otherWager.prediction.toString()} is NaN.");
@@ -155,12 +155,12 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   );
 }
 
-double _similarity(BayesianOddsWager a, BayesianOddsWager b, {double percentSteepness = 20, double percentMaxDistance = 0.05}) {
+double _similarity(BayesianOddsWager a, BayesianOddsWager b, BayesianOddsConfig config) {
   if(a.prediction.type == DbPredictionType.place && b.prediction.type == DbPredictionType.place) {
     return _jaccardIndex(a, b);
   }
   else if(a.prediction.type == DbPredictionType.percentage && b.prediction.type == DbPredictionType.percentage) {
-    return _percentageSimilarity(a, b, steepness: percentSteepness, maxDistance: percentMaxDistance);
+    return _percentageSimilarity(a, b, steepness: config.percentageSimilaritySteepness, maxDistance: config.percentageSimilarityMaxDistance);
   }
   return 0.0;
 }

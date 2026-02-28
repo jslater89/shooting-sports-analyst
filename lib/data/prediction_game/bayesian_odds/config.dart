@@ -72,6 +72,12 @@ class BayesianOddsConfig {
   /// Maximum multiplier permitted for sharpness.
   final double sharpnessClampMax;
 
+  /// Maximum distance between two percentage predictions for similarity to be considered.
+  final double percentageSimilarityMaxDistance;
+
+  /// Steepness of the sigmoid curve for percentage similarity.
+  final double percentageSimilaritySteepness;
+
   BayesianOddsConfig({
     double? nEffScale,
     double? nEffMin,
@@ -89,6 +95,8 @@ class BayesianOddsConfig {
     double? minSharpnessBets,
     double? sharpnessClampMin,
     double? sharpnessClampMax,
+    double? percentageSimilarityMaxDistance,
+    double? percentageSimilaritySteepness,
   })  : nEffScale = nEffScale ?? 10,
         nEffMin = nEffMin ?? 20,
         nEffMax = nEffMax ?? 150,
@@ -104,5 +112,7 @@ class BayesianOddsConfig {
         clampMaxMultiplier = clampMaxMultiplier ?? 2,
         minSharpnessBets = minSharpnessBets ?? 5,
         sharpnessClampMin = sharpnessClampMin ?? 0.5,
-        sharpnessClampMax = sharpnessClampMax ?? 2.0;
+        sharpnessClampMax = sharpnessClampMax ?? 2.0,
+        percentageSimilarityMaxDistance = percentageSimilarityMaxDistance ?? 0.05,
+        percentageSimilaritySteepness = percentageSimilaritySteepness ?? 20;
 }
