@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/confi
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
@@ -294,41 +295,42 @@ class PredictionGameManager {
     return Result.ok(null);
   }
 
-  Future<double> getBayesianOddsShift({
-    required DbWager wager,
+  // TODO: getParlayBayesianOddsShift
+
+  Future<double> updateWagerWithBayesianOddsShift({
+    required Wager wager,
+    required MatchPrep? matchPrep,
     required MonteCarloSimulationResult subjectMonteCarlo,
   }) async {
     // TODO: spread case - calculate delta for each side
 
     // TODO: parlay case - calculate delta for each leg
 
-    final project = await wager.matchPrep.value!.ratingProject.value!;
+    final project = await matchPrep!.ratingProject.value!;
     final algorithm = project.settings.algorithm;
 
-    final prediction = wager.legs.first;
-    final subject = prediction.target;
+    final prediction = wager.prediction;
+    final subject = DbPredictionTarget.fromShooterRating(prediction.shooter);
 
-    final subjectRating = await subject.getShooterRating(db);
-    if(subjectRating == null) {
-      throw Exception("Subject rating not found");
-    }
+    final subjectRating = prediction.shooter;
+
     int lengthInStages;
     if(algorithm is MultiplayerPercentEloRater) {
       lengthInStages = subjectRating.length;
     }
     else if(algorithm is Glicko2Rater) {
-      lengthInStages = Glicko2Rating.getLengthInStages(subjectRating);
+      lengthInStages = Glicko2Rating.getLengthInStages(subjectRating.wrappedRating);
     }
     else {
-      throw Exception("Unsupported algorithm: ${algorithm}");
+      throw ArgumentError("Unsupported algorithm: ${algorithm}");
     }
 
-    final wagersForMatch = await getWagers(matchPrep: wager.matchPrep.value!);
-    final wagersForPlayer = wagersForMatch.where((w) =>
+    final wagersForMatch = await getWagers(matchPrep: matchPrep);
+    final wagersForSubject = wagersForMatch.where((w) =>
       w.subjectMemberNumbers.intersects(subject.knownMemberNumbers)).toList();
 
     List<BayesianOddsWager> priorWagers = [];
-    for(var wager in wagersForPlayer) {
+    for(var wager in wagersForSubject) {
       final priorWager = await BayesianOddsWager.fromDbWager(subject: subject, gm: this, dbWager: wager);
       priorWagers.addAll(priorWager);
     }
@@ -354,35 +356,35 @@ class PredictionGameManager {
       return 0.0;
     }
 
+    _log.v("Bayesian odds shift calculation result:");
+    _log.v(result.log);
+
     var delta = result.delta;
 
-    if(prediction.type == DbPredictionType.place) {
+    if(prediction is PlacePrediction) {
       _log.i("Bayesian odds shift for place prediction is ${delta.toStringAsFixed(2)}");
-      var hydrated = wager.hydrate();
-      if(hydrated is Wager) {
-        hydrated.recalculateProbabilityWithDelta(
-          targetSimulation: subjectMonteCarlo,
-          underdogSimulation: null,
-          targetDelta: delta,
-          underdogDelta: null,
-        );
-        _log.i("New moneyline odds for ${hydrated.prediction.descriptiveString} are ${hydrated.probability.moneylineOdds}");
-      }
+      wager.recalculateProbabilityWithDelta(
+        targetSimulation: subjectMonteCarlo,
+        underdogSimulation: null,
+        targetDelta: delta,
+        underdogDelta: null,
+      );
+      _log.i("New moneyline odds for ${wager.prediction.descriptiveString} are ${wager.probability.moneylineOdds}");
+
+    }
+    else if(prediction is PercentagePrediction) {
+      _log.i("Bayesian odds shift for percentage prediction is ${delta.asPercentage(decimals: 2, includePercent: true)}");
+      wager.recalculateProbabilityWithDelta(
+        targetSimulation: subjectMonteCarlo,
+        underdogSimulation: null,
+        targetDelta: delta,
+        underdogDelta: null,
+      );
+
+      _log.i("New moneyline odds for ${wager.prediction.descriptiveString} are ${wager.probability.moneylineOdds}");
     }
     else {
-      _log.i("Bayesian odds shift for percentage prediction is ${delta.asPercentage(decimals: 2, includePercent: true)}");
-      var hydrated = wager.hydrate();
-
-      if(hydrated is Wager) {
-        hydrated.recalculateProbabilityWithDelta(
-          targetSimulation: subjectMonteCarlo,
-          underdogSimulation: null,
-          targetDelta: delta,
-          underdogDelta: null,
-        );
-
-        _log.i("New moneyline odds for ${hydrated.prediction.descriptiveString} are ${hydrated.probability.moneylineOdds}");
-      }
+      _log.e("Unsupported prediction type: ${prediction.runtimeType}");
     }
     return delta;
   }

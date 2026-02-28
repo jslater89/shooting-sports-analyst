@@ -51,21 +51,23 @@ class BayesianOddsWager {
   double calculateWeight(BayesianOddsConfig config, {StringBuffer? logBuffer}) {
     // If maxWager is not available, conviction = 1.0.
     final double rawConviction;
+    double conviction;
     if(maxWager != null) {
       rawConviction = amount / maxWager!;
+      conviction = log(1 + rawConviction * config.convictionLogK) / log(1 + config.convictionLogK);
+      conviction = max(conviction, config.convictionFloor);
     }
     else {
       rawConviction = config.defaultConviction;
+      conviction = config.defaultConviction;
     }
-    double conviction = log(1 + rawConviction * config.convictionLogK) / log(1 + config.convictionLogK);
-    conviction = max(conviction, config.convictionFloor);
 
     double skillMultiplier = 1.0;
     if(resolvedPlayerWagers >= config.minSharpnessBets) {
       skillMultiplier = sharpness.clamp(config.sharpnessClampMin, config.sharpnessClampMax);
     }
 
-    double timeDecay = exp(-config.lambda * daysUntilMatch);
+    double timeDecay = exp(-config.lambda * daysUntilMatch).clamp(0.5, 1.0);
 
     if(logBuffer != null) {
       logBuffer.writeln("Weight -> conviction: ${conviction.toStringAsFixed(4)} (raw: ${rawConviction.toStringAsFixed(4)})");
