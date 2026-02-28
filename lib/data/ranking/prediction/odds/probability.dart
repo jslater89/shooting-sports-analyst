@@ -139,6 +139,8 @@ class PredictionProbability {
   /// [shootersToPredictions] is a map of shooter ratings to their predictions for
   /// all of [placePrediction]'s competitors, including the competitor in question.
   ///
+  /// [shootersToPredictions] can be omitted if [simulationResult] is provided.
+  ///
   /// [bestPossibleOdds] and [worstPossibleOdds] are the minimum and maximum possible odds,
   /// used to clamp the probability.
   ///
@@ -156,11 +158,12 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPlacePrediction(
     PlacePrediction placePrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
+    double placeDelta = 0.0,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -172,24 +175,41 @@ class PredictionProbability {
     // oneSigma = standard deviation of those runs
     // ciOffset = trend shift (-0.9 to 0.9)
 
-    AlgorithmPrediction? targetPrediction = shootersToPredictions[placePrediction.shooter];
-    if(targetPrediction == null) {
-      throw ArgumentError("Shooter prediction not found for ${placePrediction.shooter.name}");
+    if(shootersToPredictions == null && simulationResult == null) {
+      throw ArgumentError("Either shootersToPredictions or simulationResult must be provided.");
     }
-
-    var successes = 0;
-
     bool ranOwnSimulation = simulationResult == null;
-    simulationResult ??= runOddsSimulation(
+
+    if(simulationResult == null) {
+      AlgorithmPrediction? targetPrediction = shootersToPredictions![placePrediction.shooter];
+      if(targetPrediction == null) {
+        throw ArgumentError("Shooter prediction not found for ${placePrediction.shooter.name}");
+      }
+
+    simulationResult = runOddsSimulation(
       target: placePrediction.shooter,
       shootersToPredictions: shootersToPredictions,
       trials: trials,
       random: random,
       disasterChance: disasterChance,
     );
+    }
+
+    var successes = 0;
+
+    num bestThreshold = placePrediction.bestPlace;
+    num worstThreshold = placePrediction.worstPlace;
+    if(placeDelta != 0.0) {
+      bestThreshold -= 0.5;
+      worstThreshold += 0.5;
+    }
 
     for(var place in simulationResult.places) {
-      if(place >= placePrediction.bestPlace && place <= placePrediction.worstPlace) {
+      num actualPlace = place;
+      if(placeDelta != 0.0) {
+        actualPlace -= placeDelta;
+      }
+      if(actualPlace >= bestThreshold && actualPlace <= worstThreshold) {
         successes++;
       }
     }
@@ -220,6 +240,8 @@ class PredictionProbability {
   /// [shootersToPredictions] is a map of shooter ratings to their predictions for
   /// all of [percentagePrediction]'s competitors, including the competitor in question.
   ///
+  /// [shootersToPredictions] can be omitted if [simulationResult] is provided.
+  ///
   /// [bestPossibleOdds] and [worstPossibleOdds] are the minimum and maximum possible odds,
   /// used to clamp the probability.
   ///
@@ -237,11 +259,12 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPercentagePrediction(
     PercentagePrediction percentagePrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
+    double ratioDelta = 0.0,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -253,25 +276,33 @@ class PredictionProbability {
     // oneSigma = standard deviation of those runs
     // ciOffset = trend shift (-0.9 to 0.9)
 
+    if(shootersToPredictions == null && simulationResult == null) {
+      throw ArgumentError("Either shootersToPredictions or simulationResult must be provided.");
+    }
+
     var successes = 0;
 
     bool ranOwnSimulation = simulationResult == null;
-    simulationResult ??= runOddsSimulation(
-      target: percentagePrediction.shooter,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
+
+    if(simulationResult == null) {
+      simulationResult ??= runOddsSimulation(
+        target: percentagePrediction.shooter,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
 
     for(var percentage in simulationResult.percentages) {
+      double actualPercentage = percentage + ratioDelta;
       if(percentagePrediction.above) {
-        if(percentage >= percentagePrediction.ratio) {
+        if(actualPercentage >= percentagePrediction.ratio) {
           successes++;
         }
       }
       else {
-        if(percentage <= percentagePrediction.ratio) {
+        if(actualPercentage <= percentagePrediction.ratio) {
           successes++;
         }
       }
@@ -321,12 +352,14 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPercentageSpreadPrediction(
     PercentageSpreadPrediction percentageSpreadPrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? favoriteSimulationResult,
     MonteCarloSimulationResult? underdogSimulationResult,
+    double favoriteRatioDelta = 0.0,
+    double underdogRatioDelta = 0.0,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -334,25 +367,35 @@ class PredictionProbability {
   }) {
     var successes = 0;
 
+    if(shootersToPredictions == null && (favoriteSimulationResult == null || underdogSimulationResult == null)) {
+      throw ArgumentError("Either shootersToPredictions or both favoriteSimulationResult and underdogSimulationResult must be provided.");
+    }
+
     bool ranOwnSimulation = favoriteSimulationResult == null || underdogSimulationResult == null;
-    favoriteSimulationResult ??= runOddsSimulation(
-      target: percentageSpreadPrediction.favorite,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
-    underdogSimulationResult ??= runOddsSimulation(
-      target: percentageSpreadPrediction.underdog,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
+    if(favoriteSimulationResult == null) {
+      favoriteSimulationResult ??= runOddsSimulation(
+        target: percentageSpreadPrediction.favorite,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
+    if(underdogSimulationResult == null) {
+      underdogSimulationResult ??= runOddsSimulation(
+        target: percentageSpreadPrediction.underdog,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
 
     var predictedGaps = <double>[];
     for(int i = 0; i < trials; i++) {
-      var gap = favoriteSimulationResult.percentages[i] - underdogSimulationResult.percentages[i];
+      double favoritePercentage = favoriteSimulationResult.percentages[i] + favoriteRatioDelta;
+      double underdogPercentage = underdogSimulationResult.percentages[i] + underdogRatioDelta;
+      var gap = favoritePercentage - underdogPercentage;
       predictedGaps.add(gap);
       if(percentageSpreadPrediction.favoriteCovers) {
         if(gap >= percentageSpreadPrediction.ratioSpread) {

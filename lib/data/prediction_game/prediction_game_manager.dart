@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -19,7 +20,15 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/audit_result.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/calculator.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -283,6 +292,96 @@ class PredictionGameManager {
     db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();
     return Result.ok(null);
+  }
+
+  Future<double> getBayesianOddsShift({
+    required DbWager wager,
+    required MonteCarloSimulationResult subjectMonteCarlo,
+  }) async {
+    // TODO: spread case - calculate delta for each side
+
+    // TODO: parlay case - calculate delta for each leg
+
+    final project = await wager.matchPrep.value!.ratingProject.value!;
+    final algorithm = project.settings.algorithm;
+
+    final prediction = wager.legs.first;
+    final subject = prediction.target;
+
+    final subjectRating = await subject.getShooterRating(db);
+    if(subjectRating == null) {
+      throw Exception("Subject rating not found");
+    }
+    int lengthInStages;
+    if(algorithm is MultiplayerPercentEloRater) {
+      lengthInStages = subjectRating.length;
+    }
+    else if(algorithm is Glicko2Rater) {
+      lengthInStages = Glicko2Rating.getLengthInStages(subjectRating);
+    }
+    else {
+      throw Exception("Unsupported algorithm: ${algorithm}");
+    }
+
+    final wagersForMatch = await getWagers(matchPrep: wager.matchPrep.value!);
+    final wagersForPlayer = wagersForMatch.where((w) =>
+      w.subjectMemberNumbers.intersects(subject.knownMemberNumbers)).toList();
+
+    List<BayesianOddsWager> priorWagers = [];
+    for(var wager in wagersForPlayer) {
+      final priorWager = await BayesianOddsWager.fromDbWager(subject: subject, gm: this, dbWager: wager);
+      priorWagers.addAll(priorWager);
+    }
+
+    _log.v("${priorWagers.length} prior wagers for subject ${subject.name}");
+    for(var w in priorWagers) {
+      _log.v("Prior: ${w.toString()}");
+    }
+
+    BayesianOddsConfig config = BayesianOddsConfig(
+      baseWeight: 30,
+      defaultConviction: 0.75,
+    );
+    var delta = await _nonclosureBayesianOddsShift(
+      config: config,
+      subjectHistoryLength: lengthInStages,
+      wagers: priorWagers,
+      subjectMonteCarlo: subjectMonteCarlo,
+    );
+
+    if(prediction.type == DbPredictionType.place) {
+      _log.i("Bayesian odds shift for place prediction is ${delta.toStringAsFixed(2)}");
+    }
+    else {
+      _log.i("Bayesian odds shift for percentage prediction is ${delta.asPercentage(decimals: 2, includePercent: true)}");
+      var hydrated = wager.hydrate();
+
+      if(hydrated is Wager) {
+        hydrated.recalculateProbabilityWithDelta(
+          targetSimulation: subjectMonteCarlo,
+          underdogSimulation: null,
+          targetDelta: delta,
+          underdogDelta: null,
+        );
+
+        _log.i("New moneyline odds for ${hydrated.prediction.toString()} are ${hydrated.probability.moneylineOdds}");
+      }
+    }
+    return delta;
+  }
+
+  static Future<double> _nonclosureBayesianOddsShift({
+    required BayesianOddsConfig config,
+    required int subjectHistoryLength,
+    required List<BayesianOddsWager> wagers,
+    required MonteCarloSimulationResult subjectMonteCarlo,
+  }) async {
+    return Isolate.run(() => calculateBayesianOddsUpdate(
+      config: config,
+      subjectHistoryLength: subjectHistoryLength,
+      wagers: wagers,
+      subjectMonteCarlo: subjectMonteCarlo,
+    ));
   }
 
   /// Fully deletes a wager from the database, also deleting

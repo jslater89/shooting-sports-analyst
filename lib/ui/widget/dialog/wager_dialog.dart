@@ -43,6 +43,8 @@ class WagerDialogResult {
 
 /// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
 class WagerDialog extends StatefulWidget {
+  static final lruCache = MonteCarloSimulationCache(capacity: 100);
+
   WagerDialog({
     super.key,
     this.game,
@@ -104,8 +106,6 @@ class _WagerDialogState extends State<WagerDialog> {
   Map<ShooterRating, AlgorithmPrediction> _shootersToPredictions = {};
   Map<RatingGroup, int> _competitorCountsByGroup = {};
   Map<ShooterRating, WagerIneligibilityReason> _ineligibleCompetitors = {};
-
-  final lruCache = MonteCarloSimulationCache(capacity: 100);
 
   @override
   void initState() {
@@ -173,7 +173,7 @@ class _WagerDialogState extends State<WagerDialog> {
         ));
       }
 
-      simulationResult = lruCache.lookup(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
+      simulationResult = WagerDialog.lruCache.lookup(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
 
       if(newPrediction is PercentageSpreadPrediction) {
         for(var number in newPrediction.underdog.knownMemberNumbers) {
@@ -184,7 +184,7 @@ class _WagerDialogState extends State<WagerDialog> {
           ));
         }
 
-        underdogSimulationResult = lruCache.lookup(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
+        underdogSimulationResult = WagerDialog.lruCache.lookup(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 
@@ -217,9 +217,9 @@ class _WagerDialogState extends State<WagerDialog> {
     }
 
     if(probability.ranOwnSimulation && predictionSetId != null) {
-      lruCache.cache(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
+      WagerDialog.lruCache.cache(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
       if(newPrediction is PercentageSpreadPrediction) {
-        lruCache.cache(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
+        WagerDialog.lruCache.cache(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 

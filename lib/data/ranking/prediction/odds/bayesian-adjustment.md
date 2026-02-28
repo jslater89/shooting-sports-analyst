@@ -33,6 +33,7 @@ P(outcome) ~ Beta(α, β)
 ```
 
 Where:
+
 - **α** = "successes" or evidence the event occurs
 - **β** = "failures" or evidence the event doesn't occur
 - **Mean probability** = α / (α + β)
@@ -43,6 +44,7 @@ Where:
 If our Monte Carlo simulation predicts P = 0.65 for "Max Michel finishes 1st-3rd":
 
 **High confidence** (tested on 100 similar predictions, 65 correct):
+
 ```
 α = 65, β = 35
 Mean = 65/100 = 0.65
@@ -50,6 +52,7 @@ Confidence = 100 (high)
 ```
 
 **Low confidence** (tested on 10 similar predictions, 6.5 correct):
+
 ```
 α = 6.5, β = 3.5
 Mean = 6.5/10 = 0.65
@@ -113,11 +116,13 @@ When a player places a bet, we update:
 ```
 
 Where:
+
 - **w** = weight of the bet (based on size, player skill, timing)
 - **signal_for** = 1.0 if betting FOR the outcome, 0.0 otherwise
 - **signal_against** = 1.0 if betting AGAINST the outcome, 0.0 otherwise
 
 For single-sided markets (only betting "for" outcomes):
+
 ```
 α_new = α_old + w
 β_new = β_old
@@ -149,7 +154,6 @@ conviction = f(raw_conviction)
 Options for `f` (all configurable, or disabled for raw linear conviction):
 
 - **Log transform**: `log(1 + raw_conviction × k) / log(1 + k)`. Raises the floor for small bets while preserving the ordering (larger bets still count more). With `k = 5`, a 0.5% raw conviction maps to ~0.015 instead of 0.005; a 20% raw conviction maps to ~0.65 instead of 0.20. Higher `k` = more aggressive (steeper curve, small bets count relatively more). `k = 0` or disabling = linear (no transform).
-
 - **Minimum floor**: `conviction = max(raw_conviction, floor)`. E.g., `floor = 0.02` ensures even a 1% bet contributes at least 2% of what a max-conviction bet would. Simpler to reason about than the log; can be combined with it (apply floor after transform).
 
 Tune these based on production behavior. If most players bet small regardless of confidence, use an aggressive transform or floor so that bets still move the line. Configurability is important — allow toggling the transform, `k`, and `floor` without code changes.
@@ -163,11 +167,12 @@ skill_multiplier = player_accuracy / expected_accuracy
 ```
 
 **Examples**:
+
 - 40% win rate (weak player): multiplier = 0.8 → downweight their bets
 - 50% win rate (average): multiplier = 1.0 → neutral
 - 70% win rate (sharp): multiplier = 1.4 → upweight their bets
 
-**Minimum sample size**: Require at least 10 resolved bets before applying skill adjustment.
+**Minimum sample size**: Require at least 5? 10? resolved bets before applying skill adjustment.
 
 Naively counting successes vs. 50-50 overweights predictions from someone who wins 80% bets at an 80% rate, and underweights predictions from someone who wins 10% bets at a 20% rate—the latter should be the stronger signal.
 
@@ -179,6 +184,7 @@ time_decay = exp(-λ × days_until_match)
 ```
 
 Where λ (lambda) controls decay rate. Suggested values:
+
 - **λ = 0.01**: Slow decay (30 days out = 75% weight)
 - **λ = 0.02**: Moderate decay (30 days out = 54% weight)
 - **λ = 0.05**: Fast decay (30 days out = 22% weight)
@@ -208,7 +214,7 @@ double calculateBetWeight({
   }
 
   // Player skill (0.8 to 1.4 typically)
-  double skillMultiplier = playerAccuracy / 0.50;
+  double skillMultiplier = ... // sharpness from leaderboard
 
   // Time relevance (0.05 to 1.0)
   double timeDecay = exp(-lambda * daysUntilMatch);
@@ -218,6 +224,7 @@ double calculateBetWeight({
 ```
 
 **baseWeight parameter**: Controls overall sensitivity to bets
+
 - **baseWeight = 5**: Conservative (bets move odds slowly)
 - **baseWeight = 10**: Moderate (recommended starting point)
 - **baseWeight = 20**: Aggressive (bets move odds quickly)
@@ -231,6 +238,7 @@ The following illustrates how bet weight updates a **single market's** posterior
 **Market**: "Max Michel finishes 1st-3rd at 2025 Area 4 Championship"
 
 **Model prediction**:
+
 - P(outcome) = 0.65 (65%)
 - Model tested on 100 similar predictions: α = 65, β = 35
 - With 5% house edge: decimal odds = 1/(0.65/0.95) ≈ 1.46
@@ -238,12 +246,14 @@ The following illustrates how bet weight updates a **single market's** posterior
 ### Bet 1: Weak Player, Small Bet, Early
 
 **Player A places bet**:
+
 - Amount: $10
 - Bankroll: $500
 - Win rate: 45% (on 20 resolved bets)
 - Days until match: 30
 
 **Calculate weight**:
+
 ```
 conviction = 10/500 = 0.02
 skill = 0.45/0.50 = 0.90
@@ -252,6 +262,7 @@ weight = 0.02 × 0.90 × 0.0498 × 10 = 0.009
 ```
 
 **Update**:
+
 ```
 α_new = 65 + 0.009 = 65.009
 β_new = 35
@@ -265,12 +276,14 @@ P_new = 65.009/100.009 = 0.6501
 ### Bet 2: Sharp Player, Large Bet, Late
 
 **Player B places bet**:
+
 - Amount: $100
 - Bankroll: $500
 - Win rate: 65% (on 40 resolved bets)
 - Days until match: 2
 
 **Calculate weight**:
+
 ```
 conviction = 100/500 = 0.20
 skill = 0.65/0.50 = 1.30
@@ -279,6 +292,7 @@ weight = 0.20 × 1.30 × 0.8187 × 10 = 2.13
 ```
 
 **Update** (from previous state):
+
 ```
 α_new = 65.009 + 2.13 = 67.139
 β_new = 35
@@ -291,11 +305,13 @@ P_new = 67.139/102.139 = 0.6573
 
 ### Summary of Movement
 
-| State | α | β | P(outcome) | Decimal Odds | Moneyline |
-|-------|---|---|------------|--------------|-----------|
-| Initial | 65.000 | 35 | 0.6500 | 1.462 | -217 |
-| After Bet 1 | 65.009 | 35 | 0.6501 | 1.462 | -217 |
-| After Bet 2 | 67.139 | 35 | 0.6573 | 1.445 | -224 |
+
+| State       | α      | β   | P(outcome) | Decimal Odds | Moneyline |
+| ----------- | ------ | --- | ---------- | ------------ | --------- |
+| Initial     | 65.000 | 35  | 0.6500     | 1.462        | -217      |
+| After Bet 1 | 65.009 | 35  | 0.6501     | 1.462        | -217      |
+| After Bet 2 | 67.139 | 35  | 0.6573     | 1.445        | -224      |
+
 
 The sharp player's late, large bet moved the line by 7 moneyline points.
 
@@ -446,6 +462,10 @@ double getAdjustedProbability({
   required bool Function(double) satisfiesMarket,
   required double modelP,
   double maxLogitShift = 1.0,
+  double? totalWeightShooter,  // optional: for evidence-dependent clamp
+  double clampEvidenceK = 0.0,
+  double baselineWeight = 1.0,
+  double clampMaxMultiplier = 2.0,
 }) {
   int N = sortedSamples.length;
   int count = 0;
@@ -454,7 +474,15 @@ double getAdjustedProbability({
   }
   double shiftedP = count / N;
 
-  return clampMovement(modelP, shiftedP, maxLogitShift: maxLogitShift);
+  return clampMovement(
+    modelP,
+    shiftedP,
+    maxLogitShift: maxLogitShift,
+    totalWeightShooter: totalWeightShooter,
+    clampEvidenceK: clampEvidenceK,
+    baselineWeight: baselineWeight,
+    clampMaxMultiplier: clampMaxMultiplier,
+  );
 }
 ```
 
@@ -465,10 +493,12 @@ This is the same computation whether the requested market has prior bets on it o
 **Setup:** John Smith, model expects ~27.5th finish. N = 10,000 MC trials. N_eff = 100.
 
 **Prior bets:**
+
 - Bet A: "John Smith 1st-10th", sharp player, late, weight = 2.13
 - Bet B: "John Smith 1st-5th", moderate player, weight = 0.5
 
 **Step 1 — Compute posteriors for markets with bets:**
+
 ```
 1st-10th: P_model = 0.012 → P_posterior = (0.012 × 100 + 2.13) / (100 + 2.13) = 0.0326
 1st-5th:  P_model = 0.003 → P_posterior = (0.003 × 100 + 0.50) / (100 + 0.50) = 0.0080
@@ -480,14 +510,16 @@ Both posteriors point toward better finishes, so they're consistent.
 
 **Step 3 — Generate odds for any requested market under the shifted distribution:**
 
-| Requested Market | P_model | P_shifted | Change |
-|---|---|---|---|
-| 1st-5th | 0.003 | 0.008 | +0.005 (line moved) |
-| 1st-10th | 0.012 | 0.033 | +0.021 (line moved) |
-| 12th-16th | 0.045 | 0.058 | **+0.013** |
-| 20th-25th | 0.220 | 0.240 | **+0.020** (largest change) |
-| 25th-30th | 0.280 | 0.272 | **-0.008** |
-| 35th-40th | 0.110 | 0.098 | **-0.012** |
+
+| Requested Market | P_model | P_shifted | Change                      |
+| ---------------- | ------- | --------- | --------------------------- |
+| 1st-5th          | 0.003   | 0.008     | +0.005 (line moved)         |
+| 1st-10th         | 0.012   | 0.033     | +0.021 (line moved)         |
+| 12th-16th        | 0.045   | 0.058     | **+0.013**                  |
+| 20th-25th        | 0.220   | 0.240     | **+0.020** (largest change) |
+| 25th-30th        | 0.280   | 0.272     | **-0.008**                  |
+| 35th-40th        | 0.110   | 0.098     | **-0.012**                  |
+
 
 Key observations:
 
@@ -502,10 +534,12 @@ Key observations:
 **Setup:** Jane Doe, model expects ~75th percentile. N = 10,000 MC trials. N_eff = 100.
 
 **Prior bets:**
+
 - Bet A: "above 95%", sharp player, weight = 1.5
 - Bet B: "above 90%", moderate player, weight = 0.4
 
 **Step 1 — Compute posteriors:**
+
 ```
 above 95%: P_model = 0.018 → P_posterior = (0.018 × 100 + 1.5) / (100 + 1.5) = 0.033
 above 90%: P_model = 0.052 → P_posterior = (0.052 × 100 + 0.4) / (100 + 0.4) = 0.056
@@ -517,14 +551,16 @@ Both point upward — consistent.
 
 **Step 3 — Generate odds for any requested market:**
 
-| Requested Market | P_model | P_shifted | Change |
-|---|---|---|---|
-| Above 95% | 0.018 | 0.033 | +0.015 (line moved) |
-| Above 90% | 0.052 | 0.072 | **+0.020** |
-| Above 85% | 0.125 | 0.155 | **+0.030** |
-| Above 80% | 0.290 | 0.325 | **+0.035** (largest!) |
-| Below 70% | 0.195 | 0.172 | **-0.023** |
-| Below 60% | 0.085 | 0.070 | **-0.015** |
+
+| Requested Market | P_model | P_shifted | Change                |
+| ---------------- | ------- | --------- | --------------------- |
+| Above 95%        | 0.018   | 0.033     | +0.015 (line moved)   |
+| Above 90%        | 0.052   | 0.072     | **+0.020**            |
+| Above 85%        | 0.125   | 0.155     | **+0.030**            |
+| Above 80%        | 0.290   | 0.325     | **+0.035** (largest!) |
+| Below 70%        | 0.195   | 0.172     | **-0.023**            |
+| Below 60%        | 0.085   | 0.070     | **-0.015**            |
+
 
 **Above 80%** sees the largest change because it's near the model's mode where the PDF is densest. Below 60% gets a stronger penalty than below 70%, because it's further from the model center on the "wrong" side.
 
@@ -532,12 +568,14 @@ Both point upward — consistent.
 
 A linear proximity factor (increasing with distance from the model center toward the bet) gets the strength allocation systematically wrong:
 
-| Target | True Change (from distribution shift) | Linear Proximity (old) |
-|---|---|---|
-| >80% (near model mode) | **+0.035** (largest) | 0.25 (weak) |
-| >85% | +0.030 | 0.50 (moderate) |
-| >90% | +0.020 | 0.75 (strong) |
-| >95% (bet target) | +0.015 | 1.00 (strongest) |
+
+| Target                 | True Change (from distribution shift) | Linear Proximity (old) |
+| ---------------------- | ------------------------------------- | ---------------------- |
+| >80% (near model mode) | **+0.035** (largest)                  | 0.25 (weak)            |
+| >85%                   | +0.030                                | 0.50 (moderate)        |
+| >90%                   | +0.020                                | 0.75 (strong)          |
+| >95% (bet target)      | +0.015                                | 1.00 (strongest)       |
+
 
 The linear heuristic gives the most weight to the market that changes the *least*, and the least weight to the market that changes the *most*.
 
@@ -565,40 +603,91 @@ The fix is to clamp symmetrically in **log-odds space**. The logit transform `lo
 double _logit(double p) => log(p / (1.0 - p));
 double _sigmoid(double x) => 1.0 / (1.0 + exp(-x));
 
-double clampMovement(double modelP, double shiftedP, {double maxLogitShift = 1.0}) {
+double clampMovement(
+  double modelP,
+  double shiftedP, {
+  double maxLogitShift = 1.0,
+  double? totalWeightShooter,  // optional: enables evidence-dependent clamp
+  double baselineWeight = 1.0,
+  double clampEvidenceK = 0.0,  // 0 = disabled
+  double clampMaxMultiplier = 2.0,
+}) {
+  double effectiveShift = maxLogitShift;
+  if (clampEvidenceK > 0.0 && totalWeightShooter != null) {
+    effectiveShift = effectiveMaxLogitShift(
+      maxLogitShift: maxLogitShift,
+      totalWeightShooter: totalWeightShooter,
+      baselineWeight: baselineWeight,
+      clampEvidenceK: clampEvidenceK,
+      clampMaxMultiplier: clampMaxMultiplier,
+    );
+  }
   double modelLogit = _logit(modelP);
-  double lower = _sigmoid(modelLogit - maxLogitShift);
-  double upper = _sigmoid(modelLogit + maxLogitShift);
+  double lower = _sigmoid(modelLogit - effectiveShift);
+  double upper = _sigmoid(modelLogit + effectiveShift);
   return shiftedP.clamp(lower, upper);
 }
 ```
 
-The `maxLogitShift` parameter controls how far the odds can move. A value of 1.0 means the odds ratio can roughly double or halve. The allowed range in probability space:
+The `maxLogitShift` parameter controls how far the odds can move. A value of 1.0 means the odds ratio can roughly double or halve. Optionally, when `clampEvidenceK > 0` and `totalWeightShooter` is provided, the effective clamp widens with evidence (see "Evidence-Dependent Clamp Width"). The allowed range in probability space (for `maxLogitShift = 1.0`):
 
-| modelP | Allowed range | Absolute width |
-|--------|---------------|----------------|
-| 0.01   | [0.004, 0.027] | 0.023 |
-| 0.05   | [0.019, 0.125] | 0.106 |
-| 0.50   | [0.269, 0.731] | 0.462 |
-| 0.95   | [0.875, 0.981] | 0.106 |
-| 0.99   | [0.973, 0.996] | 0.023 |
+
+| modelP | Allowed range  | Absolute width |
+| ------ | -------------- | -------------- |
+| 0.01   | [0.004, 0.027] | 0.023          |
+| 0.05   | [0.019, 0.125] | 0.106          |
+| 0.50   | [0.269, 0.731] | 0.462          |
+| 0.95   | [0.875, 0.981] | 0.106          |
+| 0.99   | [0.973, 0.996] | 0.023          |
+
 
 Key properties:
+
 - **Symmetric**: P = 0.05 and P = 0.95 get the same absolute width (0.106).
 - **Long shots can move**: P = 0.01 gets a range of [0.004, 0.027], not the frozen [0.008, 0.012] of a linear 20% clamp.
 - **Favorites can't exceed 1.0**: The sigmoid naturally stays in (0, 1).
-- **Single tunable parameter**: `maxLogitShift` has uniform meaning across the probability range — "how many doublings/halvings of the odds ratio are allowed?"
+- **Primary tunable**: `maxLogitShift` has uniform meaning across the probability range — "how many doublings/halvings of the odds ratio are allowed?" Optional evidence-dependent scaling adds `clampEvidenceK`, `baselineWeight`, and `clampMaxMultiplier` (see "Evidence-Dependent Clamp Width").
 
 Compare to the linear clamp (`maxMove = modelP × 0.20`):
 
+
 | modelP | Log-odds range | Linear 20% range |
-|--------|---------------|-------------------|
-| 0.01   | [0.004, 0.027] | [0.008, 0.012] |
-| 0.05   | [0.019, 0.125] | [0.040, 0.060] |
-| 0.50   | [0.269, 0.731] | [0.400, 0.600] |
-| 0.95   | [0.875, 0.981] | [0.760, 1.000] |
+| ------ | -------------- | ---------------- |
+| 0.01   | [0.004, 0.027] | [0.008, 0.012]   |
+| 0.05   | [0.019, 0.125] | [0.040, 0.060]   |
+| 0.50   | [0.269, 0.731] | [0.400, 0.600]   |
+| 0.95   | [0.875, 0.981] | [0.760, 1.000]   |
+
 
 The linear clamp over-restricts long shots and over-permits near-certainties.
+
+### Evidence-Dependent Clamp Width
+
+Should the clamp widen when multiple wagers pull the odds in the same direction? The δ search already weights markets by total bet weight, so more consensus yields a larger δ and thus larger P_shifted. The fixed clamp then applies a uniform ceiling regardless of evidence strength.
+
+**Arguments for widening with evidence:** One bet can be noise; many agreeing bets are stronger evidence. A fixed band can be overly conservative when sharp consensus suggests the model is wrong. Widening the clamp for higher total weight lets the Bayesian machinery move further when evidence is strong.
+
+**Arguments for keeping it fixed:** The clamp may be a deliberate ceiling on model deviation — "we never move more than X from fundamentals." Widening with evidence could amplify herding (early bets move the line → new bettors pile on → line moves further). A single tunable is simpler.
+
+**Recommendation:** Keep the fixed clamp as default. If backtests show the clamp frequently cuts off shifts that posteriors deem well-supported, add optional evidence-dependent scaling. Tune via Brier score and calibration.
+
+**Optional implementation** (when evidence-dependent scaling is enabled):
+
+```dart
+double effectiveMaxLogitShift({
+  required double maxLogitShift,
+  required double totalWeightShooter,
+  double baselineWeight = 1.0,
+  double clampEvidenceK = 0.2,
+  double clampMaxMultiplier = 2.0,
+}) {
+  if (clampEvidenceK <= 0.0) return maxLogitShift;
+  double multiplier = 1.0 + clampEvidenceK * log(1.0 + totalWeightShooter / baselineWeight);
+  return (maxLogitShift * multiplier).clamp(maxLogitShift, maxLogitShift * clampMaxMultiplier);
+}
+```
+
+Example: `baselineWeight = 1.0`, `clampEvidenceK = 0.2` → totalWeight 0 → 1.0×; totalWeight 5 → ~1.35×; totalWeight 20 → ~1.6×, capped at `clampMaxMultiplier × maxLogitShift`.
 
 ### Exposure Limits
 
@@ -630,7 +719,7 @@ Since odds are computed from the raw bet history, voiding a bet is trivial: mark
 
 The compute-on-demand model recomputes δ each time odds are requested, but the cost is modest:
 
-1. **MC sample ordering must be preserved** — trial indices must stay aligned across shooters so that spread predictions can compare shooter A's trial _i_ against shooter B's trial _i_. Sorting per-shooter samples by finish position or percentage would destroy this pairing. The samples are simply scanned in trial order.
+1. **MC sample ordering must be preserved** — trial indices must stay aligned across shooters so that spread predictions can compare shooter A's trial *i* against shooter B's trial *i*. Sorting per-shooter samples by finish position or percentage would destroy this pairing. The samples are simply scanned in trial order.
 2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations of binary search for single-market case). Each iteration scans the samples: O(N) per iteration, O(15N) total. For N = 10,000, this is ~150,000 comparisons.
 3. **Evaluating P_shifted** for the requested market is one pass over the shifted samples: O(N).
 4. **Sorted copies for binary search** — maintaining a sorted copy of each shooter's samples (separate from the trial-ordered originals) would allow O(log N) boundary lookups instead of O(N) linear scans for place and percentage markets, with the break-even at roughly log₂(N) queries (~14 for N = 12,500). Spread markets would still require linear scans on the paired data. At current sample sizes the linear scan completes in microseconds, so this is not worth implementing unless profiling shows the δ search is a bottleneck.
@@ -753,17 +842,22 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 
 ## Tunable Parameters Summary
 
-| Parameter | Recommended | Conservative | Aggressive | Description |
-|-----------|-------------|--------------|------------|-------------|
-| **Model Confidence** (α + β) | 50-100 | 100-200 | 25-50 | Set via N_eff from rating history (see "Principled Setting of α and β"); higher N_eff = less movement from bets. Do not tune α+β directly. |
-| **N_eff Scale** | 15 | 20 | 10 | Multiplier on (log) history count when computing N_eff. Higher = stiffer prior for experienced shooters. |
-| **N_eff Log Scale** | true | true | true | Use `log(1 + history)` instead of raw history count. Gives diminishing returns from deep history. |
-| **Base Weight** | 10.0 | 5.0 | 20.0 | Overall bet impact scaling |
-| **Conviction Log K** | 0 (off) | 0 | 5–10 | Log transform for conviction; 0 = linear. Use 5+ if players bet small relative to bankroll. See "Bet Size Relative to Bankroll." |
-| **Conviction Floor** | 0 (off) | 0 | 0.02 | Minimum conviction; ensures small bets still move the line. Combine with or instead of log transform. |
-| **Time Decay λ** | 0.10 | 0.05 | 0.15 | Rate of early bet discounting |
-| **Max Logit Shift** | 1.0 | 0.5 | 1.5 | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement." |
-| **Min Bets for Skill** | 10 | 20 | 5 | Minimum resolved bets to apply skill multiplier |
+
+| Parameter                    | Recommended | Conservative | Aggressive | Description                                                                                                                                |
+| ---------------------------- | ----------- | ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Model Confidence** (α + β) | 50-100      | 100-200      | 25-50      | Set via N_eff from rating history (see "Principled Setting of α and β"); higher N_eff = less movement from bets. Do not tune α+β directly. |
+| **N_eff Scale**              | 15          | 20           | 10         | Multiplier on (log) history count when computing N_eff. Higher = stiffer prior for experienced shooters.                                   |
+| **N_eff Log Scale**          | true        | true         | true       | Use `log(1 + history)` instead of raw history count. Gives diminishing returns from deep history.                                          |
+| **Base Weight**              | 10.0        | 5.0          | 20.0       | Overall bet impact scaling                                                                                                                 |
+| **Conviction Log K**         | 0 (off)     | 0            | 5–10       | Log transform for conviction; 0 = linear. Use 5+ if players bet small relative to bankroll. See "Bet Size Relative to Bankroll."           |
+| **Conviction Floor**         | 0 (off)     | 0            | 0.02       | Minimum conviction; ensures small bets still move the line. Combine with or instead of log transform.                                      |
+| **Time Decay λ**             | 0.10        | 0.05         | 0.15       | Rate of early bet discounting                                                                                                              |
+| **Max Logit Shift**          | 1.0         | 0.5          | 1.5        | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement."                                             |
+| **Clamp Evidence K**         | 0 (off)     | 0            | 0.2        | If >0, widen clamp with total bet weight. 0 = fixed clamp. See "Evidence-Dependent Clamp Width."                                             |
+| **Clamp Baseline Weight**   | 1.0         | 1.0          | 1.0        | Baseline for evidence scaling; used with Clamp Evidence K.                                                                                  |
+| **Clamp Max Multiplier**    | 2.0         | 1.5          | 2.5        | Maximum multiplier on maxLogitShift when evidence-dependent; caps effective clamp width.                                                   |
+| **Min Bets for Skill**      | 10          | 20           | 5          | Minimum resolved bets to apply skill multiplier                                                                                            |
+
 
 ## Testing Strategy
 
@@ -811,6 +905,7 @@ Example: If "Max 1st-3rd" has P=0.40 and "Max 4th-6th" has P=0.50, but those are
 ### 3. Correlated Market Detection
 
 Some markets are perfectly correlated:
+
 - "Max finishes ≥95%" implies "Max finishes 1st-3rd"
 - Detect and enforce consistency
 
@@ -821,6 +916,7 @@ If multiple players consistently bet together and win, treat as a single sharp e
 ### 5. Order Book Dynamics
 
 Instead of single odds, offer a range:
+
 - Bid (best odds for house): Model - movement
 - Ask (best odds for player): Model + movement
 - Spread narrows as more bets placed (confidence increases)
@@ -908,6 +1004,9 @@ class OddsGenerator {
     double maxLogitShift = 1.0,
     double baseWeight = 10.0,
     double lambda = 0.10,
+    double clampEvidenceK = 0.0,      // 0 = fixed clamp; >0 enables evidence-dependent
+    double clampBaselineWeight = 1.0,
+    double clampMaxMultiplier = 2.0,
   }) {
     String shooterKey = requestedMarket.target.memberNumber;
     List<double> samples = _getSamples(requestedMarket, shooterKey);
@@ -929,6 +1028,18 @@ class OddsGenerator {
         _computeDelta(priorBets, samples, N, nEff, baseWeight, lambda);
     _cachedDelta[shooterKey] = delta;
 
+    // Total bet weight for this shooter (for evidence-dependent clamp)
+    double totalWeightShooter = 0.0;
+    for (var wager in priorBets) {
+      totalWeightShooter += calculateBetWeight(
+        wager: wager,
+        player: wager.player,
+        matchDate: wager.matchDate,
+        baseWeight: baseWeight,
+        lambda: lambda,
+      );
+    }
+
     // Evaluate P under the shifted distribution
     int shiftedCount = 0;
     for (var sample in samples) {
@@ -937,7 +1048,15 @@ class OddsGenerator {
     }
     double shiftedP = shiftedCount / N;
 
-    double adjustedP = clampMovement(modelP, shiftedP, maxLogitShift: maxLogitShift);
+    double adjustedP = clampMovement(
+      modelP,
+      shiftedP,
+      maxLogitShift: maxLogitShift,
+      totalWeightShooter: clampEvidenceK > 0 ? totalWeightShooter : null,
+      clampEvidenceK: clampEvidenceK,
+      baselineWeight: clampBaselineWeight,
+      clampMaxMultiplier: clampMaxMultiplier,
+    );
 
     return PredictionProbability(adjustedP, houseEdge: houseEdge);
   }
@@ -1074,6 +1193,7 @@ This eliminates the need for a separate spread delta type. Every δ is single-sh
 ### Decomposition via Virtual Percentage Markets
 
 A spread bet "A beats B by ≥X%" with weight `w` implies:
+
 - A's percentage is higher than the model thinks (positive signal)
 - B's percentage is lower than the model thinks (negative signal)
 
@@ -1110,6 +1230,7 @@ A naive approach would place the virtual threshold at the model's median (P_mode
 With spread-derived thresholds, the P_model of each virtual market reflects the extremity of the spread claim:
 
 **Long-odds spread "A-B ≥ 20%"** (model expects 7% spread, excess = 13%):
+
 ```
 threshold_A = 0.85 + 0.065 = 0.915
 threshold_B = 0.78 - 0.065 = 0.715
@@ -1120,6 +1241,7 @@ P_model("B below 71.5%") ≈ 0.15  (tail of B's distribution)
 ```
 
 **Short-odds spread "A-B ≥ 1%"** (model expects 7% spread, excess = -6%):
+
 ```
 threshold_A = 0.85 - 0.03 = 0.82
 threshold_B = 0.78 + 0.03 = 0.81

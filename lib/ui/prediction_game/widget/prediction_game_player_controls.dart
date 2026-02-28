@@ -240,8 +240,17 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                       _saveParlay(player, model, result.parlay!);
                     }
                     else if(result.isIndependentWagers) {
-                      _log.i("Saving ${result.independentWagers!.length} independent wagers");
-                      _saveIndependentWagers(player, model, result.independentWagers!);
+                      var deltaWager = await result.independentWagers!.first;
+                      var deltaSimulation = deltaWager.probability.simulationResult!.targetResult;
+                      var dbWager = await DbWager.fromWager(deltaWager);
+                      dbWager.matchPrep.value = selectedMatchPrep!;
+                      var delta = await model.manager.getBayesianOddsShift(
+                        wager: dbWager,
+                        subjectMonteCarlo: deltaSimulation,
+                      );
+
+                      // _log.i("Saving ${result.independentWagers!.length} independent wagers");
+                      // _saveIndependentWagers(player, model, result.independentWagers!);
                     }
                   }
                 },

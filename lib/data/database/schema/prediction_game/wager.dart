@@ -525,6 +525,19 @@ class DbPrediction {
     dbPrediction.probability = DbProbability.fromWager(wager);
     return dbPrediction;
   }
+
+  factory DbPrediction.fromBayesianOddsWager({
+    required double percentage,
+    required bool abovePercentage,
+    required DbPredictionTarget target,
+  }) {
+    var dbPrediction = DbPrediction();
+    dbPrediction.type = DbPredictionType.percentage;
+    dbPrediction.percentage = percentage;
+    dbPrediction.abovePercentage = abovePercentage;
+    dbPrediction.target = target;
+    return dbPrediction;
+  }
 }
 
 @embedded
@@ -563,6 +576,22 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   @ignore
   String get name {
     return "${firstName} ${lastName}";
+  }
+
+  bool isSameAs(DbPredictionTarget other) {
+    if(this == other) {
+      return true;
+    }
+
+    if(this.projectId != other.projectId) {
+      return false;
+    }
+    if(this.groupUuid != other.groupUuid) {
+      return false;
+    }
+
+    return this.memberNumber == other.memberNumber
+      || this.knownMemberNumbers.intersects(other.knownMemberNumbers);
   }
 }
 
