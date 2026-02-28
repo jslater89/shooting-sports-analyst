@@ -351,6 +351,16 @@ class PredictionGameManager {
 
     if(prediction.type == DbPredictionType.place) {
       _log.i("Bayesian odds shift for place prediction is ${delta.toStringAsFixed(2)}");
+      var hydrated = wager.hydrate();
+      if(hydrated is Wager) {
+        hydrated.recalculateProbabilityWithDelta(
+          targetSimulation: subjectMonteCarlo,
+          underdogSimulation: null,
+          targetDelta: delta,
+          underdogDelta: null,
+        );
+        _log.i("New moneyline odds for ${hydrated.prediction.descriptiveString} are ${hydrated.probability.moneylineOdds}");
+      }
     }
     else {
       _log.i("Bayesian odds shift for percentage prediction is ${delta.asPercentage(decimals: 2, includePercent: true)}");
@@ -364,7 +374,7 @@ class PredictionGameManager {
           underdogDelta: null,
         );
 
-        _log.i("New moneyline odds for ${hydrated.prediction.toString()} are ${hydrated.probability.moneylineOdds}");
+        _log.i("New moneyline odds for ${hydrated.prediction.descriptiveString} are ${hydrated.probability.moneylineOdds}");
       }
     }
     return delta;

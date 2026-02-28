@@ -417,7 +417,7 @@ class BayesianOddsPrediction {
   int? bestPlace;
   int? worstPlace;
   double? percentage;
-  bool? abovePercentage;
+  bool abovePercentage;
   BayesianOddsTarget target;
   BayesianOddsTarget? underdog;
 

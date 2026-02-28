@@ -1,6 +1,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
@@ -52,6 +53,7 @@ Future<double> calculateBayesianOddsUpdate({
   _log.v("nEff: $nEff");
 
   final Map<BayesianOddsWager, double> weight = {};
+  final Map<BayesianOddsWager, Map<BayesianOddsWager, double>> additionalWeight = {};
   final Map<BayesianOddsWager, double> pShifted = {};
   final Map<BayesianOddsWager, double> alpha = {};
   final Map<BayesianOddsWager, double> pPosterior = {};
@@ -81,7 +83,35 @@ Future<double> calculateBayesianOddsUpdate({
   of wagers pull more strongly than they would in the merged-market case. Perhaps use the
   raw weight as the multiplier in sum-of-squared-errors, but use the effective weight to calculate
   the posterior in the prep code.
+
+  We can reduce the time complexity of this by sorting wagers by some measure (percentage, or
+  center of place range), and only considering certain nearby wagers (maybe up to N), but
+  that may be premature optimization.
   */
+
+  for(var wager in wagers) {
+    additionalWeight[wager] = {};
+    int nearbyCount = 0;
+    for(var otherWager in wagers) {
+      if(wager == otherWager) continue;
+
+      final similarity = _similarity(wager, otherWager);
+      if(similarity == 0.0) continue;
+      if(similarity.isNaN) {
+        _log.w("Similarity between ${wager.prediction.toString()} and ${otherWager.prediction.toString()} is NaN.");
+        continue;
+      }
+
+      final otherWeight = otherWager.calculateWeight(config);
+      additionalWeight[wager]![otherWager] = similarity * otherWeight;
+      nearbyCount++;
+    }
+
+    for(var similarityEntry in additionalWeight[wager]!.entries) {
+      additionalWeight[wager]![similarityEntry.key] = similarityEntry.value / nearbyCount;
+    }
+  }
+
 
   // Calculate the weights and model probabilities for each wager.
   for(var wager in wagers) {
@@ -98,12 +128,16 @@ Future<double> calculateBayesianOddsUpdate({
       throw ArgumentError("Unsupported prediction type: ${type}");
     }
 
+    final posteriorWeight = weight[wager]! + additionalWeight[wager]!.values.sum;
     alpha[wager] = pShifted[wager]! * nEff;
-    pPosterior[wager] = (alpha[wager]! + weight[wager]!) / (nEff + weight[wager]!);
+    pPosterior[wager] = (alpha[wager]! + posteriorWeight) / (nEff + posteriorWeight);
+
     _log.v("Weight for ${wager.prediction.toString()}: ${weight[wager]!.toStringAsFixed(4)}");
-    _log.v("Alpha for ${wager.prediction.toString()}: ${alpha[wager]!.toStringAsFixed(4)}");
-    _log.v("Posterior for ${wager.prediction.toString()}: ${pPosterior[wager]!.toStringAsFixed(4)}");
-    _log.v("Initial error for ${wager.prediction.toString()}: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
+    _log.v("Weight from nearby wagers: ${additionalWeight[wager]!.entries.map((e) => "${e.key.prediction.toString()}: ${e.value.toStringAsFixed(4)}").join(", ")}");
+    _log.v("Alpha: ${alpha[wager]!.toStringAsFixed(4)}");
+    _log.v("Prior: ${pShifted[wager]!.toStringAsFixed(4)}");
+    _log.v("Posterior: ${pPosterior[wager]!.toStringAsFixed(4)}");
+    _log.v("Initial error: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
     _log.v("\n");
   }
 
@@ -123,6 +157,50 @@ Future<double> calculateBayesianOddsUpdate({
   );
 
   return delta;
+}
+
+double _similarity(BayesianOddsWager a, BayesianOddsWager b, {double percentSteepness = 20, double percentMaxDistance = 0.05}) {
+  if(a.prediction.type == DbPredictionType.place && b.prediction.type == DbPredictionType.place) {
+    return _jaccardIndex(a, b);
+  }
+  else if(a.prediction.type == DbPredictionType.percentage && b.prediction.type == DbPredictionType.percentage) {
+    return _percentageSimilarity(a, b, steepness: percentSteepness, maxDistance: percentMaxDistance);
+  }
+  _log.w("Similarity calculation between ${a.prediction.toString()} and ${b.prediction.toString()} is not supported.");
+  return 0.0;
+}
+
+double _jaccardIndex(BayesianOddsWager wager, BayesianOddsWager otherWager) {
+  if(wager.prediction.type != DbPredictionType.place || otherWager.prediction.type != DbPredictionType.place) {
+    throw ArgumentError("Jaccard index can only be calculated for place predictions.");
+  }
+
+  var (int a, int b) = (wager.prediction.bestPlace!, wager.prediction.worstPlace!);
+  var (int x, int y) = (otherWager.prediction.bestPlace!, otherWager.prediction.worstPlace!);
+
+  int left = max(a, x);
+  int right = min(b, y);
+  int intersection = max(0, right - left + 1);
+  int size1 = b - a + 1;
+  int size2 = y - x + 1;
+  int union = size1 + size2 - intersection;
+  if(union == 0) {
+    return 0.0;
+  }
+  return intersection / union;
+}
+
+double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double steepness = 20, double maxDistance = 0.05}) {
+  if(a.prediction.type != DbPredictionType.percentage || b.prediction.type != DbPredictionType.percentage) {
+    throw ArgumentError("Percentage similarity can only be calculated for percentage predictions.");
+  }
+
+  double distance = (a.prediction.percentage! - b.prediction.percentage!).abs();
+  if(distance > maxDistance) {
+    return 0.0;
+  }
+  double x = distance / maxDistance;
+  return 1 / (1 + exp(steepness * (x - 0.5)));
 }
 
 double _calculateDelta({
