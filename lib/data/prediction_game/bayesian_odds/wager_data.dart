@@ -284,6 +284,14 @@ class BayesianOddsWager {
     required MonteCarloSimulationResult subjectMonteCarlo,
     required MonteCarloSimulationResult underdogMonteCarlo,
   }) {
+    // n.b. to decompose the spread leg, we need the model's current expected gap
+    // between the two competitors, which means we need the Monte Carlo simulation
+    // for both the target and the dog. Note that one of the target or underdog of
+    // the spread leg will be the subject of the Bayesian odds update, so we're only
+    // looking up or generating one extra result, but we do need all of the oddsmaking
+    // infrastructure to be able to get-or-generate the results for the other
+    // competitor.
+
     final meanA = subjectMonteCarlo.percentages.average;
     final meanB = underdogMonteCarlo.percentages.average;
     final modelGap = meanA - meanB;
