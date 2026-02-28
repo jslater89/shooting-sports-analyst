@@ -111,6 +111,10 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   int get lengthInStages => wrappedRating.intData[_IntKeys.lengthInStages.index];
   set lengthInStages(int v) => wrappedRating.intData[_IntKeys.lengthInStages.index] = v;
 
+  static int getLengthInStages(DbShooterRating rating) {
+    return rating.intData[_IntKeys.lengthInStages.index];
+  }
+
   @override
   int? get stageCount => lengthInStages;
 
