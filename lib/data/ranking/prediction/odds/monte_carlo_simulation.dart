@@ -30,8 +30,17 @@ MonteCarloSimulationResult runOddsSimulation({
   final actualRandom = random ?? Random();
   var shooterPrediction = shootersToPredictions[target];
   if(shooterPrediction == null) {
+    // fall back to equalsShooter search
+    final matchingKey = shootersToPredictions.keys.firstWhereOrNull((key) => key.equalsShooter(target));
+    if(matchingKey != null) {
+      shooterPrediction = shootersToPredictions[matchingKey];
+    }
+  }
+
+  if(shooterPrediction == null) {
     throw ArgumentError("Shooter prediction not found for ${target.name}");
   }
+
   List<double> percentages = [];
   List<int> places = [];
   for(var i = 0; i < trials; i++) {

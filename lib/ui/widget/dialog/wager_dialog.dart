@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_cache.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
@@ -51,7 +52,7 @@ class WagerDialog extends StatefulWidget {
     super.key,
     this.manager,
     required this.predictions,
-    required this.predictionSetId,
+    this.predictionSet,
     required this.matchId,
     this.matchPrep,
     this.title,
@@ -67,13 +68,13 @@ class WagerDialog extends StatefulWidget {
   final String? helpText;
   final String matchId;
   final MatchPrep? matchPrep;
-  final int? predictionSetId;
+  final PredictionSet? predictionSet;
   final List<AlgorithmPrediction> predictions;
 
   static Future<WagerDialogResult?> show(BuildContext context, {
     required List<AlgorithmPrediction> predictions,
     required String matchId,
-    int? predictionSetId,
+    PredictionSet? predictionSet,
     String? title,
     bool roundToMoneyline = false,
     double? availableBalance,
@@ -87,7 +88,7 @@ class WagerDialog extends StatefulWidget {
         manager: manager,
         predictions: predictions,
         matchId: matchId,
-        predictionSetId: predictionSetId,
+        predictionSet: predictionSet,
         title: title,
         roundToMoneyline: roundToMoneyline,
         availableBalance: availableBalance,
@@ -170,7 +171,7 @@ class _WagerDialogState extends State<WagerDialog> {
     const int trials = 12500;
 
     // We can only use the simulation cache if we have a prediction set ID.
-    final predictionSetId = widget.predictionSetId;
+    final predictionSetId = widget.predictionSet?.id;
     if(predictionSetId != null) {
       for(var number in newPrediction.shooter.knownMemberNumbers) {
         cacheKeys.add(MonteCarloSimulationLruKey(
@@ -180,7 +181,7 @@ class _WagerDialogState extends State<WagerDialog> {
         ));
       }
 
-      simulationResult = WagerDialog.lruCache.lookup(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
+      simulationResult = WagerDialog.lruCache.lookupSync(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
 
       if(newPrediction is PercentageSpreadPrediction) {
         for(var number in newPrediction.underdog.knownMemberNumbers) {
@@ -191,7 +192,7 @@ class _WagerDialogState extends State<WagerDialog> {
           ));
         }
 
-        underdogSimulationResult = WagerDialog.lruCache.lookup(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
+        underdogSimulationResult = WagerDialog.lruCache.lookupSync(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 
@@ -224,9 +225,9 @@ class _WagerDialogState extends State<WagerDialog> {
     }
 
     if(probability.ranOwnSimulation && predictionSetId != null) {
-      WagerDialog.lruCache.cache(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
+      WagerDialog.lruCache.cacheSync(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
       if(newPrediction is PercentageSpreadPrediction) {
-        WagerDialog.lruCache.cache(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
+        WagerDialog.lruCache.cacheSync(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 
@@ -236,15 +237,28 @@ class _WagerDialogState extends State<WagerDialog> {
       amount: newWager.amount,
     );
 
-    if(widget.manager != null && widget.matchPrep != null) {
+    if(widget.manager != null && widget.matchPrep != null && widget.predictionSet != null) {
       final matchPrep = widget.matchPrep;
+      MonteCarloSimulationResult? favoriteMonteCarlo;
+      MonteCarloSimulationResult? underdogMonteCarlo;
+      if(newPrediction is PercentageSpreadPrediction) {
+        favoriteMonteCarlo = probability.simulationResult!.targetResult;
+        underdogMonteCarlo = probability.simulationResult!.underdogResult;
+      }
       await widget.manager!.updateWagerWithBayesianOddsShift(
+        shootersToPredictions: _shootersToPredictions,
         wager: wager,
-        matchPrep: matchPrep,
+        matchPrep: matchPrep!,
+        predictionSet: widget.predictionSet!,
         subjectMonteCarlo: probability.simulationResult!.targetResult,
+        spreadFavoriteMonteCarlo: favoriteMonteCarlo,
+        spreadUnderdogMonteCarlo: underdogMonteCarlo,
+        cache: WagerDialog.lruCache,
       );
     }
 
+    // Going by wager automatically handles the parlay case, since the wager dialog
+    // combines all single legs into the parlay.
 
     if(index == -1) {
       _legs.add(wager);

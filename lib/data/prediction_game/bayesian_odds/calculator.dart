@@ -33,10 +33,17 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
 }) async {
   StringBuffer logBuffer = StringBuffer();
 
+  if(wagers.isEmpty) {
+    return BayesianOddsResult(
+      delta: 0.0,
+      log: "No wagers provided.",
+    );
+  }
+
   final type = wagers.first.prediction.type;
   for(var wager in wagers) {
-    if(wager.prediction.type != type) {
-      throw ArgumentError("All wagers must have the same prediction type.");
+    if(!wager.prediction.type.isCompatibleWith(type)) {
+      throw ArgumentError("Wager ${wager.prediction} is not compatible with type $type.");
     }
   }
 
@@ -190,10 +197,18 @@ double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double s
     throw ArgumentError("Percentage similarity can only be calculated for percentage predictions.");
   }
 
+  // Predictions in opposite directions are always dissimilar.
+  if(a.prediction.abovePercentage != b.prediction.abovePercentage) {
+    return 0.0;
+  }
+
+  // If the predictions are too far apart, they are dissimilar.
   double distance = (a.prediction.percentage! - b.prediction.percentage!).abs();
   if(distance > maxDistance) {
     return 0.0;
   }
+
+  // Otherwise, the similarity is a sigmoid function of the distance.
   double x = distance / maxDistance;
   return 1 / (1 + exp(steepness * (x - 0.5)));
 }

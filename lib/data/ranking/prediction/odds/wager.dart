@@ -97,6 +97,7 @@ class Wager implements IWager {
     MonteCarloSimulationResult? underdogSimulation,
     required double targetDelta,
     double? underdogDelta,
+    Random? random,
   }) {
     if(prediction is PlacePrediction) {
       probability = PredictionProbability.fromPlacePrediction(
@@ -104,6 +105,7 @@ class Wager implements IWager {
         null,
         simulationResult: targetSimulation,
         placeDelta: targetDelta,
+        random: random,
       );
     }
     else if(prediction is PercentagePrediction) {
@@ -112,6 +114,7 @@ class Wager implements IWager {
         null,
         simulationResult: targetSimulation,
         ratioDelta: targetDelta,
+        random: random,
       );
     }
     else if(prediction is PercentageSpreadPrediction) {
@@ -122,6 +125,7 @@ class Wager implements IWager {
         underdogSimulationResult: underdogSimulation,
         favoriteRatioDelta: targetDelta,
         underdogRatioDelta: underdogDelta ?? 0.0,
+        random: random,
       );
     }
     else {

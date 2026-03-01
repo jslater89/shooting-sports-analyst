@@ -177,7 +177,7 @@ class BayesianOddsWager {
     return hits / trials;
   }
 
-  /// Return the Bayesian odds wagers for a given DbWager.
+  /// Return the Bayesian odds wagers for a given leg of a DbWager.
   ///
   /// If DbWager is a parlay or spread, the list will have multiple
   /// elements.
@@ -189,23 +189,27 @@ class BayesianOddsWager {
   /// question.
   ///
   /// [dbWager] is the [DbWager] to convert to Bayesian odds wagers.
+  ///
+  /// [targetType] is the type of the target wager for Bayesian odds
+  /// calculation. Incompatible legs will be skipped.
   static Future<List<BayesianOddsWager>> fromDbWager({
     required DbPredictionTarget subject,
     required PredictionGameManager gm,
     required DbWager dbWager,
+    required DbPredictionType targetType,
 
     /// The logger to use for logging. BayesianOddsWagers are used in
     /// multiple isolates, some of which may not have logging infrastructure
     /// set up. If no logger is provided, no logging will be done.
     SSALogger? log,
 
-    /// The Monte Carlo simulation results for the subject. Required
-    /// only if the wager contains a spread leg.
-    MonteCarloSimulationResult? subjectMonteCarlo,
+    /// The Monte Carlo simulation results for the favorite of any spread legs in
+    /// the wager.
+    Map<DbPrediction, MonteCarloSimulationResult>? spreadFavoriteMonteCarloResults,
 
-    /// The Monte Carlo simulation results for the underdog. Required
-    /// only if the wager contains a spread leg.
-    MonteCarloSimulationResult? underdogMonteCarlo,
+    /// The Monte Carlo simulation results for the underdog of any spread legs in
+    /// the wager.
+    Map<DbPrediction, MonteCarloSimulationResult>? spreadUnderdogMonteCarloResults,
   }) async {
     var wagers = <BayesianOddsWager>[];
 
@@ -234,8 +238,14 @@ class BayesianOddsWager {
 
     // If this is a multi-leg wager, some legs may not be relevant to the subject.
     for(var leg in dbWager.legs) {
+      if(!leg.type.isCompatibleWith(targetType)) {
+        continue;
+      }
+
       if(leg.type == DbPredictionType.spread) {
-        if(subjectMonteCarlo == null || underdogMonteCarlo == null) {
+        final spreadFavoriteMonteCarlo = spreadFavoriteMonteCarloResults?[leg];
+        final spreadUnderdogMonteCarlo = spreadUnderdogMonteCarloResults?[leg];
+        if(spreadFavoriteMonteCarlo == null || spreadUnderdogMonteCarlo == null) {
           log?.w("Missing Monte Carlo simulation results for spread leg ${leg.descriptiveString}");
           continue;
         }
@@ -249,8 +259,9 @@ class BayesianOddsWager {
             sharpness: sharpness,
             resolvedPlayerWagers: resolvedWagers.length,
             daysUntilMatch: daysUntilMatch,
-            subjectMonteCarlo: subjectMonteCarlo,
-            underdogMonteCarlo: underdogMonteCarlo,
+            subjectMonteCarlo: spreadFavoriteMonteCarlo,
+            underdogMonteCarlo: spreadUnderdogMonteCarlo,
+            log: log,
           ));
         }
       }
@@ -276,6 +287,7 @@ class BayesianOddsWager {
   /// Return the Bayesian odds data for a given spread leg, returning either
   /// the target or underdog virtual bet based on the identity of subject.
   static BayesianOddsWager _decomposeSpreadLeg(DbPrediction leg, {
+    SSALogger? log,
     required BayesianOddsTarget subject,
     required double perLeg,
     required double? maxWager,
@@ -315,6 +327,8 @@ class BayesianOddsWager {
         target: leg.target,
       );
 
+      log?.i("Decomposed spread leg favorite: ${leg.descriptiveString} -> ${predictionA.descriptiveString}");
+
       return BayesianOddsWager(
         amount: perLeg / 2,
         maxWager: maxWager != null ? maxWager / 2 : null,
@@ -331,6 +345,7 @@ class BayesianOddsWager {
         target: leg.underdog!,
       );
 
+      log?.i("Decomposed spread leg underdog: ${leg.descriptiveString} -> ${predictionB.descriptiveString}");
 
       return BayesianOddsWager(
         amount: perLeg / 2,
@@ -410,6 +425,14 @@ class BayesianOddsTarget {
       return isSameAs(BayesianOddsTarget.fromDbPredictionTarget(other));
     }
     return false;
+  }
+}
+
+extension CompatiblePredictionTypes on DbPredictionType {
+  bool isCompatibleWith(DbPredictionType other) {
+    return this == other
+      || (this == DbPredictionType.spread && other == DbPredictionType.percentage)
+      || (this == DbPredictionType.percentage && other == DbPredictionType.spread);
   }
 }
 

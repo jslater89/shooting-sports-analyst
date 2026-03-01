@@ -10,6 +10,9 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
+import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_cache.dart';
+import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_cache.dart';
+import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
@@ -24,6 +27,8 @@ import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/calcu
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
@@ -295,22 +300,43 @@ class PredictionGameManager {
     return Result.ok(null);
   }
 
-  // TODO: getParlayBayesianOddsShift
-
+  /// Updates the odds of a [Wager] (i.e., the hydrated single-leg version which can either
+  /// stand alone or serve as the legs of a [Parlay]) with the Bayesian odds shift math.
+  ///
+  /// [wager] is the [Wager] to update the odds of.
+  ///
+  /// [matchPrep] is the [MatchPrep] for which to find related wagers.
+  ///
+  /// [predictionSet] is the [PredictionSet] that was used to generate the [subjectMonteCarlo].
+  ///
+  /// [subjectMonteCarlo] is the Monte Carlo simulation results for the subject of the wager.
+  ///
+  /// If [wager.prediction] is a [PercentageSpreadPrediction], [spreadFavoriteMonteCarlo] and [spreadUnderdogMonteCarlo]
+  /// are the Monte Carlo simulation results for the favorite and underdog of the spread prediction.
+  /// Note that one of these will be [subjectMonteCarlo] (depending on whether the subject of the wager
+  /// was the favorite or the underdog). They can be omitted for other prediction types.
+  ///
+  /// [cache] is an alternate cache to use for Monte Carlo simulation results. If not present, the
+  /// default [MonteCarloCache] will be used. If neither is present, this method will run simulations
+  /// on demand when decomposing spread wagers into percentage signals (as Monte Carlo samples are
+  /// required for that process).
   Future<double> updateWagerWithBayesianOddsShift({
     required Wager wager,
-    required MatchPrep? matchPrep,
+    required MatchPrep matchPrep,
+    required PredictionSet predictionSet,
+    required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     required MonteCarloSimulationResult subjectMonteCarlo,
+    MonteCarloSimulationResult? spreadFavoriteMonteCarlo,
+    MonteCarloSimulationResult? spreadUnderdogMonteCarlo,
+    MonteCarloSimulationCache? cache,
   }) async {
-    // TODO: spread case - calculate delta for each side
-
-    // TODO: parlay case - calculate delta for each leg
-
-    final project = await matchPrep!.ratingProject.value!;
+    final start = DateTime.now();
+    final project = await matchPrep.ratingProject.value!;
     final algorithm = project.settings.algorithm;
 
+    final matchId = matchPrep.futureMatch.value!.matchId;
+
     final prediction = wager.prediction;
-    final subject = DbPredictionTarget.fromShooterRating(prediction.shooter);
 
     final subjectRating = prediction.shooter;
 
@@ -325,29 +351,50 @@ class PredictionGameManager {
       throw ArgumentError("Unsupported algorithm: ${algorithm}");
     }
 
+    DbPredictionType targetType = switch(prediction) {
+      PlacePrediction() => DbPredictionType.place,
+      PercentagePrediction() => DbPredictionType.percentage,
+      PercentageSpreadPrediction() => DbPredictionType.spread,
+      _ => throw ArgumentError("Unsupported prediction type: ${prediction.runtimeType}"),
+    };
+
     final wagersForMatch = await getWagers(matchPrep: matchPrep);
     final wagersForSubject = wagersForMatch.where((w) =>
-      w.subjectMemberNumbers.intersects(subject.knownMemberNumbers)).toList();
+      w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
+      w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers)
+    ).toList();
 
-    List<BayesianOddsWager> priorWagers = [];
-    for(var wager in wagersForSubject) {
-      final priorWager = await BayesianOddsWager.fromDbWager(subject: subject, gm: this, dbWager: wager);
-      priorWagers.addAll(priorWager);
-    }
+    List<BayesianOddsWager> priorSubjectWagers = [];
+    List<BayesianOddsWager> priorUnderdogWagers = [];
 
-    _log.v("${priorWagers.length} prior wagers for subject ${subject.name}");
-    for(var w in priorWagers) {
+    priorSubjectWagers = await _getPriorWagersForSubject(
+      matchId: matchId,
+      predictionSetId: predictionSet.id,
+      project: project,
+      wagers: wagersForSubject,
+      targetType: targetType,
+      subjectRating: subjectRating,
+      subjectMonteCarlo: subjectMonteCarlo,
+      cache: cache,
+      shootersToPredictions: shootersToPredictions,
+    );
+
+    _log.v("${priorSubjectWagers.length} prior wagers for subject ${subjectRating.name}");
+    for(var w in priorSubjectWagers) {
       _log.v("Prior: ${w.toString()}");
     }
 
     BayesianOddsConfig config = BayesianOddsConfig(
-      baseWeight: 30,
+      baseWeight: 20,
       defaultConviction: 0.75,
     );
+
+    double subjectDelta;
+    double? underdogDelta;
     var result = await _nonclosureBayesianOddsShift(
       config: config,
       subjectHistoryLength: lengthInStages,
-      wagers: priorWagers,
+      wagers: priorSubjectWagers,
       subjectMonteCarlo: subjectMonteCarlo,
     );
 
@@ -359,34 +406,187 @@ class PredictionGameManager {
     _log.v("Bayesian odds shift calculation result:");
     _log.v(result.log);
 
-    var delta = result.delta;
+    subjectDelta = result.delta;
+
+    if(prediction is PercentageSpreadPrediction) {
+      final wagersForUnderdog = wagersForMatch.where((w) =>
+        w.legs.any((l) => l.type.isCompatibleWith(DbPredictionType.spread)) &&
+        w.subjectMemberNumbers.intersects(prediction.underdog.knownMemberNumbers)
+      ).toList();
+      priorUnderdogWagers = await _getPriorWagersForSubject(
+        matchId: matchId,
+        predictionSetId: predictionSet.id,
+        project: project,
+        wagers: wagersForUnderdog,
+        targetType: DbPredictionType.spread,
+        subjectRating: prediction.underdog,
+        subjectMonteCarlo: spreadUnderdogMonteCarlo!,
+        cache: cache,
+        shootersToPredictions: shootersToPredictions,
+      );
+      _log.v("${priorUnderdogWagers.length} prior wagers for underdog ${prediction.underdog.name}");
+      for(var w in priorUnderdogWagers) {
+        _log.v("Prior: ${w.toString()}");
+      }
+      final result = await _nonclosureBayesianOddsShift(
+        config: config,
+        subjectHistoryLength: lengthInStages,
+        wagers: priorUnderdogWagers,
+        subjectMonteCarlo: spreadUnderdogMonteCarlo,
+      );
+      if(!result.success) {
+        _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
+        return 0.0;
+      }
+
+      underdogDelta = result.delta;
+
+      _log.v("Bayesian odds shift calculation result:");
+      _log.v(result.log);
+    }
 
     if(prediction is PlacePrediction) {
-      _log.i("Bayesian odds shift for place prediction is ${delta.toStringAsFixed(2)}");
+      _log.i("Bayesian odds shift from model for place prediction is ${subjectDelta.toStringAsFixed(2)}");
+      final oldMoneyline = wager.probability.moneylineOdds;
       wager.recalculateProbabilityWithDelta(
         targetSimulation: subjectMonteCarlo,
         underdogSimulation: null,
-        targetDelta: delta,
+        targetDelta: subjectDelta,
         underdogDelta: null,
+        random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
-      _log.i("New moneyline odds for ${wager.prediction.descriptiveString} are ${wager.probability.moneylineOdds}");
+      _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
 
     }
     else if(prediction is PercentagePrediction) {
-      _log.i("Bayesian odds shift for percentage prediction is ${delta.asPercentage(decimals: 2, includePercent: true)}");
+      _log.i("Bayesian odds shift from model for percentage prediction is ${subjectDelta.asPercentage(decimals: 2, includePercent: true)}");
+      final oldMoneyline = wager.probability.moneylineOdds;
       wager.recalculateProbabilityWithDelta(
         targetSimulation: subjectMonteCarlo,
         underdogSimulation: null,
-        targetDelta: delta,
+        targetDelta: subjectDelta,
         underdogDelta: null,
+        random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
-      _log.i("New moneyline odds for ${wager.prediction.descriptiveString} are ${wager.probability.moneylineOdds}");
+      _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
+    }
+    else if(prediction is PercentageSpreadPrediction) {
+      _log.i("Bayesian odds shift from model for percentage spread prediction is favorite: "
+        "${subjectDelta.asPercentage(decimals: 2, includePercent: true)}, "
+        "underdog: ${underdogDelta?.asPercentage(decimals: 2, includePercent: true)}");
+      final oldMoneyline = wager.probability.moneylineOdds;
+      wager.recalculateProbabilityWithDelta(
+        targetSimulation: subjectMonteCarlo,
+        underdogSimulation: spreadUnderdogMonteCarlo,
+        targetDelta: subjectDelta,
+        underdogDelta: underdogDelta,
+        random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
+      );
+
+      _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
     }
     else {
       _log.e("Unsupported prediction type: ${prediction.runtimeType}");
     }
-    return delta;
+
+    final end = DateTime.now();
+    _log.i("Bayesian odds shift calculation took ${end.difference(start).inMilliseconds}ms");
+    return subjectDelta;
+  }
+
+  /// Convert prior wagers for a given subject into Bayesian odds wagers,
+  /// looking up data for any spread legs if needed.
+  Future<List<BayesianOddsWager>> _getPriorWagersForSubject({
+    required String matchId,
+    required int predictionSetId,
+    required DbRatingProject project,
+    required List<DbWager> wagers,
+    required DbPredictionType targetType,
+    required ShooterRating subjectRating,
+    required MonteCarloSimulationResult subjectMonteCarlo,
+    IMonteCarloCache? cache,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
+  }) async {
+    List<BayesianOddsWager> priorWagers = [];
+    final subject = DbPredictionTarget.fromShooterRating(subjectRating);
+    for(var wager in wagers) {
+      Map<DbPrediction, MonteCarloSimulationResult> spreadFavoriteMonteCarloResults = {};
+      Map<DbPrediction, MonteCarloSimulationResult> spreadUnderdogMonteCarloResults = {};
+
+      for(var leg in wager.legs) {
+        if(!leg.type.isCompatibleWith(targetType)) {
+          continue;
+        }
+
+        if(leg.type == DbPredictionType.spread) {
+          bool needsFavorite;
+          if(subject.isSameAs(leg.target)) {
+            spreadFavoriteMonteCarloResults[leg] = subjectMonteCarlo;
+            needsFavorite = false;
+          }
+          else if(subject.isSameAs(leg.underdog!)) {
+            spreadUnderdogMonteCarloResults[leg] = subjectMonteCarlo;
+            needsFavorite = true;
+          }
+          else {
+            _log.w("Subject ${subject.name} is not a target or underdog of spread leg ${leg.descriptiveString}");
+            continue;
+          }
+
+          final neededSubject = needsFavorite? leg.target : leg.underdog!;
+
+          final neededSubjectKey = MonteCarloSimulationLruKey(
+            predictionSetId: predictionSetId,
+            memberNumber: neededSubject.memberNumber,
+            trials: 12500,
+          );
+          MonteCarloSimulationResult? neededSubjectMonteCarlo;
+          if(cache != null) {
+            neededSubjectMonteCarlo = await cache.lookup(neededSubjectKey);
+          }
+
+          if(neededSubjectMonteCarlo == null) {
+            _log.v("Cache miss for spread leg ${leg.descriptiveString} target ${neededSubject.name}");
+            final neededSubjectRating = await neededSubject.getShooterRating(db);
+            if(neededSubjectRating == null) {
+              _log.w("Subject ${neededSubject.name} not found in database");
+              continue;
+            }
+            var result = runOddsSimulation(
+              shootersToPredictions: shootersToPredictions!,
+              target: project.wrapDbRatingSync(neededSubjectRating),
+              trials: 12500,
+              random: Random(matchId.stableHash),
+            );
+            if(cache != null) {
+              cache.cache(neededSubjectKey, result);
+            }
+            neededSubjectMonteCarlo = result;
+          }
+
+          if(needsFavorite) {
+            spreadFavoriteMonteCarloResults[leg] = neededSubjectMonteCarlo;
+          }
+          else {
+            spreadUnderdogMonteCarloResults[leg] = neededSubjectMonteCarlo;
+          }
+        }
+      }
+
+      final newPriors = await BayesianOddsWager.fromDbWager(
+        subject: subject,
+        gm: this,
+        dbWager: wager,
+        targetType: targetType,
+        spreadFavoriteMonteCarloResults: spreadFavoriteMonteCarloResults,
+        spreadUnderdogMonteCarloResults: spreadUnderdogMonteCarloResults,
+        log: _log,
+      );
+      priorWagers.addAll(newPriors);
+    }
+
+    return priorWagers;
   }
 
   static Future<BayesianOddsResult> _nonclosureBayesianOddsShift({

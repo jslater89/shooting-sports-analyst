@@ -124,7 +124,7 @@ class PredictionGameManagerModel extends ChangeNotifier {
     dbWager.game.value = predictionGame;
     dbWager.user.value = player;
 
-    await manager.addWager(dbWager);
+    await manager.addWager(dbWager, player: player);
     notifyListeners();
   }
 
@@ -135,7 +135,7 @@ class PredictionGameManagerModel extends ChangeNotifier {
       dbWager.predictionSet.value = predictionSet;
       dbWager.game.value = predictionGame;
       dbWager.user.value = player;
-      await manager.addWager(dbWager);
+      await manager.addWager(dbWager, player: player);
     }
     notifyListeners();
   }

@@ -225,7 +225,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                   var result = await WagerDialog.show(
                     context,
                     predictions: predictions,
-                    predictionSetId: selectedPredictionSet!.id,
+                    predictionSet: selectedPredictionSet,
                     matchId: selectedMatchPrep!.futureMatch.value!.matchId,
                     roundToMoneyline: true,
                     title: "Odds for ${selectedRatingGroup!.name}",
