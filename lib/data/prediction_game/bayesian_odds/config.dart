@@ -31,10 +31,16 @@ class BayesianOddsConfig {
   /// 0 yields no transform.
   final double convictionLogK;
 
-  /// Minimum floor for conviction, after log transform, in [0-1] space.
+  /// Output floor for conviction: transform maps to [convictionFloor, 1].
+  /// After the log transform (which yields [0, 1]), conviction is rescaled to
+  /// convictionFloor + (1 - convictionFloor) * logTransform(raw), so the output
+  /// is in [convictionFloor, 1]. Use 0 for no floor (output [0, 1]).
   final double convictionFloor;
 
   /// Default conviction value to use if maxWager is not available.
+  ///
+  /// This value is in raw conviction space, and will be log-mapped/scaled according
+  /// to convictionLogK and convictionFloor.
   final double defaultConviction;
 
   /// Maximum base logit shift for odds movement, in logit space.

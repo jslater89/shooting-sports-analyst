@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_pr
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_updater.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -245,7 +246,9 @@ class _WagerDialogState extends State<WagerDialog> {
         favoriteMonteCarlo = probability.simulationResult!.targetResult;
         underdogMonteCarlo = probability.simulationResult!.underdogResult;
       }
-      await widget.manager!.updateWagerWithBayesianOddsShift(
+      final updater = BayesianWagerUpdater();
+      await updater.updateWagerWithBayesianOddsShift(
+        gm: widget.manager!,
         shootersToPredictions: _shootersToPredictions,
         wager: wager,
         matchPrep: matchPrep!,

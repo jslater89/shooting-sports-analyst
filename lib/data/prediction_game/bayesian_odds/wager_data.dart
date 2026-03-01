@@ -54,13 +54,14 @@ class BayesianOddsWager {
     double conviction;
     if(maxWager != null) {
       rawConviction = amount / maxWager!;
-      conviction = log(1 + rawConviction * config.convictionLogK) / log(1 + config.convictionLogK);
-      conviction = max(conviction, config.convictionFloor);
     }
     else {
       rawConviction = config.defaultConviction;
-      conviction = config.defaultConviction;
     }
+
+    final double logMapped = log(1 + rawConviction * config.convictionLogK) / log(1 + config.convictionLogK);
+    final double floor = config.convictionFloor;
+    conviction = floor > 0 ? floor + (1 - floor) * logMapped : logMapped;
 
     double skillMultiplier = 1.0;
     if(resolvedPlayerWagers >= config.minSharpnessBets) {
