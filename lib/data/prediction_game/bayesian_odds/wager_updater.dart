@@ -199,7 +199,8 @@ class BayesianWagerUpdater {
   }) async {
     final wagersForSubject = wagersForMatch.where((w) =>
       w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
-      w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers)
+      w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers) &&
+      w.status != DbWagerStatus.voided
     ).toList();
 
     if(wagersForSubject.isEmpty) {
