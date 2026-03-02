@@ -1,11 +1,14 @@
 import 'dart:isolate';
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_cache.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/calculator.dart';
@@ -34,7 +37,7 @@ class BayesianWagerUpdater {
   BayesianWagerUpdater({
     BayesianOddsConfig? config,
   }) : _config = config ?? BayesianOddsConfig(
-    baseWeight: 15,
+    baseWeight: 25,
     convictionFloor: 0.25,
     defaultConviction: 0.33,
   );
@@ -99,87 +102,39 @@ class BayesianWagerUpdater {
     };
 
     final wagersForMatch = await gm.getWagers(matchPrep: matchPrep);
-    final wagersForSubject = wagersForMatch.where((w) =>
-      w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
-      w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers)
-    ).toList();
 
-    List<BayesianOddsWager> priorSubjectWagers = [];
-    List<BayesianOddsWager> priorUnderdogWagers = [];
+    double subjectDelta;
+    double? underdogDelta;
 
-    priorSubjectWagers = await _getPriorWagersForSubject(
+    subjectDelta = await _calculateDeltaForSubject(
       gm: gm,
       matchId: matchId,
-      predictionSetId: predictionSet.id,
+      predictionSet: predictionSet,
       project: project,
-      wagers: wagersForSubject,
+      wagersForMatch: wagersForMatch,
       targetType: targetType,
       subjectRating: subjectRating,
       subjectMonteCarlo: subjectMonteCarlo,
       cache: cache,
       shootersToPredictions: shootersToPredictions,
+      subjectStageHistoryLength: lengthInStages,
     );
-
-    _log.v("${priorSubjectWagers.length} prior wagers for subject ${subjectRating.name}");
-    for(var w in priorSubjectWagers) {
-      _log.v("Prior: ${w.toString()}");
-    }
-
-    double subjectDelta;
-    double? underdogDelta;
-    var result = await _nonclosureBayesianOddsShift(
-      config: _config,
-      subjectHistoryLength: lengthInStages,
-      wagers: priorSubjectWagers,
-      subjectMonteCarlo: subjectMonteCarlo,
-    );
-
-    if(!result.success) {
-      _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
-      return 0.0;
-    }
-
-    _log.v("Bayesian odds shift calculation result:");
-    _log.v(result.log);
-
-    subjectDelta = result.delta;
 
     if(prediction is PercentageSpreadPrediction) {
-      final wagersForUnderdog = wagersForMatch.where((w) =>
-        w.legs.any((l) => l.type.isCompatibleWith(DbPredictionType.spread)) &&
-        w.subjectMemberNumbers.intersects(prediction.underdog.knownMemberNumbers)
-      ).toList();
-      priorUnderdogWagers = await _getPriorWagersForSubject(
+      final underdogRating = prediction.underdog;
+      underdogDelta = await _calculateDeltaForSubject(
         gm: gm,
         matchId: matchId,
-        predictionSetId: predictionSet.id,
+        predictionSet: predictionSet,
         project: project,
-        wagers: wagersForUnderdog,
-        targetType: DbPredictionType.spread,
-        subjectRating: prediction.underdog,
+        wagersForMatch: wagersForMatch,
+        targetType: targetType,
+        subjectRating: underdogRating,
         subjectMonteCarlo: spreadUnderdogMonteCarlo!,
         cache: cache,
         shootersToPredictions: shootersToPredictions,
+        subjectStageHistoryLength: lengthInStages,
       );
-      _log.v("${priorUnderdogWagers.length} prior wagers for underdog ${prediction.underdog.name}");
-      for(var w in priorUnderdogWagers) {
-        _log.v("Prior: ${w.toString()}");
-      }
-      final result = await _nonclosureBayesianOddsShift(
-        config: _config,
-        subjectHistoryLength: lengthInStages,
-        wagers: priorUnderdogWagers,
-        subjectMonteCarlo: spreadUnderdogMonteCarlo,
-      );
-      if(!result.success) {
-        _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
-        return 0.0;
-      }
-
-      underdogDelta = result.delta;
-
-      _log.v("Bayesian odds shift calculation result:");
-      _log.v(result.log);
     }
 
     if(prediction is PlacePrediction) {
@@ -230,6 +185,96 @@ class BayesianWagerUpdater {
     final end = DateTime.now();
     _log.i("Bayesian odds shift calculation took ${end.difference(start).inMilliseconds}ms");
     return subjectDelta;
+  }
+
+  /// Get the Bayesian delta for a given subject rating, checking the database cache first.
+  Future<double> _calculateDeltaForSubject({
+    required PredictionGameManager gm,
+    required String matchId,
+    required PredictionSet predictionSet,
+    required DbRatingProject project,
+    required List<DbWager> wagersForMatch,
+    required DbPredictionType targetType,
+    required ShooterRating subjectRating,
+    required MonteCarloSimulationResult subjectMonteCarlo,
+    required IMonteCarloCache? cache,
+    required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    required int subjectStageHistoryLength,
+  }) async {
+    final wagersForSubject = wagersForMatch.where((w) =>
+      w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
+      w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers)
+    ).toList();
+
+    if(wagersForSubject.isEmpty) {
+      return 0.0;
+    }
+
+    var dates = wagersForSubject.map((w) => w.created).sorted((a, b) => b.compareTo(a));
+    var latestBetTimestamp = dates.first;
+
+    final cachedDelta = await db.getBayesianDelta(
+      memberNumber: subjectRating.memberNumber,
+      predictionSetId: predictionSet.id,
+      type: targetType,
+      validAfter: latestBetTimestamp,
+      configHash: _config.configHash,
+    );
+
+    if(cachedDelta != null) {
+      return cachedDelta.delta;
+    }
+
+    List<BayesianOddsWager> priorSubjectWagers = [];
+
+    priorSubjectWagers = await _getPriorWagersForSubject(
+      gm: gm,
+      matchId: matchId,
+      predictionSetId: predictionSet.id,
+      project: project,
+      wagers: wagersForSubject,
+      targetType: targetType,
+      subjectRating: subjectRating,
+      subjectMonteCarlo: subjectMonteCarlo,
+      cache: cache,
+      shootersToPredictions: shootersToPredictions,
+    );
+
+    _log.v("${priorSubjectWagers.length} prior wagers for subject ${subjectRating.name}");
+    for(var w in priorSubjectWagers) {
+      _log.v("Prior: ${w.toString()}");
+    }
+
+    var result = await _nonclosureBayesianOddsShift(
+      config: _config,
+      subjectHistoryLength: subjectStageHistoryLength,
+      wagers: priorSubjectWagers,
+      subjectMonteCarlo: subjectMonteCarlo,
+    );
+
+    if(!result.success) {
+      _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
+      return 0.0;
+    }
+
+    _log.v("Bayesian odds shift calculation result:");
+    _log.v(result.log);
+
+    await db.saveBayesianDelta(BayesianDelta.create(
+      memberNumber: subjectRating.memberNumber,
+      project: project,
+      rating: subjectRating.wrappedRating,
+      group: subjectRating.group,
+      delta: result.delta, type:
+      targetType,
+      contributingWagers: wagersForSubject,
+      lastBetTimestamp: latestBetTimestamp,
+      computedAt: DateTime.now(),
+      predictionSet: predictionSet,
+      config: _config,
+    ));
+
+    return result.delta;
   }
 
   /// Convert prior wagers for a given subject into Bayesian odds wagers,

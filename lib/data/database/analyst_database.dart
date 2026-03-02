@@ -29,6 +29,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_pr
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/migration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
@@ -152,6 +153,7 @@ class AnalystDatabase {
           PredictionGamePlayerSchema,
           DbWagerSchema,
           PredictionGameTransactionSchema,
+          BayesianDeltaSchema,
         ],
         maxSizeMiB: 1024 * 32,
         directory: db.path,

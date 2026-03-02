@@ -1,3 +1,5 @@
+import 'package:shooting_sports_analyst/util.dart';
+
 class BayesianOddsConfig {
   // Parameters for nEff, the effective sample size.
   // nEff is calculated from shooter rating history length
@@ -70,7 +72,7 @@ class BayesianOddsConfig {
 
 
   /// Minimum number of resolved bets for sharpness adjustment to be applied.
-  final double minSharpnessBets;
+  final int minSharpnessBets;
 
   /// Minimum multiplier permitted for sharpness.
   final double sharpnessClampMin;
@@ -98,7 +100,7 @@ class BayesianOddsConfig {
     double? clampEvidenceK,
     double? clampBaselineWeight,
     double? clampMaxMultiplier,
-    double? minSharpnessBets,
+    int? minSharpnessBets,
     double? sharpnessClampMin,
     double? sharpnessClampMax,
     double? percentageSimilarityMaxDistance,
@@ -121,4 +123,25 @@ class BayesianOddsConfig {
         sharpnessClampMax = sharpnessClampMax ?? 2.0,
         percentageSimilarityMaxDistance = percentageSimilarityMaxDistance ?? 0.05,
         percentageSimilaritySteepness = percentageSimilaritySteepness ?? 20;
+
+  int get configHash => combineHashList64([
+    nEffScale.stableHash64,
+    nEffMin.stableHash64,
+    nEffMax.stableHash64,
+    nEffLogBase?.stableHash64 ?? 0,
+    baseWeight.stableHash64,
+    lambda.stableHash64,
+    convictionLogK.stableHash64,
+    convictionFloor.stableHash64,
+    defaultConviction.stableHash64,
+    maxLogitShift.stableHash64,
+    clampEvidenceK.stableHash64,
+    clampBaselineWeight.stableHash64,
+    clampMaxMultiplier.stableHash64,
+    minSharpnessBets.stableHash64,
+    sharpnessClampMin.stableHash64,
+    sharpnessClampMax.stableHash64,
+    percentageSimilarityMaxDistance.stableHash64,
+    percentageSimilaritySteepness.stableHash64,
+  ]);
 }
