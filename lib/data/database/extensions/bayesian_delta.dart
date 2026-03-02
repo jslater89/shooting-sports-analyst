@@ -2,6 +2,7 @@ import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 
 extension BayesianDeltaDatabase on AnalystDatabase {
   Future<BayesianDelta?> getBayesianDelta({
@@ -13,10 +14,11 @@ extension BayesianDeltaDatabase on AnalystDatabase {
   }) async {
     int? oldConfigHash;
     // Try the fast index first on exact member number.
+    final compatibleTypes = type.compatibleTypes;
     var delta = await isar.bayesianDeltas.where()
       .memberNumberPredictionSetIdEqualTo(memberNumber, predictionSetId)
       .filter()
-      .typeEqualTo(type)
+      .anyOf(compatibleTypes, (q, type) => q.typeEqualTo(type))
       .lastBetTimestampGreaterThan(validAfter, include: true)
       .findFirst();
 
@@ -35,7 +37,7 @@ extension BayesianDeltaDatabase on AnalystDatabase {
       .predictionSetIdEqualTo(predictionSetId)
       .filter()
       .knownMemberNumbersElementEqualTo(memberNumber)
-      .typeEqualTo(type)
+      .anyOf(compatibleTypes, (q, type) => q.typeEqualTo(type))
       .lastBetTimestampGreaterThan(validAfter, include: true)
       .findFirst();
 

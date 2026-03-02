@@ -262,8 +262,8 @@ class BayesianWagerUpdater {
       project: project,
       rating: subjectRating.wrappedRating,
       group: subjectRating.group,
-      delta: result.delta, type:
-      targetType,
+      delta: result.delta,
+      type: targetType,
       contributingWagers: wagersForSubject,
       lastBetTimestamp: latestBetTimestamp,
       computedAt: DateTime.now(),

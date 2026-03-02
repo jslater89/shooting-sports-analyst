@@ -125,13 +125,12 @@ class BayesianOddsWager {
 
     for(int i = 0; i < trials; i++) {
       var sampleOutput = monteCarlo.places[i] - delta;
-      if(sampleOutput < 0.5) {
-        sampleOutput = 0.5;
+      sampleOutput = (sampleOutput - 0.5).ceilToDouble();
+      if(sampleOutput < 1) {
+        sampleOutput = 1;
       }
 
-      var bestPlaceThreshold = bestPlace - 0.5;
-      var worstPlaceThreshold = worstPlace + 0.5;
-      if(sampleOutput >= bestPlaceThreshold && sampleOutput <= worstPlaceThreshold) {
+      if(sampleOutput >= bestPlace && sampleOutput <= worstPlace) {
         hits++;
       }
     }
@@ -435,6 +434,12 @@ extension CompatiblePredictionTypes on DbPredictionType {
       || (this == DbPredictionType.spread && other == DbPredictionType.percentage)
       || (this == DbPredictionType.percentage && other == DbPredictionType.spread);
   }
+
+  List<DbPredictionType> get compatibleTypes => [
+    this,
+    if(this == DbPredictionType.spread) DbPredictionType.percentage,
+    if(this == DbPredictionType.percentage) DbPredictionType.spread,
+  ];
 }
 
 class BayesianOddsPrediction {
