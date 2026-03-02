@@ -88,15 +88,7 @@ This also helps when a well-established shooter has an anomalous stretch (equipm
 - **N_max** (nEffMax): cap so the prior is never rigid (e.g. 150).
 - **scale** (nEffScale): controls how quickly N_eff grows with history. Tune so that "typical" veterans (30–60 matches) yield N_eff in the 50–100 range. With log scaling, scale values in the 10–25 range are reasonable (e.g. scale = 15: 30 matches → `15 × log(31) ≈ 51.5`, 60 matches → `15 × log(61) ≈ 61.6`).
 
-Example (place market, one shooter):
-
-```dart
-int? matchCount = shooterRating.matchCount;  // from ShooterRating
-double historyCount = (matchCount ?? 0).toDouble();
-double nEff = (nEffScale * log(1.0 + historyCount)).clamp(nEffMin.toDouble(), nEffMax.toDouble());
-double alpha = modelP * nEff;
-double beta = (1.0 - modelP) * nEff;
-```
+The implementation uses the subject's history length in **stages** (from the rating algorithm, e.g. Elo length or Glicko2 stages) and computes N_eff in [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart); see also [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart).
 
 **3. Variance from the Monte Carlo.** The Monte Carlo is a binomial with N = 10,000; its estimate P̂ has variance P(1−P)/10,000. We could set (α, β) by matching the Beta mean and variance to (P, σ²) (method of moments), then optionally scale (α, β) down so one sharp bet can still move the line by a desired amount.
 
@@ -152,7 +144,7 @@ conviction = f(raw_conviction)
 Options for `f` (all configurable, or disabled for raw linear conviction):
 
 - **Log transform**: `log(1 + raw_conviction × k) / log(1 + k)`. Raises the floor for small bets while preserving the ordering (larger bets still count more). With `k = 5`, a 0.5% raw conviction maps to ~0.015 instead of 0.005; a 20% raw conviction maps to ~0.65 instead of 0.20. Higher `k` = more aggressive (steeper curve, small bets count relatively more). The implementation uses `convictionLogK` (default 5). **Note:** `k = 0` would yield division by zero in the formula; if linear conviction is desired, the implementation would need a special case (e.g. use raw conviction when k ≤ 0).
-- **Minimum floor**: `conviction = max(raw_conviction, floor)`. E.g., `floor = 0.02` ensures even a 1% bet contributes at least 2% of what a max-conviction bet would. The implementation uses `convictionFloor` (default 0.05), applied after the log transform. When `maximum_wager` is not available at placement time, the implementation uses `defaultConviction` (e.g. 0.75) instead of computing from amount.
+- **Output range [floor, 1]**: The implementation rescales the log transform into [convictionFloor, 1]: when `convictionFloor` > 0, conviction = convictionFloor + (1 − convictionFloor) × logTransform(raw). Use 0 for no floor. When `maximum_wager` is not available at placement time, raw conviction is set to `defaultConviction` and the same log transform and rescaling apply. See [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) and [BayesianOddsWager.calculateWeight](lib/data/prediction_game/bayesian_odds/wager_data.dart).
 
 Tune these based on production behavior. If most players bet small regardless of confidence, use an aggressive transform or floor so that bets still move the line. Configurability is important — allow toggling the transform, `k`, and `floor` without code changes.
 
@@ -187,7 +179,7 @@ time_decay = exp(-λ × days_until_match)
 
 The implementation clamps time decay to a minimum of 0.5 (and maximum 1.0), so very early bets are not discounted below half weight.
 
-Where λ (lambda) controls decay rate. Suggested values:
+Where λ controls decay rate (config: `timeDecayLambda`). Suggested values:
 
 - **λ = 0.01**: Slow decay (30 days out = 75% weight)
 - **λ = 0.02**: Moderate decay (30 days out = 54% weight); implementation default.
@@ -197,33 +189,9 @@ Where λ (lambda) controls decay rate. Suggested values:
 
 ### 4. Combined Weight
 
-```dart
-double calculateBetWeight({
-  required double betAmount,
-  required double? maximumWager,   // null → use defaultConviction
-  required double sharpness,      // from leaderboard (LeaderboardSortMode.sharpness)
-  required double daysUntilMatch,
-  double baseWeight = 10.0,
-  double lambda = 0.02,
-  double convictionLogK = 5.0,   // 5 = moderate. 0 requires special-case (linear).
-  double convictionFloor = 0.05,
-  double defaultConviction = 0.75,
-  double sharpnessClampMin = 0.5,
-  double sharpnessClampMax = 2.0,
-}) {
-  double conviction = maximumWager != null
-      ? log(1 + (betAmount / maximumWager) * convictionLogK) / log(1 + convictionLogK)
-      : defaultConviction;
-  if (maximumWager != null) conviction = max(conviction, convictionFloor);
+Weight is computed by [BayesianOddsWager.calculateWeight](lib/data/prediction_game/bayesian_odds/wager_data.dart) using [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart): conviction (log transform, then rescaling to [convictionFloor, 1] when floor > 0; or defaultConviction when maxWager is null, with the same transform), sharpness clamped to [sharpnessClampMin, sharpnessClampMax], time decay exp(−λ × days) clamped to [0.5, 1.0] (λ = `timeDecayLambda` in config), and baseWeight.
 
-  double skillMultiplier = sharpness.clamp(sharpnessClampMin, sharpnessClampMax);
-  double timeDecay = exp(-lambda * daysUntilMatch).clamp(0.5, 1.0);
-
-  return conviction * skillMultiplier * timeDecay * baseWeight;
-}
-```
-
-**baseWeight parameter**: Controls overall sensitivity to bets
+**baseWeight**: Controls overall sensitivity to bets
 
 - **baseWeight = 5**: Conservative (bets move odds slowly)
 - **baseWeight = 10**: Moderate (recommended starting point)
@@ -231,7 +199,7 @@ double calculateBetWeight({
 
 ## Step-by-Step Example (Conceptual)
 
-The following illustrates how bet weight updates a **single market's** posterior (α, β) and thus that market's implied probability. In the full pipeline we do not persist per-market state: we compute posteriors for every market that has bets, find the single δ that best fits them (see "Cross-Market Adjustment via Distribution Shift"), then evaluate any requested market under the shifted distribution. This example shows the same weight math that feeds into that process, but since the combinatorics of the prediction game mean we will rarely have substantial action in the same market, the odds adjustment is a toy example of the concept rather than a final product.
+The following illustrates how bet weight updates a **single wager's** posterior (α, β) and thus that wager's implied probability. In the full pipeline we do not persist per-market state: we compute posteriors for every wager (with similarity-based effective weight when evidence is clustered), find the single δ that best fits them (see "Cross-Market Adjustment via Distribution Shift"), then evaluate any requested market under the shifted distribution. This example shows the same weight math that feeds into that process, but since the combinatorics of the prediction game mean we will rarely have substantial action in the same market, the odds adjustment is a toy example of the concept rather than a final product.
 
 ### Initial State
 
@@ -412,7 +380,7 @@ x = distance / maxDistance
 similarity = 1 / (1 + exp(steepness × (x − 0.5)))
 ```
 
-Typical defaults: `steepness = 20`, `maxDistance = 0.05`. So two percentage thresholds within 5 percentage points get a positive similarity that decays as they move apart.
+Config: `percentageSimilaritySteepness` (default 20), `percentageSimilarityMaxDistance` (default 0.05). Two percentage thresholds within the max distance get a positive similarity that decays as they move apart. The implementation treats opposite-direction predictions (e.g. "above 90%" vs "below 85%") as dissimilar (similarity 0). See [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart) `_percentageSimilarity` and `_similarity`.
 
 **Effective weight for posterior:** For each wager W, for every other wager V with similarity(W, V) > 0, add `similarity(W, V) × weight(V) / nearbyCount` to W's effective weight, where `nearbyCount` is the number of such V. Then:
 
@@ -425,50 +393,7 @@ The objective term for W remains `weight(W) × (P_shifted(W) − P_posterior(W))
 
 **Why raw weight in the objective?** Similarity fixes a flaw in the per-wager setup. Two wagers on nearly the same outcome (e.g. "above 80%" and "above 82%") are stronger evidence than one; but if we treat them as fully independent, we get two separate posteriors each with one unit of weight — (α + w)/(N_eff + w) twice — instead of one posterior with combined weight, (α + 2w)/(N_eff + 2w). So we add similarity-derived weight when computing the posterior, which makes clustered wagers produce stronger posteriors and thus a larger δ (the optimizer must move δ further to match them). We do **not** use that boosted weight in the objective: each wager should influence the δ fit in proportion to the evidence it actually represents (its raw weight). Using posteriorWeight in the objective would give similar wagers extra pull and overweight clustered evidence relative to lone wagers elsewhere.
 
-```dart
-/// Finds the distribution shift δ that best fits all wager posteriors.
-///
-/// [wagers]: list of BayesianOddsWager; each has weight, pShifted, pPosterior precomputed.
-/// Objective uses raw weight; posteriors were computed using posteriorWeight (raw + similarity).
-double findCumulativeShift({
-  required List<BayesianOddsWager> wagers,
-  required DbPredictionType type,
-  required MonteCarloSimulationResult subjectMonteCarlo,
-  required Map<BayesianOddsWager, double> weight,
-  required Map<BayesianOddsWager, double> pPosterior,
-  double searchLo = -30.0,
-  double searchHi = 30.0,
-}) {
-  double objective(double delta) {
-    double error = 0.0;
-    for (var wager in wagers) {
-      double pShiftedAtDelta = wager.evaluateAgainstSimulation(
-        type: type, delta: delta, subjectMonteCarlo: subjectMonteCarlo);
-      double diff = pShiftedAtDelta - pPosterior[wager]!;
-      error += weight[wager]! * diff * diff;
-    }
-    return error;
-  }
-
-  double gr = (sqrt(5) + 1) / 2;
-  double a = searchLo, b = searchHi;
-  double c = b - (b - a) / gr;
-  double d = a + (b - a) / gr;
-
-  for (int i = 0; i < 50; i++) {
-    if ((b - a).abs() < 0.001) break;
-    if (objective(c) < objective(d)) {
-      b = d;
-    }
-    else {
-      a = c;
-    }
-    c = b - (b - a) / gr;
-    d = a + (b - a) / gr;
-  }
-  return (a + b) / 2;
-}
-```
+The δ search is implemented as `_calculateDelta` in [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart) (golden section search over δ; objective sums raw weight × squared error per wager).
 
 **Example:** Three wagers on John Smith — one on 1st-10th (weight 2.13), one on 12th-16th (weight 0.8), one on 1st-5th (weight 0.3). The 1st-10th and 1st-5th wagers have positive Jaccard similarity, so each gets some additional effective weight from the other; their posteriors are slightly stronger. The δ search minimizes raw-weight WLS across all three.
 
@@ -478,40 +403,7 @@ double findCumulativeShift({
 
 ### Generating Odds Under the Shifted Distribution
 
-Once δ is computed, generating odds for any market is straightforward: count how many shifted samples satisfy the market's predicate.
-
-```dart
-/// Generates the adjusted probability for a requested market, incorporating
-/// all prior bet evidence for this shooter.
-double getAdjustedProbability({
-  required List<double> sortedSamples,
-  required double delta,
-  required bool Function(double) satisfiesMarket,
-  required double modelP,
-  double maxLogitShift = 1.0,
-  double? totalWeightShooter,  // optional: for evidence-dependent clamp
-  double clampEvidenceK = 0.0,
-  double baselineWeight = 1.0,
-  double clampMaxMultiplier = 2.0,
-}) {
-  int N = sortedSamples.length;
-  int count = 0;
-  for (var sample in sortedSamples) {
-    if (satisfiesMarket(sample - delta)) count++;
-  }
-  double shiftedP = count / N;
-
-  return clampMovement(
-    modelP,
-    shiftedP,
-    maxLogitShift: maxLogitShift,
-    totalWeightShooter: totalWeightShooter,
-    clampEvidenceK: clampEvidenceK,
-    baselineWeight: baselineWeight,
-    clampMaxMultiplier: clampMaxMultiplier,
-  );
-}
-```
+Once δ is computed, generating odds for any market is straightforward: count how many shifted samples satisfy the market's predicate, then apply the logit clamp if implemented. See the wager/odds pipeline (e.g. [wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart) and related callers) for how δ is applied and probabilities are produced. Note that the logit clamp is not yet implemented (and may not be necessary, going by early testing).
 
 This is the same computation whether the requested market has prior bets on it or not. A bet on 1st-10th naturally moves the odds for 12th-16th, for 1st-10th itself (line movement), and for 35th-40th — all from the same δ, all with the correct magnitude.
 
@@ -624,39 +516,7 @@ Protect against over-adjustment. After computing P_shifted from the shifted MC d
 
 A naive linear clamp (`maxMove = modelP × fraction`) breaks at extreme probabilities: for a long-shot market with P = 0.01, a 20% cap allows only ±0.002 of movement — the line is effectively frozen. But long-shot bets carry high informational content (the bettor is risking a lot relative to expected return), so they should have *more* room to move, not less.
 
-The fix is to clamp symmetrically in **log-odds space**. The logit transform `logit(p) = ln(p / (1 − p))` maps probabilities to the real line, where a fixed-width band has uniform meaning across the probability range: a shift of 1 logit unit roughly doubles or halves the odds ratio, regardless of baseline probability.
-
-```dart
-double _logit(double p) => log(p / (1.0 - p));
-double _sigmoid(double x) => 1.0 / (1.0 + exp(-x));
-
-double clampMovement(
-  double modelP,
-  double shiftedP, {
-  double maxLogitShift = 1.0,
-  double? totalWeightShooter,  // optional: enables evidence-dependent clamp
-  double baselineWeight = 1.0,
-  double clampEvidenceK = 0.0,  // 0 = disabled
-  double clampMaxMultiplier = 2.0,
-}) {
-  double effectiveShift = maxLogitShift;
-  if (clampEvidenceK > 0.0 && totalWeightShooter != null) {
-    effectiveShift = effectiveMaxLogitShift(
-      maxLogitShift: maxLogitShift,
-      totalWeightShooter: totalWeightShooter,
-      baselineWeight: baselineWeight,
-      clampEvidenceK: clampEvidenceK,
-      clampMaxMultiplier: clampMaxMultiplier,
-    );
-  }
-  double modelLogit = _logit(modelP);
-  double lower = _sigmoid(modelLogit - effectiveShift);
-  double upper = _sigmoid(modelLogit + effectiveShift);
-  return shiftedP.clamp(lower, upper);
-}
-```
-
-The `maxLogitShift` parameter controls how far the odds can move. A value of 1.0 means the odds ratio can roughly double or halve. Optionally, when `clampEvidenceK > 0` and `totalWeightShooter` is provided, the effective clamp widens with evidence (see "Evidence-Dependent Clamp Width"). The allowed range in probability space (for `maxLogitShift = 1.0`):
+The fix is to clamp symmetrically in **log-odds space**. The logit transform `logit(p) = ln(p / (1 − p))` maps probabilities to the real line, where a fixed-width band has uniform meaning across the probability range: a shift of 1 logit unit roughly doubles or halves the odds ratio, regardless of baseline probability. The config parameters `maxLogitShift`, `clampEvidenceK`, `clampBaselineWeight`, and `clampMaxMultiplier` govern this; see [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart). (The logit movement cap is not yet applied in the current pipeline but is documented for when it is implemented.) A value of 1.0 for `maxLogitShift` means the odds ratio can roughly double or halve. Optionally, when `clampEvidenceK > 0` and `totalWeightShooter` is provided, the effective clamp widens with evidence (see "Evidence-Dependent Clamp Width"). The allowed range in probability space (for `maxLogitShift = 1.0`):
 
 
 | modelP | Allowed range  | Absolute width |
@@ -698,23 +558,7 @@ Should the clamp widen when multiple wagers pull the odds in the same direction?
 
 **Recommendation:** Keep the fixed clamp as default. If backtests show the clamp frequently cuts off shifts that posteriors deem well-supported, add optional evidence-dependent scaling. Tune via Brier score and calibration.
 
-**Optional implementation** (when evidence-dependent scaling is enabled):
-
-```dart
-double effectiveMaxLogitShift({
-  required double maxLogitShift,
-  required double totalWeightShooter,
-  double baselineWeight = 1.0,
-  double clampEvidenceK = 0.2,
-  double clampMaxMultiplier = 2.0,
-}) {
-  if (clampEvidenceK <= 0.0) return maxLogitShift;
-  double multiplier = 1.0 + clampEvidenceK * log(1.0 + totalWeightShooter / baselineWeight);
-  return (maxLogitShift * multiplier).clamp(maxLogitShift, maxLogitShift * clampMaxMultiplier);
-}
-```
-
-Example: `baselineWeight = 1.0`, `clampEvidenceK = 0.2` → totalWeight 0 → 1.0×; totalWeight 5 → ~1.35×; totalWeight 20 → ~1.6×, capped at `clampMaxMultiplier × maxLogitShift`.
+When evidence-dependent scaling is enabled, the effective max logit shift grows with total weight on the shooter: e.g. `multiplier = 1 + clampEvidenceK × log(1 + totalWeight / baselineWeight)`, capped at `clampMaxMultiplier`. So totalWeight 0 → 1.0×; totalWeight 5 → ~1.35×; totalWeight 20 → ~1.6×, capped at `clampMaxMultiplier × maxLogitShift`.
 
 ### Exposure Limits
 
@@ -759,81 +603,9 @@ The compute-on-demand model recomputes δ each time odds are requested, but the 
 
 Since δ entries are small (a double, a timestamp, and a few links) and rarely looked up, they belong in the database rather than an in-memory cache. This gives persistence across restarts, lets us link entries to the wagers and shooter ratings that produced them, and naturally accumulates a history for line-movement visualization.
 
-**Schema:**
+**Schema:** See [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart) (and extensions in [bayesian_delta.dart](lib/data/database/extensions/bayesian_delta.dart)). δ is stored per shooter/prediction-set with `delta`, `type` (place or percentage), and links to contributing wagers; spread is decomposed into percentage.
 
-```dart
-@collection
-class ShooterDelta with DbShooterRatingEntity {
-  Id id = Isar.autoIncrement;
-
-  /// The δ value (distribution shift).
-  double delta;
-
-  @enumerated
-  MarketType type;
-
-  /// When this δ was computed.
-  DateTime computedAt;
-
-  /// The timestamp of the most recent bet included in this δ computation.
-  DateTime lastBetTimestamp;
-
-  /// The match prep this δ is associated with.
-  final matchPrep = IsarLink<MatchPrep>();
-
-  /// The prediction game this δ is associated with.
-  final game = IsarLink<PredictionGame>();
-
-  /// The wagers that contributed to this δ.
-  final contributingWagers = IsarLinks<DbWager>();
-
-  /// The IDs of the wagers that contributed to this δ.
-  ///
-  /// This allows fast lookup of deltas by wager.
-  @Index()
-  List<int> contributingWagerIds = [];
-
-  @Index()
-  String shooterKey;
-
-  ShooterDelta({
-    required this.delta,
-    required this.computedAt,
-    required this.lastBetTimestamp,
-    required this.shooterKey,
-  });
-}
-
-enum MarketType {
-  place,
-  percentage;
-  // Spread bets are decomposed into percentage signals, so no separate
-  // spread type is needed. See "Spread Bets as Percentage Signals."
-  // Future: unified (place ↔ percentage propagation).
-}
-```
-
-**Cache lookup flow:**
-
-```
-On odds request for shooter S in match M:
-  entry = db.shooterDeltas
-    .filter()
-    .shooterKeyEqualTo(S)
-    .sortByComputedAtDesc()
-    .findFirstSync()
-
-  if entry != null:
-    latestBet = most recent accepted bet for S in M
-    if latestBet == null || latestBet.created <= entry.lastBetTimestamp:
-      → use entry.delta (cache hit)
-    else:
-      → recompute δ, write new entry (new bet invalidated it)
-  else:
-    → compute δ, write new entry
-```
-
-This reduces repeated odds requests (e.g. browsing a market list, or multiple users viewing the same shooter) to O(N) per market (one pass over MC samples to evaluate the predicate) rather than O(15N × M) to recompute δ each time.
+**Cache lookup:** The implementation uses [getBayesianDelta](lib/data/database/extensions/bayesian_delta.dart) (member number, prediction set, type, last-bet timestamp, config hash). A cache hit returns the stored δ; otherwise δ is recomputed and saved. This reduces repeated odds requests to O(N) per market (evaluate predicate over shifted samples) rather than recomputing δ each time.
 
 **Invalidation:** No explicit invalidation is needed — the timestamp comparison handles staleness. Old entries stay in the DB as history. When the MC simulation is re-run (new registration set), either write a new δ entry (the next odds request will recompute against the new samples) or mark a simulation boundary for the line-movement chart.
 
@@ -841,11 +613,11 @@ This reduces repeated odds requests (e.g. browsing a market list, or multiple us
 
 Since every δ computation writes a new entry (rather than overwriting), the DB naturally accumulates a history of how δ evolved as bets arrived. To render a line-movement chart for a specific market:
 
-1. Query all `ShooterDelta` entries for the shooter, ordered by `computedAt`.
+1. Query all `BayesianDelta` entries for the shooter (and prediction set/type), ordered by recency.
 2. For each entry, evaluate the market's predicate against the current MC samples shifted by that entry's δ.
 3. Plot the resulting probability series over time.
 
-Each entry's `contributingWagers` link lets the chart annotate which bet(s) caused each line movement. The `shooterRating` link provides context for tooltips (shooter name, rating at the time).
+Each entry's `contributingWagers` link lets the chart annotate which bet(s) caused each line movement. (Specifically, each BayesianDelta object ordered by recency will have one more wager ID than the preceding one; that wager is the one that caused the line movement between delta _n_ and _n_ - 1.) The `shooterRating` link provides context for tooltips (shooter name, rating at the time).
 
 **Note on MC simulation changes:** If the simulation is re-run (new registration set), historical δ values were computed against different samples. The δ *direction* is still meaningful (see "Reusing MC Samples Across Prediction Sets"), but evaluating old δ values against new samples may produce slightly different probabilities. For the line-movement chart, this is acceptable — mark simulation boundaries with a visual indicator and note that pre-boundary values are approximate.
 
@@ -869,7 +641,7 @@ The δ optimization finds a *relative* shift ("bets say this shooter is about 2 
 
 ## Tunable Parameters Summary
 
-Config names (from [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart)) are given in parentheses where they differ from the table label.
+All parameters live in [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart). Current implementation defaults may differ from the "Recommended" tuning column below.
 
 | Parameter                    | Recommended | Conservative | Aggressive | Description                                                                                                                                |
 | ---------------------------- | ----------- | ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -877,19 +649,19 @@ Config names (from [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/c
 | **N_eff Scale** (nEffScale)  | 10          | 15           | 8          | Multiplier on log(1 + history) when computing N_eff. Formula: clamp(nEffScale × log(1 + history), nEffMin, nEffMax).                      |
 | **N_eff Min** (nEffMin)      | 20          | 30           | 15         | Floor for N_eff.                                                                                                                           |
 | **N_eff Max** (nEffMax)      | 150         | 200          | 100        | Cap for N_eff.                                                                                                                             |
-| **Base Weight**               | 10.0        | 5.0          | 20.0       | Overall bet impact scaling.                                                                                                                |
-| **Conviction Log K**         | 5           | 0*           | 10         | Log transform for conviction. Default 5. *0 = linear but requires special-case in code (formula divides by zero).                          |
-| **Conviction Floor**         | 0.05        | 0            | 0.05       | Minimum conviction after transform; ensures small bets still move the line.                                                                  |
-| **Default Conviction**       | 0.75        | 0.5          | 0.75       | When maximum_wager is not available at placement, use this as conviction.                                                                 |
-| **Time Decay λ**             | 0.02        | 0.01         | 0.05       | Rate of early bet discounting. Implementation clamps result to [0.5, 1.0].                                                               |
+| **Base Weight**              | 10.0        | 5.0          | 20.0       | Overall bet impact scaling.                                                                                                                |
+| **Conviction Log K**         | 5           | 0*           | 10         | Log transform for conviction. *0 = linear but requires special-case in code (formula divides by zero).                                      |
+| **Conviction Floor**         | 0.05        | 0            | 0.25       | Output range floor: conviction is rescaled to [convictionFloor, 1]. Use 0 for no floor.                                                      |
+| **Default Conviction**       | 0.5         | 0.33         | 0.75       | When maximum_wager is not available, raw conviction is set to this; same log transform and rescaling apply.                                  |
+| **Time Decay λ** (timeDecayLambda) | 0.02 | 0.01         | 0.05       | Rate of early bet discounting. Implementation clamps result to [0.5, 1.0].                                                               |
 | **Max Logit Shift**          | 1.0         | 0.5          | 1.5        | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement."                                             |
-| **Clamp Evidence K**        | 0.2         | 0            | 0.2        | If >0, widen clamp with total bet weight. 0 = fixed clamp. See "Evidence-Dependent Clamp Width."                                           |
-| **Clamp Baseline Weight**   | 1.0         | 1.0          | 1.0        | Baseline for evidence scaling; used with Clamp Evidence K.                                                                                  |
-| **Clamp Max Multiplier**     | 2.0         | 1.5          | 2.5        | Maximum multiplier on maxLogitShift when evidence-dependent; caps effective clamp width.                                                     |
-| **Min Sharpness Bets** (minSharpnessBets) | 5  | 10           | 5          | Minimum resolved bets before applying sharpness (skill) multiplier; otherwise 1.0.                                                          |
-| **Sharpness Clamp Min**      | 0.5         | 0.5          | 0.5        | Minimum allowed sharpness multiplier.                                                                                                       |
-| **Sharpness Clamp Max**      | 2.0         | 1.5          | 2.5        | Maximum allowed sharpness multiplier.                                                                                                       |
-| **Similarity (percent)**     | (hardcoded) | —            | —          | Percentage similarity uses steepness=20, maxDistance=0.05; could be exposed as tunables. Place similarity is Jaccard (no tunables).         |
+| **Clamp Evidence K**         | 0.2         | 0            | 0.2        | If >0, widen clamp with total bet weight. 0 = fixed clamp. See "Evidence-Dependent Clamp Width."                                            |
+| **Clamp Baseline Weight**    | 1.0         | 1.0          | 1.0        | Baseline for evidence scaling; used with Clamp Evidence K.                                                                                  |
+| **Clamp Max Multiplier**     | 2.0         | 1.5          | 2.5        | Maximum multiplier on maxLogitShift when evidence-dependent; caps effective clamp width.                                                    |
+| **Min Sharpness Bets** (minSharpnessBets) | 5 | 10           | 5          | Minimum resolved bets (int) before applying sharpness multiplier; otherwise 1.0.                                                            |
+| **Sharpness Clamp Min**      | 0.5         | 0.5          | 0.5        | Minimum allowed sharpness multiplier.                                                                                                      |
+| **Sharpness Clamp Max**      | 2.0         | 1.5          | 2.5        | Maximum allowed sharpness multiplier.                                                                                                      |
+| **Percentage similarity**    | —           | —            | —          | percentageSimilaritySteepness (default 20), percentageSimilarityMaxDistance (default 0.05). Place similarity is Jaccard (no tunables).    |
 
 
 ## Testing Strategy
@@ -962,29 +734,13 @@ Instead of single odds, offer a range:
 - **Sports Betting Mathematics**: Cortis, "Expected Values and Variances in Bookmaker Payouts" (2015)
 - **Beta-Binomial Models**: Griffiths & Tenenbaum, "From mere coincidences to meaningful discoveries" (2007)
 
-## Appendix: Code Snippets
+## Appendix: Implementation Reference
 
-Snippets below are illustrative. Production should store δ in the database (ShooterDelta) per "Caching δ Per Shooter". The reference implementation is [calculateBayesianOddsUpdate](lib/data/prediction_game/bayesian_odds/calculator.dart) in the bayesian_odds package; DbWagers are converted to [BayesianOddsWager](lib/data/prediction_game/bayesian_odds/wager_data.dart) via `BayesianOddsWager.fromDbWager` (which handles sharpness, time decay, and spread decomposition).
+δ is stored in the database per "Caching δ Per Shooter" (see [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart)). The core logic lives in:
 
-### Complete Weight Calculation
-
-Per-wager weight is computed by `BayesianOddsWager.calculateWeight(config)`. Conceptually (see [wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)):
-
-```dart
-// Conviction: log transform when convictionLogK > 0, else use defaultConviction if maxWager null
-double conviction = maxWager != null
-    ? log(1 + rawConviction * config.convictionLogK) / log(1 + config.convictionLogK)
-    : config.defaultConviction;
-if (maxWager != null) conviction = max(conviction, config.convictionFloor);
-
-// Sharpness (skill): from leaderboard, clamped; 1.0 if resolvedWagers.length < minSharpnessBets
-double skillMultiplier = sharpness.clamp(config.sharpnessClampMin, config.sharpnessClampMax);
-
-// Time decay: clamped to [0.5, 1.0]
-double timeDecay = exp(-config.lambda * daysUntilMatch).clamp(0.5, 1.0);
-
-return conviction * skillMultiplier * timeDecay * config.baseWeight;
-```
+- **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, golden-section δ search); `_calculateDelta`, `_similarity`, `_jaccardIndex`, `_percentageSimilarity`.
+- **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard).
+- **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
 
 ### Delta Computation: Per-Wager + Similarity
 
@@ -998,7 +754,7 @@ See "Computing the Cumulative Distribution Shift (δ)" and "Similarity Between W
 
 ### Generating Odds After δ
 
-Once δ is computed (or read from ShooterDelta cache), generating odds for a requested market is one pass over the MC samples: count how many satisfy the market predicate under the shifted distribution, then apply the logit clamp. Total weight on the shooter is summed over all wagers for evidence-dependent clamp width. No per-market state is stored; the same δ is used for every market on that shooter.
+Once δ is computed (or read from the BayesianDelta cache), generating odds for a requested market is one pass over the MC samples: count how many satisfy the market predicate under the shifted distribution, then apply the logit clamp if implemented. Total weight on the shooter is summed over all wagers for evidence-dependent clamp width. No per-market state is stored; the same δ is used for every market on that shooter.
 
 ---
 
@@ -1083,30 +839,7 @@ Key properties:
 
 ### Generating Spread Odds from Individual Deltas
 
-To price a spread market "A beats B by ≥X%", compute δ_A and δ_B separately from their respective percentage evidence (including any virtual markets from spread bets), then evaluate the spread predicate on the shifted paired MC samples:
-
-```dart
-double getSpreadProbability({
-  required List<double> pctSamplesA,
-  required List<double> pctSamplesB,
-  required double deltaA,
-  required double deltaB,
-  required double spreadThreshold,
-  required bool favoriteCovers,
-}) {
-  int N = pctSamplesA.length;
-  int count = 0;
-  for (int i = 0; i < N; i++) {
-    double shiftedSpread = (pctSamplesA[i] + deltaA) - (pctSamplesB[i] + deltaB);
-    if (favoriteCovers ? shiftedSpread >= spreadThreshold : shiftedSpread <= spreadThreshold) {
-      count++;
-    }
-  }
-  return count / N;
-}
-```
-
-The MC samples are already paired (each trial simulates the full match), so `pctSamplesA[i]` and `pctSamplesB[i]` are from the same simulated match. Shifting each shooter's marginal by their respective δ and evaluating the spread preserves the correlation structure.
+To price a spread market "A beats B by ≥X%", compute δ_A and δ_B separately from their respective percentage evidence (including any virtual markets from spread bets), then evaluate the spread predicate on the shifted paired MC samples: for each trial i, shifted spread = (pctA[i] + δ_A) − (pctB[i] + δ_B); count how many trials satisfy the threshold. The MC samples are paired (same trial index = same simulated match); shifting each shooter's marginal by their δ preserves correlation. See the spread-odds path in the odds/wager pipeline for the actual implementation.
 
 ### Evidence Flow
 

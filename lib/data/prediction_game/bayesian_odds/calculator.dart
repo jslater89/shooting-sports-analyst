@@ -130,13 +130,15 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
 
     final posteriorWeight = weight[wager]! + additionalWeight[wager]!.values.sum;
     alpha[wager] = pShifted[wager]! * nEff;
+    final beta = (1 - pShifted[wager]!) * nEff;
     pPosterior[wager] = (alpha[wager]! + posteriorWeight) / (nEff + posteriorWeight);
 
     logBuffer.writeln("Weight for ${wager.prediction.toString()}: ${weight[wager]!.toStringAsFixed(4)}");
     logBuffer.writeln("Weight from nearby wagers: ${additionalWeight[wager]!.entries.map((e) => "${e.key.prediction.toString()}: ${e.value.toStringAsFixed(4)}").join(", ")}");
-    logBuffer.writeln("Alpha: ${alpha[wager]!.toStringAsFixed(4)}");
-    logBuffer.writeln("Prior: ${pShifted[wager]!.toStringAsFixed(4)}");
-    logBuffer.writeln("Posterior: ${pPosterior[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Total posterior weight: ${posteriorWeight.toStringAsFixed(4)}");
+    logBuffer.writeln("Alpha/beta: ${alpha[wager]!.toStringAsFixed(4)} / ${beta.toStringAsFixed(4)}");
+    logBuffer.writeln("Prior probability: ${pShifted[wager]!.toStringAsFixed(4)}");
+    logBuffer.writeln("Posterior probability: ${pPosterior[wager]!.toStringAsFixed(4)}");
     logBuffer.writeln("Initial error: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
     logBuffer.writeln("\n");
   }

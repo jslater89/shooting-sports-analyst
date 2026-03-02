@@ -49,7 +49,7 @@ class BayesianOddsWager {
   }) : prediction = BayesianOddsPrediction.fromDbPrediction(prediction);
 
   double calculateWeight(BayesianOddsConfig config, {StringBuffer? logBuffer}) {
-    // If maxWager is not available, conviction = 1.0.
+    // If maxWager is not available, raw conviction = defaultConviction; same transform applies.
     final double rawConviction;
     double conviction;
     if(maxWager != null) {
