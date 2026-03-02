@@ -163,7 +163,7 @@ class PredictionProbability {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
-    double placeDelta = 0.0,
+    double? placeDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -186,33 +186,35 @@ class PredictionProbability {
         throw ArgumentError("Shooter prediction not found for ${placePrediction.shooter.name}");
       }
 
-    simulationResult = runOddsSimulation(
-      target: placePrediction.shooter,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
+      simulationResult = runOddsSimulation(
+        target: placePrediction.shooter,
+        shootersToPredictions: shootersToPredictions,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
     }
 
     var successes = 0;
 
     num bestThreshold = placePrediction.bestPlace;
     num worstThreshold = placePrediction.worstPlace;
-    if(placeDelta != 0.0) {
+    if(placeDelta != null && placeDelta != 0) {
       bestThreshold -= 0.5;
       worstThreshold += 0.5;
     }
 
     for(var place in simulationResult.places) {
       num actualPlace = place;
-      if(placeDelta != 0.0) {
+      if(placeDelta != null) {
         actualPlace -= placeDelta;
       }
       if(actualPlace >= bestThreshold && actualPlace <= worstThreshold) {
         successes++;
       }
     }
+
+    final actualTrials = simulationResult.places.length;
 
     Map<String, double> info = {};
     info[PlacePrediction.minPlaceInfo] = simulationResult.places.min.toDouble();
@@ -221,9 +223,9 @@ class PredictionProbability {
     info[PlacePrediction.meanPlaceInfo] = simulationResult.places.average;
     info[PlacePrediction.stdDevPlaceInfo] = simulationResult.places.stdDev();
 
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
+    var minProbability = 1 / actualTrials;
+    var maxProbability = (actualTrials - 1) / actualTrials;
+    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     return PredictionProbability(
       probability,
@@ -264,7 +266,7 @@ class PredictionProbability {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
-    double ratioDelta = 0.0,
+    double? ratioDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -295,7 +297,10 @@ class PredictionProbability {
     }
 
     for(var percentage in simulationResult.percentages) {
-      double actualPercentage = percentage + ratioDelta;
+      double actualPercentage = percentage;
+      if(ratioDelta != null && ratioDelta != 0) {
+        actualPercentage += ratioDelta;
+      }
       if(percentagePrediction.above) {
         if(actualPercentage >= percentagePrediction.ratio) {
           successes++;
@@ -308,9 +313,11 @@ class PredictionProbability {
       }
     }
 
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
+    final actualTrials = simulationResult.percentages.length;
+
+    var minProbability = 1 / actualTrials;
+    var maxProbability = (actualTrials - 1) / actualTrials;
+    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     Map<String, double> info = {};
     info[PercentagePrediction.minPercentageInfo] = simulationResult.percentages.min.toDouble();
@@ -358,8 +365,8 @@ class PredictionProbability {
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? favoriteSimulationResult,
     MonteCarloSimulationResult? underdogSimulationResult,
-    double favoriteRatioDelta = 0.0,
-    double underdogRatioDelta = 0.0,
+    double? favoriteRatioDelta,
+    double? underdogRatioDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -369,6 +376,12 @@ class PredictionProbability {
 
     if(shootersToPredictions == null && (favoriteSimulationResult == null || underdogSimulationResult == null)) {
       throw ArgumentError("Either shootersToPredictions or both favoriteSimulationResult and underdogSimulationResult must be provided.");
+    }
+
+    if(favoriteSimulationResult != null && underdogSimulationResult != null) {
+      if(favoriteSimulationResult.percentages.length != underdogSimulationResult.percentages.length) {
+        throw ArgumentError("Favorite and underdog simulation results must have the same number of trials.");
+      }
     }
 
     bool ranOwnSimulation = favoriteSimulationResult == null || underdogSimulationResult == null;
@@ -391,10 +404,17 @@ class PredictionProbability {
       );
     }
 
+    final actualTrials = favoriteSimulationResult.percentages.length;
     var predictedGaps = <double>[];
-    for(int i = 0; i < trials; i++) {
-      double favoritePercentage = favoriteSimulationResult.percentages[i] + favoriteRatioDelta;
-      double underdogPercentage = underdogSimulationResult.percentages[i] + underdogRatioDelta;
+    for(int i = 0; i < actualTrials; i++) {
+      double favoritePercentage = favoriteSimulationResult.percentages[i];
+      if(favoriteRatioDelta != null && favoriteRatioDelta != 0) {
+        favoritePercentage += favoriteRatioDelta;
+      }
+      double underdogPercentage = underdogSimulationResult.percentages[i];
+      if(underdogRatioDelta != null && underdogRatioDelta != 0) {
+        underdogPercentage += underdogRatioDelta;
+      }
       var gap = favoritePercentage - underdogPercentage;
       predictedGaps.add(gap);
       if(percentageSpreadPrediction.favoriteCovers) {
@@ -409,9 +429,9 @@ class PredictionProbability {
       }
     }
 
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
+    var minProbability = 1 / actualTrials;
+    var maxProbability = (actualTrials - 1) / actualTrials;
+    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     Map<String, double> info = {};
     info[PercentageSpreadPrediction.minPercentageSpreadInfo] = predictedGaps.min.toDouble();
