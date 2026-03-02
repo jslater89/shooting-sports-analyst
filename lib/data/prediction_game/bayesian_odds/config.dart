@@ -24,7 +24,7 @@ class BayesianOddsConfig {
   /// Lambda for exponential time decay, 1 - exp(-lambda * daysUntilMatch)
   ///
   /// 0.02 gives ~half weight at 30 days out.
-  final double lambda;
+  final double timeDecayLambda;
 
   /// Constant for conviction log transform: log(1 + rawConviction * convictionLogK) / log(1 + convictionLogK)
   ///
@@ -44,6 +44,9 @@ class BayesianOddsConfig {
   /// This value is in raw conviction space, and will be log-mapped/scaled according
   /// to convictionLogK and convictionFloor.
   final double defaultConviction;
+
+
+  // ----- NOTE: logit movement cap not yet implemented (seems well-behaved so far) -----
 
   /// Maximum base logit shift for odds movement, in logit space.
   ///
@@ -69,6 +72,8 @@ class BayesianOddsConfig {
   /// will be multiplied by no more than this much as a result of accumulated
   /// evidence.
   final double clampMaxMultiplier;
+
+  // ----- NOTE: end of logit shift parameters -----
 
 
   /// Minimum number of resolved bets for sharpness adjustment to be applied.
@@ -109,11 +114,11 @@ class BayesianOddsConfig {
         nEffMin = nEffMin ?? 20,
         nEffMax = nEffMax ?? 150,
         nEffLogBase = nEffLogBase,
-        baseWeight = baseWeight ?? 10,
-        lambda = lambda ?? 0.02,
+        baseWeight = baseWeight ?? 20,
+        timeDecayLambda = lambda ?? 0.02,
         convictionLogK = convictionLogK ?? 5,
-        convictionFloor = convictionFloor ?? 0.05,
-        defaultConviction = defaultConviction ?? 0.75,
+        convictionFloor = convictionFloor ?? 0.25,
+        defaultConviction = defaultConviction ?? 0.33,
         maxLogitShift = maxLogitShift ?? 1.0,
         clampEvidenceK = clampEvidenceK ?? 0.2,
         clampBaselineWeight = clampBaselineWeight ?? 1,
@@ -130,7 +135,7 @@ class BayesianOddsConfig {
     nEffMax.stableHash64,
     nEffLogBase?.stableHash64 ?? 0,
     baseWeight.stableHash64,
-    lambda.stableHash64,
+    timeDecayLambda.stableHash64,
     convictionLogK.stableHash64,
     convictionFloor.stableHash64,
     defaultConviction.stableHash64,

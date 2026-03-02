@@ -36,11 +36,7 @@ class BayesianWagerUpdater {
 
   BayesianWagerUpdater({
     BayesianOddsConfig? config,
-  }) : _config = config ?? BayesianOddsConfig(
-    baseWeight: 25,
-    convictionFloor: 0.25,
-    defaultConviction: 0.33,
-  );
+  }) : _config = config ?? BayesianOddsConfig();
 
   /// Updates the odds of a [Wager] (i.e., the hydrated single-leg version which can either
   /// stand alone or serve as the legs of a [Parlay]) with the Bayesian odds shift math.

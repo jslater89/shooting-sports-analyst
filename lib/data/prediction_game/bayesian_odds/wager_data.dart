@@ -68,7 +68,7 @@ class BayesianOddsWager {
       skillMultiplier = sharpness.clamp(config.sharpnessClampMin, config.sharpnessClampMax);
     }
 
-    double timeDecay = exp(-config.lambda * daysUntilMatch).clamp(0.5, 1.0);
+    double timeDecay = exp(-config.timeDecayLambda * daysUntilMatch).clamp(0.5, 1.0);
 
     if(logBuffer != null) {
       logBuffer.writeln("Weight -> conviction: ${conviction.toStringAsFixed(4)} (raw: ${rawConviction.toStringAsFixed(4)})");
