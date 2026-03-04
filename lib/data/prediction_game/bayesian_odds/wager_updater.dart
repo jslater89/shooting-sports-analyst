@@ -58,6 +58,9 @@ class BayesianWagerUpdater {
   /// default [MonteCarloCache] will be used. If neither is present, this method will run simulations
   /// on demand when decomposing spread wagers into percentage signals (as Monte Carlo samples are
   /// required for that process).
+  ///
+  /// [bestPossibleOdds] and [worstPossibleOdds] are the best and worst possible odds for the wager,
+  /// respectively. If not present, the default values of 1.0001 and 10000.0 will be used.
   Future<double> updateWagerWithBayesianOddsShift({
     required PredictionGameManager gm,
     required Wager wager,
@@ -67,6 +70,8 @@ class BayesianWagerUpdater {
     required MonteCarloSimulationResult subjectMonteCarlo,
     MonteCarloSimulationResult? spreadFavoriteMonteCarlo,
     MonteCarloSimulationResult? spreadUnderdogMonteCarlo,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
     IMonteCarloCache? cache,
   }) async {
     final start = DateTime.now();

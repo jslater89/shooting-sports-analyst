@@ -97,6 +97,8 @@ class Wager implements IWager {
     MonteCarloSimulationResult? underdogSimulation,
     required double targetDelta,
     double? underdogDelta,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
     Random? random,
     int trials = 10000,
   }) {
@@ -106,6 +108,8 @@ class Wager implements IWager {
         null,
         simulationResult: targetSimulation,
         placeDelta: targetDelta,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
         random: random,
         trials: trials,
       );
@@ -116,6 +120,8 @@ class Wager implements IWager {
         null,
         simulationResult: targetSimulation,
         ratioDelta: targetDelta,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
         random: random,
         trials: trials,
       );
@@ -124,6 +130,8 @@ class Wager implements IWager {
       probability = PredictionProbability.fromPercentageSpreadPrediction(
         prediction as PercentageSpreadPrediction,
         null,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
         favoriteSimulationResult: targetSimulation,
         underdogSimulationResult: underdogSimulation,
         favoriteRatioDelta: targetDelta,

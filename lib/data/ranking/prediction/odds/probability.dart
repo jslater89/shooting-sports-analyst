@@ -203,7 +203,10 @@ class PredictionProbability {
         // placeDelta may be noninteger. We want to count up to 0.5 inclusive above place k as k,
         // and down to 0.5 exclusive below place k as k, but shifting it into integer space is
         // clearer and means we don't need to muck with thresholds.
-        actualPlace = (actualPlace + placeDelta - 0.5).ceilToDouble();
+        actualPlace = (actualPlace - (placeDelta + 0.5)).ceilToDouble();
+        if(actualPlace < 1) {
+          actualPlace = 1;
+        }
       }
 
       if(actualPlace >= placePrediction.bestPlace && actualPlace <= placePrediction.worstPlace) {

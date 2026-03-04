@@ -919,60 +919,58 @@ The posterior shifts here (~2.3% and ~2.4% relative) are smaller than in the fav
 - **Double-counting.** If someone bets both "A above 90%" and "A beats B by ≥10%", both contribute to A's δ_pct. The percentage bet directly; the spread bet via the spread-derived virtual percentage market for A. This isn't exactly double-counting (the virtual market uses the spread-derived threshold, not 90%), but the two signals do carry correlated information. The splitFactor discount (0.5) provides some buffering.
 - **Correlation distortion.** Shifting A and B's marginals independently slightly distorts the joint distribution. The MC samples capture the true correlation (e.g., both do well on the same stages); shifting each marginal treats the shifts as independent. For small δ values this is negligible. For large shifts, the spread probability may be slightly miscalibrated — but the δ values from bet evidence will be small in practice (see "The Core Problem" on liquidity).
 
-## Appendix: Unified Signal Propagation (Place ↔ Percentage)
+## Appendix: Place and Percentage (Single δ, Range Decomposition, Slope)
 
-### Motivation
+This appendix describes a **unified** design: a single δ in percentage space for each shooter. All place predictions are **range** predictions (e.g. 1st–10th). Place bets do not maintain a separate δ_place; they contribute evidence as percentage signals and are evaluated using the percentage–place slope at the range boundaries.
 
-With spread bets already decomposed into percentage signals (see previous appendix), the remaining cross-type gap is between **place** and **percentage**. These are computed as separate δ values (δ_place in position units, δ_pct in percentage-point units), but both describe the same underlying reality: a shooter's performance. A place bet on "A finishes 1st-10th" carries information about A's percentage finish, because finishing 20th instead of 26th *necessarily* means a better percentage than the model predicted for 26th place. The question is whether we can let place evidence inform percentage δ and vice versa.
+### Single δ in Percentage Space
 
-### The Cross-Domain Mapping Problem
+There is only **δ_pct** (percentage points). Direct percentage bets, spread-derived virtual percentage markets (see previous appendix), and place-range-derived virtual percentage markets all feed into the same WLS optimizer. One δ per shooter; no separate place delta or cross-type propagation step.
 
-The MC trials are the bridge. Each trial for shooter A has both a finish position and a percentage:
+Since certain regions of the result space may not have enough density in finishes to accurately calculate δ_pct, we retain all the calculation infrastructure for δ_place to use in those scenarios.
 
-```
-Trial 1: finished 23rd, 78.2%
-Trial 2: finished 31st, 71.5%
-Trial 3: finished 18th, 82.1%
-...
-```
+### All Place Predictions Are Range Predictions
 
-These are jointly sampled — a trial where A finishes 18th also has a specific percentage that's consistent with finishing 18th in that simulated field. However, the mapping from percentage to place (and vice versa) depends on the entire field's performance in each trial. We don't store the full N_shooters × N_trials matrix, so we can't do the cross-domain lookup directly.
+Every place market is an interval [a, b] (e.g. 1st–10th: best place in range = 1, worst place in range = 10). There is no distinct “single place” market; the same mechanism handles all place markets.
 
-What we *can* observe: after computing δ_place from place bets, the shifted finish distribution has a different mean position. The relationship between position and percentage is encoded in the MC samples — across all 10,000 trials, there's an empirical correlation between finish position and percentage. We can estimate the implied percentage shift from the position shift using this correlation. Note that this mapping is only reliable for reasonably dense fields — in a 10-person match, the position-to-percentage relationship is sparse and noisy (a 1-position shift could correspond to anywhere from 0.5% to 10% depending on who's nearby), so the implied percentage shift would not be trustworthy. In larger fields (50+), the denser packing of competitors makes the empirical correlation much more stable.
+### Using a Place Bet as Evidence
 
-### Approximate Conversion via Empirical Slope
+To use a place-range bet as evidence for the shared δ_pct:
 
-Sort the MC trials by finish position. The empirical slope `Δpct/Δplace` around the model's expected finish gives the local conversion factor. Since the slope varies across the distribution (steeper in the tails where positions are sparser, shallower near the middle where competitors are densely packed), average the slope at the model position and the shifted position for a better estimate:
+1. **Map the range to percentage bounds.** For the shooter’s MC samples, determine the percentage that corresponds to the **best** place in the range (e.g. 1st) and the **worst** place in the range (e.g. 10th). For example: mean or median percentage among trials that finished at (or in a small band around) that place.
+2. **Create two virtual percentage wagers** (same idea as spread decomposition):
+   - "Below pct at **best** place in range" (e.g. worse than the percentage corresponding to 1st).
+   - "Above pct at **worst** place in range" (e.g. better than the percentage corresponding to 10th).
+   The bettor is betting the shooter finishes in the range, so both bounds are "for" the outcome.
+3. **Split the bet weight** between the two virtual wagers (e.g. 0.5 each) so the single place bet does not get double weight in the objective.
 
-```
-slope_start = (mean_pct_at(model_place - 1) - mean_pct_at(model_place + 1)) / 2
-slope_end   = (mean_pct_at(shifted_place - 1) - mean_pct_at(shifted_place + 1)) / 2
-  where shifted_place = model_place - δ_place
+These virtual wagers enter the same posterior and WLS objective as direct percentage bets and spread-derived percentage signals. Place evidence thus influences δ_pct directly; no separate place delta is computed or propagated unless sparse finishes require it.
 
-implied_δ_pct ≈ δ_place × (slope_start + slope_end) / 2
-```
+### Evaluating a Place Bet (Probability Under δ_pct)
 
-For a shooter expected at ~26th with δ_place = 2 (shifted to ~24th), if the slope at 26th is ~0.75 pct/position and the slope at 24th is ~0.80 pct/position, then `implied_δ_pct ≈ 2 × (0.75 + 0.80) / 2 = 1.55`. The trapezoidal average matters most in the tails (where a few positions can span a large percentage gap) and for large δ values; for small δ near the center of the field, the two slopes are nearly identical and the single-point estimate suffices.
+To compute P(shooter finishes in [a, b]) under the shifted distribution:
 
-### When It Matters
+1. **Slope at top and bottom of range.** At the **best** place in the range (a) and the **worst** place (b), compute the empirical slope Δpct/Δplace from the MC data (e.g. sort trials by place; slope at position p ≈ (mean_pct at p−1 − mean_pct at p+1) / 2, or use a competitor predicted to finish near that place — see below).
+2. **Convert δ_pct to effective place shift at each boundary.** At the bottom of the range: δ_place_at_a = δ_pct / slope_at_a. At the top: δ_place_at_b = δ_pct / slope_at_b. (Better percentage ⇒ better place, so a positive δ_pct corresponds to moving to a better place.)
+3. **Evaluate the place predicate.** Use these effective place shifts to define the shifted range or to shift each sample’s place by a position-dependent amount, then count trials that fall in the shifted range. For example: for each trial at place_i, compute effective δ_place(place_i) from the slope at place_i (or interpolate between slope_at_a and slope_at_b), then shifted_place_i = place_i − δ_place(place_i); count trials where shifted_place is in [a, b].
 
-Unified propagation is most valuable when:
+So place markets are evaluated by converting the single percentage shift into a position-dependent place shift using the slope at the relevant positions, then counting as usual.
 
-- A shooter has bets across both place and percentage types — the evidence reinforces.
-- A shooter has many place bets but someone requests a percentage market (or vice versa).
-- Combined with spread decomposition, a shooter has place bets, percentage bets, and appears in spread bets — all three converge into a single δ_pct.
+### Slope From a Nearby Competitor (Optional Refinement)
 
-It matters less when bets are sparse or concentrated in a single type, since there's nothing to propagate across.
+The shooter’s own MC samples may be sparse at a given place (e.g. few trials finishing exactly 10th). For a more stable slope at that position, **find a competitor whose expected finish is near that place** and use **their** MC samples to estimate Δpct/Δplace at that position. Their distribution is centered there, so many more trials land in that band and the slope estimate is more reliable. Use that slope when converting δ_pct ↔ place at the top or bottom of a place range for the shooter in question.
 
-### Recommendation
+### Sparse Environments: Retaining Place-Based δ
 
-Start with separate δ_place and δ_pct (plus spread decomposition into δ_pct). The cross-type propagation is a refinement that can be added later if backtesting shows meaningful information loss from keeping the types independent. The empirical-slope conversion is cheap to compute but adds a layer of approximation; validate against known MC distributions before relying on it, and keep the standalone mechanisms around for sparse fields.
+In **sparse** environments (e.g. small fields, or positions where the shooter's MC samples are too thin for a stable slope), the position–percentage mapping is unreliable. We **retain place-based delta calculation** for use in those cases: compute a separate δ_place from place wagers only, and evaluate place markets by shifting place directly (as in the main body of the doc). When the field or the local sample count is dense enough, use the unified δ_pct path (place → two percentage signals, evaluate via slope); when sparse, fall back to δ_place so place evidence still moves place markets without relying on an unstable slope.
 
-### Open Questions
+Caching still works as normal, with the added wrinkle that place range markets need to check for density before deciding on method.
 
-- **Mapping fidelity.** The slope approximation is linear; the true relationship may be nonlinear, especially in the tails. With 10,000 trials this is likely fine for small δ, but worth validating.
-- **Double-counting.** If someone places both a place bet and a percentage bet on the same shooter, and unified propagation converts the place evidence into a percentage signal, the percentage δ would see both the direct percentage bet and the converted place signal. A conservative approach: discount the converted signal by a factor < 1 (e.g. 0.5×).
-- **Computational cost.** Computing the empirical slope is one pass over sorted MC samples: O(N). The unified conversion is O(1) on top of the per-type δ searches. Negligible cost.
+### Summary
+
+- **Evidence:** Place-range bet → two percentage signals (below pct at best place in range, above pct at worst place in range), split weight → same δ_pct optimizer as percentage and spread.
+- **Evaluation:** Place range [a, b] → slope at a and b (shooter or nearby competitor) → δ_pct converted to place shift at each point → count trials in shifted range.
+- No δ_place; no separate "unified propagation" step. Place and percentage are unified by expressing everything in percentage space and using the empirical slope only when evaluating a place predicate.
 
 ---
 
