@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/server_auth.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
@@ -160,11 +161,12 @@ enum _DatabaseMenuCommand implements MenuCommand {
   importDeduplicationInfo("1", "Import Deduplication Info", execute: notYetImplementedExecutor),
   listRatingProjects("2", "List Rating Projects", execute: _printRatingProjectList),
   listPredictionGames("3", "List Prediction Games", execute: _printPredictionGames),
-  setRatingContext("3", "Set Rating Context",
+  dumpSessions("4", "Dump Sessions", execute: _dumpSessions),
+  setRatingContext("5", "Set Rating Context",
     execute: _setRatingContext,
     arguments: [IntMenuArgument(label: "Project ID")]
   ),
-  printUsageStats("4", "Print Usage Stats", execute: _printDatabaseUsageStats),
+  printUsageStats("6", "Print Usage Stats", execute: _printDatabaseUsageStats),
   back("B", "Back");
 
   final String key;
@@ -185,12 +187,6 @@ Future<void> _databaseMenuLoop(Console console) async {
     menuHeader: "Database Menu",
     commandSelected: (command) async {
       switch(command.command) {
-        case _DatabaseMenuCommand.importDeduplicationInfo:
-          return true;
-        case _DatabaseMenuCommand.setRatingContext:
-          return true;
-        case _DatabaseMenuCommand.printUsageStats:
-          return true;
         case _DatabaseMenuCommand.back:
           return false;
         default:
@@ -245,6 +241,29 @@ Future<void> _printPredictionGames(Console console, List<MenuArgumentValue> argu
     ]);
   }
   console.write(gamesTable.render());
+}
+
+Future<void> _dumpSessions(Console console, List<MenuArgumentValue> arguments) async {
+  var sessions = await await _database.getActiveSessions();
+  var sessionsTable = Table();
+  sessionsTable.insertColumn(header: "Display Name");
+  sessionsTable.insertColumn(header: "Username");
+  sessionsTable.insertColumn(header: "Auth Method");
+  sessionsTable.insertColumn(header: "Created");
+  sessionsTable.insertColumn(header: "Expires");
+  sessionsTable.insertColumn(header: "Has Refresh?");
+  for(var session in sessions) {
+    final user = session.user.value;
+    sessionsTable.insertRow([
+      user?.guaranteedDisplayName ?? "n/a",
+      user?.username ?? "n/a",
+      session.authMethod.name,
+      programmerYmdHmFormat.format(session.created),
+      programmerYmdHmFormat.format(session.expires),
+      session.refreshToken != null ? "Yes" : "No"
+    ]);
+  }
+  console.write(sessionsTable.render());
 }
 
 Future<void> _setRatingContext(Console console, List<MenuArgumentValue> arguments) async {
