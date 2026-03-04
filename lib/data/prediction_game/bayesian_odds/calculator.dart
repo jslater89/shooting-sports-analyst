@@ -52,42 +52,23 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   nEff = (config.nEffScale * log(1 + subjectHistoryLength)).clamp(config.nEffMin, config.nEffMax);
   logBuffer.writeln("nEff: $nEff");
 
+  double priorPrediction;
+  if(type == DbPredictionType.place) {
+    priorPrediction = subjectMonteCarlo.places.average;
+  }
+  else if(type == DbPredictionType.percentage) {
+    priorPrediction = subjectMonteCarlo.percentages.average;
+  }
+  else {
+    throw ArgumentError("Unsupported prediction type: ${type}");
+  }
+  logBuffer.writeln("Prior prediction: ${priorPrediction.toStringAsFixed(4)} (mean of ${subjectMonteCarlo.places.length} Monte Carlo samples)");
+
   final Map<BayesianOddsWager, double> weight = {};
   final Map<BayesianOddsWager, Map<BayesianOddsWager, double>> additionalWeight = {};
   final Map<BayesianOddsWager, double> pShifted = {};
   final Map<BayesianOddsWager, double> alpha = {};
   final Map<BayesianOddsWager, double> pPosterior = {};
-
-  // TODO: similarity calculation between wagers
-  /*
-  We do actually need to calculate similarity between wagers, because otherwise we underweight
-  closely-related wagers. Consider two wagers: Smith >= 80%, weight 5. Both of these add
-  5 * (p_shifted - p_posterior) to the error, but p_posterior is the same for both, so optimizing
-  delta for one necessarily optimizes delta for the other. The pair has impact when there are
-  other predictions at play, counting for more in the sum-of-errors calculation, but we're still
-  losing signal—multiple predictions at or near one point should make a bigger hump in the
-  new-information distribution.
-
-  A simple fix is to percolate weight between wagers. Each wager gets a raw and effective
-  weight. For each wager:
-
-  1. Find nearby wagers. For place range wagers, any overlap between ranges will do. For
-  percent wagers, look for within a few percent.
-  2. Each nearby wager adds similarity * nearby_raw_weight / nearby_count to the current
-     wager's effective weight.
-     Similarity can be Jaccard index for place range, and exponential decay for percent.
-  3. The algorithm progresses as normal, using effective weight.
-
-  This adds extra bulk to each prior where there's a stack of them. This knob should perhaps
-  be turned with caution: it makes _every_ prior stronger, which means that large aggregations
-  of wagers pull more strongly than they would in the merged-market case. Perhaps use the
-  raw weight as the multiplier in sum-of-squared-errors, but use the effective weight to calculate
-  the posterior in the prep code.
-
-  We can reduce the time complexity of this by sorting wagers by some measure (percentage, or
-  center of place range), and only considering certain nearby wagers (maybe up to N), but
-  that may be premature optimization.
-  */
 
   for(var wager in wagers) {
     additionalWeight[wager] = {};
@@ -145,9 +126,36 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
 
   // Lo/hi search bounds for the delta calculation, in places or ratio-space percentage points.
   double searchLo = type == DbPredictionType.place ? -40.0 : -0.3;
-  double searchHi = type == DbPredictionType.place ? 40.0 : 0.3;
 
-  double delta = _calculateDelta(
+  double searchHi;
+  if(type == DbPredictionType.place) {
+    // Cap the high end of the search range at the number that would
+    // shift this competitor to the lowest value that rounds up to
+    // 1st place (i.e., 1.0 - 0.49ish.)
+    // e.g. predicted finish of 1.0, subtract 0.51 to get a maximum
+    // shift of 0.49.
+    searchHi = min(40.0, priorPrediction - 0.51);
+  }
+  else if(type == DbPredictionType.percentage) {
+    // Cap the high end of the search range at the number that would
+    // shift this competitor to 105%.
+    searchHi = min(0.3, 1.05 - priorPrediction);)
+  }
+  else {
+    throw ArgumentError("Unsupported prediction type: ${type}");
+  }
+
+  if(type == DbPredictionType.place) {
+    logBuffer.writeln("Search range: ${searchLo.toStringAsFixed(2)} to ${searchHi.toStringAsFixed(2)} (places)");
+  }
+  else if(type == DbPredictionType.percentage) {
+    logBuffer.writeln("Search range: ${searchLo.toStringAsFixed(4)} to ${searchHi.toStringAsFixed(4)} (percentage points)");
+  }
+  else {
+    throw ArgumentError("Unsupported prediction type: ${type}");
+  }
+
+  var (double delta, double a, double b) = _calculateDelta(
     wagers: wagers,
     type: type,
     subjectMonteCarlo: subjectMonteCarlo,
@@ -157,6 +165,20 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     searchLo: searchLo,
     searchHi: searchHi,
   );
+
+  if(type == DbPredictionType.place) {
+    // If delta falls on a half integer, check to see if the final
+    // a and b from the search range bracket it. If so, snap to
+    // that half integer.
+    final integerHalves = (delta / 0.5).round();
+    if(integerHalves.isOdd) {
+      final halfInteger = integerHalves * 0.5;
+      if(a < halfInteger && halfInteger < b) {
+        delta = halfInteger;
+        logBuffer.writeln("Delta snapped to half integer: ${delta.toStringAsFixed(2)} (a = ${a.toStringAsFixed(4)}, b = ${b.toStringAsFixed(4)})");
+      }
+    }
+  }
 
   return BayesianOddsResult(
     delta: delta,
@@ -215,7 +237,7 @@ double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double s
   return 1 / (1 + exp(steepness * (x - 0.5)));
 }
 
-double _calculateDelta({
+(double delta, double a, double b) _calculateDelta({
   required List<BayesianOddsWager> wagers,
   required DbPredictionType type,
   required MonteCarloSimulationResult subjectMonteCarlo,
@@ -264,7 +286,7 @@ double _calculateDelta({
 
   // _log.v("Bayesian odds shift calculation completed in $i iterations.");
 
-  return (a + b) / 2;
+  return ((a + b) / 2, a, b);
 }
 
 double _objective({

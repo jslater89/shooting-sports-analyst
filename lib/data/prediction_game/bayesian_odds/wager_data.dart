@@ -124,8 +124,7 @@ class BayesianOddsWager {
     int trials = monteCarlo.percentages.length;
 
     for(int i = 0; i < trials; i++) {
-      var sampleOutput = monteCarlo.places[i] - delta;
-      sampleOutput = (sampleOutput - 0.5).ceilToDouble();
+      var sampleOutput = (monteCarlo.places[i] - (delta + 0.5)).ceilToDouble();
       if(sampleOutput < 1) {
         sampleOutput = 1;
       }
@@ -135,7 +134,11 @@ class BayesianOddsWager {
       }
     }
 
-    return hits / trials;
+    final minProbability = 1 / trials;
+    final maxProbability = (trials - 1) / trials;
+    final probability = (hits / trials).clamp(minProbability, maxProbability);
+
+    return probability;
   }
 
   double evaluatePercentAgainstSimulation({
@@ -174,7 +177,11 @@ class BayesianOddsWager {
       }
     }
 
-    return hits / trials;
+    final minProbability = 1 / trials;
+    final maxProbability = (trials - 1) / trials;
+    final probability = (hits / trials).clamp(minProbability, maxProbability);
+
+    return probability;
   }
 
   /// Return the Bayesian odds wagers for a given leg of a DbWager.
