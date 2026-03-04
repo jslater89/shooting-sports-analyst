@@ -563,7 +563,8 @@ extension PredictionGameExtension on AnalystDatabase {
     }
   ) async {
     List<PredictionLeaderboardEntry> entries = [];
-    for(var player in game.users) {
+    var players = await getAllPlayersForGame(game);
+    for(var player in players) {
       var playerWagerCount = await player.wagers.count();
       if(playerWagerCount == 0) {
         // Players with no wagers don't appear on the leaderboard

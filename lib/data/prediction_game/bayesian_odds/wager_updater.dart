@@ -146,6 +146,8 @@ class BayesianWagerUpdater {
         underdogSimulation: null,
         targetDelta: subjectDelta,
         underdogDelta: null,
+        bestPossibleOdds: bestPossibleOdds,
+        worstPossibleOdds: worstPossibleOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
       _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
@@ -159,6 +161,8 @@ class BayesianWagerUpdater {
         underdogSimulation: null,
         targetDelta: subjectDelta,
         underdogDelta: null,
+        bestPossibleOdds: bestPossibleOdds,
+        worstPossibleOdds: worstPossibleOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
@@ -174,6 +178,8 @@ class BayesianWagerUpdater {
         underdogSimulation: spreadUnderdogMonteCarlo,
         targetDelta: subjectDelta,
         underdogDelta: underdogDelta,
+        bestPossibleOdds: bestPossibleOdds,
+        worstPossibleOdds: worstPossibleOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
