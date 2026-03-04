@@ -2,6 +2,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/db_entities.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
@@ -45,6 +46,10 @@ class BayesianDelta with DbShooterRatingEntity {
   @enumerated
   DbPredictionType type;
 
+  @Index()
+  int gameId;
+  final game = IsarLink<PredictionGame>();
+
   /// The wagers that were used to calculate this delta.
   final contributingWagers = IsarLinks<DbWager>();
 
@@ -78,6 +83,7 @@ class BayesianDelta with DbShooterRatingEntity {
     required this.computedAt,
     required this.predictionSetId,
     required this.configHash,
+    required this.gameId,
   });
 
   /// Create a new delta, setting up initial links values and ID/member number
@@ -94,10 +100,12 @@ class BayesianDelta with DbShooterRatingEntity {
     required this.lastBetTimestamp,
     required this.computedAt,
     required PredictionSet predictionSet,
+    required PredictionGame game,
     required BayesianOddsConfig config,
   }) :
     contributingWagerIds = contributingWagers.map((w) => w.id).toList(),
     predictionSetId = predictionSet.id,
+    gameId = game.id,
     configHash = config.configHash {
       this.group.value = group;
       this.project.value = project;
@@ -106,6 +114,7 @@ class BayesianDelta with DbShooterRatingEntity {
       this.predictionSet.value = predictionSet;
       this.memberNumber = rating.memberNumber;
       this.knownMemberNumbers = [...rating.knownMemberNumbers];
+      this.game.value = game;
     }
 
   void addContributingWager(DbWager wager) {

@@ -221,17 +221,18 @@ class BayesianWagerUpdater {
     var dates = wagersForSubject.map((w) => w.created).sorted((a, b) => b.compareTo(a));
     var latestBetTimestamp = dates.first;
 
-    // final cachedDelta = await db.getBayesianDelta(
-    //   memberNumber: subjectRating.memberNumber,
-    //   predictionSetId: predictionSet.id,
-    //   type: targetType,
-    //   validAfter: latestBetTimestamp,
-    //   configHash: _config.configHash,
-    // );
+    final cachedDelta = await db.getBayesianDelta(
+      gameId: gm.predictionGame.id,
+      memberNumber: subjectRating.memberNumber,
+      predictionSetId: predictionSet.id,
+      type: targetType,
+      validAfter: latestBetTimestamp,
+      configHash: _config.configHash,
+    );
 
-    // if(cachedDelta != null) {
-    //   return cachedDelta.delta;
-    // }
+    if(cachedDelta != null) {
+      return cachedDelta.delta;
+    }
 
     List<BayesianOddsWager> priorSubjectWagers = [];
 
@@ -269,6 +270,7 @@ class BayesianWagerUpdater {
     _log.v(result.log);
 
     await db.saveBayesianDelta(BayesianDelta.create(
+      game: gm.predictionGame,
       memberNumber: subjectRating.memberNumber,
       project: project,
       rating: subjectRating.wrappedRating,

@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager
 extension BayesianDeltaDatabase on AnalystDatabase {
   Future<BayesianDelta?> getBayesianDelta({
     required String memberNumber,
+    required int gameId,
     required int predictionSetId,
     required DbPredictionType type,
     required DateTime validAfter,
@@ -18,6 +19,7 @@ extension BayesianDeltaDatabase on AnalystDatabase {
     var delta = await isar.bayesianDeltas.where()
       .memberNumberPredictionSetIdEqualTo(memberNumber, predictionSetId)
       .filter()
+      .gameIdEqualTo(gameId)
       .anyOf(compatibleTypes, (q, type) => q.typeEqualTo(type))
       .lastBetTimestampGreaterThan(validAfter, include: true)
       .findFirst();
@@ -67,11 +69,18 @@ extension BayesianDeltaDatabase on AnalystDatabase {
     await isar.writeTxn(() async {
       await isar.bayesianDeltas.put(delta);
 
+      delta.game.save();
       delta.group.save();
       delta.project.save();
       delta.rating.save();
       delta.predictionSet.save();
       delta.contributingWagers.save();
+    });
+  }
+
+  Future<void> clearBayesianDeltasForGame(int gameId) async {
+    await isar.writeTxn(() async {
+      await isar.bayesianDeltas.where().gameIdEqualTo(gameId).deleteAll();
     });
   }
 }

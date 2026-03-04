@@ -139,7 +139,7 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   else if(type == DbPredictionType.percentage) {
     // Cap the high end of the search range at the number that would
     // shift this competitor to 105%.
-    searchHi = min(0.3, 1.05 - priorPrediction);)
+    searchHi = min(0.3, 1.05 - priorPrediction);
   }
   else {
     throw ArgumentError("Unsupported prediction type: ${type}");
