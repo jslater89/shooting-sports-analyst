@@ -83,4 +83,10 @@ extension BayesianDeltaDatabase on AnalystDatabase {
       await isar.bayesianDeltas.where().gameIdEqualTo(gameId).deleteAll();
     });
   }
+
+  Future<void> clearAllBayesianDeltas() async {
+    await isar.writeTxn(() async {
+      await isar.bayesianDeltas.where().anyId().deleteAll();
+    });
+  }
 }
