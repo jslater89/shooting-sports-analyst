@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
@@ -186,9 +187,12 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   );
 }
 
+@visibleForTesting
+double similarityForTesting(BayesianOddsWager a, BayesianOddsWager b, BayesianOddsConfig config) => _similarity(a, b, config);
+
 double _similarity(BayesianOddsWager a, BayesianOddsWager b, BayesianOddsConfig config) {
   if(a.prediction.type == DbPredictionType.place && b.prediction.type == DbPredictionType.place) {
-    return _jaccardIndex(a, b);
+    return _placeSimilarity(to: a, from: b);
   }
   else if(a.prediction.type == DbPredictionType.percentage && b.prediction.type == DbPredictionType.percentage) {
     return _percentageSimilarity(a, b, steepness: config.percentageSimilaritySteepness, maxDistance: config.percentageSimilarityMaxDistance);
@@ -196,24 +200,25 @@ double _similarity(BayesianOddsWager a, BayesianOddsWager b, BayesianOddsConfig 
   return 0.0;
 }
 
-double _jaccardIndex(BayesianOddsWager wager, BayesianOddsWager otherWager) {
-  if(wager.prediction.type != DbPredictionType.place || otherWager.prediction.type != DbPredictionType.place) {
-    throw ArgumentError("Jaccard index can only be calculated for place predictions.");
+/// Asymmetric place similarity when adding weight TO [to] FROM [from].
+/// Returns |to ∩ from| / |from|: what fraction of the contributor's range
+/// overlaps the receiver's range. E.g. 1st-1st → 1st-3rd is 1.0; 1st-3rd → 1st-1st is 1/3.
+double _placeSimilarity({required BayesianOddsWager to, required BayesianOddsWager from}) {
+  if(to.prediction.type != DbPredictionType.place || from.prediction.type != DbPredictionType.place) {
+    throw ArgumentError("Place similarity can only be calculated for place predictions.");
   }
 
-  var (int a, int b) = (wager.prediction.bestPlace!, wager.prediction.worstPlace!);
-  var (int x, int y) = (otherWager.prediction.bestPlace!, otherWager.prediction.worstPlace!);
+  var (int a, int b) = (to.prediction.bestPlace!, to.prediction.worstPlace!);
+  var (int x, int y) = (from.prediction.bestPlace!, from.prediction.worstPlace!);
 
   int left = max(a, x);
   int right = min(b, y);
   int intersection = max(0, right - left + 1);
-  int size1 = b - a + 1;
-  int size2 = y - x + 1;
-  int union = size1 + size2 - intersection;
-  if(union == 0) {
+  int sizeFrom = y - x + 1;
+  if(sizeFrom == 0) {
     return 0.0;
   }
-  return intersection / union;
+  return intersection / sizeFrom;
 }
 
 double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double steepness = 20, double maxDistance = 0.05}) {

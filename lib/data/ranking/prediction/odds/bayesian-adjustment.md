@@ -363,15 +363,15 @@ So: the **posterior** for each wager uses an effective weight (raw + similarity-
 
 When several wagers target similar outcomes (e.g. "1st-10th" and "1st-5th", or "above 90%" and "above 92%"), they represent clustered evidence: multiple predictions at or near one point should make a bigger hump in the new-information distribution than the same total weight spread across unrelated markets. The implementation adds **additional weight** to each wager from nearby wagers, using a similarity measure; that additional weight is used only when computing the posterior, not in the WLS objective.
 
-**Place wagers:** Similarity is the **Jaccard index** of the two place ranges. For ranges [a, b] and [x, y]:
+**Place wagers:** Similarity is **asymmetric**: when adding weight to wager W from wager V, use the fraction of V's range that overlaps W, so that a narrow bet (e.g. 1st-1st) fully supports a containing range (1st-3rd) but a wide bet only partly supports a narrow one. For ranges [a, b] (receiver W) and [x, y] (contributor V):
 
 ```
 intersection = max(0, min(b, y) − max(a, x) + 1)
-union        = (b − a + 1) + (y − x + 1) − intersection
-similarity   = intersection / union   (0 if union == 0)
+sizeFrom     = y − x + 1
+similarity(W, V) = intersection / sizeFrom   (0 if sizeFrom == 0)
 ```
 
-Example: "1st-10th" and "1st-5th" → intersection = 5, union = 10 + 5 − 5 = 10 → similarity = 0.5. "1st-10th" and "12th-16th" → intersection = 0 → similarity = 0.
+Example: Adding to 1st-3rd from 1st-1st → intersection = 1, sizeFrom = 1 → similarity = 1.0. Adding to 1st-1st from 1st-3rd → intersection = 1, sizeFrom = 3 → similarity = 1/3. "1st-10th" from "1st-5th" → 5/5 = 1.0; "1st-5th" from "1st-10th" → 5/10 = 0.5. "1st-10th" and "12th-16th" → intersection = 0 → similarity = 0.
 
 **Percentage wagers:** Similarity uses a decay in distance following a sigmoid curve. Let `distance = |pct_a − pct_b|`. If `distance > maxDistance` (e.g. 0.05), similarity = 0. Otherwise:
 
@@ -395,7 +395,7 @@ The objective term for W remains `weight(W) × (P_shifted(W) − P_posterior(W))
 
 The δ search is implemented as `_calculateDelta` in [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart) (golden section search over δ; objective sums raw weight × squared error per wager).
 
-**Example:** Three wagers on John Smith — one on 1st-10th (weight 2.13), one on 12th-16th (weight 0.8), one on 1st-5th (weight 0.3). The 1st-10th and 1st-5th wagers have positive Jaccard similarity, so each gets some additional effective weight from the other; their posteriors are slightly stronger. The δ search minimizes raw-weight WLS across all three.
+**Example:** Three wagers on John Smith — one on 1st-10th (weight 2.13), one on 12th-16th (weight 0.8), one on 1st-5th (weight 0.3). The 1st-10th and 1st-5th wagers have overlapping place ranges, so each gets additional effective weight from the other (asymmetric: 1st-5th gives full weight to 1st-10th; 1st-10th gives half weight to 1st-5th); their posteriors are slightly stronger. The δ search minimizes raw-weight WLS across all three.
 
 **When posteriors conflict** (e.g. a wager on 1st-10th and a wager on 35th-40th pointing in opposite directions), the weighted least squares naturally compromises, with heavier wagers dominating.
 
@@ -418,9 +418,9 @@ This is the same computation whether the requested market has prior bets on it o
 
 **Step 1 — Similarity and posteriors:**
 
-Place ranges [1,10] and [1,5] have Jaccard index 5/10 = 0.5. So each wager gets additional effective weight from the other (e.g. A gets 0.5 × 0.50 / 1 = 0.25 from B; B gets 0.5 × 2.13 / 1 = 1.065 from A). Thus:
+Place similarity (to, from) = |to ∩ from| / |from|. So A (1st-10th) gets similarity(A,B) = 5/5 = 1.0 from B; B (1st-5th) gets similarity(B,A) = 5/10 = 0.5 from A. With one nearby wager each: A gets 1.0 × 0.50 / 1 = 0.50 from B; B gets 0.5 × 2.13 / 1 = 1.065 from A. Thus:
 
-- Wager A: posteriorWeight = 2.13 + 0.25 = 2.38; P_model = 0.012 → P_posterior = (0.012 × 100 + 2.38) / (100 + 2.38) ≈ 0.0334
+- Wager A: posteriorWeight = 2.13 + 0.50 = 2.63; P_model = 0.012 → P_posterior = (0.012 × 100 + 2.63) / (100 + 2.63) ≈ 0.037
 - Wager B: posteriorWeight = 0.50 + 1.065 = 1.565; P_model = 0.003 → P_posterior = (0.003 × 100 + 1.565) / (100 + 1.565) ≈ 0.0184
 
 Both posteriors point toward better finishes. The objective uses **raw** weights (2.13 and 0.50) for the WLS terms.
@@ -661,7 +661,7 @@ All parameters live in [BayesianOddsConfig](lib/data/prediction_game/bayesian_od
 | **Min Sharpness Bets** (minSharpnessBets) | 5 | 10           | 5          | Minimum resolved bets (int) before applying sharpness multiplier; otherwise 1.0.                                                            |
 | **Sharpness Clamp Min**      | 0.5         | 0.5          | 0.5        | Minimum allowed sharpness multiplier.                                                                                                      |
 | **Sharpness Clamp Max**      | 2.0         | 1.5          | 2.5        | Maximum allowed sharpness multiplier.                                                                                                      |
-| **Percentage similarity**    | —           | —            | —          | percentageSimilaritySteepness (default 20), percentageSimilarityMaxDistance (default 0.05). Place similarity is Jaccard (no tunables).    |
+| **Percentage similarity**    | —           | —            | —          | percentageSimilaritySteepness (default 20), percentageSimilarityMaxDistance (default 0.05). Place similarity is asymmetric overlap (no tunables).    |
 
 
 ## Testing Strategy
@@ -671,7 +671,7 @@ All parameters live in [BayesianOddsConfig](lib/data/prediction_game/bayesian_od
 1. **Weight calculation**: All factors (conviction, skill, time) combine properly; time decay clamped to [0.5, 1.0]; default conviction when maxWager null.
 2. **Single-wager δ**: Binary search converges to correct δ for known MC distributions. Verify with a simple uniform or Gaussian sample set where the answer is analytically known.
 3. **Multi-wager δ**: Golden section search finds the δ that best fits multiple wager posteriors simultaneously (raw weight in objective). Verify with consistent and conflicting posteriors.
-4. **Similarity**: Jaccard for place ranges and exponential decay for percentage; posterior uses posteriorWeight, objective uses raw weight.
+4. **Similarity**: Asymmetric overlap for place (|to ∩ from| / |from|) and exponential decay for percentage; posterior uses posteriorWeight, objective uses raw weight.
 5. **Cross-market direction**: Same-subject wagers get correct sign (positive for same-side, negative for opposite-side). Verify that disjoint-but-same-side ranges get positive changes (e.g. wager on 1st-10th increases P for 12th-16th when model expects ~27th).
 6. **Cross-market shape**: Probability changes peak near the model mode, not in the tail. For a symmetric distribution, the largest change should be near the model center, not near the bet target.
 7. **Line movement**: A wager on a market shifts that same market's odds for the next request.
@@ -738,7 +738,7 @@ Instead of single odds, offer a range:
 
 δ is stored in the database per "Caching δ Per Shooter" (see [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart)). The core logic lives in:
 
-- **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, golden-section δ search); `_calculateDelta`, `_similarity`, `_jaccardIndex`, `_percentageSimilarity`.
+- **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, golden-section δ search); `_calculateDelta`, `_similarity`, `_placeSimilarity`, `_percentageSimilarity`.
 - **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard).
 - **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
 
@@ -746,7 +746,7 @@ Instead of single odds, offer a range:
 
 The δ pipeline does **not** group by market. It works over a list of `BayesianOddsWager`:
 
-1. **Similarity:** For each wager W, compute `additionalWeight[W][V] = similarity(W,V) × weight(V) / nearbyCount` for each other wager V with positive similarity (Jaccard for place, exponential decay for percentage). Then `posteriorWeight(W) = weight(W) + Σ additionalWeight[W]`.
+1. **Similarity:** For each wager W, compute `additionalWeight[W][V] = similarity(W,V) × weight(V) / nearbyCount` for each other wager V with positive similarity (asymmetric place overlap for place, exponential decay for percentage). Then `posteriorWeight(W) = weight(W) + Σ additionalWeight[W]`.
 2. **Posteriors:** For each wager W: `alpha(W) = P_model(W) × N_eff`, `P_posterior(W) = (alpha(W) + posteriorWeight(W)) / (N_eff + posteriorWeight(W))`.
 3. **Objective:** Minimize `Σ weight(W) × (P_shifted(W, δ) − P_posterior(W))²` over δ (golden section search). Use **raw** `weight(W)` in the sum, not `posteriorWeight(W)`.
 
