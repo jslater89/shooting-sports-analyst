@@ -156,6 +156,73 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     throw ArgumentError("Unsupported prediction type: ${type}");
   }
 
+  // Grid search to avoid wrong local minimum (e.g. when one wager's term has a
+  // deep valley and the other is still high). Then refine with golden section.
+  const double placeGridStep = 2.0;
+  const double percentageGridStep = 0.05;
+  final double gridStep = type == DbPredictionType.place ? placeGridStep : percentageGridStep;
+  final int gridDecimals = type == DbPredictionType.place ? 2 : 4;
+
+  // Search from lo to hi in steps of gridStep, recording local minima and maxima.
+  double bestGridDelta = searchLo;
+  double bestGridObjective = _totalObjective(
+    delta: searchLo,
+    wagers: wagers,
+    type: type,
+    subjectMonteCarlo: subjectMonteCarlo,
+    weight: weight,
+    pPosterior: pPosterior,
+  );
+
+  final localMinima = <(double delta, double objective)>[];
+  final localMaxima = <(double delta, double objective)>[];
+
+  double? prevPrevObj;
+  double prevDelta = searchLo;
+  double prevObj = bestGridObjective;
+  for(double g = searchLo + gridStep; g <= searchHi; g += gridStep) {
+    final obj = _totalObjective(
+      delta: g,
+      wagers: wagers,
+      type: type,
+      subjectMonteCarlo: subjectMonteCarlo,
+      weight: weight,
+      pPosterior: pPosterior,
+    );
+    if(obj < bestGridObjective) {
+      bestGridObjective = obj;
+      bestGridDelta = g;
+    }
+
+    // Detect local minima and maxima, i.e. where n-1 is either less
+    // than or greater than both n and n-2.
+    if(prevPrevObj != null) {
+      if(prevPrevObj > prevObj && prevObj < obj) {
+        localMinima.add((prevDelta, prevObj));
+      }
+      else if(prevPrevObj < prevObj && prevObj > obj) {
+        localMaxima.add((prevDelta, prevObj));
+      }
+    }
+    prevPrevObj = prevObj;
+    prevDelta = g;
+    prevObj = obj;
+  }
+
+  for(var minimum in localMinima) {
+    final (delta, objective) = minimum;
+    logBuffer.writeln("Grid local minimum at delta = ${delta.toStringAsFixed(gridDecimals)}, objective = ${objective.toStringAsFixed(6)}");
+  }
+  for(var maximum in localMaxima) {
+    final (delta, objective) = maximum;
+    logBuffer.writeln("Grid local maximum at delta = ${delta.toStringAsFixed(gridDecimals)}, objective = ${objective.toStringAsFixed(6)}");
+  }
+  logBuffer.writeln("Best grid point: delta = ${bestGridDelta.toStringAsFixed(gridDecimals)}, objective = ${bestGridObjective.toStringAsFixed(6)}");
+
+  final refineLo = (bestGridDelta - gridStep).clamp(searchLo, searchHi);
+  final refineHi = (bestGridDelta + gridStep).clamp(searchLo, searchHi);
+  logBuffer.writeln("Refine range: ${refineLo.toStringAsFixed(gridDecimals)} to ${refineHi.toStringAsFixed(gridDecimals)}");
+
   var (double delta, double a, double b) = _calculateDelta(
     wagers: wagers,
     type: type,
@@ -163,8 +230,8 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     weight: weight,
     pShifted: pShifted,
     pPosterior: pPosterior,
-    searchLo: searchLo,
-    searchHi: searchHi,
+    searchLo: refineLo,
+    searchHi: refineHi,
   );
 
   if(type == DbPredictionType.place) {
@@ -240,6 +307,30 @@ double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double s
   // Otherwise, the similarity is a sigmoid function of the distance.
   double x = distance / maxDistance;
   return 1 / (1 + exp(steepness * (x - 0.5)));
+}
+
+double _totalObjective({
+  required double delta,
+  required List<BayesianOddsWager> wagers,
+  required DbPredictionType type,
+  required MonteCarloSimulationResult subjectMonteCarlo,
+  required Map<BayesianOddsWager, double> weight,
+  required Map<BayesianOddsWager, double> pPosterior,
+}) {
+  double sum = 0.0;
+  for(final wager in wagers) {
+    final pShiftedAtDelta = wager.evaluateAgainstSimulation(
+      type: type,
+      delta: delta,
+      subjectMonteCarlo: subjectMonteCarlo,
+    );
+    sum += _objective(
+      pShifted: pShiftedAtDelta,
+      pPosterior: pPosterior[wager]!,
+      weight: weight[wager]!,
+    );
+  }
+  return sum;
 }
 
 (double delta, double a, double b) _calculateDelta({
