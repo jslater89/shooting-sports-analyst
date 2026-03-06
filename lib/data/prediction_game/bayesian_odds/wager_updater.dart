@@ -230,9 +230,9 @@ class BayesianWagerUpdater {
       configHash: _config.configHash,
     );
 
-    // if(cachedDelta != null) {
-    //   return cachedDelta.delta;
-    // }
+    if(cachedDelta != null) {
+      return cachedDelta.delta;
+    }
 
     List<BayesianOddsWager> priorSubjectWagers = [];
 
