@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/place_evaluation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -195,26 +196,38 @@ class PredictionProbability {
       );
     }
 
-    var successes = 0;
+    final actualTrials = simulationResult.places.length;
+    double probability;
 
-    for(var place in simulationResult.places) {
-      num actualPlace = place;
-      if(placeDelta != null) {
-        // placeDelta may be noninteger. We want to count up to 0.5 inclusive above place k as k,
-        // and down to 0.5 exclusive below place k as k, but shifting it into integer space is
-        // clearer and means we don't need to muck with thresholds.
-        actualPlace = (actualPlace - (placeDelta + 0.5)).ceilToDouble();
-        if(actualPlace < 1) {
-          actualPlace = 1;
-        }
+    if(placeDelta != null) {
+      // Continuous place evaluation: fractional contribution at boundaries so probability
+      // is smooth in delta (same logic as Bayesian odds place evaluation).
+      double sum = 0.0;
+      for(var place in simulationResult.places) {
+        final s = placeShifted(place, placeDelta);
+        sum += placeRangeContribution(s, placePrediction.bestPlace, placePrediction.worstPlace);
       }
-
-      if(actualPlace >= placePrediction.bestPlace && actualPlace <= placePrediction.worstPlace) {
-        successes++;
+      final raw = sum / actualTrials;
+      if(actualTrials <= 1) {
+        probability = raw.clamp(0.0, 1.0);
+      }
+      else {
+        final minProbability = 1 / actualTrials;
+        final maxProbability = (actualTrials - 1) / actualTrials;
+        probability = raw.clamp(minProbability, maxProbability);
       }
     }
-
-    final actualTrials = simulationResult.places.length;
+    else {
+      var successes = 0;
+      for(var place in simulationResult.places) {
+        if(place >= placePrediction.bestPlace && place <= placePrediction.worstPlace) {
+          successes++;
+        }
+      }
+      final minProbability = 1 / actualTrials;
+      final maxProbability = (actualTrials - 1) / actualTrials;
+      probability = (successes / actualTrials).clamp(minProbability, maxProbability);
+    }
 
     Map<String, double> info = {};
     info[PlacePrediction.minPlaceInfo] = simulationResult.places.min.toDouble();
@@ -222,10 +235,6 @@ class PredictionProbability {
     info[PlacePrediction.medianPlaceInfo] = simulationResult.places.median.toDouble();
     info[PlacePrediction.meanPlaceInfo] = simulationResult.places.average;
     info[PlacePrediction.stdDevPlaceInfo] = simulationResult.places.stdDev();
-
-    var minProbability = 1 / actualTrials;
-    var maxProbability = (actualTrials - 1) / actualTrials;
-    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     return PredictionProbability(
       probability,

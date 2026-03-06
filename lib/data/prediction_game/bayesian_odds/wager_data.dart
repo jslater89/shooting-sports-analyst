@@ -6,6 +6,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wag
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/place_evaluation.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -109,6 +110,11 @@ class BayesianOddsWager {
   /// percentage wagers, we add delta to the sample ratio.
   ///
   /// [monteCarlo] is the Monte Carlo simulation results to evaluate the wager against.
+  ///
+  /// Uses smooth boundaries: when the shifted place [s = place - delta] falls
+  /// between integers, the trial contributes a fraction in (0, 1) so that
+  /// P_shifted changes continuously with delta and small shifts don't dump
+  /// all mass across a place boundary.
   double evaluatePlaceAgainstSimulation({
     double delta = 0.0,
     required MonteCarloSimulationResult monteCarlo,
@@ -120,25 +126,21 @@ class BayesianOddsWager {
     final bestPlace = prediction.bestPlace!;
     final worstPlace = prediction.worstPlace!;
 
-    int hits = 0;
-    int trials = monteCarlo.percentages.length;
+    double sum = 0.0;
+    final trials = monteCarlo.percentages.length;
 
-    for(int i = 0; i < trials; i++) {
-      var sampleOutput = (monteCarlo.places[i] - (delta + 0.5)).ceilToDouble();
-      if(sampleOutput < 1) {
-        sampleOutput = 1;
-      }
-
-      if(sampleOutput >= bestPlace && sampleOutput <= worstPlace) {
-        hits++;
-      }
+    for(var i = 0; i < trials; i++) {
+      final s = placeShifted(monteCarlo.places[i], delta);
+      sum += placeRangeContribution(s, bestPlace, worstPlace);
     }
 
+    final raw = sum / trials;
+    if(trials <= 1) {
+      return raw.clamp(0.0, 1.0);
+    }
     final minProbability = 1 / trials;
     final maxProbability = (trials - 1) / trials;
-    final probability = (hits / trials).clamp(minProbability, maxProbability);
-
-    return probability;
+    return raw.clamp(minProbability, maxProbability);
   }
 
   double evaluatePercentAgainstSimulation({
