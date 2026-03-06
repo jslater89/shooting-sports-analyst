@@ -399,7 +399,12 @@ The δ search is implemented as `_calculateDelta` in [calculator.dart](lib/data/
 
 **When posteriors conflict** (e.g. a wager on 1st-10th and a wager on 35th-40th pointing in opposite directions), the weighted least squares naturally compromises, with heavier wagers dominating.
 
-**Note on fractional positions:** When δ = 1.5, a trial originally at 11th becomes 9.5th, which is inside the 1st-10th range. Use `threshold + 0.5` as the boundary (e.g. a sample at 10.5 or below counts as "10th or better") to keep the counting smooth.
+**Continuous place evaluation (smooth boundaries):** Place evaluation uses **fractional contributions** so that P_shifted is continuous in δ. A bang-bang rule (e.g. count a trial as in-range iff shifted place ≤ threshold + 0.5) would make P_shifted jump at half-integer δ and produce an easily exploitable objective for the optimizer. Instead, each trial contributes a value in [0, 1] to the range count:
+
+- **Shifted place:** `s = place - δ`, with s clamped to a minimum of 0.5 so the "1st" band is [0.5, 1.5].
+- **Place bands:** Place k occupies the continuous band [k−0.5, k+0.5]. For a range [L, R], full contribution (1.0) when s ∈ [L−0.5, R+0.5]. When L ≥ 2, a linear ramp over [L−1, L−0.5] at the lower edge (so as δ increases and a trial at place L crosses into the range, contribution increases smoothly from 0 to 1). A linear ramp over [R+0.5, R+1] at the upper edge (as δ moves a trial at place R+1 out of range, contribution falls smoothly from 1 to 0).
+
+So P_shifted changes continuously with δ; small shifts do not dump all mass across a place boundary. Implementation: [place_evaluation.dart](lib/data/ranking/prediction/odds/place_evaluation.dart) (`placeShifted`, `placeRangeContribution`); used by [BayesianOddsWager.evaluatePlaceAgainstSimulation](lib/data/prediction_game/bayesian_odds/wager_data.dart) and by the place-probability path in [probability.dart](lib/data/ranking/prediction/odds/probability.dart) when a place δ is applied.
 
 ### Generating Odds Under the Shifted Distribution
 
@@ -605,7 +610,7 @@ Since δ entries are small (a double, a timestamp, and a few links) and rarely l
 
 **Schema:** See [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart) (and extensions in [bayesian_delta.dart](lib/data/database/extensions/bayesian_delta.dart)). δ is stored per shooter/prediction-set with `delta`, `type` (place or percentage), and links to contributing wagers; spread is decomposed into percentage.
 
-**Cache lookup:** The implementation uses [getBayesianDelta](lib/data/database/extensions/bayesian_delta.dart) (member number, prediction set, type, last-bet timestamp, config hash). A cache hit returns the stored δ; otherwise δ is recomputed and saved. This reduces repeated odds requests to O(N) per market (evaluate predicate over shifted samples) rather than recomputing δ each time.
+**Cache lookup:** When generating odds, the pipeline consults the cache first via [getBayesianDelta](lib/data/database/extensions/bayesian_delta.dart) (member number, prediction set, type, last-bet timestamp, config hash). On a cache hit, the stored δ is returned and used for all market evaluations on that shooter; δ is not recomputed. On a miss, δ is computed (e.g. in [wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart)), saved, and then used. This reduces repeated odds requests to O(N) per market (evaluate predicate over shifted samples) rather than recomputing δ each time.
 
 **Invalidation:** No explicit invalidation is needed — the timestamp comparison handles staleness. Old entries stay in the DB as history. When the MC simulation is re-run (new registration set), either write a new δ entry (the next odds request will recompute against the new samples) or mark a simulation boundary for the line-movement chart.
 
@@ -739,7 +744,8 @@ Instead of single odds, offer a range:
 δ is stored in the database per "Caching δ Per Shooter" (see [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart)). The core logic lives in:
 
 - **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, golden-section δ search); `_calculateDelta`, `_similarity`, `_placeSimilarity`, `_percentageSimilarity`.
-- **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard).
+- **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard); `evaluatePlaceAgainstSimulation` (place evaluation using continuous boundaries from place_evaluation).
+- **[place_evaluation.dart](lib/data/ranking/prediction/odds/place_evaluation.dart)** — `placeShifted(place, delta)`, `placeRangeContribution(s, bestPlace, worstPlace)` for continuous place evaluation (fractional contribution at boundaries so P_shifted is smooth in δ).
 - **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
 
 ### Delta Computation: Per-Wager + Similarity
