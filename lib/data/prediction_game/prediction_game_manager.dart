@@ -511,11 +511,6 @@ class PredictionGameManager {
     Map<String, List<String>> memberNumbersToAllPossibleMemberNumbers = {};
     for(var wager in wagers) {
       var match = matches[wager];
-
-      if(wager.subjectMemberNumbers.contains("A146302") || wager.subjectMemberNumbers.contains("TY146302")) {
-        print("break");
-      }
-
       if(match != null) {
         for(var leg in wager.legs) {
           var shooter = leg.target.getShooterRatingSync(db);

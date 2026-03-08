@@ -29,8 +29,9 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
 
     var key = _RatingCacheKey(division, entry.memberNumber);
 
-    var cached = _ratingCache[key];
-    if(cached != null) return cached;
+    if(_ratingCache.containsKey(key)) {
+      return _ratingCache[key];
+    }
 
     _cacheRating(entry);
 
@@ -64,8 +65,20 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
     var ratingResult = await _source.lookupRating(group, entry.memberNumber, allPossibleMemberNumbers: true);
 
     if(ratingResult.isOk()) {
-      var key = _RatingCacheKey(group, entry.memberNumber);
-      _ratingCache[key] = ratingResult.unwrap();
+      var rating = ratingResult.unwrap();
+      List<_RatingCacheKey> keys = [];
+      if(rating != null) {
+        for(var n in rating.allPossibleMemberNumbers) {
+          keys.add(_RatingCacheKey(group, n));
+        }
+      }
+      else {
+        keys.add(_RatingCacheKey(group, entry.memberNumber));
+      }
+
+      for(var key in keys) {
+        _ratingCache[key] = rating;
+      }
       notifyListeners();
     }
   }
