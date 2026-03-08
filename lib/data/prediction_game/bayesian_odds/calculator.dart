@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wag
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager_similarity.dart';
 
 /// A calculation function for Bayesian odds adjustment, set up to be runnable
 /// with [Isolate.run] (i.e. including only objects that can be sent over
@@ -132,10 +133,10 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   if(type == DbPredictionType.place) {
     // Cap the high end of the search range at the number that would
     // shift this competitor to the lowest value that rounds up to
-    // 1st place (i.e., 1.0 - 0.49ish.)
-    // e.g. predicted finish of 1.0, subtract 0.51 to get a maximum
-    // shift of 0.49.
-    searchHi = min(40.0, priorPrediction - 0.51);
+    // 1st place (i.e., 1.0 - 0.5ish.)
+    // e.g. predicted finish of 1.0, subtract 0.5 to get a maximum
+    // shift of 0.5.
+    searchHi = min(40.0, priorPrediction - 0.5);
   }
   else if(type == DbPredictionType.percentage) {
     // Cap the high end of the search range at the number that would
@@ -275,17 +276,12 @@ double _placeSimilarity({required BayesianOddsWager to, required BayesianOddsWag
     throw ArgumentError("Place similarity can only be calculated for place predictions.");
   }
 
-  var (int a, int b) = (to.prediction.bestPlace!, to.prediction.worstPlace!);
-  var (int x, int y) = (from.prediction.bestPlace!, from.prediction.worstPlace!);
-
-  int left = max(a, x);
-  int right = min(b, y);
-  int intersection = max(0, right - left + 1);
-  int sizeFrom = y - x + 1;
-  if(sizeFrom == 0) {
-    return 0.0;
-  }
-  return intersection / sizeFrom;
+  return placeWagerSimilarity(
+    aBestPlace: to.prediction.bestPlace!,
+    aWorstPlace: to.prediction.worstPlace!,
+    bBestPlace: from.prediction.bestPlace!,
+    bWorstPlace: from.prediction.worstPlace!,
+  );
 }
 
 double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double steepness = 20, double maxDistance = 0.05}) {
@@ -293,20 +289,14 @@ double _percentageSimilarity(BayesianOddsWager a, BayesianOddsWager b, {double s
     throw ArgumentError("Percentage similarity can only be calculated for percentage predictions.");
   }
 
-  // Predictions in opposite directions are always dissimilar.
-  if(a.prediction.abovePercentage != b.prediction.abovePercentage) {
-    return 0.0;
-  }
-
-  // If the predictions are too far apart, they are dissimilar.
-  double distance = (a.prediction.percentage! - b.prediction.percentage!).abs();
-  if(distance > maxDistance) {
-    return 0.0;
-  }
-
-  // Otherwise, the similarity is a sigmoid function of the distance.
-  double x = distance / maxDistance;
-  return 1 / (1 + exp(steepness * (x - 0.5)));
+  return percentageWagerSimilarity(
+    aPercentage: a.prediction.percentage!,
+    aAbove: a.prediction.abovePercentage,
+    bPercentage: b.prediction.percentage!,
+    bAbove: b.prediction.abovePercentage,
+    steepness: steepness,
+    maxDistance: maxDistance,
+  );
 }
 
 double _totalObjective({
