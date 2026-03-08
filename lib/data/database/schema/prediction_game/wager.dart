@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'wager.g.dart';
@@ -622,8 +623,23 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
       return false;
     }
 
+    if(lastName == "Martin") {
+      print("break");
+    }
+
     return this.memberNumber == other.memberNumber
       || this.knownMemberNumbers.intersects(other.knownMemberNumbers);
+  }
+
+  Future<bool> matchesShooter(AnalystDatabase db, Shooter shooter) async {
+    var allPossibleMemberNumbers = await getAllPossibleMemberNumbers(db);
+
+    return allPossibleMemberNumbers.intersects(shooter.allPossibleMemberNumbers);
+  }
+
+  bool matchesShooterSync(AnalystDatabase db, Shooter shooter) {
+    var allPossibleMemberNumbers = getAllPossibleMemberNumbersSync(db);
+    return allPossibleMemberNumbers.intersects(shooter.allPossibleMemberNumbers);
   }
 }
 

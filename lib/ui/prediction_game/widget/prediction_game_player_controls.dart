@@ -224,6 +224,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
 
                   var result = await WagerDialog.show(
                     context,
+                    player: player,
                     predictions: predictions,
                     predictionSet: selectedPredictionSet,
                     matchId: selectedMatchPrep!.futureMatch.value!.matchId,

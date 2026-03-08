@@ -17,6 +17,7 @@ void main() {
       ..bestPlace = bestPlace
       ..worstPlace = worstPlace;
     return BayesianOddsWager(
+      wagerId: 1,
       amount: 10,
       maxWager: 100,
       sharpness: 1.0,

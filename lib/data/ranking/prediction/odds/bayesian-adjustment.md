@@ -296,7 +296,7 @@ We do **not** maintain persistent per-market states that are mutated as bets arr
 The flow when generating odds for a market:
 
 1. Start with the MC model distribution for the shooter against the current field.
-2. Gather all previously accepted bets on any compatible market for the same subject.
+2. Gather all previously accepted bets on any compatible market for the same subject. (The bettor's own prior wagers may be excluded if they point in the opposite direction — see "Bettor Wager Exclusion.")
 3. Compute the cumulative implied distribution shift (δ) from those bets.
 4. Evaluate P(requested market) under the shifted distribution.
 5. Apply house edge → display odds.
@@ -341,7 +341,7 @@ shifted_pct(trial_i)    = original_pct(trial_i) + δ       // for percentage (hi
 // better or worse' for percentage and spread predictions.
 ```
 
-The implementation treats **each wager independently**. There is no aggregation by market predicate: two bets on "1st-10th" are two separate units, each with its own weight, model probability, and posterior. We find the single δ that best fits all wager posteriors simultaneously via weighted least squares, using each wager's **raw** weight in the objective (see "Similarity Between Wagers" for how effective weight is used only in the posterior).
+The implementation treats **each wager independently**. There is no aggregation by market predicate: two bets on "1st-10th" are two separate units, each with its own weight, model probability, and posterior. We find the single δ that best fits all wager posteriors simultaneously via weighted least squares, using each wager's **raw** weight in the objective (see "Similarity Between Wagers" for how effective weight is used only in the posterior). Note that when generating odds for a specific bettor, the bettor's own opposite-direction wagers may be excluded from the wager list before this step — see "Bettor Wager Exclusion."
 
 **Per-wager quantities:**
 
@@ -749,6 +749,7 @@ Instead of single odds, offer a range:
 - **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard); `evaluatePlaceAgainstSimulation` (place evaluation using continuous boundaries from place_evaluation).
 - **[place_evaluation.dart](lib/data/ranking/prediction/odds/place_evaluation.dart)** — `placeShifted(place, delta)`, `placeRangeContribution(s, bestPlace, worstPlace)` for continuous place evaluation (fractional contribution at boundaries so P_shifted is smooth in δ).
 - **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
+- **[wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart)** — `_calculateDeltaForSubject` orchestrates delta computation for a single subject: cache lookup, bettor wager exclusion (see "Bettor Wager Exclusion"), prior wager hydration, and isolate dispatch. `_wagersAreSimilar` implements direction-based comparison between the incoming bet and a prior wager to decide whether to exclude it (derives direction from `abovePercentage` for percentage, `favoriteCovers` + subject role for spread, range midpoint vs. model expectation for place).
 
 ### Delta Computation: Per-Wager + Similarity
 
@@ -926,6 +927,73 @@ The posterior shifts here (~2.3% and ~2.4% relative) are smaller than in the fav
 - **Split ambiguity.** The equal split (splitFactor = 0.5) assumes no knowledge of which shooter drives the spread. If individual percentage bets exist for one shooter, they anchor that shooter's δ, and the spread bet's contribution is additive. A more sophisticated split could use the relative uncertainty of the two shooters (the less-certain shooter gets more of the split), but this adds complexity for a small gain.
 - **Double-counting.** If someone bets both "A above 90%" and "A beats B by ≥10%", both contribute to A's δ_pct. The percentage bet directly; the spread bet via the spread-derived virtual percentage market for A. This isn't exactly double-counting (the virtual market uses the spread-derived threshold, not 90%), but the two signals do carry correlated information. The splitFactor discount (0.5) provides some buffering.
 - **Correlation distortion.** Shifting A and B's marginals independently slightly distorts the joint distribution. The MC samples capture the true correlation (e.g., both do well on the same stages); shifting each marginal treats the shifts as independent. For small δ values this is negligible. For large shifts, the spread probability may be slightly miscalibrated — but the δ values from bet evidence will be small in practice (see "The Core Problem" on liquidity).
+
+## Appendix: Bettor Wager Exclusion (Anti-Arbitrage)
+
+### The Arbitrage Opportunity
+
+The compute-on-demand model creates an arbitrage opportunity for a bettor who has private information (or a strong opinion) about a shooter's performance. Suppose Player A believes competitor B will perform above model expectation:
+
+1. Player A first places a bet in the **opposite** direction (e.g. "B below 70%"). This moves B's line down, but Player A's bet is locked at the original (model) odds.
+2. Player A then places a bet in the **real** direction (e.g. "B above 85%"). Because their first bet shifted δ downward, the line for "B above 85%" is now more favorable than it would have been at model odds.
+
+The result: Player A holds a down bet at model odds and an up bet at better-than-model odds — a possible net profit regardless of outcome.
+
+### The Double-Down Scenario
+
+There is a legitimate scenario that looks superficially similar: a player with amount-limited wagers who wants to place multiple bets in the **same** direction (e.g. max-size bet on "B above 85%", then a second max-size bet on "B above 85%"). In this case, the line **should** move to reflect their cumulative conviction. If we naively excluded all of the bettor's own prior wagers, the line would never move for repeat same-direction bettors, allowing them to place unlimited bets at model odds and diluting the conviction signal in odds movement.
+
+### Solution: Direction-Based Exclusion
+
+When computing δ for a subject on behalf of a specific bettor, exclude the bettor's own prior wagers that point in the **opposite direction** from the incoming bet. Keep wagers that point in the **same direction** — these represent the double-down case where line movement is desirable.
+
+This requires determining the "direction" of each wager relative to the subject. The direction can be derived from prediction fields without any spread decomposition or Monte Carlo lookups:
+
+**Percentage wagers:** Direction is the `abovePercentage` field directly. `true` = "up" (subject does better), `false` = "down".
+
+**Spread wagers:** First determine whether the subject is the favorite or the underdog in the spread. Then:
+
+```
+signal_up = (subject is favorite) == favoriteCovers
+```
+
+- Subject is favorite, `favoriteCovers` = true → "up" (spread says the favorite outperforms)
+- Subject is favorite, `favoriteCovers` = false → "down" (spread says the favorite underperforms)
+- Subject is underdog, `favoriteCovers` = true → "down" (spread says the underdog falls behind)
+- Subject is underdog, `favoriteCovers` = false → "up" (spread says the underdog outperforms)
+
+This is the key advantage of the direction-based approach: spread direction is fully determined by `favoriteCovers` and the subject's role, without needing to compute the decomposed virtual percentage thresholds. The decomposition (which requires MC samples for both competitors) is only needed for the Bayesian calculation itself, not for the drop/keep decision.
+
+**Place wagers:** Compare the midpoint of the place range to the model's expected finish (available from the MC samples already loaded for the subject). Midpoint better than model = "up", worse = "down".
+
+**Cross-type comparisons** (e.g. incoming percentage vs. prior spread, or incoming spread vs. prior percentage) use the same direction derivation for each wager and compare.
+
+### Exclusion Logic
+
+For each of the bettor's own prior wagers on the subject:
+
+1. Derive the direction of the prior wager for the subject.
+2. Derive the direction of the incoming bet for the subject.
+3. If directions **agree** → keep the prior wager (double-down; line should hold).
+4. If directions **disagree** → exclude the prior wager (potential arbitrage).
+
+For multi-leg wagers (parlays), all compatible legs must agree in direction to keep the wager. If any compatible leg points opposite to the incoming bet, the wager is excluded.
+
+### Interaction with Caching
+
+When wagers are excluded, the resulting δ is bettor-specific and must **not** be cached in the shared BayesianDelta table — it would poison the cache for other bettors who should see the full-evidence δ. Only deltas computed with the complete (unfiltered) wager list are cached. When the bettor has exclusions, δ is computed on demand and not persisted.
+
+This means:
+
+- A bettor with excluded wagers pays the recomputation cost each time they request odds. In practice this is negligible (the δ search is fast).
+- Other bettors see the full-evidence δ (from cache or freshly computed with all wagers).
+- If the bettor's excluded wagers happen to include the most recent one, the cache timestamp still reflects the most recent wager. The bettor skips the cache (exclusions exist); other bettors hit the cache normally.
+
+### Limitations
+
+**Conservative cross-type exclusion.** The direction check can produce false positives in cross-type cases. Example: a bettor first bets "B above 85%" (genuine belief B does well), then bets the spread "A beats B by ≥10%" (favorite covers). For subject B, the prior is "up" and the incoming spread's signal is "down" — the direction check excludes the prior bet. But this isn't actually exploitable: the prior bet on B *hurts* the spread odds for the bettor (B's line moves up, narrowing the gap), so there is no arbitrage incentive. Excluding the prior bet gives the bettor slightly more favorable spread odds than they would otherwise get — a small concession, not an exploit.
+
+**No graded similarity.** The direction check is binary (same vs. opposite), not graded. Two same-direction bets at very different thresholds (e.g. "B above 60%" and "B above 95%") are treated identically. A future enhancement could use full similarity detection (see "Similarity Between Wagers") for the drop/keep decision, but this requires decomposing spread wagers into their virtual percentage thresholds — the expensive step we avoid here.
 
 ## Appendix: Place and Percentage (Single δ, Range Decomposition, Slope)
 

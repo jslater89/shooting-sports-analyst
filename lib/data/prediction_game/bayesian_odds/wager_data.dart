@@ -12,6 +12,9 @@ import 'package:shooting_sports_analyst/util.dart';
 
 /// A prior wager for Bayesian odds calculation.
 class BayesianOddsWager {
+  /// The ID of the [DbWager] that this BayesianOddsWager is based on.
+  final int? wagerId;
+
   /// The raw amount of the wager.
   final double amount;
 
@@ -40,6 +43,7 @@ class BayesianOddsWager {
   double? _weight;
 
   BayesianOddsWager({
+    required this.wagerId,
     required this.amount,
     required this.maxWager,
     required this.sharpness,
@@ -261,7 +265,8 @@ class BayesianOddsWager {
 
         if(leg.target.isSameAs(subject) || leg.underdog!.isSameAs(subject)) {
           wagers.add(_decomposeSpreadLeg(
-            leg,
+            wagerId: dbWager.id,
+            leg: leg,
             subject: BayesianOddsTarget.fromDbPredictionTarget(subject),
             perLeg: perLeg,
             maxWager: maxPerLeg,
@@ -278,6 +283,7 @@ class BayesianOddsWager {
         if(leg.target.isSameAs(subject)) {
           wagers.add(
             BayesianOddsWager(
+              wagerId: dbWager.id,
               amount: perLeg,
               maxWager: maxPerLeg,
               sharpness: sharpness,
@@ -295,7 +301,9 @@ class BayesianOddsWager {
 
   /// Return the Bayesian odds data for a given spread leg, returning either
   /// the target or underdog virtual bet based on the identity of subject.
-  static BayesianOddsWager _decomposeSpreadLeg(DbPrediction leg, {
+  static BayesianOddsWager _decomposeSpreadLeg({
+    required int wagerId,
+    required DbPrediction leg,
     SSALogger? log,
     required BayesianOddsTarget subject,
     required double perLeg,
@@ -339,6 +347,7 @@ class BayesianOddsWager {
       log?.i("Decomposed spread leg favorite: ${leg.descriptiveString} -> ${predictionA.descriptiveString}");
 
       return BayesianOddsWager(
+        wagerId: wagerId,
         amount: perLeg / 2,
         maxWager: maxWager != null ? maxWager / 2 : null,
         sharpness: sharpness,
@@ -357,6 +366,7 @@ class BayesianOddsWager {
       log?.i("Decomposed spread leg underdog: ${leg.descriptiveString} -> ${predictionB.descriptiveString}");
 
       return BayesianOddsWager(
+        wagerId: wagerId,
         amount: perLeg / 2,
         maxWager: maxWager != null ? maxWager / 2 : null,
         sharpness: sharpness,

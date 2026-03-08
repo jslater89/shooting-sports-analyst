@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_updater.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
@@ -52,6 +53,7 @@ class WagerDialog extends StatefulWidget {
   WagerDialog({
     super.key,
     this.manager,
+    this.player,
     required this.predictions,
     this.predictionSet,
     required this.matchId,
@@ -62,6 +64,7 @@ class WagerDialog extends StatefulWidget {
     this.helpText,
   });
 
+  final PredictionGamePlayer? player;
   final PredictionGameManager? manager;
   final bool roundToMoneyline;
   final double? availableBalance;
@@ -73,6 +76,7 @@ class WagerDialog extends StatefulWidget {
   final List<AlgorithmPrediction> predictions;
 
   static Future<WagerDialogResult?> show(BuildContext context, {
+    PredictionGamePlayer? player,
     required List<AlgorithmPrediction> predictions,
     required String matchId,
     PredictionSet? predictionSet,
@@ -86,6 +90,7 @@ class WagerDialog extends StatefulWidget {
     return showDialog<WagerDialogResult>(
       context: context,
       builder: (context) => WagerDialog(
+        player: player,
         manager: manager,
         predictions: predictions,
         matchId: matchId,
@@ -238,7 +243,7 @@ class _WagerDialogState extends State<WagerDialog> {
       amount: newWager.amount,
     );
 
-    if(widget.manager != null && widget.matchPrep != null && widget.predictionSet != null) {
+    if(widget.player != null && widget.manager != null && widget.matchPrep != null && widget.predictionSet != null) {
       final matchPrep = widget.matchPrep;
       MonteCarloSimulationResult? favoriteMonteCarlo;
       MonteCarloSimulationResult? underdogMonteCarlo;
@@ -249,6 +254,7 @@ class _WagerDialogState extends State<WagerDialog> {
       final updater = BayesianWagerUpdater();
       await updater.updateWagerWithBayesianOddsShift(
         gm: widget.manager!,
+        bettor: widget.player!,
         shootersToPredictions: _shootersToPredictions,
         wager: wager,
         matchPrep: matchPrep!,

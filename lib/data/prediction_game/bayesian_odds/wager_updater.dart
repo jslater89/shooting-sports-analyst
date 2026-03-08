@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/bayesian_delta.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/calculator.dart';
@@ -24,6 +25,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart'
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -41,7 +43,8 @@ class BayesianWagerUpdater {
   /// Updates the odds of a [Wager] (i.e., the hydrated single-leg version which can either
   /// stand alone or serve as the legs of a [Parlay]) with the Bayesian odds shift math.
   ///
-  /// [wager] is the [Wager] to update the odds of.
+  /// [wager] is the [Wager] to update the odds of, and [bettor] is the [PredictionGamePlayer]
+  /// requesting odds.
   ///
   /// [matchPrep] is the [MatchPrep] for which to find related wagers.
   ///
@@ -63,6 +66,7 @@ class BayesianWagerUpdater {
   /// respectively. If not present, the default values of 1.0001 and 10000.0 will be used.
   Future<double> updateWagerWithBayesianOddsShift({
     required PredictionGameManager gm,
+    required PredictionGamePlayer bettor,
     required Wager wager,
     required MatchPrep matchPrep,
     required PredictionSet predictionSet,
@@ -79,9 +83,7 @@ class BayesianWagerUpdater {
     final algorithm = project.settings.algorithm;
 
     final matchId = matchPrep.futureMatch.value!.matchId;
-
     final prediction = wager.prediction;
-
     final subjectRating = prediction.shooter;
 
     int lengthInStages;
@@ -109,6 +111,8 @@ class BayesianWagerUpdater {
 
     subjectDelta = await _calculateDeltaForSubject(
       gm: gm,
+      bettor: bettor,
+      incomingWager: wager,
       matchId: matchId,
       predictionSet: predictionSet,
       project: project,
@@ -125,6 +129,8 @@ class BayesianWagerUpdater {
       final underdogRating = prediction.underdog;
       underdogDelta = await _calculateDeltaForSubject(
         gm: gm,
+        bettor: bettor,
+        incomingWager: wager,
         matchId: matchId,
         predictionSet: predictionSet,
         project: project,
@@ -197,6 +203,8 @@ class BayesianWagerUpdater {
   /// Get the Bayesian delta for a given subject rating, checking the database cache first.
   Future<double> _calculateDeltaForSubject({
     required PredictionGameManager gm,
+    required PredictionGamePlayer bettor,
+    required Wager incomingWager,
     required String matchId,
     required PredictionSet predictionSet,
     required DbRatingProject project,
@@ -208,7 +216,7 @@ class BayesianWagerUpdater {
     required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     required int subjectStageHistoryLength,
   }) async {
-    final wagersForSubject = wagersForMatch.where((w) =>
+    var wagersForSubject = wagersForMatch.where((w) =>
       w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
       w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers) &&
       w.status != DbWagerStatus.voided
@@ -218,8 +226,13 @@ class BayesianWagerUpdater {
       return 0.0;
     }
 
-    var dates = wagersForSubject.map((w) => w.created).sorted((a, b) => b.compareTo(a));
-    var latestBetTimestamp = dates.first;
+    final dates = wagersForSubject.map((w) => w.created).sorted((a, b) => b.compareTo(a));
+    final latestBetTimestamp = dates.first;
+
+    double modelPlace = 0.0;
+    if(targetType == DbPredictionType.place) {
+      modelPlace = subjectMonteCarlo.places.average;
+    }
 
     final cachedDelta = await db.getBayesianDelta(
       gameId: gm.predictionGame.id,
@@ -230,8 +243,35 @@ class BayesianWagerUpdater {
       configHash: _config.configHash,
     );
 
+    List<DbWager> excludedWagers = [];
+    // If the bettor has prior wagers for the given subject, we exclude them from the calculation
+    // when they are sufficiently dissimilar to the current prediction.
+    for(var wager in wagersForSubject) {
+      if(wager.user.value?.id == bettor.id) {
+        // The prior wager was made by the bettor.
+
+        if(!_wagersAreSimilar(
+          incomingWager: incomingWager,
+          wager: wager,
+          modelPlace: modelPlace,
+          subject: subjectRating,
+        )) {
+          _log.v("Current player's prior wager ${wager.descriptiveString} excluded for conflict with incoming wager ${incomingWager.descriptiveString}");
+          excludedWagers.add(wager);
+        }
+      }
+    }
+
     if(cachedDelta != null) {
-      return cachedDelta.delta;
+      if(excludedWagers.isEmpty) {
+        return cachedDelta.delta;
+      }
+    }
+
+    if(excludedWagers.isNotEmpty) {
+      _log.i("Skipping cache: ${bettor.nickname ?? bettor.serverUser.value?.displayName ?? bettor.id} has ${excludedWagers.length} excluded wagers");
+
+      wagersForSubject = wagersForSubject.where((w) => !excludedWagers.contains(w)).toList();
     }
 
     List<BayesianOddsWager> priorSubjectWagers = [];
@@ -269,20 +309,22 @@ class BayesianWagerUpdater {
     _log.v("Bayesian odds shift calculation result:");
     _log.v(result.log);
 
-    await db.saveBayesianDelta(BayesianDelta.create(
-      game: gm.predictionGame,
-      memberNumber: subjectRating.memberNumber,
-      project: project,
-      rating: subjectRating.wrappedRating,
-      group: subjectRating.group,
-      delta: result.delta,
-      type: targetType,
-      contributingWagers: wagersForSubject,
-      lastBetTimestamp: latestBetTimestamp,
-      computedAt: DateTime.now(),
-      predictionSet: predictionSet,
-      config: _config,
-    ));
+    if(excludedWagers.isEmpty) {
+      await db.saveBayesianDelta(BayesianDelta.create(
+        game: gm.predictionGame,
+        memberNumber: subjectRating.memberNumber,
+        project: project,
+        rating: subjectRating.wrappedRating,
+        group: subjectRating.group,
+        delta: result.delta,
+        type: targetType,
+        contributingWagers: wagersForSubject,
+        lastBetTimestamp: latestBetTimestamp,
+        computedAt: DateTime.now(),
+        predictionSet: predictionSet,
+        config: _config,
+      ));
+    }
 
     return result.delta;
   }
@@ -394,5 +436,99 @@ class BayesianWagerUpdater {
       wagers: wagers,
       subjectMonteCarlo: subjectMonteCarlo,
     ));
+  }
+
+  /// Returns true if [incomingWager] is in the same direction of a player's
+  /// prior wager [wager], i.e. we can keep [wager] when calculating a Bayesian
+  /// odds shift.
+  bool _wagersAreSimilar({
+    required Wager incomingWager,
+    required Shooter subject,
+    required DbWager wager,
+    required double modelPlace,
+  }) {
+    var incomingType = switch(incomingWager.prediction) {
+      PlacePrediction() => DbPredictionType.place,
+      PercentagePrediction() => DbPredictionType.percentage,
+      PercentageSpreadPrediction() => DbPredictionType.spread,
+      _ => throw ArgumentError("Unsupported prediction type: ${incomingWager.prediction.runtimeType}"),
+    };
+
+    bool isSimilar = true;
+    for(var leg in wager.legs) {
+      if(!leg.type.isCompatibleWith(incomingType)) {
+        // Incompatible legs don't matter—we only care about legs
+        // that are compatible with the incoming wager.
+        continue;
+      }
+
+      // Otherwise, all compatible legs must be in the same direction to include this wager.
+      if(leg.type == DbPredictionType.place && incomingType == DbPredictionType.place) {
+        var placePrediction = incomingWager.prediction as PlacePrediction;
+        var incomingCenterPlace = (placePrediction.bestPlace + placePrediction.worstPlace) / 2;
+        var wagerCenterPlace = (leg.bestPlace! + leg.worstPlace!) / 2;
+
+        int incomingSign = incomingCenterPlace >= modelPlace ? 1 : -1;
+        int wagerSign = wagerCenterPlace >= modelPlace ? 1 : -1;
+        if(incomingSign != wagerSign) {
+          isSimilar = false;
+          break;
+        }
+      }
+      else if(incomingType == DbPredictionType.percentage) {
+        var incomingAbove = (incomingWager.prediction as PercentagePrediction).above;
+
+        if(leg.type == DbPredictionType.percentage) {
+          var wagerAbove = leg.abovePercentage;
+          if(incomingAbove != wagerAbove) {
+            isSimilar = false;
+            break;
+          }
+        }
+        else if(leg.type == DbPredictionType.spread) { // leg is spread
+          bool isFavorite = leg.target.matchesShooterSync(db, subject);
+          bool spreadSignalUp = isFavorite ? leg.favoriteCovers : !leg.favoriteCovers;
+
+          if(incomingAbove != spreadSignalUp) {
+            isSimilar = false;
+            break;
+          }
+        }
+        else {
+          throw StateError("Unsupported prediction type: ${leg.type}");
+        }
+      }
+      else if(incomingType == DbPredictionType.spread) {
+        // For spreads, we have two subjects, but we'll just look at the favorite for
+        // 'is similar' purposes.
+        var spreadPrediction = incomingWager.prediction as PercentageSpreadPrediction;
+        bool isFavorite = subject.equalsShooter(spreadPrediction.favorite, allPossibleMemberNumbers: true);
+        bool incomingSpreadSignalUp = isFavorite ? spreadPrediction.favoriteCovers : !spreadPrediction.favoriteCovers;
+
+        if(leg.type == DbPredictionType.percentage) {
+          var wagerAbove = leg.abovePercentage;
+          if(incomingSpreadSignalUp != wagerAbove) {
+            isSimilar = false;
+            break;
+          }
+        }
+        else if(leg.type == DbPredictionType.spread) { // leg is spread
+          bool isFavorite = leg.target.matchesShooterSync(db, subject);
+          bool spreadSignalUp = isFavorite ? leg.favoriteCovers : !leg.favoriteCovers;
+
+          if(incomingSpreadSignalUp != spreadSignalUp) {
+            isSimilar = false;
+            break;
+          }
+        }
+        else {
+          throw StateError("Unsupported prediction type: ${leg.type}");
+        }
+      }
+      else {
+        throw StateError("Unsupported prediction type: ${leg.type}");
+      }
+    }
+    return isSimilar;
   }
 }
