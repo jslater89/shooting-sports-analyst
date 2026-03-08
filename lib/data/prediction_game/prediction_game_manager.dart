@@ -159,6 +159,15 @@ class PredictionGameManager {
     return db.getAlgorithmPredictionForRatingSync(rating, matchPrep, predictionSet: predictionSet);
   }
 
+  Future<void> clearMatchPrepResolutionInformation(MatchPrep matchPrep) async {
+    var wagers = await getWagers(matchPrep: matchPrep);
+    for(var wager in wagers) {
+      wager.clearResolutionInformation();
+      await db.saveWager(wager, saveLinks: false, createWagerTransaction: false);
+    }
+    await loadPredictionGame();
+  }
+
   // ======================
   // Leaderboard
   // ======================
@@ -499,8 +508,13 @@ class PredictionGameManager {
     Map<ShootingMatch, Set<RatingGroup>> matchesToGroups = {};
     Map<ShootingMatch, Set<PredictionSet>> matchesToPredictionSets = {};
     Map<ShootingMatch, List<DbShooterRating>> matchesToWageredShooters = {};
+    Map<String, List<String>> memberNumbersToAllPossibleMemberNumbers = {};
     for(var wager in wagers) {
       var match = matches[wager];
+
+      if(wager.subjectMemberNumbers.contains("A146302") || wager.subjectMemberNumbers.contains("TY146302")) {
+        print("break");
+      }
 
       if(match != null) {
         for(var leg in wager.legs) {
@@ -508,7 +522,11 @@ class PredictionGameManager {
           var underdog = leg.underdog?.getShooterRatingSync(db);
           var shooters = [shooter, underdog].nonNulls.toList();
           for(var s in shooters) {
-            matchesToWageredShooters.addToListIfMissingByEquality(match, s, (a, b) => a.equalsShooter(b));
+            var allPossibleMemberNumbers = [...s.allPossibleMemberNumbers];
+            for(var n in allPossibleMemberNumbers) {
+              memberNumbersToAllPossibleMemberNumbers[n] = allPossibleMemberNumbers;
+            }
+            matchesToWageredShooters.addToListIfMissingByEquality(match, s, (a, b) => a.equalsShooter(b, allPossibleMemberNumbers: true));
           }
         }
         // Rating groups and prediction sets both implement DB equality
@@ -520,7 +538,12 @@ class PredictionGameManager {
     Set<PredictionSet> predictionSetsToProcess = matchesToPredictionSets.values.flattenedToSet;
     Map<PredictionSet, List<Shooter>> predictionSetShooters = {};
     for(var predictionSet in predictionSetsToProcess) {
-      predictionSetShooters[predictionSet] = predictionSet.algorithmPredictions.map((p) => p.asShooter(loadFromRating: false)).nonNulls.toList();
+      predictionSetShooters[predictionSet] = predictionSet.algorithmPredictions.map((p) {
+        var shooter = p.asShooter(loadFromRating: false);
+        var allPossibleMemberNumbers = memberNumbersToAllPossibleMemberNumbers[p.memberNumber] ?? [];
+        shooter.allPossibleMemberNumbers.addAll(allPossibleMemberNumbers);
+        return shooter;
+      }).nonNulls.toList();
     }
 
     // Get the scores of interest.
@@ -538,13 +561,13 @@ class PredictionGameManager {
         var filteredOverall = Map.fromEntries(
           overallScores.entries
             .where((element) => matchesToWageredShooters[match]!
-              .any((s) => element.key.equalsShooter(s))
+              .any((s) => element.key.equalsShooter(s, allPossibleMemberNumbers: true))
             )
           );
 
         Map<String, RelativeMatchScore> overallByNumber = {};
         for(var entry in filteredOverall.entries) {
-          for(var number in entry.key.knownMemberNumbers) {
+          for(var number in entry.key.allPossibleMemberNumbers) {
             overallByNumber[number] = entry.value;
           }
         }
@@ -552,19 +575,22 @@ class PredictionGameManager {
 
         setScores[match]![group] = {};
         for(var predictionSet in matchesToPredictionSets[match]!) {
-          var shooters = predictionSetShooters[predictionSet]!;
-          var entries = match.getEntriesFor(shooters);
-          var predictionSetScores = match.getScores(shooters: entries);
+          var shootersInSet = predictionSetShooters[predictionSet]!;
+          var filteredShooters = overallShooters.where((s) =>
+            shootersInSet.any((p) => p.equalsShooter(s, allPossibleMemberNumbers: true))
+          ).toList();
+
+          var predictionSetScores = match.getScores(shooters: filteredShooters);
           var relevantScores = Map.fromEntries(
             predictionSetScores.entries
               .where((element) => matchesToWageredShooters[match]!
-                .any((s) => element.key.equalsShooter(s))
+                .any((s) => element.key.equalsShooter(s, allPossibleMemberNumbers: true))
               )
             );
 
           Map<String, RelativeMatchScore> predictionSetByNumber = {};
           for(var entry in relevantScores.entries) {
-            for(var number in entry.key.knownMemberNumbers) {
+            for(var number in entry.key.allPossibleMemberNumbers) {
               predictionSetByNumber[number] = entry.value;
             }
           }

@@ -357,7 +357,7 @@ Find δ that minimizes:
 over all wagers W
 ```
 
-So: the **posterior** for each wager uses an effective weight (raw + similarity-derived) so that clustered evidence creates a larger hump in the updated distribution. The **objective** (WLS) uses only the raw weight, so the δ search is not double-counting similar wagers. This is a 1D optimization over a smooth objective — golden section search works well.
+So: the **posterior** for each wager uses an effective weight (raw + similarity-derived) so that clustered evidence creates a larger hump in the updated distribution. The **objective** (WLS) uses only the raw weight, so the δ search is not double-counting similar wagers. The objective is smooth in δ but not unimodal (see below); we use a coarse grid to choose the right valley, then golden section to refine within it.
 
 ### Similarity Between Wagers
 
@@ -393,7 +393,9 @@ The objective term for W remains `weight(W) × (P_shifted(W) − P_posterior(W))
 
 **Why raw weight in the objective?** Similarity fixes a flaw in the per-wager setup. Two wagers on nearly the same outcome (e.g. "above 80%" and "above 82%") are stronger evidence than one; but if we treat them as fully independent, we get two separate posteriors each with one unit of weight — (α + w)/(N_eff + w) twice — instead of one posterior with combined weight, (α + 2w)/(N_eff + 2w). So we add similarity-derived weight when computing the posterior, which makes clustered wagers produce stronger posteriors and thus a larger δ (the optimizer must move δ further to match them). We do **not** use that boosted weight in the objective: each wager should influence the δ fit in proportion to the evidence it actually represents (its raw weight). Using posteriorWeight in the objective would give similar wagers extra pull and overweight clustered evidence relative to lone wagers elsewhere.
 
-The δ search is implemented as `_calculateDelta` in [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart) (golden section search over δ; objective sums raw weight × squared error per wager).
+**Grid search then golden section (multimodal objective).** The WLS objective can have **multiple local minima**. When wagers point in opposite directions (e.g. one on 1st-1st, one on 2nd-10th), one term pulls for positive δ and the other for negative δ. A **wide** place range (e.g. 2nd-10th) has a steeper P_shifted(δ) than a single-place range (1st-1st), because mass moves in or out of a wide band quickly as δ changes. So the wide-range term's contribution to the objective can drop sharply in one valley (e.g. at strongly negative δ) even though the narrow-range term is badly fitted there. Golden section search assumes **unimodality** and only shrinks the bracket; started over the full range, it can converge into that "wrong" valley (e.g. δ ≈ −9) and never see the better compromise (e.g. δ ≈ 0). To avoid that, we first evaluate the full objective on a **coarse grid** over [searchLo, searchHi] (e.g. step 2 places for place, 0.05 for percentage), take the grid point with the smallest objective as the chosen valley, then run **golden section** only within the bracket [bestGridDelta − gridStep, bestGridDelta + gridStep]. That way we pick the correct valley from the grid and refine inside it. The implementation logs the best grid point and any grid local minima/maxima for diagnostics.
+
+The δ search is implemented in [calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart): `_totalObjective` for the full WLS sum at a given δ; a coarse grid over the search range to find the best grid delta; then `_calculateDelta` (golden section) over the bracket around that delta; objective sums raw weight × squared error per wager.
 
 **Example:** Three wagers on John Smith — one on 1st-10th (weight 2.13), one on 12th-16th (weight 0.8), one on 1st-5th (weight 0.3). The 1st-10th and 1st-5th wagers have overlapping place ranges, so each gets additional effective weight from the other (asymmetric: 1st-5th gives full weight to 1st-10th; 1st-10th gives half weight to 1st-5th); their posteriors are slightly stronger. The δ search minimizes raw-weight WLS across all three.
 
@@ -596,7 +598,7 @@ Since odds are computed from the raw bet history, voiding a bet is trivial: mark
 The compute-on-demand model recomputes δ each time odds are requested, but the cost is modest:
 
 1. **MC sample ordering must be preserved** — trial indices must stay aligned across shooters so that spread predictions can compare shooter A's trial *i* against shooter B's trial *i*. Sorting per-shooter samples by finish position or percentage would destroy this pairing. The samples are simply scanned in trial order.
-2. **δ search** converges in ~15 iterations of golden section search (or ~15 iterations for a single-wager case). Each iteration evaluates P_shifted for each wager over the samples: O(W × N) per iteration. For N = 10,000 and a small number of wagers W, cost is modest.
+2. **δ search** runs a coarse grid over the range (O(range/gridStep) full-objective evaluations), then golden section in the bracket around the best grid point (~15 iterations). Each evaluation is O(W × N). For place (range ~40, step 2) that's ~20 grid points plus refinement; cost remains modest for small W.
 3. **Evaluating P_shifted** for the requested market is one pass over the shifted samples: O(N).
 4. **Sorted copies for binary search** — maintaining a sorted copy of each shooter's samples (separate from the trial-ordered originals) would allow O(log N) boundary lookups instead of O(N) linear scans for place and percentage markets, with the break-even at roughly log₂(N) queries (~14 for N = 12,500). Spread markets would still require linear scans on the paired data. At current sample sizes the linear scan completes in microseconds, so this is not worth implementing unless profiling shows the δ search is a bottleneck.
 5. **Cache δ per shooter**: See "Caching δ Per Shooter" below.
@@ -743,7 +745,7 @@ Instead of single odds, offer a range:
 
 δ is stored in the database per "Caching δ Per Shooter" (see [BayesianDelta](lib/data/database/schema/prediction_game/bayesian_delta.dart)). The core logic lives in:
 
-- **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, golden-section δ search); `_calculateDelta`, `_similarity`, `_placeSimilarity`, `_percentageSimilarity`.
+- **[calculator.dart](lib/data/prediction_game/bayesian_odds/calculator.dart)** — `calculateBayesianOddsUpdate` (per-wager weights, similarity, posteriors, grid-then–golden-section δ search); `_totalObjective`, grid over search range, `_calculateDelta` (golden section in bracket), `_similarity`, `_placeSimilarity`, `_percentageSimilarity`.
 - **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard); `evaluatePlaceAgainstSimulation` (place evaluation using continuous boundaries from place_evaluation).
 - **[place_evaluation.dart](lib/data/ranking/prediction/odds/place_evaluation.dart)** — `placeShifted(place, delta)`, `placeRangeContribution(s, bestPlace, worstPlace)` for continuous place evaluation (fractional contribution at boundaries so P_shifted is smooth in δ).
 - **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
@@ -754,7 +756,7 @@ The δ pipeline does **not** group by market. It works over a list of `BayesianO
 
 1. **Similarity:** For each wager W, compute `additionalWeight[W][V] = similarity(W,V) × weight(V) / nearbyCount` for each other wager V with positive similarity (asymmetric place overlap for place, exponential decay for percentage). Then `posteriorWeight(W) = weight(W) + Σ additionalWeight[W]`.
 2. **Posteriors:** For each wager W: `alpha(W) = P_model(W) × N_eff`, `P_posterior(W) = (alpha(W) + posteriorWeight(W)) / (N_eff + posteriorWeight(W))`.
-3. **Objective:** Minimize `Σ weight(W) × (P_shifted(W, δ) − P_posterior(W))²` over δ (golden section search). Use **raw** `weight(W)` in the sum, not `posteriorWeight(W)`.
+3. **Objective:** Minimize `Σ weight(W) × (P_shifted(W, δ) − P_posterior(W))²` over δ. Coarse grid to select valley, then golden section in that bracket (objective can be multimodal). Use **raw** `weight(W)` in the sum, not `posteriorWeight(W)`.
 
 See "Computing the Cumulative Distribution Shift (δ)" and "Similarity Between Wagers" above for formulas. The entry point is `calculateBayesianOddsUpdate(config, subjectHistoryLength, wagers, subjectMonteCarlo)` which returns `BayesianOddsResult(delta, log)`.
 

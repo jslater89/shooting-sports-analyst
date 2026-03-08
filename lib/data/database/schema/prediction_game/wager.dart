@@ -136,18 +136,26 @@ class DbWager {
 
   /// Build the resolution information for the wager's legs.
   Map<DbPrediction, ResolutionInformation> buildResolutionInformation({
+    required AnalystDatabase db,
     required WagerScores scores,
     required DateTime scoresTimestamp,
   }) {
     Map<DbPrediction, ResolutionInformation> results = {};
     for(var leg in legs) {
       results[leg] = leg.buildResolutionInformation(
+        db: db,
         scoresTimestamp: scoresTimestamp,
         actualScores: scores.scores,
         predictionSetScores: scores.predictionSetScores,
       );
     }
     return results;
+  }
+
+  void clearResolutionInformation() {
+    for(var leg in legs) {
+      leg.clearResolutionInformation();
+    }
   }
 
   /// Get preexisting resolution information for the wager's legs.
@@ -330,8 +338,13 @@ class DbPrediction {
     if(underdog != null) ...underdog!.knownMemberNumbers,
   ];
 
+  void clearResolutionInformation() {
+    resolutionInformation = null;
+  }
+
   /// Build the resolution information for the prediction.
   ResolutionInformation buildResolutionInformation({
+    required AnalystDatabase db,
     required DateTime scoresTimestamp,
     required Map<String, RelativeMatchScore> actualScores,
     required Map<String, RelativeMatchScore> predictionSetScores,
@@ -341,10 +354,12 @@ class DbPrediction {
     RelativeMatchScore? actualUnderdogScore;
     RelativeMatchScore? predictionSetUnderdogScore;
 
+    var targetPossibleMemberNumbers = target.getAllPossibleMemberNumbersSync(db);
+
     actualScore = actualScores[target.memberNumber];
     predictionSetScore = predictionSetScores[target.memberNumber];
     if(actualScore == null) {
-      for(var n in target.knownMemberNumbers) {
+      for(var n in targetPossibleMemberNumbers) {
         actualScore = actualScores[n];
         if(actualScore != null) {
           break;
@@ -352,7 +367,7 @@ class DbPrediction {
       }
     }
     if(predictionSetScore == null) {
-      for(var n in target.knownMemberNumbers) {
+      for(var n in targetPossibleMemberNumbers) {
         predictionSetScore = predictionSetScores[n];
         if(predictionSetScore != null) {
           break;
@@ -361,10 +376,11 @@ class DbPrediction {
     }
 
     if(type.hasUnderdog) {
+      var underdogPossibleMemberNumbers = underdog!.getAllPossibleMemberNumbersSync(db);
       actualUnderdogScore = actualScores[underdog!.memberNumber];
       predictionSetUnderdogScore = predictionSetScores[underdog!.memberNumber];
       if(actualUnderdogScore == null) {
-        for(var n in underdog!.knownMemberNumbers) {
+        for(var n in underdogPossibleMemberNumbers) {
           actualUnderdogScore = actualScores[n];
           if(actualUnderdogScore != null) {
             break;
@@ -372,7 +388,7 @@ class DbPrediction {
         }
       }
       if(predictionSetUnderdogScore == null) {
-        for(var n in underdog!.knownMemberNumbers) {
+        for(var n in underdogPossibleMemberNumbers) {
           predictionSetUnderdogScore = predictionSetScores[n];
           if(predictionSetUnderdogScore != null) {
             break;
@@ -552,6 +568,22 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   String memberNumber;
 
   List<String> knownMemberNumbers;
+
+  Set<String> getAllPossibleMemberNumbersSync( AnalystDatabase db) {
+    var rating = getShooterRatingSync(db);
+    if(rating == null) {
+      return {};
+    }
+    return rating.allPossibleMemberNumbers;
+  }
+
+  Future<Set<String>> getAllPossibleMemberNumbers(AnalystDatabase db) async {
+    var rating = await getShooterRating(db);
+    if(rating == null) {
+      return {};
+    }
+    return rating.allPossibleMemberNumbers;
+  }
 
   DbPredictionTarget({
     this.projectId = -1,

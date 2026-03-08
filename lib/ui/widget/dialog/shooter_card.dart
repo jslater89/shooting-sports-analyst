@@ -11,12 +11,15 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("ShooterResultCard");
 
 class ShooterResultCard extends StatelessWidget {
   final Sport sport;
@@ -188,6 +191,10 @@ class ShooterResultCard extends StatelessWidget {
               child: IconButton(
                 icon: Icon(Icons.auto_graph),
                 onPressed: () {
+                  if(shooterRating == null) {
+                    _log.w("Shooter rating is null for ${shooter.name} ${shooter.memberNumber}");
+                    return;
+                  }
                   ShooterStatsDialog.show(context, shooterRating!, match: match!, ratings: ratings);
                 }
               ),
