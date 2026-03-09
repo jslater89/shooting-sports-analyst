@@ -353,7 +353,7 @@ class PredictionGameManager {
       return Result.err(WagerResolutionError.alreadyResolved);
     }
 
-    if(!wager.hasResolutionInformation) {
+    if(!wager.hasResolutionInformation && status != DbWagerStatus.voided) {
       return Result.err(WagerResolutionError.noResolutionInformation);
     }
 
