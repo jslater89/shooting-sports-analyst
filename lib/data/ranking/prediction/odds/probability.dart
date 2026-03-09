@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/place_evaluation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -139,6 +140,8 @@ class PredictionProbability {
   /// [shootersToPredictions] is a map of shooter ratings to their predictions for
   /// all of [placePrediction]'s competitors, including the competitor in question.
   ///
+  /// [shootersToPredictions] can be omitted if [simulationResult] is provided.
+  ///
   /// [bestPossibleOdds] and [worstPossibleOdds] are the minimum and maximum possible odds,
   /// used to clamp the probability.
   ///
@@ -156,11 +159,12 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPlacePrediction(
     PlacePrediction placePrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
+    double? placeDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -172,26 +176,57 @@ class PredictionProbability {
     // oneSigma = standard deviation of those runs
     // ciOffset = trend shift (-0.9 to 0.9)
 
-    AlgorithmPrediction? targetPrediction = shootersToPredictions[placePrediction.shooter];
-    if(targetPrediction == null) {
-      throw ArgumentError("Shooter prediction not found for ${placePrediction.shooter.name}");
+    if(shootersToPredictions == null && simulationResult == null) {
+      throw ArgumentError("Either shootersToPredictions or simulationResult must be provided.");
+    }
+    bool ranOwnSimulation = simulationResult == null;
+
+    if(simulationResult == null) {
+      AlgorithmPrediction? targetPrediction = shootersToPredictions![placePrediction.shooter];
+      if(targetPrediction == null) {
+        throw ArgumentError("Shooter prediction not found for ${placePrediction.shooter.name}");
+      }
+
+      simulationResult = runOddsSimulation(
+        target: placePrediction.shooter,
+        shootersToPredictions: shootersToPredictions,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
     }
 
-    var successes = 0;
+    final actualTrials = simulationResult.places.length;
+    double probability;
 
-    bool ranOwnSimulation = simulationResult == null;
-    simulationResult ??= runOddsSimulation(
-      target: placePrediction.shooter,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
-
-    for(var place in simulationResult.places) {
-      if(place >= placePrediction.bestPlace && place <= placePrediction.worstPlace) {
-        successes++;
+    if(placeDelta != null) {
+      // Continuous place evaluation: fractional contribution at boundaries so probability
+      // is smooth in delta (same logic as Bayesian odds place evaluation).
+      double sum = 0.0;
+      for(var place in simulationResult.places) {
+        final s = placeShifted(place, placeDelta);
+        sum += placeRangeContribution(s, placePrediction.bestPlace, placePrediction.worstPlace);
       }
+      final raw = sum / actualTrials;
+      if(actualTrials <= 1) {
+        probability = raw.clamp(0.0, 1.0);
+      }
+      else {
+        final minProbability = 1 / actualTrials;
+        final maxProbability = (actualTrials - 1) / actualTrials;
+        probability = raw.clamp(minProbability, maxProbability);
+      }
+    }
+    else {
+      var successes = 0;
+      for(var place in simulationResult.places) {
+        if(place >= placePrediction.bestPlace && place <= placePrediction.worstPlace) {
+          successes++;
+        }
+      }
+      final minProbability = 1 / actualTrials;
+      final maxProbability = (actualTrials - 1) / actualTrials;
+      probability = (successes / actualTrials).clamp(minProbability, maxProbability);
     }
 
     Map<String, double> info = {};
@@ -200,10 +235,6 @@ class PredictionProbability {
     info[PlacePrediction.medianPlaceInfo] = simulationResult.places.median.toDouble();
     info[PlacePrediction.meanPlaceInfo] = simulationResult.places.average;
     info[PlacePrediction.stdDevPlaceInfo] = simulationResult.places.stdDev();
-
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
 
     return PredictionProbability(
       probability,
@@ -219,6 +250,8 @@ class PredictionProbability {
   /// Calculate the probability that a shooter finishes within the specified percentage range.
   /// [shootersToPredictions] is a map of shooter ratings to their predictions for
   /// all of [percentagePrediction]'s competitors, including the competitor in question.
+  ///
+  /// [shootersToPredictions] can be omitted if [simulationResult] is provided.
   ///
   /// [bestPossibleOdds] and [worstPossibleOdds] are the minimum and maximum possible odds,
   /// used to clamp the probability.
@@ -237,11 +270,12 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPercentagePrediction(
     PercentagePrediction percentagePrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? simulationResult,
+    double? ratioDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -253,33 +287,46 @@ class PredictionProbability {
     // oneSigma = standard deviation of those runs
     // ciOffset = trend shift (-0.9 to 0.9)
 
+    if(shootersToPredictions == null && simulationResult == null) {
+      throw ArgumentError("Either shootersToPredictions or simulationResult must be provided.");
+    }
+
     var successes = 0;
 
     bool ranOwnSimulation = simulationResult == null;
-    simulationResult ??= runOddsSimulation(
-      target: percentagePrediction.shooter,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
+
+    if(simulationResult == null) {
+      simulationResult ??= runOddsSimulation(
+        target: percentagePrediction.shooter,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
 
     for(var percentage in simulationResult.percentages) {
+      double actualPercentage = percentage;
+      if(ratioDelta != null && ratioDelta != 0) {
+        actualPercentage += ratioDelta;
+      }
       if(percentagePrediction.above) {
-        if(percentage >= percentagePrediction.ratio) {
+        if(actualPercentage >= percentagePrediction.ratio) {
           successes++;
         }
       }
       else {
-        if(percentage <= percentagePrediction.ratio) {
+        if(actualPercentage <= percentagePrediction.ratio) {
           successes++;
         }
       }
     }
 
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
+    final actualTrials = simulationResult.percentages.length;
+
+    var minProbability = 1 / actualTrials;
+    var maxProbability = (actualTrials - 1) / actualTrials;
+    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     Map<String, double> info = {};
     info[PercentagePrediction.minPercentageInfo] = simulationResult.percentages.min.toDouble();
@@ -321,12 +368,14 @@ class PredictionProbability {
   /// [trials] is the number of trials to run for the simulation, defaulting to 10000.
   factory PredictionProbability.fromPercentageSpreadPrediction(
     PercentageSpreadPrediction percentageSpreadPrediction,
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
   {
     double bestPossibleOdds = bestPossibleOddsDefault,
     double worstPossibleOdds = worstPossibleOddsDefault,
     MonteCarloSimulationResult? favoriteSimulationResult,
     MonteCarloSimulationResult? underdogSimulationResult,
+    double? favoriteRatioDelta,
+    double? underdogRatioDelta,
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
@@ -334,25 +383,48 @@ class PredictionProbability {
   }) {
     var successes = 0;
 
-    bool ranOwnSimulation = favoriteSimulationResult == null || underdogSimulationResult == null;
-    favoriteSimulationResult ??= runOddsSimulation(
-      target: percentageSpreadPrediction.favorite,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
-    underdogSimulationResult ??= runOddsSimulation(
-      target: percentageSpreadPrediction.underdog,
-      shootersToPredictions: shootersToPredictions,
-      trials: trials,
-      random: random,
-      disasterChance: disasterChance,
-    );
+    if(shootersToPredictions == null && (favoriteSimulationResult == null || underdogSimulationResult == null)) {
+      throw ArgumentError("Either shootersToPredictions or both favoriteSimulationResult and underdogSimulationResult must be provided.");
+    }
 
+    if(favoriteSimulationResult != null && underdogSimulationResult != null) {
+      if(favoriteSimulationResult.percentages.length != underdogSimulationResult.percentages.length) {
+        throw ArgumentError("Favorite and underdog simulation results must have the same number of trials.");
+      }
+    }
+
+    bool ranOwnSimulation = favoriteSimulationResult == null || underdogSimulationResult == null;
+    if(favoriteSimulationResult == null) {
+      favoriteSimulationResult ??= runOddsSimulation(
+        target: percentageSpreadPrediction.favorite,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
+    if(underdogSimulationResult == null) {
+      underdogSimulationResult ??= runOddsSimulation(
+        target: percentageSpreadPrediction.underdog,
+        shootersToPredictions: shootersToPredictions!,
+        trials: trials,
+        random: random,
+        disasterChance: disasterChance,
+      );
+    }
+
+    final actualTrials = favoriteSimulationResult.percentages.length;
     var predictedGaps = <double>[];
-    for(int i = 0; i < trials; i++) {
-      var gap = favoriteSimulationResult.percentages[i] - underdogSimulationResult.percentages[i];
+    for(int i = 0; i < actualTrials; i++) {
+      double favoritePercentage = favoriteSimulationResult.percentages[i];
+      if(favoriteRatioDelta != null && favoriteRatioDelta != 0) {
+        favoritePercentage += favoriteRatioDelta;
+      }
+      double underdogPercentage = underdogSimulationResult.percentages[i];
+      if(underdogRatioDelta != null && underdogRatioDelta != 0) {
+        underdogPercentage += underdogRatioDelta;
+      }
+      var gap = favoritePercentage - underdogPercentage;
       predictedGaps.add(gap);
       if(percentageSpreadPrediction.favoriteCovers) {
         if(gap >= percentageSpreadPrediction.ratioSpread) {
@@ -366,9 +438,9 @@ class PredictionProbability {
       }
     }
 
-    var minProbability = 1 / trials;
-    var maxProbability = (trials - 1) / trials;
-    var probability = (successes / trials).clamp(minProbability, maxProbability);
+    var minProbability = 1 / actualTrials;
+    var maxProbability = (actualTrials - 1) / actualTrials;
+    var probability = (successes / actualTrials).clamp(minProbability, maxProbability);
 
     Map<String, double> info = {};
     info[PercentageSpreadPrediction.minPercentageSpreadInfo] = predictedGaps.min.toDouble();

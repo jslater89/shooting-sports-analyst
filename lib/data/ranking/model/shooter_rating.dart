@@ -615,13 +615,16 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   /// Whether this shooter rating equals the given competitor, taking into account
   /// all the known member numbers for both shooters.
   @override
-  bool equalsShooter(Shooter other) {
+  bool equalsShooter(Shooter other, {bool allPossibleMemberNumbers = false}) {
     if(super.equalsShooter(other)) return true;
     var numberProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
 
-    for(var number in knownMemberNumbers) {
+    var numberSource = allPossibleMemberNumbers ? this.allPossibleMemberNumbers : this.knownMemberNumbers;
+    var otherNumberSource = allPossibleMemberNumbers ? other.allPossibleMemberNumbers : other.knownMemberNumbers;
+
+    for(var number in numberSource) {
       var processed = numberProcessor(number);
-      for(var otherNumber in other.knownMemberNumbers) {
+      for(var otherNumber in otherNumberSource) {
         var otherProcessed = numberProcessor(otherNumber);
         if(processed == otherProcessed) return true;
       }

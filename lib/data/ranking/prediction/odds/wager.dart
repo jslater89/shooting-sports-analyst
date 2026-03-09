@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -64,7 +65,7 @@ abstract class IWager {
 class Wager implements IWager {
   final UserPrediction prediction;
   final double amount;
-  final PredictionProbability probability;
+  PredictionProbability probability;
 
   double get payout => amount * probability.decimalOdds;
   double get moneylinePayout => IWager.advancedPayout(amount, probability, roundToMoneyline: true);
@@ -90,6 +91,59 @@ class Wager implements IWager {
     probability: probability.copyWith(),
     amount: amount,
   );
+
+  void recalculateProbabilityWithDelta({
+    required MonteCarloSimulationResult targetSimulation,
+    MonteCarloSimulationResult? underdogSimulation,
+    required double targetDelta,
+    double? underdogDelta,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
+    Random? random,
+    int trials = 10000,
+  }) {
+    if(prediction is PlacePrediction) {
+      probability = PredictionProbability.fromPlacePrediction(
+        prediction as PlacePrediction,
+        null,
+        simulationResult: targetSimulation,
+        placeDelta: targetDelta,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
+        random: random,
+        trials: trials,
+      );
+    }
+    else if(prediction is PercentagePrediction) {
+      probability = PredictionProbability.fromPercentagePrediction(
+        prediction as PercentagePrediction,
+        null,
+        simulationResult: targetSimulation,
+        ratioDelta: targetDelta,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
+        random: random,
+        trials: trials,
+      );
+    }
+    else if(prediction is PercentageSpreadPrediction) {
+      probability = PredictionProbability.fromPercentageSpreadPrediction(
+        prediction as PercentageSpreadPrediction,
+        null,
+        bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+        worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
+        favoriteSimulationResult: targetSimulation,
+        underdogSimulationResult: underdogSimulation,
+        favoriteRatioDelta: targetDelta,
+        underdogRatioDelta: underdogDelta ?? 0.0,
+        random: random,
+        trials: trials,
+      );
+    }
+    else {
+      throw ArgumentError("Unsupported prediction type: ${prediction.runtimeType}");
+    }
+  }
 
   String get descriptiveString => prediction.descriptiveString;
   String? get tooltipString => prediction.tooltipString(probability.info);

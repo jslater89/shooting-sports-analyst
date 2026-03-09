@@ -182,6 +182,7 @@ class _WagerListState extends State<WagerList> {
         final matchLastUpdated = _matchResult?.sourceLastUpdated ?? DateTime.now();
         if(_matchResult != null && relevantScores != null && !wager.resolutionInformationValid(matchLastUpdated: matchLastUpdated)) {
           wager.buildResolutionInformation(
+            db: db,
             scores: relevantScores,
             scoresTimestamp: matchLastUpdated,
           );

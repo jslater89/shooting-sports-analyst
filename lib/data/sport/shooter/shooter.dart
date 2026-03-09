@@ -129,8 +129,13 @@ class Shooter {
     this.rawLocation = other.rawLocation;
   }
 
-  bool equalsShooter(Shooter other) {
-    return other.knownMemberNumbers.contains(memberNumber);
+  bool equalsShooter(Shooter other, {bool allPossibleMemberNumbers = false}) {
+    if(allPossibleMemberNumbers) {
+      return other.allPossibleMemberNumbers.contains(memberNumber) || this.allPossibleMemberNumbers.contains(other.memberNumber);
+    }
+    else {
+      return other.knownMemberNumbers.contains(memberNumber) || this.knownMemberNumbers.contains(other.memberNumber);
+    }
   }
 
   /// The shooter's name, without suffixes.

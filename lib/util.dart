@@ -5,6 +5,7 @@
  */
 
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
@@ -296,6 +297,31 @@ extension StableIntHash on int {
   /// 64-bit stable hash. Same guarantees as [stableHash] but full 64-bit range.
   int get stableHash64 {
     var x = this & 0xFFFFFFFFFFFFFFFF;
+    x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF;
+    x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF;
+    return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF;
+  }
+}
+
+/// Stable 64-bit hash for [double]. Same guarantees as [StableIntHash.stableHash64]:
+/// deterministic across runs, full 64-bit range. Normalizes -0.0 to +0.0 and all NaN
+/// to a canonical value so that equal doubles (per [Object.==]) get the same hash.
+extension StableDoubleHash on double {
+  int get stableHash64 {
+    final bytes = ByteData(8);
+    bytes.setFloat64(0, this);
+    var x = bytes.getUint64(0);
+
+    // -0.0 → +0.0 so that 0.0 == -0.0 implies same hash.
+    if (x == 0x8000000000000000) {
+      x = 0;
+    }
+    // Canonicalize NaN so any NaN hashes the same.
+    else if ((x & 0x7FF0000000000000) == 0x7FF0000000000000 &&
+        (x & 0x000FFFFFFFFFFFFF) != 0) {
+      x = 0x7FF8000000000000;
+    }
+
     x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF;
     x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF;
     return (x ^ (x >> 31)) & 0xFFFFFFFFFFFFFFFF;

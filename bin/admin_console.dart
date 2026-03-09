@@ -10,6 +10,9 @@ import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/server_auth.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
@@ -157,11 +160,13 @@ Future<void> _fantasyMenuLoop(Console console) async {
 enum _DatabaseMenuCommand implements MenuCommand {
   importDeduplicationInfo("1", "Import Deduplication Info", execute: notYetImplementedExecutor),
   listRatingProjects("2", "List Rating Projects", execute: _printRatingProjectList),
-  setRatingContext("3", "Set Rating Context",
+  listPredictionGames("3", "List Prediction Games", execute: _printPredictionGames),
+  dumpSessions("4", "Dump Sessions", execute: _dumpSessions),
+  setRatingContext("5", "Set Rating Context",
     execute: _setRatingContext,
     arguments: [IntMenuArgument(label: "Project ID")]
   ),
-  printUsageStats("4", "Print Usage Stats", execute: _printDatabaseUsageStats),
+  printUsageStats("6", "Print Usage Stats", execute: _printDatabaseUsageStats),
   back("B", "Back");
 
   final String key;
@@ -182,12 +187,6 @@ Future<void> _databaseMenuLoop(Console console) async {
     menuHeader: "Database Menu",
     commandSelected: (command) async {
       switch(command.command) {
-        case _DatabaseMenuCommand.importDeduplicationInfo:
-          return true;
-        case _DatabaseMenuCommand.setRatingContext:
-          return true;
-        case _DatabaseMenuCommand.printUsageStats:
-          return true;
         case _DatabaseMenuCommand.back:
           return false;
         default:
@@ -225,6 +224,48 @@ Future<void> _printRatingProjectList(Console console, List<MenuArgumentValue> ar
   console.write(projectsTable.render());
 }
 
+Future<void> _printPredictionGames(Console console, List<MenuArgumentValue> arguments) async {
+  var games = await _database.getAllPredictionGames();
+  console.write("Prediction Games\n");
+  var gamesTable = Table();
+  gamesTable.insertColumn(header: "ID");
+  gamesTable.insertColumn(header: "Name");
+  gamesTable.insertColumn(header: "Start");
+  gamesTable.insertColumn(header: "End");
+  for(var game in games) {
+    gamesTable.insertRow([
+      game.id,
+      game.name,
+      game.start != null ? programmerYmdFormat.format(game.start!) : "n/a",
+      game.end != null ? programmerYmdFormat.format(game.end!) : "n/a"
+    ]);
+  }
+  console.write(gamesTable.render());
+}
+
+Future<void> _dumpSessions(Console console, List<MenuArgumentValue> arguments) async {
+  var sessions = await await _database.getActiveSessions();
+  var sessionsTable = Table();
+  sessionsTable.insertColumn(header: "Display Name");
+  sessionsTable.insertColumn(header: "Username");
+  sessionsTable.insertColumn(header: "Auth Method");
+  sessionsTable.insertColumn(header: "Created");
+  sessionsTable.insertColumn(header: "Expires");
+  sessionsTable.insertColumn(header: "Has Refresh?");
+  for(var session in sessions) {
+    final user = session.user.value;
+    sessionsTable.insertRow([
+      user?.guaranteedDisplayName ?? "n/a",
+      user?.username ?? "n/a",
+      session.authMethod.name,
+      programmerYmdHmFormat.format(session.created),
+      programmerYmdHmFormat.format(session.expires),
+      session.refreshToken != null ? "Yes" : "No"
+    ]);
+  }
+  console.write(sessionsTable.render());
+}
+
 Future<void> _setRatingContext(Console console, List<MenuArgumentValue> arguments) async {
   var projectId = arguments.first.value;
   var project = await _database.getRatingProjectById(projectId);
@@ -252,6 +293,9 @@ enum _SSAMenuCommand implements MenuCommand {
     IntMenuArgument(label: "project id", description: "Project ID to calculate", required: true),
     BoolMenuArgument(label: "full recalculation", description: "Force a full recalculation", required: false, defaultValue: false),
     BoolMenuArgument(label: "skip deduplication", description: "Skip deduplication", required: false, defaultValue: true),
+  ]),
+  clearBayesianOddsCache("4", "Clear Bayesian Odds Cache", execute: _clearBayesianOddsCache, arguments: [
+    IntMenuArgument(label: "game id", description: "Game ID to clear the Bayesian odds cache for", required: true),
   ]),
   back("B", "Back");
 
@@ -458,6 +502,29 @@ Future<void> _calculateRatingProject(Console console, List<MenuArgumentValue> ar
     return;
   }
   console.print("Ratings calculated in ${DateTime.now().difference(start).inSeconds} seconds");
+}
+
+Future<void> _clearBayesianOddsCache(Console console, List<MenuArgumentValue> arguments) async {
+  var gameId = arguments[0].value;
+  if(gameId <= 0) {
+    console.print("Delete Bayesian odds cache for all games? (y/n)");
+    var answer = console.readLine()?.trim();
+    if(answer != null && answer.toLowerCase() == "y") {
+      gameId = -1;
+    }
+    else {
+      return;
+    }
+  }
+
+  if(gameId == -1) {
+    console.print("Deleting Bayesian odds cache for all games");
+    await _database.clearAllBayesianDeltas();
+  }
+  else {
+    console.print("Deleting Bayesian odds cache for game $gameId");
+    await _database.clearBayesianDeltasForGame(gameId);
+  }
 }
 
 Future<void> _ssaServerToolsMenuLoop(Console console) async {

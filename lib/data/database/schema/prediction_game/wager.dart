@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'wager.g.dart';
@@ -136,18 +137,26 @@ class DbWager {
 
   /// Build the resolution information for the wager's legs.
   Map<DbPrediction, ResolutionInformation> buildResolutionInformation({
+    required AnalystDatabase db,
     required WagerScores scores,
     required DateTime scoresTimestamp,
   }) {
     Map<DbPrediction, ResolutionInformation> results = {};
     for(var leg in legs) {
       results[leg] = leg.buildResolutionInformation(
+        db: db,
         scoresTimestamp: scoresTimestamp,
         actualScores: scores.scores,
         predictionSetScores: scores.predictionSetScores,
       );
     }
     return results;
+  }
+
+  void clearResolutionInformation() {
+    for(var leg in legs) {
+      leg.clearResolutionInformation();
+    }
   }
 
   /// Get preexisting resolution information for the wager's legs.
@@ -330,8 +339,13 @@ class DbPrediction {
     if(underdog != null) ...underdog!.knownMemberNumbers,
   ];
 
+  void clearResolutionInformation() {
+    resolutionInformation = null;
+  }
+
   /// Build the resolution information for the prediction.
   ResolutionInformation buildResolutionInformation({
+    required AnalystDatabase db,
     required DateTime scoresTimestamp,
     required Map<String, RelativeMatchScore> actualScores,
     required Map<String, RelativeMatchScore> predictionSetScores,
@@ -341,10 +355,12 @@ class DbPrediction {
     RelativeMatchScore? actualUnderdogScore;
     RelativeMatchScore? predictionSetUnderdogScore;
 
+    var targetPossibleMemberNumbers = target.getAllPossibleMemberNumbersSync(db);
+
     actualScore = actualScores[target.memberNumber];
     predictionSetScore = predictionSetScores[target.memberNumber];
     if(actualScore == null) {
-      for(var n in target.knownMemberNumbers) {
+      for(var n in targetPossibleMemberNumbers) {
         actualScore = actualScores[n];
         if(actualScore != null) {
           break;
@@ -352,7 +368,7 @@ class DbPrediction {
       }
     }
     if(predictionSetScore == null) {
-      for(var n in target.knownMemberNumbers) {
+      for(var n in targetPossibleMemberNumbers) {
         predictionSetScore = predictionSetScores[n];
         if(predictionSetScore != null) {
           break;
@@ -361,10 +377,11 @@ class DbPrediction {
     }
 
     if(type.hasUnderdog) {
+      var underdogPossibleMemberNumbers = underdog!.getAllPossibleMemberNumbersSync(db);
       actualUnderdogScore = actualScores[underdog!.memberNumber];
       predictionSetUnderdogScore = predictionSetScores[underdog!.memberNumber];
       if(actualUnderdogScore == null) {
-        for(var n in underdog!.knownMemberNumbers) {
+        for(var n in underdogPossibleMemberNumbers) {
           actualUnderdogScore = actualScores[n];
           if(actualUnderdogScore != null) {
             break;
@@ -372,7 +389,7 @@ class DbPrediction {
         }
       }
       if(predictionSetUnderdogScore == null) {
-        for(var n in underdog!.knownMemberNumbers) {
+        for(var n in underdogPossibleMemberNumbers) {
           predictionSetUnderdogScore = predictionSetScores[n];
           if(predictionSetUnderdogScore != null) {
             break;
@@ -525,6 +542,19 @@ class DbPrediction {
     dbPrediction.probability = DbProbability.fromWager(wager);
     return dbPrediction;
   }
+
+  factory DbPrediction.fromBayesianOddsWager({
+    required double percentage,
+    required bool abovePercentage,
+    required DbPredictionTarget target,
+  }) {
+    var dbPrediction = DbPrediction();
+    dbPrediction.type = DbPredictionType.percentage;
+    dbPrediction.percentage = percentage;
+    dbPrediction.abovePercentage = abovePercentage;
+    dbPrediction.target = target;
+    return dbPrediction;
+  }
 }
 
 @embedded
@@ -539,6 +569,22 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   String memberNumber;
 
   List<String> knownMemberNumbers;
+
+  Set<String> getAllPossibleMemberNumbersSync( AnalystDatabase db) {
+    var rating = getShooterRatingSync(db);
+    if(rating == null) {
+      return {};
+    }
+    return rating.allPossibleMemberNumbers;
+  }
+
+  Future<Set<String>> getAllPossibleMemberNumbers(AnalystDatabase db) async {
+    var rating = await getShooterRating(db);
+    if(rating == null) {
+      return {};
+    }
+    return rating.allPossibleMemberNumbers;
+  }
 
   DbPredictionTarget({
     this.projectId = -1,
@@ -563,6 +609,33 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   @ignore
   String get name {
     return "${firstName} ${lastName}";
+  }
+
+  bool isSameAs(DbPredictionTarget other) {
+    if(this == other) {
+      return true;
+    }
+
+    if(this.projectId != other.projectId) {
+      return false;
+    }
+    if(this.groupUuid != other.groupUuid) {
+      return false;
+    }
+
+    return this.memberNumber == other.memberNumber
+      || this.knownMemberNumbers.intersects(other.knownMemberNumbers);
+  }
+
+  Future<bool> matchesShooter(AnalystDatabase db, Shooter shooter) async {
+    var allPossibleMemberNumbers = await getAllPossibleMemberNumbers(db);
+
+    return allPossibleMemberNumbers.intersects(shooter.allPossibleMemberNumbers);
+  }
+
+  bool matchesShooterSync(AnalystDatabase db, Shooter shooter) {
+    var allPossibleMemberNumbers = getAllPossibleMemberNumbersSync(db);
+    return allPossibleMemberNumbers.intersects(shooter.allPossibleMemberNumbers);
   }
 }
 

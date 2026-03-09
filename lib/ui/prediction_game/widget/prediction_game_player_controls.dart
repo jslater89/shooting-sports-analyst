@@ -224,14 +224,16 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
 
                   var result = await WagerDialog.show(
                     context,
+                    player: player,
                     predictions: predictions,
-                    predictionSetId: selectedPredictionSet!.id,
+                    predictionSet: selectedPredictionSet,
                     matchId: selectedMatchPrep!.futureMatch.value!.matchId,
                     roundToMoneyline: true,
                     title: "Odds for ${selectedRatingGroup!.name}",
                     helpText: "Current match: ${selectedMatchPrep!.futureMatch.value!.eventName}",
                     availableBalance: player.balance,
-                    game: model.predictionGame,
+                    manager: model.manager,
+                    matchPrep: selectedMatchPrep,
                   );
 
                   if(result != null) {
@@ -240,7 +242,6 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                       _saveParlay(player, model, result.parlay!);
                     }
                     else if(result.isIndependentWagers) {
-                      _log.i("Saving ${result.independentWagers!.length} independent wagers");
                       _saveIndependentWagers(player, model, result.independentWagers!);
                     }
                   }

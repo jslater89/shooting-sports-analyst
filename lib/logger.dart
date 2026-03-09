@@ -276,8 +276,17 @@ class SSALogger extends LogPrinter {
 
   static List<ReceivePort> _receivePorts = [];
   static _SSAFileOutput _receivePortOutput = _SSAFileOutput();
-  static handleReceivePort(ReceivePort port) {
+  static bool _hasReceivePorts = false;
+  /// Set up this isolate's SSALogger to receive logs from the given
+  /// receive port, printing them to console and file outputs.
+  ///
+  /// If [thisIsolateName] is provided, it will be used to prefix logs from
+  /// this isolate with the given name.
+  static handleReceivePort(ReceivePort port, {String? thisIsolateName}) {
     _receivePorts.add(port);
+    SSALogger.isolateName = thisIsolateName;
+
+    _hasReceivePorts = true;
     port.listen((event) {
       if(event is Map) {
         if(event["level"] != null) {
@@ -346,7 +355,9 @@ class SSALogger extends LogPrinter {
       }
     }
 
-    String info = "[${_translateLevel(event.level)}] $tag ${DateTime.now().toString()} ::: $callsite";
+    String isolatePrefix = _hasReceivePorts && isolateName != null ? "($isolateName) " : "";
+
+    String info = "$isolatePrefix[${_translateLevel(event.level)}] $tag ${DateTime.now().toString()} ::: $callsite";
     List<String> lines = ["$info ${event.message}"];
 
     if(event.error != null) {

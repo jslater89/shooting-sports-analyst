@@ -217,11 +217,11 @@ class ShootingMatch implements SourceIdsProvider {
 
   /// Get the match entries for a list of shooters (comparing by member number), optionally
   /// filtered to a list of divisions.
-  List<MatchEntry> getEntriesFor(List<Shooter> shooters, {List<Division>? divisions}) {
+  List<MatchEntry> getEntriesFor(List<Shooter> shooters, {List<Division>? divisions, bool allPossibleMemberNumbers = false}) {
     List<MatchEntry> eligibleEntries = filterShooters(divisions: divisions);
     List<MatchEntry> entries = [];
     entries.addAll(eligibleEntries
-      .where((e) => shooters.any((s) => s.equalsShooter(e))));
+      .where((e) => shooters.any((s) => s.equalsShooter(e, allPossibleMemberNumbers: allPossibleMemberNumbers))));
     return entries;
   }
 

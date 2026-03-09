@@ -12,8 +12,13 @@ import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_cache.dart';
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_updater.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
@@ -43,48 +48,58 @@ class WagerDialogResult {
 
 /// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
 class WagerDialog extends StatefulWidget {
+  static final lruCache = MonteCarloSimulationCache(capacity: 100);
+
   WagerDialog({
     super.key,
-    this.game,
+    this.manager,
+    this.player,
     required this.predictions,
-    required this.predictionSetId,
+    this.predictionSet,
     required this.matchId,
+    this.matchPrep,
     this.title,
     this.roundToMoneyline = false,
     this.availableBalance,
     this.helpText,
   });
 
-  final PredictionGame? game;
+  final PredictionGamePlayer? player;
+  final PredictionGameManager? manager;
   final bool roundToMoneyline;
   final double? availableBalance;
   final String? title;
   final String? helpText;
   final String matchId;
-  final int? predictionSetId;
+  final MatchPrep? matchPrep;
+  final PredictionSet? predictionSet;
   final List<AlgorithmPrediction> predictions;
 
   static Future<WagerDialogResult?> show(BuildContext context, {
+    PredictionGamePlayer? player,
     required List<AlgorithmPrediction> predictions,
     required String matchId,
-    int? predictionSetId,
+    PredictionSet? predictionSet,
     String? title,
     bool roundToMoneyline = false,
     double? availableBalance,
     String? helpText,
-    PredictionGame? game,
+    PredictionGameManager? manager,
+    MatchPrep? matchPrep,
   }) async {
     return showDialog<WagerDialogResult>(
       context: context,
       builder: (context) => WagerDialog(
+        player: player,
+        manager: manager,
         predictions: predictions,
         matchId: matchId,
-        predictionSetId: predictionSetId,
+        predictionSet: predictionSet,
         title: title,
         roundToMoneyline: roundToMoneyline,
         availableBalance: availableBalance,
         helpText: helpText,
-        game: game,
+        matchPrep: matchPrep,
       ),
       barrierDismissible: false
     );
@@ -105,8 +120,6 @@ class _WagerDialogState extends State<WagerDialog> {
   Map<RatingGroup, int> _competitorCountsByGroup = {};
   Map<ShooterRating, WagerIneligibilityReason> _ineligibleCompetitors = {};
 
-  final lruCache = MonteCarloSimulationCache(capacity: 100);
-
   @override
   void initState() {
     super.initState();
@@ -119,12 +132,13 @@ class _WagerDialogState extends State<WagerDialog> {
 
 
   void _updateIneligibleCompetitors() {
-    if(widget.game == null) {
+    var game = widget.manager?.predictionGame;
+    if(game == null) {
       return;
     }
     _ineligibleCompetitors.clear();
     for(var prediction in widget.predictions) {
-      var ineligibilityReason = widget.game?.checkValidity(prediction, competitorCount: _competitorCountsByGroup[prediction.shooter.group]!);
+      var ineligibilityReason = game.checkValidity(prediction, competitorCount: _competitorCountsByGroup[prediction.shooter.group]!);
       if(ineligibilityReason != null) {
         _ineligibleCompetitors[prediction.shooter] = ineligibilityReason;
       }
@@ -139,7 +153,7 @@ class _WagerDialogState extends State<WagerDialog> {
     }
   }
 
-  void _updateWager(int index, Wager newWager) {
+  Future<void> _updateWager(int index, Wager newWager) async {
     double? bestPossibleOdds;
     var algorithmPrediction = _shootersToPredictions[newWager.prediction.shooter];
     var userPrediction = newWager.prediction;
@@ -163,7 +177,7 @@ class _WagerDialogState extends State<WagerDialog> {
     const int trials = 12500;
 
     // We can only use the simulation cache if we have a prediction set ID.
-    final predictionSetId = widget.predictionSetId;
+    final predictionSetId = widget.predictionSet?.id;
     if(predictionSetId != null) {
       for(var number in newPrediction.shooter.knownMemberNumbers) {
         cacheKeys.add(MonteCarloSimulationLruKey(
@@ -173,7 +187,7 @@ class _WagerDialogState extends State<WagerDialog> {
         ));
       }
 
-      simulationResult = lruCache.lookup(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
+      simulationResult = WagerDialog.lruCache.lookupSync(cacheKeys.first, additionalKeys: cacheKeys.sublist(1));
 
       if(newPrediction is PercentageSpreadPrediction) {
         for(var number in newPrediction.underdog.knownMemberNumbers) {
@@ -184,7 +198,7 @@ class _WagerDialogState extends State<WagerDialog> {
           ));
         }
 
-        underdogSimulationResult = lruCache.lookup(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
+        underdogSimulationResult = WagerDialog.lruCache.lookupSync(underdogCacheKeys.first, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 
@@ -217,9 +231,9 @@ class _WagerDialogState extends State<WagerDialog> {
     }
 
     if(probability.ranOwnSimulation && predictionSetId != null) {
-      lruCache.cache(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
+      WagerDialog.lruCache.cacheSync(cacheKeys.first, probability.simulationResult!.targetResult, additionalKeys: cacheKeys.sublist(1));
       if(newPrediction is PercentageSpreadPrediction) {
-        lruCache.cache(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
+        WagerDialog.lruCache.cacheSync(underdogCacheKeys.first, probability.simulationResult!.underdogResult!, additionalKeys: underdogCacheKeys.sublist(1));
       }
     }
 
@@ -229,6 +243,31 @@ class _WagerDialogState extends State<WagerDialog> {
       amount: newWager.amount,
     );
 
+    if(widget.player != null && widget.manager != null && widget.matchPrep != null && widget.predictionSet != null) {
+      final matchPrep = widget.matchPrep;
+      MonteCarloSimulationResult? favoriteMonteCarlo;
+      MonteCarloSimulationResult? underdogMonteCarlo;
+      if(newPrediction is PercentageSpreadPrediction) {
+        favoriteMonteCarlo = probability.simulationResult!.targetResult;
+        underdogMonteCarlo = probability.simulationResult!.underdogResult;
+      }
+      final updater = BayesianWagerUpdater();
+      await updater.updateWagerWithBayesianOddsShift(
+        gm: widget.manager!,
+        bettor: widget.player!,
+        shootersToPredictions: _shootersToPredictions,
+        wager: wager,
+        matchPrep: matchPrep!,
+        predictionSet: widget.predictionSet!,
+        subjectMonteCarlo: probability.simulationResult!.targetResult,
+        spreadFavoriteMonteCarlo: favoriteMonteCarlo,
+        spreadUnderdogMonteCarlo: underdogMonteCarlo,
+        cache: WagerDialog.lruCache,
+      );
+    }
+
+    // Going by wager automatically handles the parlay case, since the wager dialog
+    // combines all single legs into the parlay.
 
     if(index == -1) {
       _legs.add(wager);
@@ -258,6 +297,8 @@ class _WagerDialogState extends State<WagerDialog> {
         canAffordParlay = parlaySum <= widget.availableBalance!;
       }
     }
+
+    final game = widget.manager?.predictionGame;
 
     return AlertDialog(
       title: Text(widget.title ?? "Check odds"),
@@ -309,7 +350,7 @@ class _WagerDialogState extends State<WagerDialog> {
                                     prediction: leg,
                                     availableCompetitors: widget.predictions,
                                     ineligibleCompetitors: _ineligibleCompetitors,
-                                    game: widget.game,
+                                    game: game,
                                   );
                                 }
                                 else if(leg.prediction is PercentagePrediction) {
@@ -318,7 +359,7 @@ class _WagerDialogState extends State<WagerDialog> {
                                     prediction: leg,
                                     availableCompetitors: widget.predictions,
                                     ineligibleCompetitors: _ineligibleCompetitors,
-                                    game: widget.game,
+                                    game: game,
                                   );
                                 }
                                 else if(leg.prediction is PercentageSpreadPrediction) {
@@ -327,7 +368,7 @@ class _WagerDialogState extends State<WagerDialog> {
                                     prediction: leg,
                                     availableCompetitors: widget.predictions,
                                     ineligibleCompetitors: _ineligibleCompetitors,
-                                    game: widget.game,
+                                    game: game,
                                   );
                                 }
 
@@ -403,7 +444,7 @@ class _WagerDialogState extends State<WagerDialog> {
                       ),
                       availableCompetitors: widget.predictions,
                       ineligibleCompetitors: _ineligibleCompetitors,
-                      game: widget.game,
+                      game: game,
                     );
 
                     if(newWager != null) {
@@ -426,7 +467,7 @@ class _WagerDialogState extends State<WagerDialog> {
                       ),
                       availableCompetitors: widget.predictions,
                       ineligibleCompetitors: _ineligibleCompetitors,
-                      game: widget.game,
+                      game: game,
                     );
                     if(newWager != null) {
                       _updateWager(-1, newWager);
@@ -449,7 +490,7 @@ class _WagerDialogState extends State<WagerDialog> {
                       ),
                       availableCompetitors: widget.predictions,
                       ineligibleCompetitors: _ineligibleCompetitors,
-                      game: widget.game,
+                      game: game,
                     );
                     if(newWager != null) {
                       _updateWager(-1, newWager);

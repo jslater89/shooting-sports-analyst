@@ -31,7 +31,7 @@ void main() async {
   var loggerSendPort = loggerReceivePort.sendPort;
 
   // Other isolates should use [SSALogger.setupSendPort] to send logs to the logger isolate.
-  SSALogger.handleReceivePort(loggerReceivePort);
+  SSALogger.handleReceivePort(loggerReceivePort, thisIsolateName: "main");
   _log.i("Logger setup complete");
 
   // Start the manager isolate and get its send port.

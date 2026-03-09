@@ -35,18 +35,18 @@ class MonteCarloIsolateServer {
   Future<MonteCarloIsolateServerResponse> _commandHandler(MonteCarloIsolateServerCommand command) async {
     switch(command) {
       case CacheCommand(key: var key, entry: var entry, additionalKeys: var additionalKeys):
-        cache.cache(key, entry, additionalKeys: additionalKeys);
+        cache.cacheSync(key, entry, additionalKeys: additionalKeys);
         return AckResponse();
       case LookupCommand(key: var key, additionalKeys: var additionalKeys):
-        return LookupResponse(entry: cache.lookup(key, additionalKeys: additionalKeys));
+        return LookupResponse(entry: cache.lookupSync(key, additionalKeys: additionalKeys));
       case InvalidateKeyCommand(key: var key, additionalKeys: var additionalKeys):
-        cache.invalidate(key, additionalKeys: additionalKeys);
+        cache.invalidateSync(key, additionalKeys: additionalKeys);
         return AckResponse();
       case InvalidatePredictionSetsCommand(predictionSetIds: var predictionSetIds):
-        cache.invalidatePredictionSets(predictionSetIds);
+        cache.invalidatePredictionSetsSync(predictionSetIds);
         return AckResponse();
       case ClearCommand():
-        cache.clear();
+        cache.clearSync();
         return AckResponse();
       case PrintCacheStatsCommand():
         cache.printStats();
