@@ -44,6 +44,7 @@ extension FutureMatchDatabase on AnalystDatabase {
   Future<VoidResult> saveFutureMatch(FutureMatch match, {
     List<MatchPrepLinkTypes> updateLinks = MatchPrepLinkTypes.values,
     List<MatchRegistration>? newRegistrations,
+    bool deleteOldRegistrations = false,
   }) async {
     var sport = SportRegistry().lookup(match.sportName, caseSensitive: false);
     if(sport == null) {
@@ -58,6 +59,10 @@ extension FutureMatchDatabase on AnalystDatabase {
         await isar.futureMatchs.put(match);
 
         if(match.newRegistrations.isNotEmpty) {
+          if(deleteOldRegistrations) {
+            await match.registrations.filter().deleteAll();
+            match.registrations.clear();
+          }
           await isar.matchRegistrations.putAll(match.newRegistrations);
           match.registrations.addAll(match.newRegistrations);
           await match.registrations.save();

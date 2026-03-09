@@ -81,7 +81,7 @@ class RegistrationService {
     }
     var match = importRes.unwrap();
 
-    await database.saveFutureMatch(match);
+    await database.saveFutureMatch(match, deleteOldRegistrations: true);
     return Response.ok(jsonEncode({"success": "Match uploaded"}));
   }
 }

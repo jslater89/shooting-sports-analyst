@@ -623,10 +623,6 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
       return false;
     }
 
-    if(lastName == "Martin") {
-      print("break");
-    }
-
     return this.memberNumber == other.memberNumber
       || this.knownMemberNumbers.intersects(other.knownMemberNumbers);
   }
