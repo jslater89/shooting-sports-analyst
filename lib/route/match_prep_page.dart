@@ -51,7 +51,7 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
       child: EmptyScaffold(
         title: _model.futureMatch.eventName,
         actions: [
-          Tooltip(
+          if(_model.futureMatch.sourceCode == null) Tooltip(
             message: "Link a match result to this match prep",
             child: IconButton(
               icon: Icon(Icons.link),
@@ -59,7 +59,18 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
                 var match = await MatchDatabaseChooserDialog.showSingle(context: context, sport: _model.sport);
                 if(match != null) {
                   _model.linkMatch(match);
+                  setState(() {});
                 }
+              }
+            ),
+          ),
+          if(_model.futureMatch.sourceCode != null) Tooltip(
+            message: "Unlink the match result from this match prep",
+            child: IconButton(
+              icon: Icon(Icons.link_off),
+              onPressed: () async {
+                _model.unlinkMatch();
+                setState(() {});
               }
             ),
           )

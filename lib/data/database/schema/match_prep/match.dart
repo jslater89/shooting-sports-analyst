@@ -72,11 +72,31 @@ class FutureMatch {
     }
   }
 
+  /// Disassociate a [DbShootingMatch] from this [FutureMatch].
+  Future<void> disassociateDbMatch({bool save = true}) async {
+    dbMatch.value = null;
+    sourceCode = null;
+    sourceIds = null;
+    if(save) {
+      await AnalystDatabase().saveFutureMatch(this, updateLinks: [MatchPrepLinkTypes.dbMatch]);
+    }
+  }
+
   /// Associate a [DbShootingMatch] with this [FutureMatch] synchronously.
   void associateDbMatchSync(DbShootingMatch match, {bool save = true}) {
     dbMatch.value = match;
     sourceCode = match.sourceCode;
     sourceIds = [...match.sourceIds];
+    if(save) {
+      AnalystDatabase().saveFutureMatchSync(this, updateLinks: [MatchPrepLinkTypes.dbMatch]);
+    }
+  }
+
+  /// Disassociate a [DbShootingMatch] from this [FutureMatch] synchronously.
+  void disassociateDbMatchSync({bool save = true}) {
+    dbMatch.value = null;
+    sourceCode = null;
+    sourceIds = null;
     if(save) {
       AnalystDatabase().saveFutureMatchSync(this, updateLinks: [MatchPrepLinkTypes.dbMatch]);
     }

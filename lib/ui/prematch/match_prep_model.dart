@@ -180,7 +180,12 @@ class MatchPrepPageModel extends ChangeNotifier {
   }
 
   Future<void> linkMatch(DbShootingMatch match) async {
-    futureMatch.associateDbMatch(match);
+    await futureMatch.associateDbMatch(match);
+    notifyListeners();
+  }
+
+  Future<void> unlinkMatch() async {
+    await futureMatch.disassociateDbMatch();
     notifyListeners();
   }
 

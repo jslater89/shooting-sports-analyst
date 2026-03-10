@@ -213,11 +213,12 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
   late PredictionViewModel model;
   late int lastPredictionSetId;
   late String lastRatingGroupUuid;
+  late bool lastHadOutcomes;
 
   @override
   void initState() {
     super.initState();
-    var outerModel = context.read<_MatchPrepPredictionsModel>();
+    final outerModel = Provider.of<_MatchPrepPredictionsModel>(context, listen: false);
     lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
     lastRatingGroupUuid = widget.group.uuid;
     var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
@@ -227,6 +228,7 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
       showWager: true,
     );
     _updateOutcomes(outerModel);
+    lastHadOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
   }
 
   Future<void> _updateOutcomes(_MatchPrepPredictionsModel outerModel) async {
@@ -252,8 +254,17 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
             outcomes[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score.ratio, place: score.place);
           }
         }
+        lastHadOutcomes = true;
         model.setOutcomes(outcomes);
       }
+      else {
+        lastHadOutcomes = false;
+        model.setOutcomes({});
+      }
+    }
+    else {
+      lastHadOutcomes = false;
+      model.setOutcomes({});
     }
   }
 
@@ -263,6 +274,11 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
       lastRatingGroupUuid = widget.group.uuid;
       var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
       model.setPredictions(groupPredictions, notify: false);
+    }
+
+    bool outerModelHasOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
+    if(outerModelHasOutcomes != lastHadOutcomes) {
+      _updateOutcomes(outerModel);
     }
   }
 
