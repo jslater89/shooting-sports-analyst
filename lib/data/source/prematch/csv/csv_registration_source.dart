@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:csv/csv.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
@@ -58,7 +59,13 @@ class CSVRegistrationSource implements FutureMatchSource {
 
   List<MatchRegistration> processCsvFile({required String matchId, required File csvFile}) {
     var csv = csvFile.readAsStringSync();
-    var lines = csv.split("\n");
+    _log.i("Processing CSV file: $csvFile");
+    final decoder = CsvDecoder(
+      dynamicTyping: false,
+      parseHeaders: false,
+      quoteCharacter: "'",
+    );
+    final lines = decoder.convert(csv);
 
     if(lines.isEmpty) {
       _log.w("CSV file is empty");
@@ -70,8 +77,8 @@ class CSVRegistrationSource implements FutureMatchSource {
       return [];
     }
 
-    var headers = lines[0].split(",");
-    var headerMap = <_RegistrationField, int>{};
+    final headers = lines[0];
+    final headerMap = {};
     int lastHeaderIndex = 0;
     for(var (index, header) in headers.indexed) {
       var field = _RegistrationField.fromColumnName(header);
@@ -100,7 +107,7 @@ class CSVRegistrationSource implements FutureMatchSource {
 
     var registrations = <MatchRegistration>[];
     for(var (index, line) in lines.sublist(1).indexed) {
-      var fields = line.split(",");
+      var fields = line;
       if(fields.length < lastHeaderIndex) {
         _log.w("CSV line is too short to contain all fields");
         _log.v("CSV line: $line");

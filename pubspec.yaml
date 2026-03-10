@@ -84,6 +84,7 @@ dependencies:
   cryptography: ^2.8.0
   device_info_plus: ^12.2.0
   watcher: ^1.1.4
+  csv: ^7.2.0
 
 dev_dependencies:
   flutter_test:
