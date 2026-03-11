@@ -195,7 +195,11 @@ class AnalystDatabase {
     return isar.writeTxnSync(txn, silent: silent);
   }
 
-
+  Future<void> saveBackup(Directory path) async {
+    var filename = "${DateTime.now().toIso8601String()}.backup.isar";
+    var fullPath = path.absolute.path + Platform.pathSeparator + filename;
+    await isar.copyToFile(fullPath);
+  }
 
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
