@@ -523,7 +523,7 @@ Protect against over-adjustment. After computing P_shifted from the shifted MC d
 
 A naive linear clamp (`maxMove = modelP × fraction`) breaks at extreme probabilities: for a long-shot market with P = 0.01, a 20% cap allows only ±0.002 of movement — the line is effectively frozen. But long-shot bets carry high informational content (the bettor is risking a lot relative to expected return), so they should have *more* room to move, not less.
 
-The fix is to clamp symmetrically in **log-odds space**. The logit transform `logit(p) = ln(p / (1 − p))` maps probabilities to the real line, where a fixed-width band has uniform meaning across the probability range: a shift of 1 logit unit roughly doubles or halves the odds ratio, regardless of baseline probability. The config parameters `maxLogitShift`, `clampEvidenceK`, `clampBaselineWeight`, and `clampMaxMultiplier` govern this; see [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart). (The logit movement cap is not yet applied in the current pipeline but is documented for when it is implemented.) A value of 1.0 for `maxLogitShift` means the odds ratio can roughly double or halve. Optionally, when `clampEvidenceK > 0` and `totalWeightShooter` is provided, the effective clamp widens with evidence (see "Evidence-Dependent Clamp Width"). The allowed range in probability space (for `maxLogitShift = 1.0`):
+The fix is to clamp symmetrically in **log-odds space**. The logit transform `logit(p) = ln(p / (1 − p))` maps probabilities to the real line, where a fixed-width band has uniform meaning across the probability range: a shift of 1 logit unit roughly doubles or halves the odds ratio, regardless of baseline probability. The config parameters `maxLogitShift`, `clampEvidenceTau`, and `clampMaxMultiplier` govern this; see [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart). A value of 1.0 for `maxLogitShift` means the odds ratio can roughly double or halve. Optionally, when `clampEvidenceTau > 0` and total bet weight is available, the effective clamp widens with evidence (see "Evidence-Dependent Clamp Width"). The allowed range in probability space (for `maxLogitShift = 1.0`):
 
 
 | modelP | Allowed range  | Absolute width |
@@ -540,7 +540,7 @@ Key properties:
 - **Symmetric**: P = 0.05 and P = 0.95 get the same absolute width (0.106).
 - **Long shots can move**: P = 0.01 gets a range of [0.004, 0.027], not the frozen [0.008, 0.012] of a linear 20% clamp.
 - **Favorites can't exceed 1.0**: The sigmoid naturally stays in (0, 1).
-- **Primary tunable**: `maxLogitShift` has uniform meaning across the probability range — "how many doublings/halvings of the odds ratio are allowed?" Optional evidence-dependent scaling adds `clampEvidenceK`, `baselineWeight`, and `clampMaxMultiplier` (see "Evidence-Dependent Clamp Width").
+- **Primary tunable**: `maxLogitShift` has uniform meaning across the probability range — "how many doublings/halvings of the odds ratio are allowed?" Optional evidence-dependent scaling adds `clampEvidenceTau` and `clampMaxMultiplier` (see "Evidence-Dependent Clamp Width").
 
 Compare to the linear clamp (`maxMove = modelP × 0.20`):
 
@@ -555,6 +555,8 @@ Compare to the linear clamp (`maxMove = modelP × 0.20`):
 
 The linear clamp over-restricts long shots and over-permits near-certainties.
 
+**Implementation:** The clamp is applied in [wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart) after δ is computed. The current (pre-clamp) raw probability is converted to logit; allowed probability bounds are `logit⁻¹(logit(p) ± maxLogitShift)` using the effective max logit shift (evidence-dependent when `clampEvidenceTau > 0`). From those bounds, best and worst allowed decimal odds are derived via [PredictionProbability.fromRawProbability](lib/data/ranking/prediction/odds/probability.dart); the final odds passed to `recalculateProbabilityWithDelta` are the intersection of that logit-derived band with any caller-supplied `bestPossibleOdds`/`worstPossibleOdds`. Total bet weight used for evidence-dependent clamp width is the sum of weights from the subject's contributing wagers (for spreads, the geometric mean of subject and underdog weight sums).
+
 ### Evidence-Dependent Clamp Width
 
 Should the clamp widen when multiple wagers pull the odds in the same direction? The δ search already weights wagers by raw bet weight, so more consensus yields a larger δ and thus larger P_shifted. The fixed clamp then applies a uniform ceiling regardless of evidence strength.
@@ -563,9 +565,28 @@ Should the clamp widen when multiple wagers pull the odds in the same direction?
 
 **Arguments for keeping it fixed:** The clamp may be a deliberate ceiling on model deviation — "we never move more than X from fundamentals." Widening with evidence could amplify herding (early bets move the line → new bettors pile on → line moves further). A single tunable is simpler.
 
-**Recommendation:** Keep the fixed clamp as default. If backtests show the clamp frequently cuts off shifts that posteriors deem well-supported, add optional evidence-dependent scaling. Tune via Brier score and calibration.
+**Recommendation:** Keep the fixed clamp as default. If backtests show the clamp frequently cuts off shifts that posteriors deem well-supported, enable evidence-dependent scaling. Tune via Brier score and calibration.
 
-When evidence-dependent scaling is enabled, the effective max logit shift grows with total weight on the shooter: e.g. `multiplier = 1 + clampEvidenceK × log(1 + totalWeight / baselineWeight)`, capped at `clampMaxMultiplier`. So totalWeight 0 → 1.0×; totalWeight 5 → ~1.35×; totalWeight 20 → ~1.6×, capped at `clampMaxMultiplier × maxLogitShift`.
+When evidence-dependent scaling is enabled (`clampEvidenceTau > 0`), the effective max logit shift grows with total weight on the shooter using an exponential approach to the maximum:
+
+```
+multiplier = 1 + (clampMaxMultiplier − 1) × (1 − exp(−totalWeight / clampEvidenceTau))
+effectiveMaxLogitShift = multiplier × maxLogitShift
+```
+
+The single tunable **`clampEvidenceTau`** (tau) is the total bet weight at which the multiplier reaches ~63% of the way from 1.0 to `clampMaxMultiplier`. This gives it a direct interpretation: "how much evidence before the clamp is substantially widened?" The exponential form naturally saturates at `clampMaxMultiplier` without a hard cap, and the useful range of tau is wide (2–50+), unlike the narrow sweet spot of a log-based scaling factor.
+
+Example with `clampMaxMultiplier = 2.0`:
+
+| totalWeight | tau=5 → mult | tau=10 → mult | tau=20 → mult |
+| ----------- | ------------ | ------------- | ------------- |
+| 2           | 1.33         | 1.18          | 1.10          |
+| 5           | 1.63         | 1.39          | 1.22          |
+| 10          | 1.86         | 1.63          | 1.39          |
+| 20          | 1.98         | 1.86          | 1.63          |
+| 50          | ~2.0         | 1.99          | 1.92          |
+
+With `maxLogitShift = 1.0` and `tau = 10`, a single sharp bet (weight ~2) produces only modest clamp widening (1.18×), five sharp bets (total ~10) push to 1.63×, and the asymptote of 2.0× is effectively reached around 50 total weight.
 
 ### Exposure Limits
 
@@ -662,9 +683,8 @@ All parameters live in [BayesianOddsConfig](lib/data/prediction_game/bayesian_od
 | **Default Conviction**       | 0.5         | 0.33         | 0.75       | When maximum_wager is not available, raw conviction is set to this; same log transform and rescaling apply.                                  |
 | **Time Decay λ** (timeDecayLambda) | 0.02 | 0.01         | 0.05       | Rate of early bet discounting. Implementation clamps result to [0.5, 1.0].                                                               |
 | **Max Logit Shift**          | 1.0         | 0.5          | 1.5        | Maximum movement in log-odds space (1.0 ≈ odds can double/halve). See "Maximum Odds Movement."                                             |
-| **Clamp Evidence K**         | 0.2         | 0            | 0.2        | If >0, widen clamp with total bet weight. 0 = fixed clamp. See "Evidence-Dependent Clamp Width."                                            |
-| **Clamp Baseline Weight**    | 1.0         | 1.0          | 1.0        | Baseline for evidence scaling; used with Clamp Evidence K.                                                                                  |
-| **Clamp Max Multiplier**     | 2.0         | 1.5          | 2.5        | Maximum multiplier on maxLogitShift when evidence-dependent; caps effective clamp width.                                                    |
+| **Clamp Evidence Tau** (clampEvidenceTau) | 10.0 | 0 (disabled) | 5.0 | Characteristic weight for evidence-dependent clamp. Total bet weight at which multiplier is ~63% of way to max. 0 = fixed clamp. See "Evidence-Dependent Clamp Width." |
+| **Clamp Max Multiplier**     | 2.0         | 1.5          | 2.5        | Asymptote for evidence-dependent multiplier on maxLogitShift. See "Evidence-Dependent Clamp Width."                                        |
 | **Min Sharpness Bets** (minSharpnessBets) | 5 | 10           | 5          | Minimum resolved bets (int) before applying sharpness multiplier; otherwise 1.0.                                                            |
 | **Sharpness Clamp Min**      | 0.5         | 0.5          | 0.5        | Minimum allowed sharpness multiplier.                                                                                                      |
 | **Sharpness Clamp Max**      | 2.0         | 1.5          | 2.5        | Maximum allowed sharpness multiplier.                                                                                                      |
@@ -749,7 +769,8 @@ Instead of single odds, offer a range:
 - **[wager_data.dart](lib/data/prediction_game/bayesian_odds/wager_data.dart)** — `BayesianOddsWager.calculateWeight(config)` (conviction log transform and rescaling to [convictionFloor, 1], sharpness clamp, time decay clamp); `fromDbWager` (DbWager → BayesianOddsWager, including spread decomposition and sharpness from leaderboard); `evaluatePlaceAgainstSimulation` (place evaluation using continuous boundaries from place_evaluation).
 - **[place_evaluation.dart](lib/data/ranking/prediction/odds/place_evaluation.dart)** — `placeShifted(place, delta)`, `placeRangeContribution(s, bestPlace, worstPlace)` for continuous place evaluation (fractional contribution at boundaries so P_shifted is smooth in δ).
 - **[config.dart](lib/data/prediction_game/bayesian_odds/config.dart)** — [BayesianOddsConfig](lib/data/prediction_game/bayesian_odds/config.dart) holds all tunables (nEff, baseWeight, timeDecayLambda, convictionLogK, convictionFloor, defaultConviction, sharpness, similarity, etc.).
-- **[wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart)** — `_calculateDeltaForSubject` orchestrates delta computation for a single subject: cache lookup, bettor wager exclusion (see "Bettor Wager Exclusion"), prior wager hydration, and isolate dispatch. `_wagersAreSimilar` implements direction-based comparison between the incoming bet and a prior wager to decide whether to exclude it (derives direction from `abovePercentage` for percentage, `favoriteCovers` + subject role for spread, range midpoint vs. model expectation for place).
+- **[wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart)** — `_calculateDeltaForSubject` orchestrates delta computation for a single subject: cache lookup, bettor wager exclusion (see "Bettor Wager Exclusion"), prior wager hydration, and isolate dispatch; returns delta and bet weights for evidence-dependent clamp. `_wagersAreSimilar` implements direction-based comparison between the incoming bet and a prior wager to decide whether to exclude it (derives direction from `abovePercentage` for percentage, `favoriteCovers` + subject role for spread, range midpoint vs. model expectation for place). After deltas are computed, the logit movement cap is applied: effective `maxLogitShift` (with optional evidence-dependent multiplier from total bet weight), then `logit⁻¹(logit(p) ± maxLogitShift)` for allowed probability bounds and thus best/worst decimal odds passed to `recalculateProbabilityWithDelta`.
+- **[probability.dart](lib/data/ranking/prediction/odds/probability.dart)** — `PredictionProbability.fromRawProbability` builds a probability from a raw P for use in the logit clamp; `rawMoneylineOdds` for logging. Final decimal odds are clamped between `worstPossibleOdds` and `bestPossibleOdds` in `decimalOdds` getter.
 
 ### Delta Computation: Per-Wager + Similarity
 
@@ -763,7 +784,7 @@ See "Computing the Cumulative Distribution Shift (δ)" and "Similarity Between W
 
 ### Generating Odds After δ
 
-Once δ is computed (or read from the BayesianDelta cache), generating odds for a requested market is one pass over the MC samples: count how many satisfy the market predicate under the shifted distribution, then apply the logit clamp if implemented. Total weight on the shooter is summed over all wagers for evidence-dependent clamp width. No per-market state is stored; the same δ is used for every market on that shooter.
+Once δ is computed (or read from the BayesianDelta cache), generating odds for a requested market is one pass over the MC samples: count how many satisfy the market predicate under the shifted distribution, then apply the logit clamp (see "Maximum Odds Movement" and implementation in [wager_updater.dart](lib/data/prediction_game/bayesian_odds/wager_updater.dart)). Total weight on the shooter is summed over all wagers for evidence-dependent clamp width. No per-market state is stored; the same δ is used for every market on that shooter.
 
 ---
 

@@ -105,7 +105,7 @@ class BayesianDelta with DbShooterRatingEntity {
     required PredictionSet predictionSet,
     required PredictionGame game,
     required BayesianOddsConfig config,
-    required List<double> betWeights,
+    required this.betWeights,
   }) :
     contributingWagerIds = contributingWagers.map((w) => w.id).toList(),
     predictionSetId = predictionSet.id,

@@ -46,8 +46,6 @@ class BayesianOddsConfig {
   final double defaultConviction;
 
 
-  // ----- NOTE: logit movement cap not yet implemented (seems well-behaved so far) -----
-
   /// Maximum base logit shift for odds movement, in logit space.
   ///
   /// 1.0 means the odds can roughly double or halve at most
@@ -57,24 +55,18 @@ class BayesianOddsConfig {
   /// on the shooter.
   final double maxLogitShift;
 
-  /// Clamp factor for evidence-dependent logit shift. If >0, as more
-  /// evidence (in the form of bet weights) accumulates on a shooter,
-  /// the allowed shift in log space grows. This scales the speed of
-  /// the shift.
-  final double clampEvidenceK;
-
-  /// Baseline bet weight for evidence-dependent logit shift. The total
-  /// weight of evidence on the shooter is divided by this value to
-  /// create the parameter to log() for evidence-dependent logit shift.
-  final double clampBaselineWeight;
+  /// Characteristic weight for evidence-dependent logit shift. This is the
+  /// total bet weight at which the clamp multiplier reaches ~63% of the way
+  /// from 1.0 to [clampMaxMultiplier]. Set to 0 or negative to disable
+  /// evidence-dependent scaling (fixed clamp at [maxLogitShift]).
+  ///
+  /// Formula: multiplier = 1 + (clampMaxMultiplier - 1) * (1 - exp(-totalWeight / clampEvidenceTau))
+  final double clampEvidenceTau;
 
   /// Maximum multiplier for evidence-dependent logit shift. [maxLogitShift]
   /// will be multiplied by no more than this much as a result of accumulated
   /// evidence.
   final double clampMaxMultiplier;
-
-  // ----- NOTE: end of logit shift parameters -----
-
 
   /// Minimum number of resolved bets for sharpness adjustment to be applied.
   final int minSharpnessBets;
@@ -102,8 +94,7 @@ class BayesianOddsConfig {
     double? convictionFloor,
     double? defaultConviction,
     double? maxLogitShift,
-    double? clampEvidenceK,
-    double? clampBaselineWeight,
+    double? clampEvidenceTau,
     double? clampMaxMultiplier,
     int? minSharpnessBets,
     double? sharpnessClampMin,
@@ -120,8 +111,7 @@ class BayesianOddsConfig {
         convictionFloor = convictionFloor ?? 0.25,
         defaultConviction = defaultConviction ?? 0.33,
         maxLogitShift = maxLogitShift ?? 1.0,
-        clampEvidenceK = clampEvidenceK ?? 0.2,
-        clampBaselineWeight = clampBaselineWeight ?? 5,
+        clampEvidenceTau = clampEvidenceTau ?? 50.0,
         clampMaxMultiplier = clampMaxMultiplier ?? 2,
         minSharpnessBets = minSharpnessBets ?? 5,
         sharpnessClampMin = sharpnessClampMin ?? 0.5,
@@ -140,8 +130,7 @@ class BayesianOddsConfig {
     convictionFloor.stableHash64,
     defaultConviction.stableHash64,
     maxLogitShift.stableHash64,
-    clampEvidenceK.stableHash64,
-    clampBaselineWeight.stableHash64,
+    clampEvidenceTau.stableHash64,
     clampMaxMultiplier.stableHash64,
     minSharpnessBets.stableHash64,
     sharpnessClampMin.stableHash64,

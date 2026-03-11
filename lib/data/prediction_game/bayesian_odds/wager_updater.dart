@@ -164,13 +164,12 @@ class BayesianWagerUpdater {
       totalBetWeight = subjectBetWeight;
     }
 
-    double maxLogitShift = 1.0;
-    if(_config.clampEvidenceK > 0.0) {
-      final clampEvidenceK = _config.clampEvidenceK;
-      final clampBaselineWeight = _config.clampBaselineWeight;
-      final clampMaxMultiplier = _config.clampMaxMultiplier;
-      double multiplier = 1.0 + clampEvidenceK * log(1 + totalBetWeight / clampBaselineWeight);
-      multiplier = multiplier.clamp(1.0, clampMaxMultiplier);
+    double maxLogitShift = _config.maxLogitShift;
+    if(_config.clampEvidenceTau > 0.0) {
+      final tau = _config.clampEvidenceTau;
+      final maxMult = _config.clampMaxMultiplier;
+      double multiplier = 1.0 + (maxMult - 1.0) * (1.0 - exp(-totalBetWeight / tau));
+      _log.v("Clamp calculation: 1.0 + (${maxMult.toStringAsFixed(2)} - 1) * (1 - exp(-${totalBetWeight.toStringAsFixed(2)} / ${tau.toStringAsFixed(2)})) = ${multiplier.toStringAsFixed(4)}");
       maxLogitShift = multiplier * _config.maxLogitShift;
     }
 
