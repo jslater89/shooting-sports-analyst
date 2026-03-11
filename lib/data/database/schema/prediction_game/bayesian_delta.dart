@@ -32,6 +32,8 @@ class BayesianDelta with DbShooterRatingEntity {
 
   double delta;
 
+  List<double> betWeights = [];
+
   @Index()
   /// The prediction set ID for which this delta is valid.
   int predictionSetId;
@@ -83,6 +85,7 @@ class BayesianDelta with DbShooterRatingEntity {
     required this.computedAt,
     required this.predictionSetId,
     required this.configHash,
+    required this.betWeights,
     required this.gameId,
   });
 
@@ -102,6 +105,7 @@ class BayesianDelta with DbShooterRatingEntity {
     required PredictionSet predictionSet,
     required PredictionGame game,
     required BayesianOddsConfig config,
+    required List<double> betWeights,
   }) :
     contributingWagerIds = contributingWagers.map((w) => w.id).toList(),
     predictionSetId = predictionSet.id,

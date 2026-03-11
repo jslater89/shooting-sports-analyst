@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
@@ -108,10 +109,13 @@ class BayesianWagerUpdater {
 
     double subjectDelta;
     double? underdogDelta;
+    List<double> subjectBetWeights = [];
+    List<double> underdogBetWeights = [];
 
-    subjectDelta = await _calculateDeltaForSubject(
+    var subjectDeltaResult = await _calculateDeltaForSubject(
       gm: gm,
       bettor: bettor,
+      config: _config,
       incomingWager: wager,
       matchId: matchId,
       predictionSet: predictionSet,
@@ -124,12 +128,15 @@ class BayesianWagerUpdater {
       shootersToPredictions: shootersToPredictions,
       subjectStageHistoryLength: lengthInStages,
     );
+    subjectDelta = subjectDeltaResult.delta;
+    subjectBetWeights = subjectDeltaResult.betWeights;
 
     if(prediction is PercentageSpreadPrediction) {
       final underdogRating = prediction.underdog;
-      underdogDelta = await _calculateDeltaForSubject(
+      var underdogDeltaResult = await _calculateDeltaForSubject(
         gm: gm,
         bettor: bettor,
+        config: _config,
         incomingWager: wager,
         matchId: matchId,
         predictionSet: predictionSet,
@@ -142,18 +149,64 @@ class BayesianWagerUpdater {
         shootersToPredictions: shootersToPredictions,
         subjectStageHistoryLength: lengthInStages,
       );
+      underdogDelta = underdogDeltaResult.delta;
+      underdogBetWeights = underdogDeltaResult.betWeights;
     }
+
+    double totalBetWeight = 0.0;
+    double subjectBetWeight = subjectBetWeights.sum;
+    if(underdogBetWeights.isNotEmpty) {
+      double underdogBetWeight = underdogBetWeights.sum;
+
+      totalBetWeight = sqrt(subjectBetWeight * underdogBetWeight);
+    }
+    else {
+      totalBetWeight = subjectBetWeight;
+    }
+
+    double maxLogitShift = 1.0;
+    if(_config.clampEvidenceK > 0.0) {
+      final clampEvidenceK = _config.clampEvidenceK;
+      final clampBaselineWeight = _config.clampBaselineWeight;
+      final clampMaxMultiplier = _config.clampMaxMultiplier;
+      double multiplier = 1.0 + clampEvidenceK * log(1 + totalBetWeight / clampBaselineWeight);
+      multiplier = multiplier.clamp(1.0, clampMaxMultiplier);
+      maxLogitShift = multiplier * _config.maxLogitShift;
+    }
+
+    final rawProbability = wager.probability.rawProbability;
+    final logitProbability = log(rawProbability / (1 - rawProbability));
+    final minProbability = 1 / (1 + exp(-(logitProbability - maxLogitShift)));
+    final maxProbability = 1 / (1 + exp(-(logitProbability + maxLogitShift)));
+
+    final worstProbability = PredictionProbability.fromRawProbability(
+      maxProbability,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
+    );
+    final bestProbability = PredictionProbability.fromRawProbability(
+      minProbability,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
+    );
+
+    final actualWorstOdds = max(worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault, worstProbability.decimalOdds);
+    final actualBestOdds = min(bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault, bestProbability.decimalOdds);
+
+    _log.v("Clamp of ${maxLogitShift.toStringAsFixed(2)} logits allows true odds between ${worstProbability.rawMoneylineOdds} and ${bestProbability.rawMoneylineOdds}");
+    _log.v("House edge adjusted odds between ${worstProbability.moneylineOdds} and ${bestProbability.moneylineOdds}");
 
     if(prediction is PlacePrediction) {
       _log.i("Bayesian odds shift from model for place prediction is ${subjectDelta.toStringAsFixed(2)}");
       final oldMoneyline = wager.probability.moneylineOdds;
+
       wager.recalculateProbabilityWithDelta(
         targetSimulation: subjectMonteCarlo,
         underdogSimulation: null,
         targetDelta: subjectDelta,
         underdogDelta: null,
-        bestPossibleOdds: bestPossibleOdds,
-        worstPossibleOdds: worstPossibleOdds,
+        bestPossibleOdds: actualBestOdds,
+        worstPossibleOdds: actualWorstOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
       _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
@@ -162,13 +215,14 @@ class BayesianWagerUpdater {
     else if(prediction is PercentagePrediction) {
       _log.i("Bayesian odds shift from model for percentage prediction is ${subjectDelta.asPercentage(decimals: 2, includePercent: true)}");
       final oldMoneyline = wager.probability.moneylineOdds;
+
       wager.recalculateProbabilityWithDelta(
         targetSimulation: subjectMonteCarlo,
         underdogSimulation: null,
         targetDelta: subjectDelta,
         underdogDelta: null,
-        bestPossibleOdds: bestPossibleOdds,
-        worstPossibleOdds: worstPossibleOdds,
+        bestPossibleOdds: actualBestOdds,
+        worstPossibleOdds: actualWorstOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
@@ -184,8 +238,8 @@ class BayesianWagerUpdater {
         underdogSimulation: spreadUnderdogMonteCarlo,
         targetDelta: subjectDelta,
         underdogDelta: underdogDelta,
-        bestPossibleOdds: bestPossibleOdds,
-        worstPossibleOdds: worstPossibleOdds,
+        bestPossibleOdds: actualBestOdds,
+        worstPossibleOdds: actualWorstOdds,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
@@ -201,9 +255,10 @@ class BayesianWagerUpdater {
   }
 
   /// Get the Bayesian delta for a given subject rating, checking the database cache first.
-  Future<double> _calculateDeltaForSubject({
+  Future<_DeltaResult> _calculateDeltaForSubject({
     required PredictionGameManager gm,
     required PredictionGamePlayer bettor,
+    required BayesianOddsConfig config,
     required Wager incomingWager,
     required String matchId,
     required PredictionSet predictionSet,
@@ -223,7 +278,7 @@ class BayesianWagerUpdater {
     ).toList();
 
     if(wagersForSubject.isEmpty) {
-      return 0.0;
+      return _DeltaResult(delta: 0.0, betWeights: []);
     }
 
     final dates = wagersForSubject.map((w) => w.created).sorted((a, b) => b.compareTo(a));
@@ -264,7 +319,7 @@ class BayesianWagerUpdater {
 
     if(cachedDelta != null) {
       if(excludedWagers.isEmpty) {
-        return cachedDelta.delta;
+        return _DeltaResult(delta: cachedDelta.delta, betWeights: cachedDelta.betWeights);
       }
     }
 
@@ -303,12 +358,13 @@ class BayesianWagerUpdater {
 
     if(!result.success) {
       _log.e("Bayesian odds shift calculation failed: ${result.errorMessage}");
-      return 0.0;
+      return _DeltaResult(delta: 0.0, betWeights: []);
     }
 
     _log.v("Bayesian odds shift calculation result:");
     _log.v(result.log);
 
+    var betWeights = priorSubjectWagers.map((w) => w.calculateWeight(config)).toList();
     if(excludedWagers.isEmpty) {
       await db.saveBayesianDelta(BayesianDelta.create(
         game: gm.predictionGame,
@@ -323,10 +379,11 @@ class BayesianWagerUpdater {
         computedAt: DateTime.now(),
         predictionSet: predictionSet,
         config: _config,
+        betWeights: betWeights,
       ));
     }
 
-    return result.delta;
+    return _DeltaResult(delta: result.delta, betWeights: betWeights);
   }
 
   /// Convert prior wagers for a given subject into Bayesian odds wagers,
@@ -531,4 +588,14 @@ class BayesianWagerUpdater {
     }
     return isSimilar;
   }
+}
+
+class _DeltaResult {
+  double delta;
+  List<double> betWeights;
+
+  _DeltaResult({
+    required this.delta,
+    required this.betWeights,
+  });
 }

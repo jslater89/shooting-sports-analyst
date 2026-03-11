@@ -121,7 +121,7 @@ class BayesianOddsConfig {
         defaultConviction = defaultConviction ?? 0.33,
         maxLogitShift = maxLogitShift ?? 1.0,
         clampEvidenceK = clampEvidenceK ?? 0.2,
-        clampBaselineWeight = clampBaselineWeight ?? 1,
+        clampBaselineWeight = clampBaselineWeight ?? 5,
         clampMaxMultiplier = clampMaxMultiplier ?? 2,
         minSharpnessBets = minSharpnessBets ?? 5,
         sharpnessClampMin = sharpnessClampMin ?? 0.5,

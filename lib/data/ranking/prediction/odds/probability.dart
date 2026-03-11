@@ -64,12 +64,28 @@ class PredictionProbability {
     }
   }
 
+  factory PredictionProbability.fromRawProbability(double rawProbability, {
+    double? houseEdge,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
+  }) {
+    return PredictionProbability(rawProbability,
+    houseEdge: houseEdge ?? standardHouseEdge,
+    bestPossibleOdds: bestPossibleOdds ?? bestPossibleOddsDefault,
+    worstPossibleOdds: worstPossibleOdds ?? worstPossibleOddsDefault,
+    );
+  }
+
   factory PredictionProbability.fromDecimalOdds(double decimalOdds, {
     double? houseEdge,
-    double bestPossibleOdds = bestPossibleOddsDefault,
-    double worstPossibleOdds = worstPossibleOddsDefault,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
   }) {
-    return PredictionProbability(1 / decimalOdds, houseEdge: houseEdge ?? standardHouseEdge);
+    return PredictionProbability(1 / decimalOdds,
+      houseEdge: houseEdge ?? standardHouseEdge,
+      bestPossibleOdds: bestPossibleOdds ?? bestPossibleOddsDefault,
+      worstPossibleOdds: worstPossibleOdds ?? worstPossibleOddsDefault,
+    );
   }
 
   /// Calculate the probability of a parlay over the given predictions.
@@ -497,6 +513,21 @@ class PredictionProbability {
     } else {
       // Negative moneyline for favorites
       var stake = -100 / (decimalOdds - 1.0);
+      return "${stake.round()}";
+    }
+  }
+
+  String get rawMoneylineOdds {
+    if(rawDecimalOdds == 2.0) {
+      return "+100";
+    }
+    else if (rawDecimalOdds > 2.0) {
+      // Positive moneyline for underdogs
+      var payout = (rawDecimalOdds - 1.0) * 100;
+      return "+${payout.round()}";
+    } else {
+      // Negative moneyline for favorites
+      var stake = -100 / (rawDecimalOdds - 1.0);
       return "${stake.round()}";
     }
   }
