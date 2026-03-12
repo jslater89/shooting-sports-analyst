@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wag
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/audit_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -228,21 +229,21 @@ class PredictionGameManager {
     double? maximumWager;
     if(player != null) {
       if(player.balance < wager.amount) {
-        return Result.err(AddWagerError.insufficientFunds);
+        return Result.err(InsufficientFundsError());
       }
       maximumWager = player.balance;
     }
     if(limits != null) {
       if(limits.maxWager != null) {
         if(limits.maxWager! < wager.amount) {
-          return Result.err(AddWagerError.exceededMaxWager);
+          return Result.err(ExceededMaxWagerError());
         }
         maximumWager = min(maximumWager ?? double.infinity, limits.maxWager!);
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
       if(limits.maxConcurrentWagers != null && limits.maxConcurrentWagers! < openWagers + 1) {
-        return Result.err(AddWagerError.exceededMaxWagerCount);
+        return Result.err(ExceededMaxWagerCountError());
       }
     }
 
@@ -255,7 +256,7 @@ class PredictionGameManager {
     }
     catch(e) {
       _log.e("Error adding wager: $e");
-      return Result.err(AddWagerError.unknown);
+      return Result.err(UnknownError());
     }
     await loadPredictionGame();
     return Result.ok(null);
@@ -269,21 +270,21 @@ class PredictionGameManager {
     double? maximumWager;
     if(player != null) {
       if(player.balance < wager.amount) {
-        return Result.err(AddWagerError.insufficientFunds);
+        return Result.err(InsufficientFundsError());
       }
       maximumWager = player.balance;
     }
     if(limits != null) {
       if(limits.maxWager != null) {
         if(limits.maxWager! < wager.amount) {
-          return Result.err(AddWagerError.exceededMaxWager);
+          return Result.err(ExceededMaxWagerError());
         }
         maximumWager = min(maximumWager ?? double.infinity, limits.maxWager!);
       }
 
       var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
       if(limits.maxConcurrentWagers != null && limits.maxConcurrentWagers! < openWagers + 1) {
-        return Result.err(AddWagerError.exceededMaxWagerCount);
+        return Result.err(ExceededMaxWagerCountError());
       }
     }
 
@@ -785,21 +786,55 @@ class PredictionGameManager {
   }
 }
 
-enum AddWagerError implements ResultErr {
-  insufficientFunds,
-  exceededMaxWager,
-  exceededMaxWagerCount,
-  matchAlreadyStarted,
-  unknown;
+sealed class AddWagerError implements ResultErr {
+  const AddWagerError();
 
   @override
-  String get message => switch(this) {
-    insufficientFunds => "Insufficient funds",
-    exceededMaxWager => "Exceeded max wager",
-    exceededMaxWagerCount => "Exceeded max wager count",
-    matchAlreadyStarted => "Match already started",
-    unknown => "Unknown error",
-  };
+  String get message => "Unknown error";
+}
+
+class InsufficientFundsError extends AddWagerError {
+  const InsufficientFundsError();
+
+  @override
+  String get message => "Insufficient funds";
+}
+
+class ExceededMaxWagerError extends AddWagerError {
+  const ExceededMaxWagerError();
+
+  @override
+  String get message => "Exceeded max wager";
+}
+
+class ExceededMaxWagerCountError extends AddWagerError {
+  const ExceededMaxWagerCountError();
+
+  @override
+  String get message => "Exceeded max wager count";
+}
+
+class MatchAlreadyStartedError extends AddWagerError {
+  const MatchAlreadyStartedError();
+
+  @override
+  String get message => "Match already started";
+}
+
+class InvalidParlayError extends AddWagerError {
+  final ParlayValidity validity;
+
+  InvalidParlayError({required this.validity});
+
+  @override
+  String get message => "Invalid parlay: ${validity.shortDescription}";
+}
+
+class UnknownError extends AddWagerError {
+  const UnknownError();
+
+  @override
+  String get message => "Unknown error";
 }
 
 typedef AddWagerResult = Result<void, AddWagerError>;

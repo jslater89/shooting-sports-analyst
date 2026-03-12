@@ -17,6 +17,7 @@ enum ParlayValidity {
   valid,
   overfilled,
   trivialLeg,
+  redundantPredictions,
   conflictingPredictions;
 
   bool get isValid => this == valid;
@@ -25,6 +26,7 @@ enum ParlayValidity {
     valid => "Valid",
     overfilled => "Overfilled",
     trivialLeg => "Trivial leg",
+    redundantPredictions => "Redundant predictions",
     conflictingPredictions => "Conflicting predictions",
   };
 
@@ -33,6 +35,7 @@ enum ParlayValidity {
     overfilled => "The parlay is impossible to satisfy: too many shooters are predicted to finish in the same place or range.",
     trivialLeg => "The parlay has a trivial leg: some predictions are necessarily true if the remaining predictions are also true.",
     conflictingPredictions => "The parlay has conflicting predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
+    redundantPredictions => "The parlay has redundant predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
   };
 }
 
@@ -157,6 +160,17 @@ class Parlay implements IWager {
     legs,
     houseEdgePerLeg: PredictionProbability.standardHouseEdge,
   );
+
+  PredictionProbability calculateProbabilityWith({
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
+  }) => PredictionProbability.fromParlayLegs(
+    legs,
+    houseEdgePerLeg: PredictionProbability.standardHouseEdge,
+    bestPossibleOdds: bestPossibleOdds,
+    worstPossibleOdds: worstPossibleOdds,
+  );
+
   double get payout => amount * probability.decimalOdds;
   double get moneylinePayout => IWager.advancedPayout(amount, probability, roundToMoneyline: true);
 
@@ -337,7 +351,11 @@ class Parlay implements IWager {
       return ParlayValidity.overfilled;
     }
 
-    // Check for trivial legs (requires field size)
+    if(_hasRedundantPredictions(legs)) {
+      return ParlayValidity.redundantPredictions;
+    }
+
+    // Check for trivial legs (most checks require field size)
     if (fieldSize != null && _isTrivialParlay(legs, fieldSize)) {
       return ParlayValidity.trivialLeg;
     }
@@ -402,6 +420,82 @@ class Parlay implements IWager {
     else {
       return "$name2|$name1";
     }
+  }
+
+  /// Check if a parlay has redundant predictions. Two cases are checked:
+  /// 1. Multiple place or percentage predictions for the same shooter.
+  /// 2. Multiple spread predictions for the same pair of shooters.
+  /// 3. One 1st place and one percentage prediction for the same shooter.
+  static bool _hasRedundantPredictions(List<Wager> legs) {
+    // A map of shooter rating IDs to the number of predictions that that shooter
+    var shooterPlacePredictions = <int, int>{};
+    // A map of shooter rating ID to the number of percentage predictions that that shooter has.
+    var shooterPercentagePredictions = <int, int>{};
+
+    // A map of combined hashes of shooter rating IDs to the number of spread predictions for that pair.
+    var spreadPredictions = <int, int>{};
+
+    // A map of shooter rating ID to whether they have a 1st place prediction.
+    var has1stPlacePrediction = <int, bool>{};
+
+    // A map of shooter ratings to whether they have a 100% prediction.
+    var has100PercentPrediction = <int, bool>{};
+
+    for(var leg in legs) {
+      var prediction = leg.prediction;
+      if(prediction is PlacePrediction) {
+        shooterPlacePredictions.increment(prediction.shooter.wrappedRating.id);
+
+        if(prediction.bestPlace == 1 && prediction.worstPlace == 1) {
+          has1stPlacePrediction[prediction.shooter.wrappedRating.id] = true;
+        }
+      }
+      else if(prediction is PercentagePrediction) {
+        shooterPercentagePredictions.increment(prediction.shooter.wrappedRating.id);
+        if(prediction.ratio == 1.0) {
+          has100PercentPrediction[prediction.shooter.wrappedRating.id] = true;
+        }
+      }
+      else if(prediction is PercentageSpreadPrediction) {
+        final favoriteId = prediction.favorite.wrappedRating.id;
+        final underdogId = prediction.underdog.wrappedRating.id;
+        final key = combineHashes64(favoriteId, underdogId);
+        spreadPredictions.increment(key);
+      }
+    }
+
+    for(var MapEntry(key: _, value: count) in shooterPlacePredictions.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+    for(var MapEntry(key: _, value: count) in shooterPercentagePredictions.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+
+    for(var MapEntry(key: rating, value: has1stPlacePrediction) in has1stPlacePrediction.entries) {
+      final hasAnyPercentagePrediction = shooterPercentagePredictions.containsKey(rating);
+      if(has1stPlacePrediction && hasAnyPercentagePrediction) {
+        return true;
+      }
+    }
+
+    for(var MapEntry(key: rating, value: has100PercentPrediction) in has100PercentPrediction.entries) {
+      final hasAnyPlacePrediction = shooterPlacePredictions.containsKey(rating);
+      if(has100PercentPrediction && hasAnyPlacePrediction) {
+        return true;
+      }
+    }
+
+    for(var MapEntry(key: _, value: count) in spreadPredictions.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// Check if a parlay has trivial legs (redundant predictions).

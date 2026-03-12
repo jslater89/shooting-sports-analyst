@@ -94,6 +94,8 @@ class PredictionProbability {
     required Map<UserPrediction, PredictionProbability> predictionProbabilities,
     double? houseEdge,
     double? houseEdgePerLeg,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
   }) {
     // For a parlay, we need the probability that ALL predictions are correct
     // This is the product of individual probabilities, assuming independence
@@ -131,12 +133,18 @@ class PredictionProbability {
       parlayProbability *= (1 - (0.02 * (min(legCount, 10) - 5)));
     }
 
-    return PredictionProbability(parlayProbability, houseEdge: houseEdge!);
+    return PredictionProbability(parlayProbability,
+      houseEdge: houseEdge!,
+      bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
+      worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
+    );
   }
 
   factory PredictionProbability.fromParlayLegs(List<Wager> legs, {
     double? houseEdge,
     double? houseEdgePerLeg,
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
   }) {
     var predictionProbabilities = <UserPrediction, PredictionProbability>{};
     var predictions = <UserPrediction>[];
@@ -148,7 +156,9 @@ class PredictionProbability {
       predictions: predictions,
       predictionProbabilities: predictionProbabilities,
       houseEdge: houseEdge,
-      houseEdgePerLeg: houseEdgePerLeg
+      houseEdgePerLeg: houseEdgePerLeg,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
     );
   }
 

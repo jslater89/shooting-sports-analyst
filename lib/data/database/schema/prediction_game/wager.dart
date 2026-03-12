@@ -202,13 +202,16 @@ class DbWager {
     return dbWager;
   }
 
-  factory DbWager.fromParlay(Parlay parlay) {
+  factory DbWager.fromParlay(Parlay parlay, {
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
+  }) {
     var ratingGroup = parlay.legs.first.prediction.shooter.wrappedRating.group.value;
     var dbWager = DbWager(
       legs: parlay.legs.map((leg) => DbPrediction.fromWager(leg)).toList(),
       amount: parlay.amount,
     );
-    dbWager.parlayProbability = DbProbability.fromParlay(parlay);
+    dbWager.parlayProbability = DbProbability.fromParlay(parlay, bestPossibleOdds: bestPossibleOdds, worstPossibleOdds: worstPossibleOdds);
     dbWager.ratingGroup.value = ratingGroup;
     return dbWager;
   }
@@ -663,12 +666,15 @@ class DbProbability {
     );
   }
 
-  factory DbProbability.fromParlay(Parlay parlay) {
+  factory DbProbability.fromParlay(Parlay parlay, {
+    double? bestPossibleOdds,
+    double? worstPossibleOdds,
+  }) {
     return DbProbability(
       probability: parlay.probability.probability,
       houseEdge: parlay.probability.houseEdge,
-      worstPossibleOdds: parlay.probability.worstPossibleOdds,
-      bestPossibleOdds: parlay.probability.bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds ?? parlay.probability.worstPossibleOdds,
+      bestPossibleOdds: bestPossibleOdds ?? parlay.probability.bestPossibleOdds,
     );
   }
 
