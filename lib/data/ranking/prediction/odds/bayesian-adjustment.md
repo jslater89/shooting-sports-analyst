@@ -588,6 +588,24 @@ Example with `clampMaxMultiplier = 2.0`:
 
 With `maxLogitShift = 1.0` and `tau = 10`, a single sharp bet (weight ~2) produces only modest clamp widening (1.18×), five sharp bets (total ~10) push to 1.63×, and the asymptote of 2.0× is effectively reached around 50 total weight.
 
+### Input-Side Sanitization of Extreme Wagers
+
+The logit clamp protects against **over-movement given a reasonable baseline probability**. However, some wagers encode pathological views of the subject's performance that would otherwise dominate the optimization, especially when the bettor is effectively asserting "this shooter will DQ" (e.g. a percentage prediction that implies the subject finishes at or near 0% of the winner's score), or "this shooter finishes way off the right tail" (place ranges far worse than the model expects). In practice, these correspond to **thresholds many standard deviations away from the model’s own mean**.
+
+To keep these edge cases from dragging the entire distribution while still allowing the optimizer to see genuine, extreme-but-plausible views, the implementation applies a simple input-side filter **before** computing per-wager probabilities and posteriors in `calculateBayesianOddsUpdate`:
+
+- **Compute the subject's mean and standard deviation from the Monte Carlo samples**, using the same arrays already in use elsewhere in the optimizer:
+  - For **place** deltas: `priorPrediction = mean(places)`, `priorStandardDeviation = stdDev(places)`.
+  - For **percentage** deltas: `priorPrediction = mean(percentages)`, `priorStandardDeviation = stdDev(percentages)`.
+- Derive two cutoffs:
+  - `percentMinimumThreshold = priorPrediction − 3 × priorStandardDeviation` (in percentage space).
+  - `placeMaximumThreshold = priorPrediction + 3 × priorStandardDeviation` (in place space; larger place = worse finish).
+- When scanning the incoming `BayesianOddsWager` list:
+  - For **percentage wagers** (both "above" and "below" predictions), if the wager's percentage threshold is **below** `percentMinimumThreshold`, the wager is treated as **invalid** for Bayesian updating and is **removed** from the wager list. It is still priced normally for the bettor, but it no longer contributes to δ or to total bet weight for the evidence-dependent clamp.
+  - For **place wagers**, if the wager's **bestPlace** (the numerically best place in its range) is **worse than** `placeMaximumThreshold` (i.e. entirely out in the far-worse tail: even the top of the range is more than 3 standard deviations worse than the model’s mean finish), the wager is likewise treated as invalid and removed for δ computation.
+
+If all wagers are filtered out by this rule, the optimizer logs "No valid wagers remaining after removing invalid wagers." and returns **δ = 0.0** for that subject and type. Intuitively, this treats "subject completely cratered / DQ" assertions (extreme low-side percentage thresholds) and "subject finishes way off the right tail" assertions (place ranges wholly beyond `mean + 3σ`) as **non-informative about the central part of the distribution**. Three-standard-deviation events still appear frequently enough in a 12,500-trial Monte Carlo that they change as δ changes (so the optimizer remains well-behaved), but thresholds far beyond that region no longer have leverage over δ. Currently there is no symmetric clamp on **high-side** percentage thresholds; extremely strong positive views ("subject crushes the field") are left to be handled by the δ search plus the logit clamp.
+
 ### Exposure Limits
 
 In a real-money context, the house would need to track total exposure (sum of potential payouts minus wager amounts across all open wagers) and throttle odds movement when exposure grows large relative to the house's bankroll. This would work by computing an exposure multiplier that scales down bet weights as exposure increases, making it harder for new bets to move the line when the house is already heavily exposed. The multiplier would apply to `baseWeight` in the bet weighting function.
