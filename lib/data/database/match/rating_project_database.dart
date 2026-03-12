@@ -188,6 +188,14 @@ extension RatingProjectDatabase on AnalystDatabase {
     return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers, useCache: useCache)) != null;
   }
 
+  Future<DbShooterRating?> getRatingById(int id) async {
+    return await isar.dbShooterRatings.where().idEqualTo(id).findFirst();
+  }
+
+  DbShooterRating? getRatingByIdSync(int id) {
+    return isar.dbShooterRatings.getSync(id);
+  }
+
   /// Retrieves a known shooter rating from the database.
   ///
   /// if [useCache] is true, [syncRatingCache] will be checked for

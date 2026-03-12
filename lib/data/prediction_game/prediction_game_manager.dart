@@ -313,19 +313,21 @@ class PredictionGameManager {
   /// Get the wagers from the prediction game with various filters.
   Future<List<DbWager>> getWagers({
     bool openOnly = false,
+    DbShooterRating? subject,
     MatchPrep? matchPrep,
     PredictionGamePlayer? player,
   }) async {
-    return db.getWagers(game: predictionGame, openOnly: openOnly, matchPrep: matchPrep, player: player);
+    return db.getWagers(game: predictionGame, openOnly: openOnly, subject: subject, matchPrep: matchPrep, player: player);
   }
 
   /// Get the wagers from the prediction game with various filters.
   List<DbWager> getWagersSync({
     bool openOnly = false,
+    DbShooterRating? subject,
     MatchPrep? matchPrep,
     PredictionGamePlayer? player,
   }) {
-    return db.getWagersSync(game: predictionGame, openOnly: openOnly, matchPrep: matchPrep, player: player);
+    return db.getWagersSync(game: predictionGame, openOnly: openOnly, subject: subject, matchPrep: matchPrep, player: player);
   }
 
   // /// Process the wagers for a particular match prep.

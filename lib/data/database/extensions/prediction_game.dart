@@ -414,6 +414,7 @@ extension PredictionGameExtension on AnalystDatabase {
   Future<List<DbWager>> getWagers({
     required PredictionGame game,
     bool openOnly = false,
+    DbShooterRating? subject,
     MatchPrep? matchPrep,
     PredictionGamePlayer? player,
   }) async {
@@ -425,6 +426,9 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
+      if(subject != null) {
+        query = query.anyOf(subject.knownMemberNumbers, (q, number) => q.subjectMemberNumbersElementEqualTo(number));
+      }
       return query.sortByCreatedDesc().findAll();
     }
     else {
@@ -435,6 +439,9 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
+      if(subject != null) {
+        query = query.anyOf(subject.knownMemberNumbers, (q, number) => q.subjectMemberNumbersElementEqualTo(number));
+      }
       return query.sortByCreatedDesc().findAll();
     }
   }
@@ -442,6 +449,7 @@ extension PredictionGameExtension on AnalystDatabase {
   List<DbWager> getWagersSync({
     required PredictionGame game,
     bool openOnly = false,
+    DbShooterRating? subject,
     MatchPrep? matchPrep,
     PredictionGamePlayer? player,
   }) {
@@ -453,6 +461,9 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
+      if(subject != null) {
+        query = query.anyOf(subject.knownMemberNumbers, (q, number) => q.subjectMemberNumbersElementEqualTo(number));
+      }
       return query.sortByCreatedDesc().findAllSync();
     }
     else {
@@ -462,6 +473,9 @@ extension PredictionGameExtension on AnalystDatabase {
       }
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
+      }
+      if(subject != null) {
+        query = query.anyOf(subject.knownMemberNumbers, (q, number) => q.subjectMemberNumbersElementEqualTo(number));
       }
       return query.sortByCreatedDesc().findAllSync();
     }
