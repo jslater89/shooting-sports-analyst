@@ -158,7 +158,7 @@ class BayesianWagerUpdater {
     if(underdogBetWeights.isNotEmpty) {
       double underdogBetWeight = underdogBetWeights.sum;
 
-      totalBetWeight = sqrt(subjectBetWeight * underdogBetWeight);
+      totalBetWeight = (subjectBetWeight + underdogBetWeight) / 2.0;
     }
     else {
       totalBetWeight = subjectBetWeight;
