@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/predicti
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_updater.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -148,6 +149,8 @@ class _WagerDialogState extends State<WagerDialog> {
   void _updateParlay() {
     if(_legs.length > 1) {
       _parlay = Parlay(legs: _legs, amount: 1);
+      var probability = _parlay!.probability;
+      _log.i("Parlay probability: ${probability.moneylineOdds}");
     } else {
       _parlay = null;
     }
@@ -251,7 +254,11 @@ class _WagerDialogState extends State<WagerDialog> {
         favoriteMonteCarlo = probability.simulationResult!.targetResult;
         underdogMonteCarlo = probability.simulationResult!.underdogResult;
       }
-      final updater = BayesianWagerUpdater();
+      final updater = BayesianWagerUpdater(
+        config: BayesianOddsConfig(
+          maxLogitShift: -1,
+        )
+      );
       await updater.updateWagerWithBayesianOddsShift(
         gm: widget.manager!,
         bettor: widget.player!,

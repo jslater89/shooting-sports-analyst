@@ -4,10 +4,12 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager_similarity.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// A calculation function for Bayesian odds adjustment, set up to be runnable
 /// with [Isolate.run] (i.e. including only objects that can be sent over
@@ -55,11 +57,14 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   logBuffer.writeln("nEff: $nEff");
 
   double priorPrediction;
+  double priorStandardDeviation;
   if(type == DbPredictionType.place) {
     priorPrediction = subjectMonteCarlo.places.average;
+    priorStandardDeviation = subjectMonteCarlo.places.stdDev();
   }
   else if(type == DbPredictionType.percentage) {
     priorPrediction = subjectMonteCarlo.percentages.average;
+    priorStandardDeviation = subjectMonteCarlo.percentages.stdDev();
   }
   else {
     throw ArgumentError("Unsupported prediction type: ${type}");
@@ -77,7 +82,6 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     int nearbyCount = 0;
     for(var otherWager in wagers) {
       if(wager == otherWager) continue;
-
       final similarity = _similarity(wager, otherWager, config);
       if(similarity == 0.0) continue;
       if(similarity.isNaN) {
@@ -96,10 +100,28 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   }
 
 
+  double minimumThreshold = priorPrediction - (3 * priorStandardDeviation);
   // Calculate the weights and model probabilities for each wager.
+  List<BayesianOddsWager> invalidWagers = [];
   for(var wager in wagers) {
     logBuffer.writeln("Initial data for ${wager.prediction.toString()}:");
     weight[wager] = wager.calculateWeight(config, logBuffer: logBuffer);
+
+    // If a wager is substantially below the prior prediction, give it a very low weight.
+    if(type == DbPredictionType.percentage) {
+      if(wager.prediction.percentage! < minimumThreshold) {
+        logBuffer.writeln("Wager ${wager.prediction.toString()} is below threhold ${minimumThreshold.asPercentage(decimals: 2, includePercent: true)}");
+        invalidWagers.add(wager);
+        continue;
+      }
+    }
+    else if(type == DbPredictionType.place) {
+      if(wager.prediction.bestPlace! < minimumThreshold) {
+        logBuffer.writeln("Wager ${wager.prediction.toString()} is below threhold ${minimumThreshold.asPercentage(decimals: 2, includePercent: true)}");
+        invalidWagers.add(wager);
+        continue;
+      }
+    }
 
     if(type == DbPredictionType.place) {
       pShifted[wager] = wager.evaluatePlaceAgainstSimulation(monteCarlo: subjectMonteCarlo);
@@ -124,6 +146,17 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     logBuffer.writeln("Posterior probability: ${pPosterior[wager]!.toStringAsFixed(4)}");
     logBuffer.writeln("Initial error: ${_objective(pShifted: pShifted[wager]!, pPosterior: pPosterior[wager]!, weight: weight[wager]!)}");
     logBuffer.writeln("\n");
+  }
+
+  if(invalidWagers.isNotEmpty) {
+    wagers = wagers.where((w) => !invalidWagers.contains(w)).toList();
+    if(wagers.isEmpty) {
+      logBuffer.writeln("No valid wagers remaining after removing invalid wagers.");
+      return BayesianOddsResult(
+        delta: 0.0,
+        log: logBuffer.toString(),
+      );
+    }
   }
 
   // Lo/hi search bounds for the delta calculation, in places or ratio-space percentage points.

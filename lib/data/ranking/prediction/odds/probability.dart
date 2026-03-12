@@ -104,7 +104,7 @@ class PredictionProbability {
     houseEdge ??= parlayHouseEdge;
 
     for (var leg in predictions) {
-      var predictionProb = predictionProbabilities[leg]!.rawProbability;
+      var predictionProb = predictionProbabilities[leg]!.clampedRawProbability;
       if(houseEdgePerLeg != null) {
         houseEdge = houseEdge! * (1 + houseEdgePerLeg);
       }
@@ -489,6 +489,12 @@ class PredictionProbability {
 
   /// Get the raw probability.
   double get rawProbability => probability;
+
+  /// Get the raw probability, clamped to between [bestPossibleOdds] and [worstPossibleOdds].
+  double get clampedRawProbability {
+    var clampedRawDecimalOdds = rawDecimalOdds.clamp(worstPossibleOdds, bestPossibleOdds);
+    return 1.0 / clampedRawDecimalOdds;
+  }
 
   /// Get the probability adjusted for house edge.
   double get probabilityWithHouseEdge => probability / (1 - houseEdge);

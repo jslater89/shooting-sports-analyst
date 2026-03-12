@@ -164,36 +164,44 @@ class BayesianWagerUpdater {
       totalBetWeight = subjectBetWeight;
     }
 
+
+    double actualWorstOdds = worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault;
+    double actualBestOdds = bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault;
     double maxLogitShift = _config.maxLogitShift;
-    if(_config.clampEvidenceTau > 0.0) {
-      final tau = _config.clampEvidenceTau;
-      final maxMult = _config.clampMaxMultiplier;
-      double multiplier = 1.0 + (maxMult - 1.0) * (1.0 - exp(-totalBetWeight / tau));
-      _log.v("Clamp calculation: 1.0 + (${maxMult.toStringAsFixed(2)} - 1) * (1 - exp(-${totalBetWeight.toStringAsFixed(2)} / ${tau.toStringAsFixed(2)})) = ${multiplier.toStringAsFixed(4)}");
-      maxLogitShift = multiplier * _config.maxLogitShift;
+    if(_config.maxLogitShift > 0.0) {
+      if(_config.clampEvidenceTau > 0.0) {
+        final tau = _config.clampEvidenceTau;
+        final maxMult = _config.clampMaxMultiplier;
+        double multiplier = 1.0 + (maxMult - 1.0) * (1.0 - exp(-totalBetWeight / tau));
+        _log.v("Base max logit shift: ${_config.maxLogitShift.toStringAsFixed(2)}");
+        _log.v("Logit multiplier calculation: 1.0 + (${maxMult.toStringAsFixed(2)} - 1) × (1 - exp(-${totalBetWeight.toStringAsFixed(2)} / ${tau.toStringAsFixed(2)})) = ${multiplier.toStringAsFixed(4)}");
+
+        maxLogitShift = multiplier * _config.maxLogitShift;
+        _log.v("Effective max logit shift: ${multiplier.toStringAsFixed(4)} × ${_config.maxLogitShift.toStringAsFixed(2)} = ${maxLogitShift.toStringAsFixed(4)}");
+      }
+
+      final rawProbability = wager.probability.rawProbability;
+      final logitProbability = log(rawProbability / (1 - rawProbability));
+      final minProbability = 1 / (1 + exp(-(logitProbability - maxLogitShift)));
+      final maxProbability = 1 / (1 + exp(-(logitProbability + maxLogitShift)));
+
+      final worstProbability = PredictionProbability.fromRawProbability(
+        maxProbability,
+        bestPossibleOdds: bestPossibleOdds,
+        worstPossibleOdds: worstPossibleOdds,
+      );
+      final bestProbability = PredictionProbability.fromRawProbability(
+        minProbability,
+        bestPossibleOdds: bestPossibleOdds,
+        worstPossibleOdds: worstPossibleOdds,
+      );
+
+      actualWorstOdds = max(worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault, worstProbability.decimalOdds);
+      actualBestOdds = min(bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault, bestProbability.decimalOdds);
+
+      _log.v("Clamp of ${maxLogitShift.toStringAsFixed(2)} logits allows true odds between ${worstProbability.rawMoneylineOdds} and ${bestProbability.rawMoneylineOdds}");
+      _log.v("House edge adjusted odds between ${worstProbability.moneylineOdds} and ${bestProbability.moneylineOdds}");
     }
-
-    final rawProbability = wager.probability.rawProbability;
-    final logitProbability = log(rawProbability / (1 - rawProbability));
-    final minProbability = 1 / (1 + exp(-(logitProbability - maxLogitShift)));
-    final maxProbability = 1 / (1 + exp(-(logitProbability + maxLogitShift)));
-
-    final worstProbability = PredictionProbability.fromRawProbability(
-      maxProbability,
-      bestPossibleOdds: bestPossibleOdds,
-      worstPossibleOdds: worstPossibleOdds,
-    );
-    final bestProbability = PredictionProbability.fromRawProbability(
-      minProbability,
-      bestPossibleOdds: bestPossibleOdds,
-      worstPossibleOdds: worstPossibleOdds,
-    );
-
-    final actualWorstOdds = max(worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault, worstProbability.decimalOdds);
-    final actualBestOdds = min(bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault, bestProbability.decimalOdds);
-
-    _log.v("Clamp of ${maxLogitShift.toStringAsFixed(2)} logits allows true odds between ${worstProbability.rawMoneylineOdds} and ${bestProbability.rawMoneylineOdds}");
-    _log.v("House edge adjusted odds between ${worstProbability.moneylineOdds} and ${bestProbability.moneylineOdds}");
 
     if(prediction is PlacePrediction) {
       _log.i("Bayesian odds shift from model for place prediction is ${subjectDelta.toStringAsFixed(2)}");
