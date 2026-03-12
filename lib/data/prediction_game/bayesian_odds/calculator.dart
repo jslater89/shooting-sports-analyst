@@ -100,7 +100,8 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   }
 
 
-  double minimumThreshold = priorPrediction - (3 * priorStandardDeviation);
+  double percentMinimumThreshold = priorPrediction - (3 * priorStandardDeviation);
+  double placeMaximumThreshold = priorPrediction + (3 * priorStandardDeviation);
   // Calculate the weights and model probabilities for each wager.
   List<BayesianOddsWager> invalidWagers = [];
   for(var wager in wagers) {
@@ -109,15 +110,15 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
 
     // If a wager is substantially below the prior prediction, give it a very low weight.
     if(type == DbPredictionType.percentage) {
-      if(wager.prediction.percentage! < minimumThreshold) {
-        logBuffer.writeln("Wager ${wager.prediction.toString()} is below threhold ${minimumThreshold.asPercentage(decimals: 2, includePercent: true)}");
+      if(wager.prediction.percentage! < percentMinimumThreshold) {
+        logBuffer.writeln("Wager ${wager.prediction.toString()} is below threhold ${percentMinimumThreshold.asPercentage(decimals: 2, includePercent: true)}");
         invalidWagers.add(wager);
         continue;
       }
     }
     else if(type == DbPredictionType.place) {
-      if(wager.prediction.bestPlace! < minimumThreshold) {
-        logBuffer.writeln("Wager ${wager.prediction.toString()} is below threhold ${minimumThreshold.asPercentage(decimals: 2, includePercent: true)}");
+      if(wager.prediction.bestPlace! > placeMaximumThreshold) {
+        logBuffer.writeln("Wager ${wager.prediction.toString()} is above threshold $placeMaximumThreshold");
         invalidWagers.add(wager);
         continue;
       }
