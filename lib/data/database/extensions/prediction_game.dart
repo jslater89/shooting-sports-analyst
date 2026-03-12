@@ -726,8 +726,8 @@ class PredictionLeaderboardEntry {
         if(closedWagers.isEmpty) {
           return 0.0;
         }
-        final actualAccuracy = wonWagers.length / closedWagers.length;
-        final expectedAccuracy = closedWagers.map((w) => w.wagerProbability.probability).average;
+        final actualAccuracy = wonWagers.length;
+        final expectedAccuracy = closedWagers.map((w) => w.wagerProbability.rawProbability).sum;
         return actualAccuracy / expectedAccuracy;
 
       case LeaderboardSortMode.averageOdds:
