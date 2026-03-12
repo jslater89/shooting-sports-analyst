@@ -113,25 +113,26 @@ class PredictionProbability {
 
     var placePredictions = predictions.where((prediction) => prediction is PlacePrediction).map((prediction) => prediction as PlacePrediction).toList();
     var fullness = Parlay.parlayFillProportion(placePredictions).clamp(0.0, 1.0);
-    var legCount = predictions.length;
+    // var legCount = predictions.length;
 
     // For parlays more than 75% full, decrease the probability by between 0% and 25%.
     // Probability is our estimate that the parlay is correct, so we decrease it to make
     // the payout higher.
-    if(fullness > 0.75) {
-      parlayProbability *= (1 - (0.25 * (fullness - 0.75)));
-    }
+    // if(fullness > 0.75) {
+    //   parlayProbability *= (1 - (0.25 * (fullness - 0.75)));
+    // }
+
     // For parlays less than 50% full, increase the probability by between 0% and 25%.
     // This reduces the payout for easy parlays.
-    else if(fullness < 0.50) {
+    if(fullness < 0.50) {
       parlayProbability *= (1 + (0.25 * (0.50 - fullness)));
     }
 
     // For parlays with more than 5 legs, decrease the probability by 2% per leg, capped
     // at 10 legs.
-    if(legCount > 5) {
-      parlayProbability *= (1 - (0.02 * (min(legCount, 10) - 5)));
-    }
+    // if(legCount > 5) {
+    //   parlayProbability *= (1 - (0.02 * (min(legCount, 10) - 5)));
+    // }
 
     return PredictionProbability(parlayProbability,
       houseEdge: houseEdge!,
