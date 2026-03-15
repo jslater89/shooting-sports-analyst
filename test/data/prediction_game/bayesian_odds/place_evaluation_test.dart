@@ -75,7 +75,7 @@ void main() {
       final p025 = wager1st.evaluatePlaceAgainstSimulation(delta: 0.25, monteCarlo: monteCarlo);
       final p05 = wager1st.evaluatePlaceAgainstSimulation(delta: 0.5, monteCarlo: monteCarlo);
 
-      // At delta=0.25, place-2 trials have s=1.75; upper ramp (2 - 1.75)/0.5 = 0.5 each.
+      // At delta=0.25, place-2 trials have s=1.75; ramp t=0.5, smoothstep(0.5)=0.5.
       final expectedP025 = (1558 + 10671 * 0.5) / n;
       expect(p025, closeTo(expectedP025, 1e-6));
       expect(p0, lessThan(p025));
@@ -159,31 +159,31 @@ void main() {
   });
 
   group("place_evaluation module — placeRangeContribution", () {
-    test("1st: plateau [0.5, 1.5], upper ramp only", () {
+    test("1st: plateau [0.5, 1.5], upper ramp only (smoothstep)", () {
       expect(placeRangeContribution(0.5, 1, 1), equals(1.0));
       expect(placeRangeContribution(1.0, 1, 1), equals(1.0));
       expect(placeRangeContribution(1.5, 1, 1), equals(1.0));
-      expect(placeRangeContribution(1.8, 1, 1), closeTo(0.4, 1e-10)); // (2 - 1.8)/0.5
+      expect(placeRangeContribution(1.8, 1, 1), closeTo(0.352, 1e-10)); // t=0.4, smoothstep(0.4)
       expect(placeRangeContribution(2.0, 1, 1), equals(0.0));
       expect(placeRangeContribution(2.5, 1, 1), equals(0.0));
     });
 
-    test("2nd: lower ramp [1, 1.5], plateau [1.5, 2.5], upper ramp [2.5, 3]", () {
+    test("2nd: lower ramp [1, 1.5], plateau [1.5, 2.5], upper ramp [2.5, 3] (smoothstep)", () {
       expect(placeRangeContribution(0.9, 2, 2), equals(0.0)); // below L-1
-      expect(placeRangeContribution(1.0, 2, 2), equals(0.0)); // (1 - 1)/0.5
-      expect(placeRangeContribution(1.25, 2, 2), closeTo(0.5, 1e-10)); // (1.25 - 1)/0.5
+      expect(placeRangeContribution(1.0, 2, 2), equals(0.0)); // t=0
+      expect(placeRangeContribution(1.25, 2, 2), closeTo(0.5, 1e-10)); // t=0.5, smoothstep(0.5)=0.5
       expect(placeRangeContribution(1.5, 2, 2), equals(1.0)); // plateau
       expect(placeRangeContribution(2.0, 2, 2), equals(1.0));
       expect(placeRangeContribution(2.5, 2, 2), equals(1.0));
-      expect(placeRangeContribution(2.75, 2, 2), closeTo(0.5, 1e-10)); // (3 - 2.75)/0.5
+      expect(placeRangeContribution(2.75, 2, 2), closeTo(0.5, 1e-10)); // t=0.5
       expect(placeRangeContribution(3.0, 2, 2), equals(0.0));
     });
 
-    test("lower edge ramp: trial at place 2 as delta increases past 0.5", () {
-      // s = 2 - delta. Delta 0.5 -> s=1.5 (plateau). Delta 0.6 -> s=1.4 (ramp). Delta 1.0 -> s=1.0 (ramp start).
+    test("lower edge ramp: trial at place 2 as delta increases past 0.5 (smoothstep)", () {
+      // s = 2 - delta. Delta 0.5 -> s=1.5 (plateau). Delta 0.6 -> s=1.4 (ramp t=0.8). Delta 1.0 -> s=1.0 (ramp start).
       expect(placeRangeContribution(placeShifted(2, 0.5), 2, 2), equals(1.0));
-      expect(placeRangeContribution(placeShifted(2, 0.6), 2, 2), closeTo(0.8, 1e-10)); // s=1.4, (1.4-1)/0.5
-      expect(placeRangeContribution(placeShifted(2, 0.75), 2, 2), closeTo(0.5, 1e-10)); // s=1.25
+      expect(placeRangeContribution(placeShifted(2, 0.6), 2, 2), closeTo(0.896, 1e-10)); // s=1.4, t=0.8, smoothstep(0.8)
+      expect(placeRangeContribution(placeShifted(2, 0.75), 2, 2), closeTo(0.5, 1e-10)); // s=1.25, t=0.5
       expect(placeRangeContribution(placeShifted(2, 1.0), 2, 2), equals(0.0)); // s=1.0
     });
   });
@@ -198,7 +198,7 @@ void main() {
       final p10 = wager2nd.evaluatePlaceAgainstSimulation(delta: 1.0, monteCarlo: monteCarlo);
 
       expect(p05, equals(1.0));
-      expect(p06, closeTo(0.8, 1e-10));
+      expect(p06, closeTo(0.896, 1e-10)); // s=1.4, smoothstep(0.8)
       expect(p10, equals(0.0));
     });
   });

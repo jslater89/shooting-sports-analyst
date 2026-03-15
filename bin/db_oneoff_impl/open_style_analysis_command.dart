@@ -169,9 +169,9 @@ class OpenStyleAnalysisCommand extends DbOneoffCommand {
 
     // Dump crossover data to CSV
     var csv = StringBuffer();
-    csv.writeln("Open Member Number,Open Name,Open Alpha Percentage,Open Charlie Percentage,Open Other Percentage,Open Length,Carry Optics Member Number,Carry Optics Name,Carry Optics Alpha Percentage,Carry Optics Charlie Percentage,Carry Optics Other Percentage,Carry Optics Length");
+    csv.writeln("Open Member Number,Open Name,Open Rating,Open Alpha Percentage,Open Charlie Percentage,Open Other Percentage,Open Length,Carry Optics Member Number,Carry Optics Name,Carry Optics Rating,Carry Optics Alpha Percentage,Carry Optics Charlie Percentage,Carry Optics Other Percentage,Carry Optics Length");
     for(var competitor in crossoverCompetitors) {
-      csv.writeln("${competitor.openRating.memberNumber},\"${competitor.openRating.name}\",${competitor.openAlphaPercentage},${competitor.openCharliePercentage},${competitor.openOtherPercentage},${competitor.openRating.length},${competitor.coRating.memberNumber},\"${competitor.coRating.name}\",${competitor.coAlphaPercentage},${competitor.coCharliePercentage},${competitor.coOtherPercentage},${competitor.coRating.length }");
+      csv.writeln("${competitor.openRating.memberNumber},\"${competitor.openRating.name}\",${competitor.openRating.formattedRating()},${competitor.openAlphaPercentage},${competitor.openCharliePercentage},${competitor.openOtherPercentage},${competitor.openRating.length},${competitor.coRating.memberNumber},\"${competitor.coRating.name}\",${competitor.coRating.formattedRating()},${competitor.coAlphaPercentage},${competitor.coCharliePercentage},${competitor.coOtherPercentage},${competitor.coRating.length }");
     }
     var file = File("/tmp/crossover_data.csv");
     file.writeAsStringSync(csv.toString());
