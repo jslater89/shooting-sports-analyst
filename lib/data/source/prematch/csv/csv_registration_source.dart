@@ -95,6 +95,7 @@ class CSVRegistrationSource implements FutureMatchSource {
     bool hasSquad = headerMap.containsKey(_RegistrationField.squad);
     bool hasEntryId = headerMap.containsKey(_RegistrationField.entryId);
     bool hasClassification = headerMap.containsKey(_RegistrationField.classification);
+    bool hasApprovalStatus = headerMap.containsKey(_RegistrationField.approvalStatus);
 
     if(!hasName) {
       _log.w("CSV file has no name fields");
@@ -116,6 +117,13 @@ class CSVRegistrationSource implements FutureMatchSource {
       final firstName = fields[headerMap[_RegistrationField.firstName]!];
       final lastName = fields[headerMap[_RegistrationField.lastName]!];
       final division = fields[headerMap[_RegistrationField.division]!];
+
+      if(hasApprovalStatus) {
+        final approvalStatus = fields[headerMap[_RegistrationField.approvalStatus]!].toLowerCase();
+        if(!approvalStatus.contains("approved")) {
+          continue;
+        }
+      }
 
 
       String? memberNumber;
@@ -176,7 +184,8 @@ enum _RegistrationField {
   classification(["classification", "class"]),
   memberNumber(["member number", "member #", "uspsa member number"]),
   squad(["squad"]),
-  entryId(["entry id", "id", "entry #"]);
+  entryId(["entry id", "id", "entry #"]),
+  approvalStatus(["approval status", "approved"]);
 
   final List<String> columnNames;
 
