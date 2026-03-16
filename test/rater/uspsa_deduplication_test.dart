@@ -26,6 +26,8 @@ import 'package:uuid/uuid.dart';
 
 void main() async {
   FlutterOrNative.debugModeProvider = ServerDebugProvider();
+  FlutterOrNative.isolateModeProvider = ServerDebugProvider(isMultiIsolate: false);
+
   var db = AnalystDatabase.test();
   var ratingGroup = uspsaSport.builtinRatingGroupsProvider!.divisionRatingGroups.firstWhere((e) => e.name == "Open");
 
