@@ -32,6 +32,16 @@ import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("BayesianWagerUpdater");
 
+/// Whether to exclude wagers that are similar to the incoming wager.
+///
+/// Should always be true for release builds.
+const _excludeWagers = true;
+
+/// Whether to use the cache for Bayesian delta calculations.
+///
+/// Should always be true for release builds.
+const _useCache = true;
+
 class BayesianWagerUpdater {
   final db = AnalystDatabase();
 
@@ -308,23 +318,25 @@ class BayesianWagerUpdater {
     List<DbWager> excludedWagers = [];
     // If the bettor has prior wagers for the given subject, we exclude them from the calculation
     // when they are sufficiently dissimilar to the current prediction.
-    for(var wager in wagersForSubject) {
-      if(wager.user.value?.id == bettor.id) {
-        // The prior wager was made by the bettor.
+    if(_excludeWagers) {
+      for(var wager in wagersForSubject) {
+        if(wager.user.value?.id == bettor.id) {
+          // The prior wager was made by the bettor.
 
-        if(!_wagersAreSimilar(
-          incomingWager: incomingWager,
-          wager: wager,
-          modelPlace: modelPlace,
-          subject: subjectRating,
-        )) {
-          _log.v("Current player's prior wager ${wager.descriptiveString} excluded for conflict with incoming wager ${incomingWager.descriptiveString}");
-          excludedWagers.add(wager);
+          if(!_wagersAreSimilar(
+            incomingWager: incomingWager,
+            wager: wager,
+            modelPlace: modelPlace,
+            subject: subjectRating,
+          )) {
+            _log.v("Current player's prior wager ${wager.descriptiveString} excluded for conflict with incoming wager ${incomingWager.descriptiveString}");
+            excludedWagers.add(wager);
+          }
         }
       }
     }
 
-    if(cachedDelta != null) {
+    if(_useCache && cachedDelta != null) {
       if(excludedWagers.isEmpty) {
         return _DeltaResult(delta: cachedDelta.delta, betWeights: cachedDelta.betWeights);
       }

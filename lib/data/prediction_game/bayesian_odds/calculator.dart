@@ -1,4 +1,5 @@
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -10,6 +11,9 @@ import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager_similarity.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+const bool _kCaptureErrorCurveForPlot = false;
+const int _kErrorCurvePlotSteps = 1000;
 
 /// A calculation function for Bayesian odds adjustment, set up to be runnable
 /// with [Isolate.run] (i.e. including only objects that can be sent over
@@ -198,6 +202,27 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   final double gridStep = type == DbPredictionType.place ? placeGridStep : percentageGridStep;
   final int gridDecimals = type == DbPredictionType.place ? 2 : 4;
 
+  if(_kCaptureErrorCurveForPlot) {
+    final points = <({double delta, double objective})>[];
+    final stepDivisor = (_kErrorCurvePlotSteps - 1).clamp(1, 0x7FFFFFFF);
+    for(var i = 0; i < _kErrorCurvePlotSteps; i++) {
+      final delta = searchLo + (searchHi - searchLo) * i / stepDivisor;
+      final obj = _totalObjective(
+        delta: delta,
+        wagers: wagers,
+        type: type,
+        subjectMonteCarlo: subjectMonteCarlo,
+        weight: weight,
+        pPosterior: pPosterior,
+      );
+      points.add((delta: delta, objective: obj));
+    }
+    final path = "/tmp/bayesian_odds_error_curve_${(DateTime.now().millisecondsSinceEpoch ~/ 1000)}.csv";
+    final lines = ["delta,objective", ...points.map((p) => "${p.delta},${p.objective}")];
+    File(path).writeAsStringSync(lines.join("\n"));
+    logBuffer.writeln("Error curve written to $path (${points.length} points)");
+  }
+
   // Search from lo to hi in steps of gridStep, recording local minima and maxima.
   double bestGridDelta = searchLo;
   double bestGridObjective = _totalObjective(
@@ -209,8 +234,8 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     pPosterior: pPosterior,
   );
 
-  final localMinima = <(double delta, double objective)>[];
-  final localMaxima = <(double delta, double objective)>[];
+  final localMinima = <({double delta, double objective})>[];
+  final localMaxima = <({double delta, double objective})>[];
 
   double? prevPrevObj;
   double prevDelta = searchLo;
@@ -233,10 +258,10 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     // than or greater than both n and n-2.
     if(prevPrevObj != null) {
       if(prevPrevObj > prevObj && prevObj < obj) {
-        localMinima.add((prevDelta, prevObj));
+        localMinima.add((delta: prevDelta, objective: prevObj));
       }
       else if(prevPrevObj < prevObj && prevObj > obj) {
-        localMaxima.add((prevDelta, prevObj));
+        localMaxima.add((delta: prevDelta, objective: prevObj));
       }
     }
     prevPrevObj = prevObj;
@@ -245,12 +270,10 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
   }
 
   for(var minimum in localMinima) {
-    final (delta, objective) = minimum;
-    logBuffer.writeln("Grid local minimum at delta = ${delta.toStringAsFixed(gridDecimals)}, objective = ${objective.toStringAsFixed(6)}");
+    logBuffer.writeln("Grid local minimum at delta = ${minimum.delta.toStringAsFixed(gridDecimals)}, objective = ${minimum.objective.toStringAsFixed(6)}");
   }
   for(var maximum in localMaxima) {
-    final (delta, objective) = maximum;
-    logBuffer.writeln("Grid local maximum at delta = ${delta.toStringAsFixed(gridDecimals)}, objective = ${objective.toStringAsFixed(6)}");
+    logBuffer.writeln("Grid local maximum at delta = ${maximum.delta.toStringAsFixed(gridDecimals)}, objective = ${maximum.objective.toStringAsFixed(6)}");
   }
   logBuffer.writeln("Best grid point: delta = ${bestGridDelta.toStringAsFixed(gridDecimals)}, objective = ${bestGridObjective.toStringAsFixed(6)}");
 
