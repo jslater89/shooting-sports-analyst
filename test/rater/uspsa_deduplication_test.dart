@@ -1200,6 +1200,7 @@ Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject
       rating: 1000,
       memberNumber: competitor.memberNumber,
       female: competitor.female,
+      email: competitor.email,
       error: 0,
       connectivity: 0,
       rawConnectivity: 0,

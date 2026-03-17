@@ -308,6 +308,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required this.connectivity,
     required this.firstSeen,
     required this.lastSeen,
+    required super.email,
   }) : this._firstName = firstName,
        this._lastName = lastName,
        super(firstName: firstName, lastName: lastName);
@@ -326,6 +327,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
     DateTime? lastSeen,
     int doubleDataLength = 0,
     int intDataLength = 0,
+    super.email,
   }) :
         this._firstName = firstName,
         this._lastName = lastName,

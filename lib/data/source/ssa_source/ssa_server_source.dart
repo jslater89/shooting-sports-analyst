@@ -118,7 +118,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
     if(!canUpload) {
       return MatchSourceError.noCredentials;
     }
-    var miff = MiffExporter().exportMatch(match);
+    var miff = MiffExporter(includeEmails: true).exportMatch(match);
     if(miff.isErr()) {
       return FormatError(miff.unwrapErr());
     }

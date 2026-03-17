@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -70,6 +71,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
 
     // --- Parse groups, slots, and lady slots ---
     final bool ladySlots = (config["ladySlots"] as bool?) ?? false;
+    final bool multipleDivisionRatingQualification = (config["multipleDivisionRatingQualification"] as bool?) ?? false;
 
     final Map<dynamic, dynamic> rawSlotsByGroup =
         (config["slotsByGroup"] as Map?) ?? {};
@@ -329,6 +331,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
             invitations: invitations,
             invitationsByGroup: invitationsByGroup,
             ladyInvitationsByGroup: ladyInvitatations,
+            multipleDivisionRatingQualification: multipleDivisionRatingQualification,
           );
           console.print("Added $ratingsAdded lady invites for group ${group.name}");
           console.print("Remaining required invites: ${maximumSlotsByGroup[group]! - filledSlotsByGroup[group]!}");
@@ -349,6 +352,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
         invitations: invitations,
         invitationsByGroup: invitationsByGroup,
         ladyInvitationsByGroup: ladyInvitatations,
+        multipleDivisionRatingQualification: multipleDivisionRatingQualification,
       );
       console.print("Added $ratingsAdded invites for group ${group.name}");
 
@@ -472,7 +476,14 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
     final csv = lines.join("\n");
     final file = File("/tmp/invitations.csv");
     file.writeAsStringSync(csv);
-    console.print("Invitations written to ${file.path}");
+
+    List<dynamic> jsonInvitations = invitations.map((i) => i.toJson()).toList();
+    final encoder = JsonEncoder.withIndent("  ");
+    final json = encoder.convert(jsonInvitations);
+    final jsonFile = File("/tmp/invitations.json");
+    jsonFile.writeAsStringSync(json);
+
+    console.print("Invitations written to ${file.path} and ${jsonFile.path}");
   }
 
   RatingGroup? findGroup(List<RatingGroup> allGroups, String key) {
@@ -616,6 +627,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
     required List<Invitation> invitations,
     required Map<RatingGroup, List<Invitation>> invitationsByGroup,
     required Map<RatingGroup, List<Invitation>> ladyInvitationsByGroup,
+    required bool multipleDivisionRatingQualification,
   }) {
     var ratingsList = [...ratings];
     ratingsList.retainWhere((r) {
@@ -632,6 +644,11 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
         final existingInvitation = invitationsByMemberNumber[number];
         if(existingInvitation != null) {
           foundExistingInvitation = true;
+
+          if(multipleDivisionRatingQualification) {
+            existingInvitation.groups.addIfMissing(group);
+            existingInvitation.earnedByRatings.addIfMissing(group);
+          }
           break;
         }
       }
@@ -640,6 +657,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
       }
 
       var invitation = Invitation(groups: [group], rating: ratingSystem.wrapDbRating(rating), fallbackSlot: false, reservedSlot: lady);
+      invitation.earnedByRatings.add(group);
       invitations.add(invitation);
       invitationsByGroup.addToList(group, invitation);
       filledSlotsByGroup.increment(group);
@@ -779,6 +797,7 @@ class Invitation {
   final List<RelativeMatchScore> relativeMatchScores;
   final List<ShootingMatch> earnedAtMatches;
   final List<InvitationMatch> matchCriteria;
+  final List<RatingGroup> earnedByRatings = [];
   bool fallbackSlot;
   bool reservedSlot;
 
@@ -791,6 +810,24 @@ class Invitation {
     required this.fallbackSlot,
     required this.reservedSlot,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      "memberNumber": rating.memberNumber,
+      "name": rating.name,
+      "groups": groups.map((g) => g.name).toList(),
+      "rating": rating.formattedRating(),
+      "matchInvitations": earnedAtMatches.mapIndexed((i, match) => {
+        "matchName": match.name,
+        "matchDate": programmerYmdFormat.format(match.date),
+        "group": relativeMatchScores[i].shooter.division?.name,
+        "place": relativeMatchScores[i].place,
+        "ratio": relativeMatchScores[i].ratio.asPercentage(),
+        "matchCriterion": matchCriteria[i].toJson(),
+      }).toList(),
+      "ratingInvitations": earnedByRatings.map((g) => g.name).toList(),
+    };
+  }
 }
 
 class InvitationMatch {
@@ -967,6 +1004,34 @@ class InvitationMatch {
         return scores.values.toList();
       }
     }
+  }
+
+  Map<String, dynamic> toJson() {
+    String type;
+    if(either) {
+      type = "either";
+    }
+    else if(both) {
+      type = "both";
+    }
+    else if(topN != null) {
+      type = "topN";
+    }
+    else if(aboveNPercent != null) {
+      type = "aboveNPercent";
+    }
+    else {
+      type = "unknown";
+    }
+    return {
+      "namePattern": namePattern.pattern,
+      "afterDate": afterDate != null ? programmerYmdFormat.format(afterDate!) : null,
+      "topN": topN,
+      "aboveNPercent": aboveNPercent,
+      "minimumCompetitors": minimumCompetitors,
+      "priority": priority,
+      "type": type,
+    };
   }
 }
 

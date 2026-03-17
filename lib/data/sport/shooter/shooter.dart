@@ -16,6 +16,12 @@ class Shooter {
 
   String _memberNumber = "";
 
+  /// The shooter's email address, if available.
+  String? email;
+
+  @ignore
+  bool get hasEmail => email != null && email!.isNotEmpty;
+
   @Index()
   /// The first member number this shooter appeared with, normalized to capitalized
   /// letter and number format.
@@ -93,6 +99,7 @@ class Shooter {
     this.regionSubdivision,
     this.rawLocation,
     this.female = false,
+    this.email,
     this.ageCategory,
     this.categories = const [],
   }) {
@@ -117,6 +124,7 @@ class Shooter {
   void copyVitalsFrom(Shooter other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
+    this.email = other.email;
     this._memberNumber = other._memberNumber;
     this.originalMemberNumber = other.originalMemberNumber;
     this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
@@ -179,6 +187,7 @@ class MatchEntry extends Shooter {
   MatchEntry({
     required super.firstName,
     required super.lastName,
+    super.email,
     super.memberNumber,
     super.ageCategory,
     super.categories,

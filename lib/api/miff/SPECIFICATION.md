@@ -1,6 +1,6 @@
 # Match Interchange File Format (MIFF) Specification
 
-## Version 1.2
+## Version 1.3
 
 The Match Interchange File Format (`.miff` or `.miff.gz`) is an open standard for exchanging match score data across platforms and applications in practical shooting sports. This format uses JSON as its underlying data structure, compressed with gzip for efficient storage and transfer. The format is designed to be compact, easily parseable, and self-describing.
 
@@ -11,7 +11,7 @@ MIFF files are gzip-compressed JSON documents. When decompressed, the JSON has t
 ```json
 {
   "format": "miff",
-  "version": "1.2",
+  "version": "1.3",
   "match": { ... }
 }
 ```
@@ -190,6 +190,7 @@ Represents a competitor's entry in the match.
 | `firstName` | string | Yes | First name |
 | `lastName` | string | Yes | Last name |
 | `memberNumber` | string | Yes | Member number |
+| `email` | string | No | Shooter contact email address, if provided by the source data. Producers may omit this field for privacy. |
 | `originalMemberNumber` | string | No | Original member number from source |
 | `knownMemberNumbers` | array[string] | No | Other member numbers this shooter is known by |
 | `female` | boolean | No | Whether shooter is female (default: false) |
@@ -367,7 +368,7 @@ This indicates a score where the total points and/or final time are directly spe
 ```json
 {
   "format": "miff",
-  "version": "1.2",
+  "version": "1.3",
   "match": {
     "name": "2024 Area 4 Championship",
     "date": "2024-05-15",
@@ -431,7 +432,7 @@ This example shows a stage with variable X-ring events (common in ICORE):
 ```json
 {
   "format": "miff",
-  "version": "1.2",
+  "version": "1.3",
   "match": {
     "name": "2024 ICORE Regional",
     "date": "2024-06-10",
@@ -484,7 +485,7 @@ This example shows a shooter with a score that has been edited, with the previou
 ```json
 {
   "format": "miff",
-  "version": "1.2",
+  "version": "1.3",
   "match": {
     "name": "2024 Local Match",
     "date": "2024-06-01",
@@ -530,11 +531,13 @@ In this example, the shooter's score on stage 1 was originally 12.67 seconds wit
 ## Versioning
 
 The format version is specified in the `version` field. This specification describes version 1.2.
+This specification describes version 1.3.
 
 The specification version number uses two-place semantic versioning. Changes to the minor version
 number (the second element) will always be backward compatible, such that a 1.0 parser will always
 be able to successfully parse any 1.x file (at the cost of losing information added in newer
-versions).
+versions). Version 1.3 adds an optional `email` field on the Shooter Object; parsers that ignore
+unknown fields remain valid 1.x parsers.
 
 Parsers should:
 - Ignore unknown fields

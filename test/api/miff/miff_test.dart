@@ -13,9 +13,11 @@ import "package:shooting_sports_analyst/api/miff/impl/miff_importer.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_validator.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
+import "package:shooting_sports_analyst/data/sport/builtins/registry.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
+import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/flutter_native_providers.dart";
 import "package:shooting_sports_analyst/server/providers.dart";
 
@@ -114,10 +116,10 @@ void main() {
       }
     });
 
-    test("Import and export preserve shooter categories", () async {
+    test("Import and export preserve shooter categories and email", () async {
       var minimalMiffJson = {
         "format": "miff",
-        "version": "1.2",
+        "version": "1.3",
         "match": {
           "name": "Categories Test Match",
           "date": "2024-06-01",
@@ -135,6 +137,7 @@ void main() {
               "firstName": "Jane",
               "lastName": "Shooter",
               "memberNumber": "A99999",
+              "email": "jane.shooter@example.com",
               "powerFactor": "Major",
               "categories": ["Law Enforcement", "Military"],
               "scores": {
@@ -156,16 +159,71 @@ void main() {
       var importedMatch = importFromMiff(miffBytes);
       expect(importedMatch.shooters.length, equals(1));
       var shooter = importedMatch.shooters.first;
+      expect(shooter.email, equals("jane.shooter@example.com"));
       expect(shooter.categories.length, equals(2));
       expect(shooter.categories.map((c) => c.name).toList(), equals(["Law Enforcement", "Military"]));
 
-      var exportedBytes = await exportToMiff(importedMatch);
+      // Re-export with emails included and ensure they survive round-trip.
+      var exporterWithEmail = MiffExporter(includeEmails: true);
+      var exportedJson = exporterWithEmail.toJson(importedMatch);
+      var exportedBytes = gzip.encode(utf8.encode(jsonEncode(exportedJson)));
       var reimportedMatch = importFromMiff(exportedBytes);
       expect(reimportedMatch.shooters.length, equals(1));
+      expect(reimportedMatch.shooters.first.email, equals("jane.shooter@example.com"));
       expect(
         reimportedMatch.shooters.first.categories.map((c) => c.name).toList(),
         equals(["Law Enforcement", "Military"]),
       );
+    });
+
+    test("Exporter includeEmails flag controls email output", () async {
+      var sport = SportRegistry().availableSports.firstWhere((s) => s.type == SportType.uspsa);
+      var stage = MatchStage(
+        stageId: 1,
+        name: "Stage 1",
+        scoring: const HitFactorScoring(),
+      );
+      var shooter = MatchEntry(
+        entryId: 1,
+        firstName: "Email",
+        lastName: "Shooter",
+        memberNumber: "A12345",
+        email: "email.shooter@example.com",
+        powerFactor: sport.powerFactors.values.first,
+        scores: {
+          stage: RawScore(
+            scoring: const HitFactorScoring(),
+            rawTime: 10.0,
+            targetEvents: {},
+            penaltyEvents: {},
+          ),
+        },
+      );
+      var match = ShootingMatch(
+        name: "Email Export Test",
+        rawDate: "",
+        date: DateTime(2024, 6, 1),
+        endDate: null,
+        sourceLastUpdated: null,
+        stages: [stage],
+        sport: sport,
+        shooters: [shooter],
+        level: null,
+        sourceCode: "",
+        sourceIds: const [],
+        localBonusEvents: const [],
+        localPenaltyEvents: const [],
+      );
+
+      var exporterWithoutEmail = MiffExporter();
+      var jsonWithoutEmail = exporterWithoutEmail.toJson(match);
+      var shootersWithoutEmail = (jsonWithoutEmail["match"]["shooters"] as List).cast<Map<String, dynamic>>();
+      expect(shootersWithoutEmail.first.containsKey("email"), isFalse);
+
+      var exporterWithEmail = MiffExporter(includeEmails: true);
+      var jsonWithEmail = exporterWithEmail.toJson(match);
+      var shootersWithEmail = (jsonWithEmail["match"]["shooters"] as List).cast<Map<String, dynamic>>();
+      expect(shootersWithEmail.first["email"], equals("email.shooter@example.com"));
     });
 
     test("Validator: valid MIFF files pass validation", () async {
@@ -342,7 +400,7 @@ void main() {
       var validator = MiffValidator();
       var json = {
         "format": "miff",
-        "version": "1.2",
+        "version": "1.3",
         "match": {
           "name": "Test",
           "date": "2024-01-01",
@@ -401,7 +459,7 @@ void main() {
       };
       var jsonNotArray = {
         "format": "miff",
-        "version": "1.2",
+        "version": "1.3",
         "match": Map<String, dynamic>.from(baseMatch)
           ..["shooters"] = [
             {
@@ -427,7 +485,7 @@ void main() {
 
       var jsonElementNotString = {
         "format": "miff",
-        "version": "1.2",
+        "version": "1.3",
         "match": Map<String, dynamic>.from(baseMatch)
           ..["shooters"] = [
             {

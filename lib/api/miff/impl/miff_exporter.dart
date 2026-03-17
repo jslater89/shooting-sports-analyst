@@ -19,6 +19,14 @@ class MiffExporter implements AbstractMiffExporter {
   static const String mimeType = "application/x-miff";
   static const String compressedMimeType = "application/x-miff+gzip";
 
+  /// Whether to include shooter email addresses in exported MIFF.
+  ///
+  /// Defaults to false for privacy; when false, email data is omitted even if
+  /// present on the underlying match entries.
+  final bool includeEmails;
+
+  MiffExporter({this.includeEmails = false});
+
   @override
   Result<List<int>, ResultErr> exportMatch(ShootingMatch match) {
     try {
@@ -82,7 +90,7 @@ class MiffExporter implements AbstractMiffExporter {
 
     return {
       "format": "miff",
-      "version": "1.2",
+      "version": "1.3",
       "match": matchJson,
     };
   }
@@ -206,6 +214,9 @@ class MiffExporter implements AbstractMiffExporter {
     }
     if (shooter.knownMemberNumbers.isNotEmpty) {
       shooterJson["knownMemberNumbers"] = shooter.knownMemberNumbers.toList();
+    }
+    if (includeEmails && shooter.email != null && shooter.email!.isNotEmpty) {
+      shooterJson["email"] = shooter.email;
     }
     if (shooter.female) {
       shooterJson["female"] = true;

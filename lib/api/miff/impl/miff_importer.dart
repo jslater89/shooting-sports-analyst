@@ -393,6 +393,7 @@ class MiffImporter implements AbstractMiffImporter {
         entryId: entryId,
         firstName: firstName,
         lastName: lastName,
+        email: json["email"] as String?,
         memberNumber: memberNumber,
         powerFactor: powerFactor,
         division: sport.hasDivisions ? sport.divisions.lookupByName(json["division"] as String?) : null,

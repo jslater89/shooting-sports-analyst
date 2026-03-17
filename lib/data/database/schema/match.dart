@@ -505,6 +505,7 @@ abstract class DbMatchEntryBase {
   List<String> knownMemberNumbers;
   String? region;
   String? regionSubdivision;
+  String? email;
   bool female;
   bool reentry;
   bool dq;
@@ -528,6 +529,7 @@ abstract class DbMatchEntryBase {
     this.knownMemberNumbers = const [],
     this.region,
     this.regionSubdivision,
+    this.email,
     this.female = false,
     this.dq = false,
     this.reentry = false,
@@ -571,6 +573,7 @@ class StandaloneDbMatchEntry extends DbMatchEntryBase {
     super.knownMemberNumbers,
     super.region,
     super.regionSubdivision,
+    super.email,
     super.female,
     super.dq,
     super.squad,
@@ -644,6 +647,7 @@ class DbMatchEntry extends DbMatchEntryBase {
     super.knownMemberNumbers,
     super.region,
     super.regionSubdivision,
+    super.email,
     super.female,
     super.dq,
     super.reentry,
@@ -668,6 +672,7 @@ class DbMatchEntry extends DbMatchEntryBase {
       knownMemberNumbers: entry.knownMemberNumbers.toList(),
       region: entry.region,
       regionSubdivision: entry.regionSubdivision,
+      email: entry.email,
       female: entry.female,
       dq: entry.dq,
       squad: entry.squad,
@@ -740,6 +745,7 @@ class DbMatchEntry extends DbMatchEntryBase {
       memberNumber: memberNumber,
       region: region,
       regionSubdivision: regionSubdivision,
+      email: email,
       female: female,
       dq: dq,
       squad: squad,
