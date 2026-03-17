@@ -325,6 +325,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   @override
   PredictionSettings get predictionSettings => PredictionSettings(
+    placeSigmaMultiplier: 1.75,
+    percentSigmaMultiplier: 1.75,
+    spreadSigmaMultiplier: 1.75,
     outputsAreRatios: true,
   );
 

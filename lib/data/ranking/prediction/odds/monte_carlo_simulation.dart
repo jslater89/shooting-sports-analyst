@@ -48,7 +48,14 @@ MonteCarloSimulationResult runOddsSimulation({
     // Random number between 0 and 0.5, used to multiply the output expected score.
     var disasterMagnitude = 1.0;
     if(actualRandom.nextDouble() < disasterChance) {
-      disasterMagnitude = actualRandom.nextDouble() * 0.50;
+      var coinFlip = actualRandom.nextDouble();
+      // Half the time it's a DQ or match DNF.
+      if(coinFlip < 0.5) {
+        disasterMagnitude = 0.0;
+      }
+      else {
+        disasterMagnitude = actualRandom.nextDouble() * 0.50;
+      }
     }
 
     // Generate a random expected score for this shooter using a normal distribution
@@ -70,9 +77,22 @@ MonteCarloSimulationResult runOddsSimulation({
     for (var otherPred in shootersToPredictions.values) {
       if (otherPred == shooterPrediction) continue;
 
-      var otherMean = otherPred.mean + otherPred.oneSigma * otherPred.ciOffset;
+      var otherDisasterMagnitude = 1.0;
+      if(actualRandom.nextDouble() < disasterChance) {
+        var coinFlip = actualRandom.nextDouble();
+        // Half the time it's a DQ or match DNF.
+        if(coinFlip < 0.5) {
+          otherDisasterMagnitude = 0.0;
+        }
+        else {
+          otherDisasterMagnitude = actualRandom.nextDouble() * 0.50;
+        }
+      }
+
+      final otherFinalSigma = otherPred.oneSigma * placeSigmaMultiplier;
+      var otherMean = otherPred.mean + otherFinalSigma * otherPred.ciOffset;
       var z = _nextDistributedValue(actualRandom, otherPred.ciOffset);
-      var otherExpectedScore = otherMean + otherPred.oneSigma * z;
+      var otherExpectedScore = otherMean + otherFinalSigma * z * otherDisasterMagnitude;
 
       otherExpectedScores.add(otherExpectedScore);
       if(otherExpectedScore > bestExpectedScore) {
@@ -87,6 +107,9 @@ MonteCarloSimulationResult runOddsSimulation({
       }
     }
     double shooterRatio;
+
+    // Keep the un-normalized shooter score for later use.
+    final rawShooterScore = shooterExpectedScore;
 
     // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
     if(shooterPrediction.algorithm.predictionsOutputRatios) {
@@ -110,7 +133,7 @@ MonteCarloSimulationResult runOddsSimulation({
     percentages.add(shooterRatio);
 
     // Count how many shooters have higher expected scores (higher score = better placement)
-    var betterCount = otherExpectedScores.where((score) => score > shooterExpectedScore).length;
+    var betterCount = otherExpectedScores.where((score) => score > rawShooterScore).length;
     var place = betterCount + 1;
 
     places.add(place);
