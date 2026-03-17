@@ -70,6 +70,7 @@ import 'db_oneoff_impl/finding_adrian_randle.dart';
 import 'db_oneoff_impl/lady_rating_analysis_command.dart';
 import 'db_oneoff_impl/fix_future_match_sport_names_command.dart';
 import 'db_oneoff_impl/open_style_analysis_command.dart';
+import 'db_oneoff_impl/generate_invitational_invites.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -107,6 +108,22 @@ Future<void> main(List<String> args) async {
         MenuArgumentValue<String>(argument: StringMenuArgument(label: "directory"), value: directory),
       ]);
     }
+    else if(command == "GI") {
+      if(args.length < 2) {
+        console.print("Usage: GI <config-path>");
+        return;
+      }
+      var configPath = args[1];
+      await GenerateInvitationalInvitesCommand(db).executor(
+        console,
+        [
+          MenuArgumentValue<String>(
+            argument: StringMenuArgument(label: "Config path"),
+            value: configPath,
+          ),
+        ],
+      );
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -118,6 +135,7 @@ Future<void> main(List<String> args) async {
     //MatchBumpGmsCommand(db),
     //DoesMyQueryWorkCommand(db),
     //Lady90PercentFinishesCommand(db),
+    GenerateInvitationalInvitesCommand(db),
     AnalyzeIcoreDumpCommand(db),
     ImportIcoreDumpCommand(db),
     //WinningPointsByDateCommand(db),

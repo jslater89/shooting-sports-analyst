@@ -133,10 +133,12 @@ extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {
 }
 
 extension AddIfMissing<T> on List<T> {
-  void addIfMissing(T value) {
+  bool addIfMissing(T value) {
     if(!this.contains(value)) {
       this.add(value);
+      return true;
     }
+    return false;
   }
 
   List<T> removeDuplicates() {

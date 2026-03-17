@@ -78,7 +78,7 @@ class RatingProjectSettings {
   /// entry will be used for rating updates. Use it so JJ doesn't get a huge Open boost from
   /// winning Open at Prod/PCC Nationals, or other similar cases.
   ///
-  /// Match IDs should be PracticalMatch.practiscoreId.
+  /// Match IDs should be a valid source ID for a match in the local database.
   Map<String, List<Division>> recognizedDivisions;
 
   RatingProjectSettings({
