@@ -124,7 +124,13 @@ class Shooter {
   void copyVitalsFrom(Shooter other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
-    this.email = other.email;
+
+    // Don't overwrite the email if this shooter has one and the other
+    // doesn't. Overwrite with the other shooter's email if both have
+    // an email.
+    if(!this.hasEmail || other.hasEmail) {
+      this.email = other.email;
+    }
     this._memberNumber = other._memberNumber;
     this.originalMemberNumber = other.originalMemberNumber;
     this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
