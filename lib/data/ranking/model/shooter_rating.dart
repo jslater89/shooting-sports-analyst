@@ -44,6 +44,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   String get lastName => wrappedRating.lastName;
   set lastName(String n) => wrappedRating.lastName = n;
 
+  String? get email => wrappedRating.email;
+  set email(String? e) => wrappedRating.email = e;
+  bool get hasEmail => wrappedRating.hasEmail;
+
   AgeCategory? get ageCategory => wrappedRating.ageCategory;
   set ageCategory(AgeCategory? c) => wrappedRating.ageCategory = c;
 

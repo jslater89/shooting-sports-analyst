@@ -72,6 +72,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
     // --- Parse groups, slots, and lady slots ---
     final bool ladySlots = (config["ladySlots"] as bool?) ?? false;
     final bool multipleDivisionRatingQualification = (config["multipleDivisionRatingQualification"] as bool?) ?? false;
+    final bool includeEmails = (config["includeEmails"] as bool?) ?? false;
 
     final Map<dynamic, dynamic> rawSlotsByGroup =
         (config["slotsByGroup"] as Map?) ?? {};
@@ -427,12 +428,21 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
 
     final lines = <String>[];
     final String header;
-    if(ladySlots) {
-      header = "Fallback,Lady,Reserved,Member#,Name,Group,Rating,MatchName,EarnedDate,EarnedPlace,EarnedPercent";
-    }
-    else {
-      header = "Fallback,Member#,Name,Group,Rating,MatchName,EarnedDate,EarnedPlace,EarnedPercent";
-    }
+    List<String> headers = [
+      "Fallback",
+      if(ladySlots) "Lady",
+      if(ladySlots) "Reserved",
+      "Member#",
+      "Name",
+      if(includeEmails) "Email",
+      "Group",
+      "Rating",
+      "MatchName",
+      "EarnedDate",
+      "EarnedPlace",
+      "EarnedPercent",
+    ];
+    header = headers.join(",");
     lines.add(header);
 
     // console.print(header);
@@ -455,6 +465,9 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
         }
         buffer.write("${invitation.rating.memberNumber},");
         buffer.write('"${invitation.rating.name}",');
+        if(includeEmails) {
+          buffer.write("${invitation.rating.email ?? ""},");
+        }
         buffer.write("${invitation.groups.map((g) => g.name).sorted().join("|")},");
         if(invitation.earnedAtMatches.isNotEmpty) {
           buffer.write("Match slot,");
@@ -815,14 +828,15 @@ class Invitation {
     return {
       "memberNumber": rating.memberNumber,
       "name": rating.name,
+      "email": rating.email ?? "",
       "groups": groups.map((g) => g.name).toList(),
-      "rating": rating.formattedRating(),
+      "rating": double.tryParse(rating.formattedRating()) ?? 0,
       "matchInvitations": earnedAtMatches.mapIndexed((i, match) => {
         "matchName": match.name,
         "matchDate": programmerYmdFormat.format(match.date),
         "group": relativeMatchScores[i].shooter.division?.name,
         "place": relativeMatchScores[i].place,
-        "ratio": relativeMatchScores[i].ratio.asPercentage(),
+        "percentage": double.tryParse(relativeMatchScores[i].ratio.asPercentage()) ?? 0,
         "matchCriterion": matchCriteria[i].toJson(),
       }).toList(),
       "ratingInvitations": earnedByRatings.map((g) => g.name).toList(),
