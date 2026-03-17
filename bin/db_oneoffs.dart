@@ -71,6 +71,7 @@ import 'db_oneoff_impl/lady_rating_analysis_command.dart';
 import 'db_oneoff_impl/fix_future_match_sport_names_command.dart';
 import 'db_oneoff_impl/open_style_analysis_command.dart';
 import 'db_oneoff_impl/generate_invitational_invites.dart';
+import 'db_oneoff_impl/long_shot_place_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -161,6 +162,7 @@ Future<void> main(List<String> args) async {
     // FixFutureMatchSportNamesCommand(db),
     OpenStyleAnalysisCommand(db),
     Glicko2RatingGapCommand(db),
+    LongShotPlaceCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
