@@ -25,6 +25,33 @@ class MatchPrepSquadding extends StatefulWidget {
   State<MatchPrepSquadding> createState() => _MatchPrepSquaddingState();
 }
 
+class _Schedule {
+  late final String prefix;
+  final int length;
+
+  _Schedule({required String prefix, required this.length}) :
+    // Assume all squads with a length of 1 are the same schedule (i.e. 1, 2, 3, etc.)
+    // Assume all squads with length > 1 use the first character of the squad name as the schedule prefix
+    // (e.g. 101, 102, 103; 201, 202, 203; etc.)
+    prefix = length > 1 ? prefix : "-";
+
+  @override
+  bool operator ==(Object other) {
+    if(other is _Schedule) {
+      return prefix == other.prefix && length == other.length;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => prefix.hashCode ^ length.hashCode;
+
+  @override
+  String toString() {
+    return "$prefix-$length";
+  }
+}
+
 class _MatchPrepSquaddingState extends State<MatchPrepSquadding> with AutomaticKeepAliveClientMixin{
   @override
   Widget build(BuildContext context) {
@@ -32,11 +59,13 @@ class _MatchPrepSquaddingState extends State<MatchPrepSquadding> with AutomaticK
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Consumer<MatchPrepPageModel>(
       builder: (context, model, child) {
-        Map<String, List<String>> squadsBySchedule = {};
+        Map<_Schedule, List<String>> squadsBySchedule = {};
         for(var squad in model.knownSquads) {
           if(squad.length > 0) {
             var schedule = squad.substring(0, 1);
-            squadsBySchedule.addToList(schedule, squad);
+            var length = squad.length;
+            var key = _Schedule(prefix: schedule, length: length);
+            squadsBySchedule.addToList(key, squad);
           }
         }
         final crossAxisCount = MediaQuery.of(context).size.width / (400 * uiScaleFactor);
@@ -77,7 +106,7 @@ class _MatchPrepSquaddingSchedule extends StatelessWidget {
     required this.model,
   });
 
-  final String schedule;
+  final _Schedule schedule;
   final List<String> squads;
   final int crossAxisCount;
   final MatchPrepPageModel model;

@@ -20,10 +20,24 @@ part 'algorithm_prediction.g.dart';
 
 /// A DbAlgorithmPrediction is a dehydrated [AlgorithmPrediction] for a particular shooter,
 /// prediction set, and rating project. The id is a synthesis of the project id, prediction set id,
-/// and the shooter's original member number.
+/// group uuid, and the shooter's original member number.
 @collection
 class DbAlgorithmPrediction with DbShooterRatingEntity {
-  Id get id => combineHashList64([projectId, predictionSetId, memberNumber.stableHash]);
+  Id get id {
+    if(groupUuid == null) {
+      return combineHashList64([
+        projectId,
+        predictionSetId,
+        memberNumber.stableHash]);
+    }
+    else {
+      return combineHashList64([
+        projectId,
+        predictionSetId,
+        groupUuid!.stableHash,
+        memberNumber.stableHash]);
+    }
+  }
 
   final project = IsarLink<DbRatingProject>();
 
@@ -32,6 +46,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
 
   @override
   final group = IsarLink<RatingGroup>();
+  final String? groupUuid;
 
   /// A member number that can locate the correct shooter rating for this prediction
   /// in [group].
@@ -87,6 +102,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   DbAlgorithmPrediction({
     required this.projectId,
     required this.predictionSetId,
+    required this.groupUuid,
     required this.mean,
     required this.oneSigma,
     required this.twoSigma,
@@ -102,6 +118,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   DbAlgorithmPrediction.fromHydrated(DbRatingProject project, PredictionSet predictionSet, AlgorithmPrediction prediction) :
     projectId = project.id,
     predictionSetId = predictionSet.id,
+    groupUuid = prediction.shooter.group.uuid,
     mean = prediction.mean,
     oneSigma = prediction.oneSigma,
     twoSigma = prediction.twoSigma,

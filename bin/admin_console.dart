@@ -14,7 +14,9 @@ import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/server_auth.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -162,11 +164,12 @@ enum _DatabaseMenuCommand implements MenuCommand {
   listRatingProjects("2", "List Rating Projects", execute: _printRatingProjectList),
   listPredictionGames("3", "List Prediction Games", execute: _printPredictionGames),
   dumpSessions("4", "Dump Sessions", execute: _dumpSessions),
-  setRatingContext("5", "Set Rating Context",
+  dumpGameDeltas("5", "Dump Game Deltas", execute: _dumpDeltas, arguments: [IntMenuArgument(label: "Game ID", required: true)]),
+  setRatingContext("6", "Set Rating Context",
     execute: _setRatingContext,
     arguments: [IntMenuArgument(label: "Project ID")]
   ),
-  printUsageStats("6", "Print Usage Stats", execute: _printDatabaseUsageStats),
+  printUsageStats("7", "Print Usage Stats", execute: _printDatabaseUsageStats),
   back("B", "Back");
 
   final String key;
@@ -264,6 +267,68 @@ Future<void> _dumpSessions(Console console, List<MenuArgumentValue> arguments) a
     ]);
   }
   console.write(sessionsTable.render());
+}
+
+Future<void> _dumpDeltas(Console console, List<MenuArgumentValue> arguments) async {
+  if(arguments.isEmpty) {
+    console.print("Game ID is required");
+    return;
+  }
+  var gameIdArg = arguments[0] as MenuArgumentValue<int>;
+  final gameId = gameIdArg.value;
+  final game = await _database.getPredictionGame(gameId);
+  if(game == null) {
+    console.print("Game not found");
+    return;
+  }
+
+  final db = AnalystDatabase();
+
+  final gm = PredictionGameManager(predictionGame: game);
+  final matchPreps = await gm.getMatchPreps(futureOnly: true, hasPredictionsOnly: true);
+
+  for(var matchPrep in matchPreps) {
+    console.print("Match Prep: ${matchPrep.futureMatch.value!.eventName} ${matchPrep.matchDate}");
+
+    final deltas = await _database.getBayesianDeltasForMatch(gameId, matchPrep);
+    DbShooterRating? lastRating;
+    for(var delta in deltas) {
+      final buf = StringBuffer();
+      final rating = delta.getShooterRatingSync(db);
+      if(lastRating?.id != rating?.id) {
+        lastRating = rating;
+        buf.write("\t");
+        buf.write(rating?.name);
+        buf.write(" - ");
+        buf.write(delta.group.value!.name);
+        buf.write(" - ");
+        buf.write(rating?.memberNumber);
+        buf.write("\n");
+      }
+      final predictionSetIdHash = delta.predictionSetId.toRadixString(16).substring(0, 8);
+      buf.write("\t\t");
+      buf.write(predictionSetIdHash);
+      buf.write(" - ");
+      buf.write(delta.type.name);
+      buf.write(" - ");
+      if(delta.type == DbPredictionType.percentage) {
+        buf.write(delta.delta.asPercentage(decimals: 2, includePercent: true));
+      }
+      else if(delta.type == DbPredictionType.place) {
+        buf.write(delta.delta.toStringAsFixed(2));
+      }
+      else if(delta.type == DbPredictionType.spread) {
+        buf.write("${delta.delta.asPercentage(decimals: 2, includePercent: true)}");
+      }
+      buf.write(" - ");
+      buf.write(programmerYmdHmFormat.format(delta.computedAt));
+      buf.write(" - ");
+      buf.write(delta.contributingWagerIds.length);
+      buf.write(" wagers");
+      console.print(buf.toString());
+    }
+    console.print("");
+  }
 }
 
 Future<void> _setRatingContext(Console console, List<MenuArgumentValue> arguments) async {
