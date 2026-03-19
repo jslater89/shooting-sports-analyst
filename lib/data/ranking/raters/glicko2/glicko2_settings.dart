@@ -21,6 +21,7 @@ class Glicko2Settings extends RaterSettings {
   static const _startingRDKey = "g2StartingRD";
   static const _maximumRatingDeltaKey = "g2MaximumRatingDelta";
   static const _scoreFunctionTypeKey = "g2ScoreFunctionType";
+  static const _logisticSteepnessKey = "g2LogisticSteepness";
   static const _perfectVictoryDifferenceKey = "g2PerfectVictoryDifference";
   static const _linearRegionKey = "g2LinearRegion";
   static const _marginOfVictoryInflationKey = "g2MarginOfVictoryInflation";
@@ -41,6 +42,7 @@ class Glicko2Settings extends RaterSettings {
     this.maximumRatingDelta = defaultMaximumRatingDelta,
     this.scoreFunctionType = ScoreFunctionType.linearMarginOfVictory,
     this.perfectVictoryDifference = defaultPerfectVictoryDifference,
+    this.logisticSteepness = defaultLogisticSteepness,
     this.eLinearRegion = defaultLinearRegion,
     this.marginOfVictoryInflation = defaultMarginOfVictoryInflation,
     this.maximumOpponentCountForNew = defaultMaximumOpponentCount,
@@ -70,6 +72,8 @@ class Glicko2Settings extends RaterSettings {
   static const defaultPerfectVictoryDifference = 0.25;
   /// The default linear region for the score function in predictions, measured in from 0 and 1.
   static const defaultLinearRegion = 0.125;
+  /// The default steepness of the logistic margin of victory score function.
+  static const defaultLogisticSteepness = 8.0;
   /// The default margin of victory inflation factor for predictions.
   static const defaultMarginOfVictoryInflation = 1.00;
   /// The default maximum number of opponents to consider when calculating rating updates for new players.
@@ -121,12 +125,19 @@ class Glicko2Settings extends RaterSettings {
   Glicko2ScoreFunction get scoreFunction => switch(scoreFunctionType) {
     ScoreFunctionType.allOrNothing => AllOrNothingScoreFunction(),
     ScoreFunctionType.linearMarginOfVictory => LinearMarginOfVictoryScoreFunction(perfectVictoryDifference: perfectVictoryDifference),
+    ScoreFunctionType.logisticMarginOfVictory => LogisticMarginOfVictoryScoreFunction(steepness: logisticSteepness),
   };
 
   /// The perfect victory difference for Glicko-2's linear margin of victory score function.
   double perfectVictoryDifference;
 
+  /// The steepness of the logistic margin of victory score function.
+  double logisticSteepness;
+
   /// The linear region for the expected score function in predictions, measured in from 0 and 1.
+  /// Linear region is used when predicting with the linear margin of victory score function, and
+  /// prevents predictions from being calculated for extreme rating differences where a difference
+  /// in E no longer represents a linear difference in expected percentage.
   ///
   /// e.g. 0.175 means the linear region is between 0.175 and 1 - 0.175 = 0.825.
   double eLinearRegion;
@@ -204,6 +215,7 @@ class Glicko2Settings extends RaterSettings {
     json[_maximumRatingDeltaKey] = maximumRatingDelta;
     json[_scoreFunctionTypeKey] = scoreFunctionType.name;
     json[_perfectVictoryDifferenceKey] = perfectVictoryDifference;
+    json[_logisticSteepnessKey] = logisticSteepness;
     json[_linearRegionKey] = eLinearRegion;
     json[_marginOfVictoryInflationKey] = marginOfVictoryInflation;
     json[_maximumOpponentCountForNewKey] = maximumOpponentCountForNew;
@@ -225,6 +237,7 @@ class Glicko2Settings extends RaterSettings {
     maximumRatingDelta = (json[_maximumRatingDeltaKey] ?? defaultMaximumRatingDelta) as double;
     scoreFunctionType = ScoreFunctionType.values.byName(json[_scoreFunctionTypeKey] ?? ScoreFunctionType.linearMarginOfVictory.name);
     perfectVictoryDifference = (json[_perfectVictoryDifferenceKey] ?? defaultPerfectVictoryDifference) as double;
+    logisticSteepness = (json[_logisticSteepnessKey] ?? defaultLogisticSteepness) as double;
     eLinearRegion = (json[_linearRegionKey] ?? defaultLinearRegion) as double;
     marginOfVictoryInflation = (json[_marginOfVictoryInflationKey] ?? defaultMarginOfVictoryInflation) as double;
     maximumOpponentCountForNew = (json[_maximumOpponentCountForNewKey] ?? defaultMaximumOpponentCount) as int;

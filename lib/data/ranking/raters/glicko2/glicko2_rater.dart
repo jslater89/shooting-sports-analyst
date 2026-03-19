@@ -321,7 +321,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   }
 
   @override
-  bool get supportsPrediction => settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory;
+  bool get supportsPrediction => settings.scoreFunction.reversible;
 
   @override
   PredictionSettings get predictionSettings => PredictionSettings(
@@ -812,7 +812,6 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // in the 0.1 case above, we get (1 - 0.9^3) for the way this is currently being used.
     final victoryMarginInflation = settings.marginOfVictoryInflation;
 
-    var scoreFunction = settings.scoreFunction as LinearMarginOfVictoryScoreFunction;
     if(priorExpectedPercentages == null) {
       priorExpectedPercentages = {};
     }
@@ -891,7 +890,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
             opponentRD: opponentRd,
             opponentRatio: opponentExpectedPercentage.centralValue,
             playerRatio: null, // not needed for this scenario
-            scoreFunction: scoreFunction,
+            scoreFunction: settings.scoreFunction,
             victoryMarginInflation: victoryMarginInflation,
             playerIsBetter: false,
           );
@@ -936,7 +935,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
               opponentRD: opponentRd,
               opponentRatio: opponentExpectedPercentage.centralValue,
               playerRatio: playerExpectedPercentage.centralValue,
-              scoreFunction: scoreFunction,
+              scoreFunction: settings.scoreFunction,
               victoryMarginInflation: victoryMarginInflation,
               playerIsBetter: true,
             );
@@ -1101,10 +1100,13 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     required double opponentRating,
     required double opponentRD,
     required double opponentRatio,
-    required LinearMarginOfVictoryScoreFunction scoreFunction,
+    required Glicko2ScoreFunction scoreFunction,
     required double victoryMarginInflation,
     required bool playerIsBetter,
   }) {
+    if(!scoreFunction.reversible) {
+      throw ArgumentError("Score function must be reversible");
+    }
     var volatilityFactor = lerpAroundCenter(
       value: playerVolatility,
       center: settings.initialVolatility,
@@ -1129,8 +1131,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     // The linear region of the E function outputs approximately 0.2 to 0.8.
-    // Outside that region, we can't calculate an expected percentage to reasonable accuracy.
-    if(expectedScore > (1 - settings.eLinearRegion) || expectedScore < settings.eLinearRegion) {
+    // Outside that region, we can't calculate an expected percentage to reasonable accuracy
+    // when using linear score functions.
+    if(scoreFunction.onlyReversibleInLinearE && (expectedScore > (1 - settings.eLinearRegion) || expectedScore < settings.eLinearRegion)) {
       return null;
     }
 

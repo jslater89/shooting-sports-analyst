@@ -158,6 +158,7 @@ class AnalystDatabase {
         maxSizeMiB: 1024 * 32,
         directory: db.path,
         name: test ? "test-database" : "database",
+        // compactOnLaunch: CompactCondition(minRatio: 1.5),
       );
     }
     on IsarError catch(e, stackTrace) {

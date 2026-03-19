@@ -737,7 +737,7 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 200 * uiScaleFactor,
+                width: 225 * uiScaleFactor,
                 child: InputDecorator(
                   decoration: InputDecoration(
                     isDense: true,
@@ -772,7 +772,7 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 200 * uiScaleFactor,
+                width: 225 * uiScaleFactor,
                 child: InputDecorator(
                   decoration: InputDecoration(
                     isDense: true,
