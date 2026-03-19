@@ -1,0 +1,304 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\geometry{a4paper, margin=1in}
+
+\title{A Latent Log-Ratio Model for Practical Shooting Ratings}
+\author{}
+\date{}
+
+\begin{document}
+	
+	\maketitle
+	
+	\begin{abstract}
+		Traditional rating systems like Elo and Glicko were designed for zero-sum, pairwise competitions (e.g., Chess). Applying them to practical shooting sports (USPSA, IDPA, ICORE) introduces severe structural friction. Practical shooting is massively multiplayer, with matches featuring dozens to hundreds of competitors simultaneously. Furthermore, it is continuous and non-zero-sum: margin of victory is defined by continuous, ratio-space percentages (derived from Hit Factor or Time-Plus scoring), not binary win/loss outcomes.
+		
+		While adaptations like extending Glicko-2 with logistic score functions improve predictions by smoothing the win-probability boundaries, they still suffer from information loss when mapping continuous performance margins through sigmoid functions, and from combinatorial explosion in match processing.
+		
+		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model translates multiplicative performance ratios into additive rating updates via a logarithmic transformation that eliminates the winner's-curse bias inherent in percentage scoring. It combines a linear-time match baseline with selective pairwise residual corrections, tracks per-competitor volatility via exponential moving averages, and uses innovation-based adaptive variance to prevent the monotonic certainty collapse common in basic Kalman filters. Predictions leverage the log-normal structure with analytical corrections for winner uncertainty.
+	\end{abstract}
+	
+	\section{Key Insights and Concepts}
+	
+	\subsection{The Multiplicative Nature of Scoring}
+	In practical shooting, true skill is fundamentally multiplicative, whether measured by Hit Factor (Points / Time) in USPSA, or total time in Time-Plus sports like IDPA and ICORE. If Competitor A takes 10 seconds to shoot a stage and Competitor B takes 20 seconds, Competitor A is twice as fast. On a longer stage, the times might be 20 seconds and 40 seconds; the absolute margin changes, but the $2\times$ ratio remains constant.
+	
+	\subsection{The ``Winner's Curse'' in Percentage Scoring}
+	Matches are scored as percentages of the top competitor's performance. Using these raw percentages injects the winner's variance into the entire field.
+	\begin{itemize}
+		\item \textbf{Hit Factor} (USPSA, where $P_i$ is a competitor's finish percentage in $(0.0 - 1.0)$): $S_i = \frac{P_i}{1.0}$
+		\item \textbf{Time-Plus} (IDPA/ICORE): $S_i = \frac{T_{min}}{T_i}$
+	\end{itemize}
+	If the match winner performs exceptionally well, every other competitor's percentage drops, mathematically suggesting the field performed poorly when they did not.
+	
+	\subsection{The Logarithmic Bridge}
+	By taking the natural logarithm of match percentages, we completely eliminate the winner's influence when comparing any two competitors. Because $\ln(a/b) = \ln(a) - \ln(b)$, the log-difference between two competitors becomes a pure measurement of their underlying performance ratio, regardless of the scoring format:
+	
+	For Hit Factor:
+	\begin{equation}
+		\ln(S_A) - \ln(S_B) = \ln\left(\frac{P_A}{1.0}\right) - \ln\left(\frac{P_B}{1.0}\right) = \ln\left(\frac{P_A}{P_B}\right)
+	\end{equation}
+	
+	For Time-Plus:
+	\begin{equation}
+		\ln(S_A) - \ln(S_B) = \ln\left(\frac{T_{min}}{T_A}\right) - \ln\left(\frac{T_{min}}{T_B}\right) = \ln\left(\frac{T_B}{T_A}\right)
+	\end{equation}
+	
+	In both cases, the anchor (the winner) vanishes.
+	
+	\subsection{Ratings as Expected Log-Ratios}
+	This cancellation property leads directly to the model's core identity. Since ratings $R_i$ represent expected log-performance, the difference between any two ratings is the expected log-ratio of their performances:
+	\begin{equation}
+		R_i - R_j = E[\ln(S_i) - \ln(S_j)] = E\!\left[\ln\!\left(\frac{S_i}{S_j}\right)\right]
+	\end{equation}
+	
+	Equivalently, the expected ratio of two competitors' performances is:
+	\begin{equation}
+		E\!\left[\frac{S_i}{S_j}\right] \approx \exp(R_i - R_j)
+	\end{equation}
+	
+	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. This relationship is exact in log space and carries through the entire update and prediction pipeline without distortion. No probability function, score function, or scaling parameter mediates between rating and performance---they are the same quantity in different representations.
+	
+	\section{System Architecture and Algorithm}
+	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space, augmented with a per-competitor volatility estimate.
+	
+	\subsection{State Representation}
+	Each competitor $i$ is defined by three variables:
+	\begin{itemize}
+		\item \textbf{$R_i$ (Rating):} The expected mean of their natural log performance. An average baseline competitor can be anchored at 0.
+		\item \textbf{$V_i$ (Variance):} The uncertainty in the rating. High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.
+		\item \textbf{$\sigma_i^2$ (Competitor Volatility):} A running estimate of how erratic the competitor's performances are. Tracks whether a competitor is consistent or prone to large swings. This is analogous to the volatility parameter in Glicko-2, but computed via an exponential moving average rather than an iterative root-finding algorithm.
+	\end{itemize}
+	
+	\subsection{System Parameters}
+	\begin{itemize}
+		\item \textbf{$\sigma_{sport}^2$ (Sport Volatility):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor. (This value will ordinarily grow substantially when considering individual stages vs. matches as the rating event.)
+		\item \textbf{$\sigma_{drift}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
+		\item \textbf{$\beta$ (Volatility Adaptation Rate):} Controls how quickly the per-competitor volatility $\sigma_i^2$ adapts to recent results. A value of 0.1--0.15 gives an effective lookback window of approximately 7--10 matches.
+		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
+		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
+	\end{itemize}
+	
+	\subsection{Match Processing Loop}
+	Matches are processed completely online (sequentially). The core baseline computation is $\mathcal{O}(N)$; the optional pairwise residual correction adds $\mathcal{O}(N \cdot k)$ where $k$ is the number of selected opponents per competitor (typically 20--30), yielding total complexity of $\mathcal{O}(N \cdot k)$.
+	
+	\textbf{Step 1: Calculate Log-Scores}\\
+	Floor match percentages at a minimal value (e.g., 0.01) to prevent undefined logarithms, then convert to log space:
+	\begin{equation}
+		L_i = \ln(S_i)
+	\end{equation}
+	
+	\textbf{Step 2: Calculate Competitor Weights}\\
+	Determine how much influence a competitor should have on establishing the match's difficulty. High-variance and high-volatility competitors have less influence:
+	\begin{equation}
+		W_i = \frac{1}{V_i + \sigma_{sport}^2 + \sigma_i^2}
+	\end{equation}
+	
+	\textbf{Step 3: Establish the Match Baseline ($B$)}\\
+	Calculate the latent difficulty of the match by comparing the field's expected ratings against their actual log-scores:
+	\begin{equation}
+		B = \frac{\sum_{i=1}^N W_i (R_i - L_i)}{\sum_{i=1}^N W_i}
+	\end{equation}
+	\textit{Note: $B$ acts as the mathematical anchor, answering: ``How difficult was this match compared to the known skill level of the field?''}
+	
+	\textbf{Step 4: Calculate Pairwise Residuals ($D_i$)}\\
+	The match baseline captures the average difficulty of the field, but discards structural information about \textit{whom} each competitor outperformed. In a match with widely varying skill levels, this information is valuable: beating someone rated far above you is a stronger signal than beating someone rated far below you.
+	
+	For each competitor $i$, select $k$ opponents (e.g., the top performers plus those nearby in rating or match finish). For each selected opponent $j$, compute the pairwise residual in log space:
+	\begin{equation}
+		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
+	\end{equation}
+	This measures how much better or worse competitor $i$ performed against opponent $j$ relative to what their ratings predicted. The winner's curse is already eliminated by the log transformation.
+	
+	Compute a precision-weighted average of the pairwise residuals:
+	\begin{equation}
+		D_i = \frac{\sum_{j \in \mathcal{S}_i} w_j \cdot \delta_{ij}}{\sum_{j \in \mathcal{S}_i} w_j}, \quad w_j = \frac{1}{V_j + \sigma_{sport}^2 + \sigma_j^2}
+	\end{equation}
+	where $\mathcal{S}_i$ is the selected opponent set for competitor $i$.
+	
+	\textbf{Step 5: Calculate Observed Performance ($P_i$)}\\
+	Blend the baseline-derived performance with the pairwise residual correction:
+	\begin{equation}
+		P_i = L_i + B + \alpha \cdot D_i
+	\end{equation}
+	When $\alpha = 0$, this reduces to the pure baseline model. As $\alpha$ increases, the structural information about specific opponent matchups contributes more to the observed performance estimate.
+	
+	\subsection{The Update Rule}
+	For each competitor, update their rating, variance, and volatility.
+	
+	\textbf{Step 1: Calculate the Innovation}\\
+	The innovation measures how surprising the competitor's observed performance was relative to their current rating:
+	\begin{equation}
+		e_i = P_i - R_i
+	\end{equation}
+	
+	\textbf{Step 2: Calculate the Kalman Gain ($K_i$)}\\
+	The Kalman gain balances how much to trust the new observation versus the prior rating. The competitor's own volatility $\sigma_i^2$ enters as additional observation noise, so that erratic competitors receive smaller per-match updates:
+	\begin{equation}
+		K_i = \frac{V_i}{V_i + \sigma_{sport}^2 + \sigma_i^2}
+	\end{equation}
+	
+	\textbf{Step 3: Update Rating}
+	\begin{equation}
+		R_i \leftarrow R_i + K_i \cdot e_i
+	\end{equation}
+	
+	\textbf{Step 4: Update Variance (Innovation-Based Adaptive Kalman)}\\
+	A standard Kalman filter variance update $V_i \leftarrow V_i(1 - K_i)$ monotonically decreases $V_i$. Over time, this causes the system to become excessively certain about every competitor's rating, regardless of whether recent results support that certainty. To prevent this, we augment the standard update with an innovation-based correction:
+	\begin{equation}
+		V_i \leftarrow V_i(1 - K_i) + \gamma \cdot \max\!\left(0, \; e_i^2 - (V_i + \sigma_{sport}^2 + \sigma_i^2)\right)
+	\end{equation}
+	
+	The $\max$ term activates only when the squared innovation exceeds the expected innovation variance. In plain terms: if a competitor's result is more surprising than the model predicted it should be, the variance increases to reflect reduced certainty. If the result is within expectations, the variance decreases normally.
+	
+	This is a well-known extension of the Kalman filter (innovation-based adaptive filtering). It provides the same qualitative behavior as Glicko-2's volatility-driven RD adaptation---surprising results make the system more responsive, consistent results make it more stable---but requires no iterative root-finding.
+	
+	Note that the interaction with $\sigma_i^2$ is self-consistent: erratic competitors (high $\sigma_i^2$) have a higher expected innovation variance, so it takes a genuinely extreme result to trigger a $V_i$ increase. Consistent competitors (low $\sigma_i^2$) are more sensitive to moderate surprises.
+	
+	\textbf{Step 5: Update Competitor Volatility}\\
+	Track how erratic each competitor's performances are using an exponential moving average of squared innovations:
+	\begin{equation}
+		\sigma_i^2 \leftarrow (1 - \beta) \cdot \sigma_i^2 + \beta \cdot e_i^2
+	\end{equation}
+	
+	This adapts in $\mathcal{O}(1)$ per update: one multiply-add operation. A competitor who consistently performs near their rating will have low $\sigma_i^2$; a competitor who oscillates between brilliant and terrible performances will have high $\sigma_i^2$. The system naturally adjusts: consistent competitors get more responsive updates (higher $K_i$), erratic competitors get more conservative updates (lower $K_i$).
+	
+	Clamp $\sigma_i^2$ within $[c_{min} \cdot \sigma_{sport}^2, \; c_{max} \cdot \sigma_{sport}^2]$ (e.g., $c_{min} = 0.5$, $c_{max} = 3.0$) to prevent degenerate behavior at the extremes.
+	
+	\textbf{Step 6: Apply Aging Between Matches}\\
+	Between rating periods, increase uncertainty to reflect the possibility that true skill has drifted:
+	\begin{equation}
+		V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t
+	\end{equation}
+	where $\Delta t$ is the elapsed time in rating periods since the competitor's last match.
+	
+	\subsection{Handling Non-Ratio Anomalies: Time Bonuses and Micro-Stages}
+	
+	The Latent Log-Ratio model fundamentally assumes that the scoring data exists on a \textbf{Ratio Scale} (where zero represents an absolute absence of time, and ratios between values are physically meaningful). However, specific rule sets can violate this assumption:
+	
+	\begin{enumerate}
+		\item \textbf{Time Bonuses (ICORE):} Rules that subtract fixed time for accuracy can result in near-zero or even negative stage times. This converts the data into an Interval Scale, where log-ratios are mathematically undefined or heavily distorted.
+		\item \textbf{Micro-Stages (Speed Shoots):} Even without bonuses, very fast stages (e.g., a 2.0-second stage) cause artificial volatility magnification. A 0.5-second stumble on a 2.0-second stage yields a massive 25\% ratio penalty, whereas a 0.5-second stumble on a 20-second stage is mathematically negligible. 
+	\end{enumerate}
+	
+	\subsubsection*{Additive Time Normalization (Time Padding)}
+	To restore the ratio-scale properties and prevent infinite variance from undefined logarithms, we apply an additive normalization constant ($k$) to all raw times on stages that fall below a minimum time threshold ($T_{floor}$). 
+	
+	Let $T_{min}$ be the winning (lowest) time on a given stage. If $T_{min} < T_{floor}$ (e.g., $T_{floor} = 10.0$ seconds), we calculate a padding constant:
+	\begin{equation}
+		k = T_{floor} - T_{min}
+	\end{equation}
+	
+	This constant is then added to every competitor's time on that stage before converting the finishes into percentages:
+	\begin{equation}
+		T_i' = T_i + k
+	\end{equation}
+	
+	This translation guarantees that all $T_i' \geq T_{floor} > 0$, ensuring the natural logarithm is always defined. Furthermore, it acts as mathematical smoothing (similar to Laplace smoothing). It preserves the exact rank-order of the competitors while compressing the artificially inflated log-ratios back to a scale representative of true human skill differences.
+	
+	We only scale up from below to solve mathematical issues: $T_{floor}$ corrects undefined-log problems and smooths extreme volatility swings on short stages. Scaling long stages down to a reference time introduces issues rather than correcting them:
+	
+	\begin{enumerate}
+		\item \textbf{The ``Speed Tax'' on Field Courses (Reversed Volatility):} 
+		While global scaling fixes the volatility of fixed-time mistakes, it introduces massive mathematical volatility for proportional speed differences. If a competitor's physiological pace is exactly 10\% slower than the stage winner, their absolute time difference ($\Delta T$) scales with the length of the stage.
+		\begin{itemize}
+			\item On a short 10-second stage: $\Delta T = 1.0$ second. Under a universal reference (e.g., $T_{ref} = 20.0$), their ratio is $\frac{21.0}{20.0} = 1.05$ (a 5\% penalty).
+			\item On a long 50-second stage: $\Delta T = 5.0$ seconds. Under the same universal reference, their ratio is $\frac{25.0}{20.0} = 1.25$ (a 25\% penalty).
+		\end{itemize}
+		By standardizing the winner's time universally, the model artificially magnifies the deficit of consistently slower competitors on long field courses.
+		
+		\item \textbf{Loss of Physical Fidelity:} 
+		In practical shooting, the duration of the stage provides critical context for the severity of a mistake. A 3.0-second error on a 5.0-second stage represents a catastrophic failure relative to the task, whereas a 3.0-second error on a 50.0-second stage is a minor inefficiency. A universal additive scale discards the physical reality of the task's duration, treating both errors as mathematically identical.
+	\end{enumerate}
+	
+	Because of these drawbacks, a \textbf{Hybrid Scaling} approach is generally preferred over a universal reference time. By applying the additive padding $k$ only to stages where $T_{min} < T_{floor}$, the model safely bounds the extreme punishment of micro-stages and time bonuses, while leaving standard field courses unadjusted to preserve the mathematical reality of proportional pace.
+	
+	\section{Benefits Over Glicko-2 and Logistic Models}
+	\begin{enumerate}
+		\item \textbf{Algorithmic Efficiency:} Glicko-2 requires $\mathcal{O}(N^2)$ pairwise comparisons. A 300-person match yields 44,850 comparisons per competitor. The Latent Log-Ratio model computes the match baseline in $\mathcal{O}(N)$ and adds pairwise corrections against $k$ selected opponents per competitor, yielding $\mathcal{O}(N \cdot k)$ total complexity. With $k = 20$--$30$, a 300-person match requires 6,000--9,000 pairwise comparisons total, rather than 44,850 per competitor.
+		
+		\item \textbf{Native Representation of Performance Distances:} Logistic models represent the outcome of a pairwise comparison as a probability in $(0, 1)$, which is correct for binary win/loss but introduces information loss for continuous margins. A pairwise expected score of $0.95$ could correspond to a 5\% performance margin or a 50\% margin---the sigmoid saturates at the extremes, compressing large differences into a narrow band. The log-ratio model preserves the full performance distance throughout the update pipeline: a competitor who performs at twice the level of another has a log-ratio of $\ln(2) \approx 0.69$, regardless of whether both are elite or both are novices. This distance is carried through the baseline, pairwise residuals, and rating updates without compression.
+		
+		\item \textbf{Explicit Separation of Variance Sources:} Rather than routing all uncertainty through a single mechanism (e.g., Glicko-2's Rating Deviation, which conflates measurement uncertainty, skill drift, and competitor consistency), the model explicitly separates:
+		\begin{itemize}
+			\item $\sigma_{sport}^2$: the irreducible noise of the sport (a global constant, tuned once),
+			\item $V_i$: measurement uncertainty in each competitor's rating (adapts via the Kalman filter),
+			\item $\sigma_i^2$: per-competitor behavioral volatility (adapts via EMA),
+			\item $\sigma_{drift}^2$: skill drift over time (a global constant for the aging function).
+		\end{itemize}
+		This decomposition makes each parameter independently interpretable and tunable. In Glicko-2, a competitor bombing a single stage can drastically inflate their RD (via the volatility $\rightarrow$ RD pathway), destabilizing future updates. Here, a single bad performance primarily affects $\sigma_i^2$ (which adapts gradually via the EMA) and may trigger a modest $V_i$ increase (via the innovation term), but neither mechanism produces the runaway instability that Glicko-2's volatility iteration can exhibit.
+	\end{enumerate}
+	
+	\section{The Prediction System and Confidence Intervals}
+	Because ratings operate in log space, predicting future outcomes requires generating a Log-Normal distribution. This allows us to predict both the expected finish percentage and a probabilistic range of outcomes.
+	
+	\subsection{Identifying the Presumptive Winner}
+	Assemble the ratings of the field ($R_1 \dots R_N$). Rather than assuming the single highest-rated competitor will win, account for the uncertainty in who will actually produce the best performance on the day.
+	
+	\subsubsection*{Closed-Form Approximation (Well-Separated Fields)}
+	When the top of the field is clearly separated (e.g., one or two strong favorites), a fast closed-form approximation suffices. For each candidate winner $w$ among the top-$m$ rated competitors, estimate the probability that $w$ produces the highest performance:
+	\begin{equation}
+		p_w \approx \prod_{j \neq w} \Phi\!\left(\frac{R_w - R_j}{\sqrt{V_w + V_j + 2\sigma_{sport}^2}}\right)
+	\end{equation}
+	where $\Phi$ is the standard normal CDF. Normalize so that $\sum_w p_w = 1$.
+	
+	This product approximation treats each pairwise ``does $w$ beat $j$?'' event as independent, but they share the same draw of $w$'s performance. When candidates are well-separated, the correlation effect is negligible and the approximation is accurate.
+	
+	\subsubsection*{Monte Carlo Sampling (Contested Fields)}
+	At hotly contested matches, 10\% or more of the field may have a realistic chance of winning. In this regime, the product approximation degrades because the pairwise correlations are no longer negligible. Monte Carlo sampling provides robust winner probabilities regardless of field composition.
+	
+	For each trial $t = 1 \dots T$ (e.g., $T = 1000$--$2000$):
+	\begin{enumerate}
+		\item For each competitor $i$, draw a performance sample $X_i \sim \mathcal{N}(R_i, V_i + \sigma_{sport}^2)$.
+		\item Record the winner: $w_t = \arg\max_i X_i$.
+	\end{enumerate}
+	
+	The win probability is the empirical frequency:
+	\begin{equation}
+		p_w = \frac{|\{t : w_t = w\}|}{T}
+	\end{equation}
+	
+	This naturally adapts to any field composition: if 30 competitors could realistically win, all 30 will receive nonzero $p_w$. The cost is $\mathcal{O}(T \cdot N)$, but this runs only at prediction time (not during rating updates), and with $T = 2000$ and $N = 300$, the 600,000 draws are trivially fast.
+	
+	In practice, filter to $p_w > \epsilon$ (e.g., $\epsilon = 0.005$) before computing the prediction mixture to avoid noise from single-trial long-shot winners.
+	
+	\subsection{Generating the Expected Percentage (The Mean)}
+	The naive prediction $\hat{S}_i = \exp(R_i - R_{max})$ assumes the winner performs exactly at their mean rating. Since the winner's actual performance is a random variable, we apply an analytical correction derived from the moment-generating function of the normal distribution.
+	
+	For a single presumed winner $w$ with performance $X_w \sim \mathcal{N}(R_w, V_w + \sigma_{sport}^2)$:
+	\begin{equation}
+		E[\exp(R_i - X_w)] = \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2}{2}\right)
+	\end{equation}
+	
+	The correction term $\frac{V_w + \sigma_{sport}^2}{2}$ is always positive: when the winner's rating is uncertain, the expected finish percentage is higher than the naive point estimate, because the winner is more likely to have a mediocre day than a perfect one.
+	
+	Combining with the winner mixture:
+	\begin{equation}
+		\hat{S}_i = \sum_{w \in \text{top-}m} p_w \cdot \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2}{2}\right)
+	\end{equation}
+	
+	\subsection{Generating the Range of Outcomes (Standard Deviation)}
+	A competitor's actual percentage will fluctuate based on multiple sources of variance:
+	\begin{enumerate}
+		\item Their own rating uncertainty ($V_i$)
+		\item Their own behavioral volatility ($\sigma_i^2$)
+		\item The presumed winner's uncertainty (probability-weighted)
+		\item The inherent volatility of the sport ($\sigma_{sport}^2$)
+	\end{enumerate}
+	
+	The total predictive variance in log space, accounting for the winner mixture:
+	\begin{equation}
+		\sigma_{pred,i}^2 = V_i + \sigma_i^2 + \sigma_{sport}^2 + \sum_{w \in \text{top-}m} p_w \cdot V_w
+	\end{equation}
+	
+	Because the errors are normally distributed in log space, the actual match percentage follows a log-normal distribution. You can provide a 95\% Confidence Interval for a competitor's expected percentage:
+	
+	\textbf{Lower Bound:} $\exp\!\left(\ln(\hat{S}_i) - 1.96 \times \sqrt{\sigma_{pred,i}^2}\right)$\\
+	\textbf{Upper Bound:} $\exp\!\left(\ln(\hat{S}_i) + 1.96 \times \sqrt{\sigma_{pred,i}^2}\right)$
+	
+\end{document}

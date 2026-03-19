@@ -89,3 +89,16 @@ lib/closed_sources/psv2/
 
 # FVM Version Cache
 .fvm/
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+research/**/*.pdf
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.synctex.gz(busy)
+*.synctex.gz(busy)
