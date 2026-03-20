@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -54,9 +56,15 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   LatentLogSettings settings;
 
   double get displayRating => rating * settings.scaleFactor + settings.scaleOffset;
-  double get displayVariance => variance * settings.scaleFactor;
-  double get displayCurrentVariance => currentVariance * settings.scaleFactor;
-  double get displayVolatility => volatility * settings.scaleFactor;
+  double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
+  double get displayCurrentVariance => currentVariance * settings.scaleFactor * settings.scaleFactor;
+  double get displayVolatility => volatility * settings.scaleFactor * settings.scaleFactor;
+
+  double get ratingStandardDeviation => sqrt(variance);
+  double get currentVarianceStandardDeviation => sqrt(currentVariance);
+  double get displayStandardDeviation => sqrt(displayVariance);
+  double get displayCurrentStandardDeviation => sqrt(displayCurrentVariance);
+  double get displayVolatilityStandardDeviation => sqrt(displayVolatility);
 
   double get variance => wrappedRating.error;
   set variance(double v) => wrappedRating.error = v;
@@ -97,10 +105,13 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   /// Variance is a simple function of time since last update and skill drift rate.
   double calculateCurrentVariance({DateTime? asOfDate}) {
     asOfDate ??= DateTime.now();
+    if(asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
+      return variance;
+    }
     var daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
     var ratingPeriodsSinceLastCommit = daysSinceLastCommit / ratingPeriodLengthInDays;
     var newVariance = variance + settings.skillDriftRate * ratingPeriodsSinceLastCommit;
-    return newVariance;
+    return min(settings.startingVariance, newVariance);
   }
 
   @override

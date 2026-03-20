@@ -122,9 +122,9 @@
 	where $\mathcal{S}_i$ is the selected opponent set for competitor $i$.
 	
 	\textbf{Step 5: Calculate Observed Performance ($P_i$)}\\
-	Blend the baseline-derived performance with the pairwise residual correction:
+	Blend the baseline-derived performance with the pairwise residual correction. Use the leave-one-out baseline $B_{-i}$ (see \S\,``Propagating Estimation Uncertainty'') to avoid circularity:
 	\begin{equation}
-		P_i = L_i + B + \alpha \cdot D_i
+		P_i = L_i + B_{-i} + \alpha \cdot D_i
 	\end{equation}
 	When $\alpha = 0$, this reduces to the pure baseline model. As $\alpha$ increases, the structural information about specific opponent matchups contributes more to the observed performance estimate.
 	
@@ -176,6 +176,50 @@
 		V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t
 	\end{equation}
 	where $\Delta t$ is the elapsed time in rating periods since the competitor's last match.
+	
+	\subsection{Propagating Estimation Uncertainty}
+	The baseline $B$ and pairwise residual $D_i$ from the Match Processing Loop are \emph{estimates}, not known quantities. In the basic algorithm above, the Kalman gain treats the observation noise as $\sigma_{sport}^2 + \sigma_i^2$, implicitly assuming that $B$ and $D_i$ are measured perfectly. In reality, both carry estimation variance that depends on the field: a baseline anchored by 50 well-known competitors is far more precise than one anchored by 2 newcomers. Ignoring this causes systematic over-updating in small or uncertain fields.
+	
+	\subsubsection*{Leave-One-Out Baseline}
+	To avoid circularity (competitor $i$ influencing their own baseline), replace $B$ with a leave-one-out estimate:
+	\begin{equation}
+		B_{-i} = \frac{\sum_{j \neq i} W_j (R_j - L_j)}{\sum_{j \neq i} W_j}
+	\end{equation}
+	
+	The variance of this estimate under the precision-weighted mean is:
+	\begin{equation}
+		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
+	\end{equation}
+	
+	In large fields with well-known competitors, $\sum_{j \neq i} W_j$ is large and $\mathrm{Var}(B_{-i})$ is negligible. In small fields, particularly those dominated by high-variance newcomers, $\mathrm{Var}(B_{-i})$ grows substantially---exactly when the model should be cautious.
+	
+	\subsubsection*{Pairwise Estimation Variance}
+	The pairwise residual $D_i$ is itself a precision-weighted mean over the opponent set $\mathcal{S}_i$. Its estimation variance is:
+	\begin{equation}
+		\mathrm{Var}(D_i) = \frac{1}{\sum_{j \in \mathcal{S}_i} w_j}
+	\end{equation}
+	
+	Since $D_i$ enters the observed performance scaled by $\alpha$, its contribution to the total observation variance is $\alpha^2 \cdot \mathrm{Var}(D_i)$.
+	
+	\subsubsection*{Effective Observation Noise}
+	Combining all variance sources, the total observation noise for competitor $i$'s performance estimate is:
+	\begin{equation}
+		R_{obs,i} = \sigma_{sport}^2 + \sigma_i^2 + \mathrm{Var}(B_{-i}) + \alpha^2 \cdot \mathrm{Var}(D_i)
+	\end{equation}
+	
+	This replaces $\sigma_{sport}^2 + \sigma_i^2$ in the Kalman gain (Step~2 of the Update Rule), the innovation-based variance update (Step~4), and the $z$-score used for robust weighting:
+	\begin{equation}
+		K_i = \frac{V_i}{V_i + R_{obs,i}}, \qquad z_i = \frac{e_i}{\sqrt{V_i + R_{obs,i}}}
+	\end{equation}
+	
+	The effect is automatic and principled: large fields with strong opponents produce small $R_{obs,i}$ (close to the original $\sigma_{sport}^2 + \sigma_i^2$), so rating updates proceed normally. Small fields with uncertain opponents inflate $R_{obs,i}$, which simultaneously reduces $K_i$ (smaller updates) and reduces $|z_i|$ (making the Student-$t$ robust weight less aggressive). No hand-tuned field-size multipliers or evidence scale-down factors are needed.
+	
+	\subsubsection*{Robust Outlier Weighting}
+	Even with correct observation noise, individual match results can be corrupted by equipment failure, rule violations, or other non-skill factors. A Student-$t$ weight on the innovation provides a final layer of robustness:
+	\begin{equation}
+		w_t(z_i) = \frac{\nu + 1}{\nu + z_i^2}
+	\end{equation}
+	where $\nu$ scales with field size (e.g., $\nu = \mathrm{clamp}(2 + 0.5N, \; 2, \; 30)$). The weighted innovation $e_i \leftarrow w_t(z_i) \cdot e_i$ is used in all subsequent update steps. Because $z_i$ is now computed against the full $R_{obs,i}$, the threshold for ``surprising'' is correctly calibrated: a $z$-score of 3 in a 100-person match genuinely indicates an outlier, whereas the same raw innovation in a 2-person match would produce a much smaller $z$-score (due to the large $\mathrm{Var}(B_{-i})$ term), and the Student-$t$ weight would remain close to 1.
 	
 	\subsection{Handling Non-Ratio Anomalies: Time Bonuses and Micro-Stages}
 	

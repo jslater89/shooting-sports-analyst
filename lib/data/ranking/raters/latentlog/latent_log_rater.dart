@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// A rating system that uses a latent log-ratio model to calculate ratings.
 class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
@@ -142,14 +143,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     Map<ShooterRating, double> competitorVariances = {};
 
     // First pass: gather data and calculate the baseline.
+    List<Shooter> validShooters = [];
     for(var shooter in shooters) {
       shooter as LatentLogRating;
       var score = scores[shooter];
-      if(score == null) {
+      if(score == null || score.ratio == 0.0) {
         continue;
       }
 
-      final logScore = log(score.ratio);
+      validShooters.add(shooter);
+
+      final logScore = log(max(0.25, score.ratio));
       competitorLogScores[shooter] = logScore;
       final shooterVariance = shooter.calculateCurrentVariance(asOfDate: match.date);
       competitorVariances[shooter] = shooterVariance;
@@ -160,9 +164,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       baselineResidual += weight * (shooter.rating - logScore);
     }
 
-    final baseline = baselineResidual / totalWeight;
-
-    for(var shooter in shooters) {
+    for(var shooter in validShooters) {
       shooter as LatentLogRating;
       final shooterVariance = competitorVariances[shooter];
       if(shooterVariance == null) {
@@ -173,10 +175,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         shooter: shooter,
         shooterVariance: competitorVariances[shooter]!,
         matchDate: match.date,
-        baseline: baseline,
+        baselineResidualSum: baselineResidual,
+        totalBaselineWeight: totalWeight,
         scores: scores,
         competitorLogScores: competitorLogScores,
-        competitorPairwiseResiduals: competitorWeights,
+        competitorWeights: competitorWeights,
       );
       if(change == null) {
         continue;
@@ -192,27 +195,39 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     required ShooterRating shooter,
     required double shooterVariance,
     required DateTime matchDate,
-    required double baseline,
+    required double baselineResidualSum,
+    required double totalBaselineWeight,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, double> competitorLogScores,
-    required Map<ShooterRating, double> competitorPairwiseResiduals,
+    required Map<ShooterRating, double> competitorWeights,
   }) {
     shooter as LatentLogRating;
     final shooterScore = scores[shooter];
     final shooterLogScore = competitorLogScores[shooter];
-    if(shooterScore == null || shooterLogScore == null) {
+    final shooterWeight = competitorWeights[shooter];
+    if(shooterScore == null || shooterLogScore == null || shooterWeight == null) {
       return null;
     }
     final shooterRatio = shooterScore.ratio;
 
+    // Leave-one-out baseline: remove this competitor's own contribution
+    // to avoid circularity. B_{-i} = (Σ w_j (R_j - L_j) - w_i (R_i - L_i)) / (Σ w_j - w_i).
+    final looWeight = totalBaselineWeight - shooterWeight;
+    if(looWeight <= 0) {
+      return null;
+    }
+    final looBaseline = (baselineResidualSum - shooterWeight * (shooter.rating - shooterLogScore)) / looWeight;
+    final baselineVariance = 1.0 / looWeight;
+
     double pairwiseResidual = 0.0;
+    double pairwiseVariance = 0.0;
     int pairwiseOpponentCount = 0;
     if(settings.pairwiseBlendWeight > 0) {
       final pairwiseOpponents = _selectOpponents(shooter, scores, shooterRatio);
       pairwiseOpponentCount = pairwiseOpponents.length;
 
       double weightedResiduals = 0.0;
-      double totalWeights = 0.0;
+      double totalPairwiseWeight = 0.0;
       for(var opponent in pairwiseOpponents) {
         opponent as LatentLogRating;
         final opponentVariance = opponent.calculateCurrentVariance(asOfDate: matchDate);
@@ -223,22 +238,60 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final residual = (shooterLogScore - opponentLogScore) - (shooter.rating - opponent.rating);
         final weight = 1 / (opponentVariance + settings.sportVolatility + opponent.volatility);
         weightedResiduals += residual * weight;
-        totalWeights += weight;
+        totalPairwiseWeight += weight;
       }
-      pairwiseResidual = weightedResiduals / totalWeights;
+      if(totalPairwiseWeight > 0) {
+        pairwiseResidual = weightedResiduals / totalPairwiseWeight;
+        pairwiseVariance = 1.0 / totalPairwiseWeight;
+      }
     }
 
-    final observedPerformance = shooterLogScore + baseline + settings.pairwiseBlendWeight * pairwiseResidual;
-    final innovation = observedPerformance - shooter.rating;
-    final kalmanGain = shooterVariance / (shooterVariance + settings.sportVolatility + shooter.volatility);
+    var pairwiseBlendWeight = settings.pairwiseBlendWeight;
+    if(pairwiseOpponentCount < 10) {
+      pairwiseBlendWeight = lerpAroundCenter(
+        value: pairwiseOpponentCount.toDouble(),
+        center: (10 + 2) / 2,
+        rangeMin: 2,
+        rangeMax: 10,
+        minOut: 0,
+        centerOut: 1,
+        maxOut: 1,
+      );
+    }
+
+    final observedPerformance = shooterLogScore + looBaseline + pairwiseBlendWeight * pairwiseResidual;
+    var innovation = observedPerformance - shooter.rating;
+
+    // Effective observation noise propagates uncertainty from the baseline
+    // estimate and pairwise estimate into the Kalman filter, rather than
+    // treating them as known quantities. This naturally damps updates in
+    // small/weak fields without ad-hoc multipliers.
+    final effectiveObsNoise = settings.sportVolatility
+        + shooter.volatility
+        + baselineVariance
+        + pairwiseBlendWeight * pairwiseBlendWeight * pairwiseVariance;
+    final kalmanDenominator = shooterVariance + effectiveObsNoise;
+    final zScore = innovation / sqrt(kalmanDenominator);
+
+    // Student-t robust weight: damp outlier innovations. The z-score is
+    // now computed against effectiveObsNoise, so this is correctly calibrated.
+    const nuMin = 2;
+    const nuMax = 30;
+    final nu = (nuMin + 0.5 * scores.length).clamp(nuMin, nuMax);
+    final weight = (nu + 1) / (nu + zScore * zScore);
+    innovation = innovation * weight;
+
+    final kalmanGain = shooterVariance / kalmanDenominator;
     final newRating = shooter.rating + kalmanGain * innovation;
 
     final innovationVariance = innovation * innovation;
-    final innovationCorrection = settings.surpriseAdaptationRate * max(0.0, innovationVariance - (shooterVariance + settings.sportVolatility + shooter.volatility));
-    final newVariance = shooterVariance * (1 - kalmanGain) + innovationCorrection;
-    final newVolatility = shooter.volatility * (1 - settings.volatilityAdaptationRate) + settings.volatilityAdaptationRate * innovationVariance;
+    final innovationCorrection = settings.surpriseAdaptationRate * max(0.0, innovationVariance - kalmanDenominator);
+    final newVariance = min(settings.startingVariance, shooterVariance * (1 - kalmanGain) + innovationCorrection);
+    final newVolatility = (shooter.volatility * (1 - settings.volatilityAdaptationRate) + settings.volatilityAdaptationRate * innovationVariance).clamp(0.5 * settings.sportVolatility, 3 * settings.sportVolatility);
 
-    final varianceChange = newVariance - shooterVariance;
+    // Change is relative to the _committed_ variance, not the calculated current
+    // variance-with-aging.
+    final varianceChange = newVariance - shooter.variance;
     final volatilityChange = newVolatility - shooter.volatility;
 
     final stagesForEvent = byStage ? 1.0 : match.stages.length.toDouble();

@@ -1953,6 +1953,11 @@ class RatingProjectLoader {
       );
 
       for(var rating in scoreMap.keys) {
+        if(update[rating] == null) {
+          // This can happen if the rating system declines to
+          // calculate a rating change for this shooter.
+          continue;
+        }
         var score = scoreMap[rating]!;
         // You only get one rating change per match.
         if (changes[rating.wrappedRating]!.isEmpty) {
