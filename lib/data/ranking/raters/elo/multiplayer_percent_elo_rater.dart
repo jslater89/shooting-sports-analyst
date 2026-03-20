@@ -106,7 +106,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     else if(scores.length == 1) {
       return {
         shooters[0]: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
           errorKey: 0,
           baseKKey: 0,
           effectiveKKey: 0,
@@ -133,7 +133,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     if(params.usedScores == 1) {
       return {
         aRating: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
           errorKey: 0,
           baseKKey: 0,
           effectiveKKey: 0,
@@ -381,7 +381,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     return {
       aRating: RatingChange(change: {
-        RatingSystem.ratingKey: change,
+        RatingSystem.ratingChangeKey: change,
         errorKey: (params.expectedScore - actualScore.score) * params.usedScores,
         baseKKey: K * (params.usedScores - 1),
         effectiveKKey: effectiveK * (params.usedScores),

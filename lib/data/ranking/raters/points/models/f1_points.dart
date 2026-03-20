@@ -20,7 +20,7 @@ class F1Points extends PointsModel {
     else if(scores.length == 1) {
       return {
         scores.keys.first: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
         })
       };
     }
@@ -38,7 +38,7 @@ class F1Points extends PointsModel {
       }
 
       changes[rating] = RatingChange(change: {
-        RatingSystem.ratingKey: change,
+        RatingSystem.ratingChangeKey: change,
       });
 
     }

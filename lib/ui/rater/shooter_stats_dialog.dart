@@ -17,6 +17,8 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -426,6 +428,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   // TODO: go back to Division as key once rater is updated
   Map<String, charts.Color> _divisionColors = {};
   int _colorIndex = 0;
+  double _chartMeasureForShooterEvent(ShooterRating shooterRating, RatingEvent e) {
+    if(shooterRating is LatentLogRating) {
+      return (e as LatentLogRatingEvent).newDisplayRating;
+    }
+    return e.newRating;
+  }
+
+  double _chartRatingChangeForShooter(ShooterRating shooterRating, RatingEvent e) {
+    if(shooterRating is LatentLogRating) {
+      return e.ratingChange * shooterRating.settings.scaleFactor;
+    }
+    return e.ratingChange;
+  }
+
   List<charts.Color> _colorOptions = [
     charts.MaterialPalette.blue.shadeDefault,
     charts.MaterialPalette.indigo.shadeDefault,
@@ -459,6 +475,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       minimumMaximum = 1500;
       maximumMinimum = 1500;
     }
+    else if(rating is LatentLogRating) {
+      final o = rating.settings.scaleOffset;
+      minimumMaximum = o;
+      maximumMinimum = o;
+    }
     else if(rating is EloShooterRating && careerStats.isAnnualStats(displayedStats)) {
       // minimumMaximum = 1000;
       // maximumMinimum = 1000;
@@ -479,8 +500,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           yearIndices[e.wrappedEvent.date.year] = i;
         }
 
-        if(e.newRating < minRating) minRating = e.newRating;
-        if(e.newRating > maxRating) maxRating = e.newRating;
+        final measureRating = _chartMeasureForShooterEvent(rating, e);
+        if(measureRating < minRating) minRating = measureRating;
+        if(measureRating > maxRating) maxRating = measureRating;
 
         double error = 0;
         if(rating is EloShooterRating) {
@@ -495,13 +517,18 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           e as Glicko2RatingEvent;
           error = e.newDisplayRD / 2;
         }
+        else if(rating is LatentLogRating) {
+          e as LatentLogRatingEvent;
+          final sf = e.settings.scaleFactor;
+          error = sqrt(max(0, e.newVariance)) * sf / 2;
+        }
 
-        var plusError = e.newRating + error;
-        var minusError = e.newRating - error;
+        var plusError = measureRating + error;
+        var minusError = measureRating - error;
         if(plusError > maxWithError) maxWithError = plusError;
         if(minusError < minWithError) minWithError = minusError;
 
-        return _AccumulatedRatingEvent(e, accumulator += e.ratingChange, error);
+        return _AccumulatedRatingEvent(e, accumulator += _chartRatingChangeForShooter(rating, e), error);
       }).toList();
 
       _series = charts.Series<_AccumulatedRatingEvent, int>(
@@ -526,18 +553,18 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           }
         },
         measureFn: (_AccumulatedRatingEvent e, _) {
-          return e.baseEvent.newRating;
+          return _chartMeasureForShooterEvent(rating, e.baseEvent);
         },
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
-          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating) {
-            return e.baseEvent.newRating - e.errorAt;
+          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
+            return _chartMeasureForShooterEvent(rating, e.baseEvent) - e.errorAt;
           }
           return null;
         },
         measureUpperBoundFn: (e, i) {
-          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating) {
-            return e.baseEvent.newRating + e.errorAt;
+          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
+            return _chartMeasureForShooterEvent(rating, e.baseEvent) + e.errorAt;
           }
           return null;
         },
@@ -600,13 +627,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             type: charts.SelectionModelType.info,
             updatedListener: (model) {
               if(model.hasDatumSelection) {
-                final rating = _ratings[model.selectedDatum[0].index!];
+                final picked = _ratings[model.selectedDatum[0].index!];
                 _EloTooltipRenderer.context = context;
                 _EloTooltipRenderer.index = model.selectedDatum[0].index!;
                 _EloTooltipRenderer.indexTotal = _ratings.length;
-                _EloTooltipRenderer.rating = rating.baseEvent.newRating;
-                _EloTooltipRenderer.error = rating.errorAt;
-                _highlight(rating);
+                _EloTooltipRenderer.rating = _chartMeasureForShooterEvent(rating, picked.baseEvent);
+                _EloTooltipRenderer.error = picked.errorAt;
+                _highlight(picked);
               }
             },
           ),

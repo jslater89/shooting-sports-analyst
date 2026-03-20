@@ -191,15 +191,15 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         continue;
       }
 
-        var vForOpponent = _glickoVForOpponent(shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
-        vSum += vForOpponent;
+      var vForOpponent = _glickoVForOpponent(shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
+      vSum += vForOpponent;
 
-        var shooterStageScoreRatio = shooterScore.ratio;
-        var opponentStageScoreRatio = opponentScore.ratio;
-        var scoreForOpponent = _calculateScoreForOpponent(shooterStageScoreRatio, opponentStageScoreRatio);
+      var shooterStageScoreRatio = shooterScore.ratio;
+      var opponentStageScoreRatio = opponentScore.ratio;
+      var scoreForOpponent = _calculateScoreForOpponent(shooterStageScoreRatio, opponentStageScoreRatio);
 
-        var deltaForOpponent = _glickoDeltaForOpponent(scoreForOpponent, shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
-        deltaSum += deltaForOpponent;
+      var deltaForOpponent = _glickoDeltaForOpponent(scoreForOpponent, shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
+      deltaSum += deltaForOpponent;
 
       // by stage below
       // for(var shooterStageScore in shooterStageScores) {
@@ -289,7 +289,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     return {
       shooter: RatingChange(
         change: {
-          RatingSystem.ratingKey: ratingChange,
+          RatingSystem.ratingChangeKey: ratingChange,
           Glicko2Rater.oldRDKey: shooter.committedInternalRD,
           Glicko2Rater.rdChangeKey: rdChange,
           Glicko2Rater.oldVolatilityKey: shooter.volatility,

@@ -90,7 +90,7 @@ class EloRatingEvent extends RatingEvent {
 
   @override
   void apply(RatingChange change) {
-    ratingChange += change.change[RatingSystem.ratingKey]!;
+    ratingChange += change.change[RatingSystem.ratingChangeKey]!;
     error = change.change[MultiplayerPercentEloRater.errorKey]!;
     baseK = change.change[MultiplayerPercentEloRater.baseKKey]!;
     effectiveK = change.change[MultiplayerPercentEloRater.effectiveKKey]!;

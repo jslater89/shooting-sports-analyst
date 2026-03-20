@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
@@ -38,8 +39,8 @@ part 'rating_system.g.dart';
 /// for a particular competitor, and [S] is the type of a [RaterSettings] class that
 /// holds configuration parameters for the rating system.
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
-  /// Use in rating changes
-  static const ratingKey = "rating";
+  /// The change in rating from a rating event.
+  static const ratingChangeKey = "rating";
 
   RatingMode get mode;
   bool get byStage;
@@ -233,6 +234,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
         return MarbleRater.fromJson(encodedProject);
       case DbRatingProject.glicko2Value:
         return Glicko2Rater.fromJson(encodedProject);
+      case DbRatingProject.latentLogValue:
+        return LatentLogRater.fromJson(encodedProject);
       default:
         throw ArgumentError();
     }

@@ -11,6 +11,8 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_ratings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko2_ratings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/ui/latent_log_ratings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_ratings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
@@ -40,6 +42,9 @@ class RatingSystemUiBuilder {
     else if(algorithm is Glicko2Rater) {
       return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
+    else if(algorithm is LatentLogRater) {
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
+    }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
   }
 
@@ -57,6 +62,9 @@ class RatingSystemUiBuilder {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
     else if(algorithm is Glicko2Rater) {
+      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
+    }
+    else if(algorithm is LatentLogRater) {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");

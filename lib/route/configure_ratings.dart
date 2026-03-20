@@ -22,6 +22,8 @@ import 'package:shooting_sports_analyst/data/help/entries/elo_configuration_help
 import 'package:shooting_sports_analyst/data/help/entries/elo_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/glicko2_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/glicko2_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/latent_log_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/latent_log_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/points_help.dart';
@@ -39,6 +41,9 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko2_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/ui/latent_log_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';
@@ -315,6 +320,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       var jsonEncoder = JsonEncoder.withIndent("  ");
       _log.d("Glicko-2 settings as JSON: ${jsonEncoder.convert(settingsJson)}");
+    }
+    else if(_ratingSystem is LatentLogRater) {
+      settings as LatentLogSettings;
+      _ratingSystem = LatentLogRater(settings: settings);
     }
     else if(_ratingSystem is MarbleRater) {
       settings as MarbleSettings;
@@ -930,6 +939,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _ratingSystemUi = Glicko2SettingsUi();
           _settingsController = _ratingSystemUi.newSettingsController();
           break;
+        case _ConfigurableRater.latentLog:
+          settings = LatentLogSettings();
+          _ratingSystem = LatentLogRater(settings: settings as LatentLogSettings);
+          _ratingSystemUi = LatentLogSettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
+          break;
       }
 
       setState(() {
@@ -946,6 +961,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     if(algorithm is OpenskillRater) return _ConfigurableRater.openskill;
     if(algorithm is MarbleRater) return _ConfigurableRater.marbles;
     if(algorithm is Glicko2Rater) return _ConfigurableRater.glicko2;
+    if(algorithm is LatentLogRater) return _ConfigurableRater.latentLog;
 
     throw UnsupportedError("Algorithm not yet supported");
   }
@@ -1598,7 +1614,8 @@ enum _ConfigurableRater {
   openskill,
   points,
   marbles,
-  glicko2;
+  glicko2,
+  latentLog;
 
   String get uiLabel {
     switch(this) {
@@ -1612,6 +1629,8 @@ enum _ConfigurableRater {
         return "Marble game";
       case _ConfigurableRater.glicko2:
         return "Glicko2";
+      case _ConfigurableRater.latentLog:
+        return "Latent log ratio";
     }
   }
 
@@ -1629,6 +1648,8 @@ enum _ConfigurableRater {
         return "A system where competitors stake marbes to enter matches and win them by placing highly.";
       case _ConfigurableRater.glicko2:
         return "Glicko2, a rating system that predicts match outcomes by comparing the ratings of competitors.";
+      case _ConfigurableRater.latentLog:
+        return "Latent log ratio, a Kalman-style model on log finish performance with display scaling.";
     }
   }
 
@@ -1638,6 +1659,7 @@ enum _ConfigurableRater {
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpId,
     _ConfigurableRater.glicko2 => glicko2HelpId,
+    _ConfigurableRater.latentLog => latentLogHelpId,
   };
 
   String get configHelpId => switch(this) {
@@ -1646,5 +1668,6 @@ enum _ConfigurableRater {
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpLink,
     _ConfigurableRater.glicko2 => glicko2ConfigHelpId,
+    _ConfigurableRater.latentLog => latentLogConfigHelpId,
   };
 }

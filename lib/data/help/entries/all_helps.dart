@@ -13,6 +13,8 @@ import 'package:shooting_sports_analyst/data/help/entries/elo_configuration_help
 import 'package:shooting_sports_analyst/data/help/entries/elo_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/glicko2_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/glicko2_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/latent_log_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/latent_log_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/icore_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
@@ -73,5 +75,7 @@ void registerHelpTopics() {
   ratings.addChild(helpRatingSets);
   ratings.addChild(helpGlicko2);
   ratings.addChild(helpGlicko2Config);
+  ratings.addChild(helpLatentLog);
+  ratings.addChild(helpLatentLogConfig);
   root.addChild(ratings);
 }
