@@ -9,6 +9,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultVolatilityAdaptationRate = 0.10;
   static const defaultSurpriseAdaptationRate = 0.07;
   static const defaultPairwiseBlendWeight = 0.10;
+  static const defaultMatchDifficultyVariance = 0.03;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
@@ -19,6 +20,7 @@ class LatentLogSettings extends RaterSettings {
   static const _volatilityAdaptationRateKey = "latentLogVolatilityAdaptationRate";
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
+  static const _matchDifficultyVarianceKey = "latentLogMatchDifficultyVariance";
 
   /// Whether to calculate ratings by stage (true) or by match (false).
   bool byStage;
@@ -122,6 +124,26 @@ class LatentLogSettings extends RaterSettings {
   /// -> > 1: pairwise residuals applied with additional emphasis.
   double pairwiseBlendWeight = defaultPairwiseBlendWeight;
 
+  /// The prior variance on match difficulty, i.e. τ² from the paper.
+  ///
+  /// Interpretation: how much match difficulty varies from one event to the
+  /// next. Places a Bayesian prior B ~ N(0, τ²) on the match baseline,
+  /// shrinking the baseline estimate toward zero (average difficulty) when
+  /// the field is too small to reliably estimate it.
+  ///
+  /// The prior precision 1/τ² acts as a "virtual field weight." In a
+  /// 2-person match, this dominates the single opponent's contribution,
+  /// heavily damping the baseline. In a 100-person match, the field's
+  /// total precision weight overwhelms the prior and it has negligible
+  /// effect.
+  ///
+  /// Tuning: variance units, positive. sqrt(τ²) is the 1SD of match
+  /// difficulty in log-ratio units.
+  /// -> sqrt(0.005) ≈ 0.071: ±7% in finish terms. Strong shrinkage.
+  /// -> sqrt(0.008) ≈ 0.089: ±9% in finish terms. Moderate (default).
+  /// -> sqrt(0.015) ≈ 0.122: ±13% in finish terms. Weak shrinkage.
+  double matchDifficultyVariance = defaultMatchDifficultyVariance;
+
   LatentLogSettings({
     this.byStage = false,
     this.scaleOffset = defaultScaleOffset,
@@ -132,6 +154,7 @@ class LatentLogSettings extends RaterSettings {
     this.volatilityAdaptationRate = defaultVolatilityAdaptationRate,
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
+    this.matchDifficultyVariance = defaultMatchDifficultyVariance,
   });
 
   @override
@@ -145,6 +168,7 @@ class LatentLogSettings extends RaterSettings {
     json[_volatilityAdaptationRateKey] = volatilityAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
+    json[_matchDifficultyVarianceKey] = matchDifficultyVariance;
   }
 
   @override
@@ -158,6 +182,7 @@ class LatentLogSettings extends RaterSettings {
     volatilityAdaptationRate = (json[_volatilityAdaptationRateKey] ?? defaultVolatilityAdaptationRate) as double;
     surpriseAdaptationRate = (json[_surpriseAdaptationRateKey] ?? defaultSurpriseAdaptationRate) as double;
     pairwiseBlendWeight = (json[_pairwiseBlendWeightKey] ?? defaultPairwiseBlendWeight) as double;
+    matchDifficultyVariance = (json[_matchDifficultyVarianceKey] ?? defaultMatchDifficultyVariance) as double;
   }
 
 }
