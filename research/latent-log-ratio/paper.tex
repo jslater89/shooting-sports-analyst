@@ -20,7 +20,7 @@
 		
 		While adaptations like extending Glicko-2 with logistic score functions improve predictions by smoothing the win-probability boundaries, they still suffer from information loss when mapping continuous performance margins through sigmoid functions, and from combinatorial explosion in match processing.
 		
-		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model translates multiplicative performance ratios into additive rating updates via a logarithmic transformation that eliminates the winner's-curse bias inherent in percentage scoring. It combines a linear-time match baseline with selective pairwise residual corrections, tracks per-competitor volatility via exponential moving averages, and uses innovation-based adaptive variance to prevent the monotonic certainty collapse common in basic Kalman filters. Predictions leverage the log-normal structure with analytical corrections for winner uncertainty.
+		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model uses the logarithmic structure of multiplicative performance ratios to eliminate the winner's-curse bias inherent in percentage scoring while preserving globally log-linear rating semantics for prediction. It combines a linear-time match baseline with selective pairwise residual corrections, a robust and weakly regularized leave-one-out baseline estimator, score-dependent tail noise for very weak finishes, a match-context weak-field uncertainty term for tiny bottom-heavy fields, per-competitor volatility tracked via exponential moving averages, and innovation-based adaptive variance to prevent the monotonic certainty collapse common in basic Kalman filters. Predictions leverage the log-normal structure with analytical corrections for winner uncertainty.
 	\end{abstract}
 	
 	\section{Key Insights and Concepts}
@@ -37,19 +37,27 @@
 	If the match winner performs exceptionally well, every other competitor's percentage drops, mathematically suggesting the field performed poorly when they did not.
 	
 	\subsection{The Logarithmic Bridge}
-	By taking the natural logarithm of match percentages, we completely eliminate the winner's influence when comparing any two competitors. Because $\ln(a/b) = \ln(a) - \ln(b)$, the log-difference between two competitors becomes a pure measurement of their underlying performance ratio, regardless of the scoring format:
-	
-	For Hit Factor:
+	Let $P_i$ denote a competitor's absolute performance on any positive ratio scale where larger is better (e.g., Hit Factor, points-per-second, or an equivalent speed metric), and let $P_{max}$ denote the winning performance in the match. The match percentage is then
 	\begin{equation}
-		\ln(S_A) - \ln(S_B) = \ln\left(\frac{P_A}{1.0}\right) - \ln\left(\frac{P_B}{1.0}\right) = \ln\left(\frac{P_A}{P_B}\right)
+		S_i = \frac{P_i}{P_{max}}
 	\end{equation}
-	
-	For Time-Plus:
+	For any two competitors $A$ and $B$, the difference of their log-percentages is
 	\begin{equation}
-		\ln(S_A) - \ln(S_B) = \ln\left(\frac{T_{min}}{T_A}\right) - \ln\left(\frac{T_{min}}{T_B}\right) = \ln\left(\frac{T_B}{T_A}\right)
+		\ln(S_A) - \ln(S_B) = \ln\left(\frac{P_A}{P_{max}}\right) - \ln\left(\frac{P_B}{P_{max}}\right)
 	\end{equation}
-	
-	In both cases, the anchor (the winner) vanishes.
+	Using $\ln(x/y) = \ln(x) - \ln(y)$, this becomes
+	\begin{equation}
+		\ln(S_A) - \ln(S_B) = (\ln(P_A) - \ln(P_{max})) - (\ln(P_B) - \ln(P_{max}))
+	\end{equation}
+	and the common anchor cancels exactly:
+	\begin{equation}
+		\ln(S_A) - \ln(S_B) = \ln(P_A) - \ln(P_B) = \ln\left(\frac{P_A}{P_B}\right)
+	\end{equation}
+	This is the central trick of the model: once the winner anchor cancels, the observed log-ratio of absolute performances can be treated as a direct estimate of latent rating difference,
+	\begin{equation}
+		\ln\left(\frac{P_A}{P_B}\right) \approx R_A - R_B
+	\end{equation}
+	Thus, the winner's score appears only as a nuisance normalization constant in the published percentages; it does not survive pairwise comparison in log space. The resulting quantity is the pure ratio of the competitors' absolute performances, independent of who won the match or by how much. In Time-Plus sports, this same derivation applies by choosing $P_i$ to be any proportional speed variable such as $1/T_i$, which yields $\ln(S_A) - \ln(S_B) = \ln(T_B/T_A)$.
 	
 	\subsection{Ratings as Expected Log-Ratios}
 	This cancellation property leads directly to the model's core identity. Since ratings $R_i$ represent expected log-performance, the difference between any two ratings is the expected log-ratio of their performances:
@@ -62,7 +70,7 @@
 		E\!\left[\frac{S_i}{S_j}\right] \approx \exp(R_i - R_j)
 	\end{equation}
 	
-	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. This relationship is exact in log space and carries through the entire update and prediction pipeline without distortion. No probability function, score function, or scaling parameter mediates between rating and performance---they are the same quantity in different representations.
+	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. This relationship remains exact throughout the implemented model. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
 	
 	\section{System Architecture and Algorithm}
 	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space, augmented with a per-competitor volatility estimate.
@@ -82,27 +90,59 @@
 		\item \textbf{$\beta$ (Volatility Adaptation Rate):} Controls how quickly the per-competitor volatility $\sigma_i^2$ adapts to recent results. A value of 0.1--0.15 gives an effective lookback window of approximately 7--10 matches.
 		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
 		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
+		\item \textbf{$s_0$ (Tail Noise Start Percentage):} The finish percentage below which very weak results begin receiving additional observation noise. Above $s_0$, the ordinary variance model is used.
+		\item \textbf{$\xi^2$ (Tail Noise Variance):} The maximum additional observation variance applied to the deepest tail. Larger values make the model more skeptical of very weak finishes without changing the log-ratio mean link.
+		\item \textbf{$\omega^2$ (Weak-Field Variance):} The maximum additional match-context observation variance applied when a field is both small and bottom-heavy.
+		\item \textbf{$n_{max}$ (Weak-Field Max Size):} The field size at or above which weak-field damping decays to zero.
+		\item \textbf{$s_w$ (Weak Finish Threshold):} The finish threshold below which a non-winning score counts as ``weak'' for weak-field detection.
+		\item \textbf{$q_0$ (Weak Fraction Threshold):} The minimum fraction of weak non-winners required before the weak-field term activates.
+		\item \textbf{$c$ (Baseline Robustness Threshold):} A Huber-style threshold, measured in residual standard deviations, used to downweight extreme field anchors when estimating match baseline.
+		\item \textbf{$\tau^2$ (Match Difficulty Prior Variance):} A weak prior variance on the match baseline. Its precision $1/\tau^2$ acts as a virtual anchor at zero match difficulty and is best treated as a light regularization term rather than a literal estimate of real-world match-to-match difficulty.
 	\end{itemize}
 	
 	\subsection{Match Processing Loop}
 	Matches are processed completely online (sequentially). The core baseline computation is $\mathcal{O}(N)$; the optional pairwise residual correction adds $\mathcal{O}(N \cdot k)$ where $k$ is the number of selected opponents per competitor (typically 20--30), yielding total complexity of $\mathcal{O}(N \cdot k)$.
 	
 	\textbf{Step 1: Calculate Log-Scores}\\
-	Floor match percentages at a minimal value (e.g., 0.01) to prevent undefined logarithms, then convert to log space:
+	Floor match percentages at a minimal value $S_{floor}$ (e.g., 0.01) to prevent undefined logarithms, then convert to log space:
 	\begin{equation}
-		L_i = \ln(S_i)
+		L_i = \ln(\max(S_{floor}, S_i))
 	\end{equation}
+	To preserve global log-linearity while reducing overconfidence in extremely weak finishes, the implementation keeps this mean link exactly intact and instead introduces score-dependent tail noise in the observation variance.
 	
 	\textbf{Step 2: Calculate Competitor Weights}\\
-	Determine how much influence a competitor should have on establishing the match's difficulty. High-variance and high-volatility competitors have less influence:
+	Determine how much influence a competitor should have on establishing the match's difficulty. High-variance and high-volatility competitors have less influence. Very weak finishes can also receive additional observation variance:
 	\begin{equation}
-		W_i = \frac{1}{V_i + \sigma_{sport}^2 + \sigma_i^2}
+		\eta(S_i) =
+		\begin{cases}
+			0, & S_i \ge s_0 \\
+			\xi^2 \left(\frac{s_0 - S_i}{s_0}\right)^2, & S_i < s_0
+		\end{cases}
+	\end{equation}
+	\begin{equation}
+		W_i = \frac{1}{V_i + \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i)}
 	\end{equation}
 	
 	\textbf{Step 3: Establish the Match Baseline ($B$)}\\
-	Calculate the latent difficulty of the match by comparing the field's expected ratings against their actual log-scores:
+	Calculate per-competitor baseline residuals by comparing the field's expected ratings against their log-scores:
 	\begin{equation}
-		B = \frac{\sum_{i=1}^N W_i (R_i - L_i)}{\sum_{i=1}^N W_i}
+		a_i = R_i - L_i
+	\end{equation}
+	A raw baseline estimate is then:
+	\begin{equation}
+		B_{raw} = \frac{\sum_{i=1}^N W_i a_i}{\sum_{i=1}^N W_i + \tau^{-2}}
+	\end{equation}
+	The implementation then robustifies the field anchor with a Huber-style taper. Standardize each residual relative to the raw center:
+	\begin{equation}
+		z_i = \frac{a_i - B_{raw}}{\sqrt{1/W_i}}
+	\end{equation}
+	and define robustified baseline weights
+	\begin{equation}
+		\tilde{W}_i = W_i \cdot \min\!\left(1, \frac{c}{|z_i|}\right)
+	\end{equation}
+	with the convention that the multiplier is 1 when $z_i = 0$ or $c \le 0$. The robust baseline summary is then
+	\begin{equation}
+		B = \frac{\sum_{i=1}^N \tilde{W}_i a_i}{\sum_{i=1}^N \tilde{W}_i}
 	\end{equation}
 	\textit{Note: $B$ acts as the mathematical anchor, answering: ``How difficult was this match compared to the known skill level of the field?''}
 	
@@ -113,11 +153,11 @@
 	\begin{equation}
 		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
 	\end{equation}
-	This measures how much better or worse competitor $i$ performed against opponent $j$ relative to what their ratings predicted. The winner's curse is already eliminated by the log transformation.
+	This measures how much better or worse competitor $i$ performed against opponent $j$ relative to what their ratings predicted. The winner's curse is eliminated by the underlying log-ratio geometry, while the score-dependent tail-noise term reduces the leverage of extremely weak finishes through the weights rather than by altering the mean link.
 	
 	Compute a precision-weighted average of the pairwise residuals:
 	\begin{equation}
-		D_i = \frac{\sum_{j \in \mathcal{S}_i} w_j \cdot \delta_{ij}}{\sum_{j \in \mathcal{S}_i} w_j}, \quad w_j = \frac{1}{V_j + \sigma_{sport}^2 + \sigma_j^2}
+		D_i = \frac{\sum_{j \in \mathcal{S}_i} w_j \cdot \delta_{ij}}{\sum_{j \in \mathcal{S}_i} w_j}, \quad w_j = \frac{1}{V_j + \sigma_{sport}^2 + \sigma_j^2 + \eta(S_j)}
 	\end{equation}
 	where $\mathcal{S}_i$ is the selected opponent set for competitor $i$.
 	
@@ -181,17 +221,17 @@
 	The baseline $B$ and pairwise residual $D_i$ from the Match Processing Loop are \emph{estimates}, not known quantities. In the basic algorithm above, the Kalman gain treats the observation noise as $\sigma_{sport}^2 + \sigma_i^2$, implicitly assuming that $B$ and $D_i$ are measured perfectly. In reality, both carry estimation variance that depends on the field: a baseline anchored by 50 well-known competitors is far more precise than one anchored by 2 newcomers. Ignoring this causes systematic over-updating in small or uncertain fields.
 	
 	\subsubsection*{Leave-One-Out Baseline}
-	To avoid circularity (competitor $i$ influencing their own baseline), replace $B$ with a leave-one-out estimate:
+	To avoid circularity (competitor $i$ influencing their own baseline), replace $B$ with a leave-one-out estimate formed from the robustified weights:
 	\begin{equation}
-		B_{-i} = \frac{\sum_{j \neq i} W_j (R_j - L_j)}{\sum_{j \neq i} W_j}
+		B_{-i} = \frac{\sum_{j \neq i} \tilde{W}_j a_j}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
 	\end{equation}
 	
-	The variance of this estimate under the precision-weighted mean is:
+	The variance of this estimate under the precision-weighted mean with prior regularization is:
 	\begin{equation}
-		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
+		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
 	\end{equation}
 	
-	In large fields with well-known competitors, $\sum_{j \neq i} W_j$ is large and $\mathrm{Var}(B_{-i})$ is negligible. In small fields, particularly those dominated by high-variance newcomers, $\mathrm{Var}(B_{-i})$ grows substantially---exactly when the model should be cautious.
+	In large fields with well-known competitors, $\sum_{j \neq i} \tilde{W}_j$ is large and the prior is negligible, so $\mathrm{Var}(B_{-i})$ remains tiny. In small or structurally weird fields, robust downweighting and the weak prior both act as stabilizers: extreme anchors lose leverage, and the baseline is gently shrunk toward average difficulty rather than being allowed to run away.
 	
 	\subsubsection*{Pairwise Estimation Variance}
 	The pairwise residual $D_i$ is itself a precision-weighted mean over the opponent set $\mathcal{S}_i$. Its estimation variance is:
@@ -200,11 +240,46 @@
 	\end{equation}
 	
 	Since $D_i$ enters the observed performance scaled by $\alpha$, its contribution to the total observation variance is $\alpha^2 \cdot \mathrm{Var}(D_i)$.
+
+	\subsubsection*{Weak-Field Match-Context Damping}
+	Some pathological cases are not well-described by per-competitor tail noise alone: tiny matches in which a large share of the non-winners finish extremely far behind the winner. In such fields, the issue is not merely that one weak finish is noisy, but that the match as a whole provides little trustworthy information about top-end skill separation. To model this, introduce a match-level variance term that depends on field size and weak-field composition.
+	
+	Let $N$ be the field size and define a small-field taper
+	\begin{equation}
+		f_{size}(N) = \max\!\left(0,\frac{n_{max} - N}{n_{max} - 2}\right)
+	\end{equation}
+	so that two-person fields receive the full size penalty and fields with $N \ge n_{max}$ receive none.
+	
+	Let $\mathcal{W}$ be the set of non-winners whose finish percentages fall below the weak threshold:
+	\begin{equation}
+		\mathcal{W} = \{j : \text{$j$ is not the winner and } S_j < s_w\}
+	\end{equation}
+	and define the weak non-winner fraction
+	\begin{equation}
+		q = \frac{|\mathcal{W}|}{N - 1}
+	\end{equation}
+	If $q < q_0$, no weak-field penalty is applied. Otherwise, define a severity term by measuring how far the weak finishes extend below the threshold in log space:
+	\begin{equation}
+		g = \min\!\left(1,\frac{1}{|\mathcal{W}| \cdot (-\ln s_w)} \sum_{j \in \mathcal{W}} \max\!\left(0,\ln\!\left(\frac{s_w}{\max(S_{floor}, S_j)}\right)\right)\right)
+	\end{equation}
+	The match-level pathology score is then
+	\begin{equation}
+		p =
+		\begin{cases}
+			0, & q < q_0 \\
+			f_{size}(N) \cdot q \cdot g, & q \ge q_0
+		\end{cases}
+	\end{equation}
+	and the resulting weak-field observation variance is
+	\begin{equation}
+		\sigma_{path}^2 = \omega^2 \cdot p
+	\end{equation}
+	This term is shared across competitors in the same match. Conceptually, it says: ``this field may be real, but it is not an especially precise instrument for measuring elite-vs-elite skill.'' Current USPSA-oriented implementation defaults are $s_0 = 0.60$, $\xi^2 = 0.06$, $\omega^2 = 0.50$, $n_{max} = 10$, $s_w = 0.60$, and $q_0 = 0.40$.
 	
 	\subsubsection*{Effective Observation Noise}
 	Combining all variance sources, the total observation noise for competitor $i$'s performance estimate is:
 	\begin{equation}
-		R_{obs,i} = \sigma_{sport}^2 + \sigma_i^2 + \mathrm{Var}(B_{-i}) + \alpha^2 \cdot \mathrm{Var}(D_i)
+		R_{obs,i} = \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i) + \mathrm{Var}(B_{-i}) + \alpha^2 \cdot \mathrm{Var}(D_i) + \sigma_{path}^2
 	\end{equation}
 	
 	This replaces $\sigma_{sport}^2 + \sigma_i^2$ in the Kalman gain (Step~2 of the Update Rule), the innovation-based variance update (Step~4), and the $z$-score used for robust weighting:
@@ -212,7 +287,7 @@
 		K_i = \frac{V_i}{V_i + R_{obs,i}}, \qquad z_i = \frac{e_i}{\sqrt{V_i + R_{obs,i}}}
 	\end{equation}
 	
-	The effect is automatic and principled: large fields with strong opponents produce small $R_{obs,i}$ (close to the original $\sigma_{sport}^2 + \sigma_i^2$), so rating updates proceed normally. Small fields with uncertain opponents inflate $R_{obs,i}$, which simultaneously reduces $K_i$ (smaller updates) and reduces $|z_i|$ (making the Student-$t$ robust weight less aggressive). No hand-tuned field-size multipliers or evidence scale-down factors are needed.
+	The effect is automatic and principled: large fields with strong opponents and non-pathological finishes produce small $R_{obs,i}$ (close to the original $\sigma_{sport}^2 + \sigma_i^2$), so rating updates proceed normally. Small fields, uncertain opponents, extremely weak individual finishes, and tiny bottom-heavy fields inflate $R_{obs,i}$, which simultaneously reduces $K_i$ (smaller updates) and reduces $|z_i|$ (making the Student-$t$ robust weight less aggressive). No deformation of the log-ratio mean link is required.
 	
 	\subsubsection*{Robust Outlier Weighting}
 	Even with correct observation noise, individual match results can be corrupted by equipment failure, rule violations, or other non-skill factors. A Student-$t$ weight on the innovation provides a final layer of robustness:
@@ -266,7 +341,7 @@
 	\begin{enumerate}
 		\item \textbf{Algorithmic Efficiency:} Glicko-2 requires $\mathcal{O}(N^2)$ pairwise comparisons. A 300-person match yields 44,850 comparisons per competitor. The Latent Log-Ratio model computes the match baseline in $\mathcal{O}(N)$ and adds pairwise corrections against $k$ selected opponents per competitor, yielding $\mathcal{O}(N \cdot k)$ total complexity. With $k = 20$--$30$, a 300-person match requires 6,000--9,000 pairwise comparisons total, rather than 44,850 per competitor.
 		
-		\item \textbf{Native Representation of Performance Distances:} Logistic models represent the outcome of a pairwise comparison as a probability in $(0, 1)$, which is correct for binary win/loss but introduces information loss for continuous margins. A pairwise expected score of $0.95$ could correspond to a 5\% performance margin or a 50\% margin---the sigmoid saturates at the extremes, compressing large differences into a narrow band. The log-ratio model preserves the full performance distance throughout the update pipeline: a competitor who performs at twice the level of another has a log-ratio of $\ln(2) \approx 0.69$, regardless of whether both are elite or both are novices. This distance is carried through the baseline, pairwise residuals, and rating updates without compression.
+		\item \textbf{Native Representation of Performance Distances:} Logistic models represent the outcome of a pairwise comparison as a probability in $(0, 1)$, which is correct for binary win/loss but introduces information loss for continuous margins. A pairwise expected score of $0.95$ could correspond to a 5\% performance margin or a 50\% margin---the sigmoid saturates at the extremes, compressing large differences into a narrow band. The latent log-ratio model preserves the log-ratio structure of performance distances globally: a competitor who performs at twice the level of another has a log-gap of $\ln(2) \approx 0.69$, regardless of whether both are elite or both are novices. Pathological deep-tail updates are handled by observation-noise inflation rather than by deforming this distance scale, so prediction remains analytically simple.
 		
 		\item \textbf{Explicit Separation of Variance Sources:} Rather than routing all uncertainty through a single mechanism (e.g., Glicko-2's Rating Deviation, which conflates measurement uncertainty, skill drift, and competitor consistency), the model explicitly separates:
 		\begin{itemize}
