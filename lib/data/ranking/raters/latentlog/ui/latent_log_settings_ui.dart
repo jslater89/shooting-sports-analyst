@@ -325,7 +325,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       _startingVarianceInternal.text = settings.startingVariance
           .toStringAsFixed(4);
       _matchDifficultyInternal.text = settings.matchDifficultyVariance
-          .toStringAsFixed(6);
+          .toStringAsFixed(4);
     }
     if (updateScaled) {
       _sportVolatilityScaled.text = (settings.sportVolatility * sf)
@@ -596,11 +596,10 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     settings.weakFieldWeakFinishThreshold = weakFieldWeakFinishThreshold;
     settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
 
-    final updateMode = _varianceBasis == _VarianceBasis.internalUnits
-        ? _VarianceUpdateMode.scaledOnly
-        : _varianceBasis == _VarianceBasis.displayScaled
-        ? _VarianceUpdateMode.internalOnly
-        : _VarianceUpdateMode.both;
+    final updateMode = switch (_varianceBasis) {
+      _VarianceBasis.internalUnits => _VarianceUpdateMode.scaledOnly,
+      _VarianceBasis.displayScaled => _VarianceUpdateMode.internalOnly,
+    };
     _writeVarianceControllersFromSettings(updateMode);
     widget.controller.lastError = null;
   }
@@ -620,6 +619,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: columnGap,
           children: [
             const Divider(),
             Row(
@@ -632,12 +632,13 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.only(left: 8, top: 8),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 4),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     "Variance parameters: ",
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   ToggleButtons(
                     isSelected: [
@@ -1024,7 +1025,7 @@ class _LatentLogVarianceDisplaySlot extends StatelessWidget {
         listenable: controller,
         builder: (context, _) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Align(
               alignment: Alignment.centerRight,
               child: Text(
