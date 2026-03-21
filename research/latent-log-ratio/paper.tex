@@ -122,6 +122,28 @@
 	\begin{equation}
 		W_i = \frac{1}{V_i + \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i)}
 	\end{equation}
+	This construction is deliberately asymmetric between mean and variance. The observed score remains
+	\begin{equation}
+		L_i = \ln(\max(S_{floor}, S_i))
+	\end{equation}
+	so the globally log-linear interpretation of rating differences is preserved exactly. Tail handling enters only through uncertainty: as a finish moves deeper into the weak tail, the model treats it as less precise evidence about latent skill rather than as evidence with a different mean.
+	
+	\subsubsection*{Why Tail Noise Is Needed}
+	In many practical-shooting datasets, very weak finishes are not reliable linear evidence about top-end skill separation. A competitor finishing at 20\% of the winner is certainly worse than one finishing at 40\%, but it does not follow that the 20\% finisher provides proportionally trustworthy information about how far the winner sits above the rest of the field in latent skill space. Deep-tail results are often contaminated by penalties, stage failures, equipment problems, or simply the nonlinear geometry of ratio scoring in the far tail.
+	
+	A naive fix would be to compress the log-score itself with a nonlinear map. That can work as a robust update heuristic, but it destroys the model's clean predictive semantics: once the mean link is no longer $\ln(S_i)$, rating differences are no longer trivially interpretable as log-performance ratios. The tail-noise approach instead keeps the central identity intact and expresses skepticism in the probabilistically appropriate place, namely the observation variance.
+	
+	The piecewise definition of $\eta(S_i)$ encodes two desiderata:
+	\begin{enumerate}
+		\item For ordinary finishes ($S_i \ge s_0$), the model should reduce to the standard latent log-ratio update, so $\eta(S_i) = 0$.
+		\item For weak finishes ($S_i < s_0$), the extra variance should increase smoothly as the score deteriorates, so that extremely weak results have less leverage in baseline anchoring, pairwise residual averaging, and the final Kalman update.
+	\end{enumerate}
+	
+	The quadratic form
+	\begin{equation}
+		\eta(S_i) = \xi^2 \left(\frac{s_0 - S_i}{s_0}\right)^2
+	\end{equation}
+	is not the only possible choice, but it has several practical advantages: it is continuous at the threshold, it is monotone in tail depth, it is cheap to compute, and it avoids introducing a second kink in the update geometry. Most importantly, it leaves the mean observation untouched while making low-end results progressively less influential as evidence.
 	
 	\textbf{Step 3: Establish the Match Baseline ($B$)}\\
 	Calculate per-competitor baseline residuals by comparing the field's expected ratings against their log-scores:
@@ -362,7 +384,7 @@
 	\subsubsection*{Closed-Form Approximation (Well-Separated Fields)}
 	When the top of the field is clearly separated (e.g., one or two strong favorites), a fast closed-form approximation suffices. For each candidate winner $w$ among the top-$m$ rated competitors, estimate the probability that $w$ produces the highest performance:
 	\begin{equation}
-		p_w \approx \prod_{j \neq w} \Phi\!\left(\frac{R_w - R_j}{\sqrt{V_w + V_j + 2\sigma_{sport}^2}}\right)
+		p_w \approx \prod_{j \neq w} \Phi\!\left(\frac{R_w - R_j}{\sqrt{V_w + V_j + 2\sigma_{sport}^2 + \sigma_w^2 + \sigma_j^2}}\right)
 	\end{equation}
 	where $\Phi$ is the standard normal CDF. Normalize so that $\sum_w p_w = 1$.
 	
@@ -373,7 +395,7 @@
 	
 	For each trial $t = 1 \dots T$ (e.g., $T = 1000$--$2000$):
 	\begin{enumerate}
-		\item For each competitor $i$, draw a performance sample $X_i \sim \mathcal{N}(R_i, V_i + \sigma_{sport}^2)$.
+		\item For each competitor $i$, draw a performance sample $X_i \sim \mathcal{N}(R_i, V_i + \sigma_{sport}^2 + \sigma_i^2)$.
 		\item Record the winner: $w_t = \arg\max_i X_i$.
 	\end{enumerate}
 	
@@ -384,21 +406,21 @@
 	
 	This naturally adapts to any field composition: if 30 competitors could realistically win, all 30 will receive nonzero $p_w$. The cost is $\mathcal{O}(T \cdot N)$, but this runs only at prediction time (not during rating updates), and with $T = 2000$ and $N = 300$, the 600,000 draws are trivially fast.
 	
-	In practice, filter to $p_w > \epsilon$ (e.g., $\epsilon = 0.005$) before computing the prediction mixture to avoid noise from single-trial long-shot winners.
+	In practice, filter to $p_w > \epsilon$ (e.g., $\epsilon = 0.005$) before computing the prediction mixture to avoid noise from single-trial long-shot winners. If filtering, renormalize such that $\sum_w p_w = 1$.
 	
 	\subsection{Generating the Expected Percentage (The Mean)}
 	The naive prediction $\hat{S}_i = \exp(R_i - R_{max})$ assumes the winner performs exactly at their mean rating. Since the winner's actual performance is a random variable, we apply an analytical correction derived from the moment-generating function of the normal distribution.
 	
-	For a single presumed winner $w$ with performance $X_w \sim \mathcal{N}(R_w, V_w + \sigma_{sport}^2)$:
+	For a single presumed winner $w$ with performance $X_w \sim \mathcal{N}(R_w, V_w + \sigma_{sport}^2 + \sigma_w^2)$:
 	\begin{equation}
-		E[\exp(R_i - X_w)] = \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2}{2}\right)
+		E[\exp(R_i - X_w)] = \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2 + \sigma_w^2}{2}\right)
 	\end{equation}
 	
-	The correction term $\frac{V_w + \sigma_{sport}^2}{2}$ is always positive: when the winner's rating is uncertain, the expected finish percentage is higher than the naive point estimate, because the winner is more likely to have a mediocre day than a perfect one.
+	The correction term $\frac{V_w + \sigma_{sport}^2 + \sigma_w^2}{2}$ is always positive: when the winner's rating is uncertain and the winner's performance is also subject to volatility, the expected finish percentage is higher than the naive point estimate, because the winner is more likely to have a mediocre day than a perfect one.
 	
 	Combining with the winner mixture:
 	\begin{equation}
-		\hat{S}_i = \sum_{w \in \text{top-}m} p_w \cdot \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2}{2}\right)
+		\hat{S}_i = \sum_{w \in \text{top-}m} p_w \cdot \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2 + \sigma_w^2}{2}\right)
 	\end{equation}
 	
 	\subsection{Generating the Range of Outcomes (Standard Deviation)}
@@ -406,13 +428,14 @@
 	\begin{enumerate}
 		\item Their own rating uncertainty ($V_i$)
 		\item Their own behavioral volatility ($\sigma_i^2$)
-		\item The presumed winner's uncertainty (probability-weighted)
+		\item The presumed winner's uncertainty (probability-weighted $V_w$)
+		\item The presumed winner's behavioral volatility (probability-weighted $\sigma_w^2$)
 		\item The inherent volatility of the sport ($\sigma_{sport}^2$)
 	\end{enumerate}
 	
 	The total predictive variance in log space, accounting for the winner mixture:
 	\begin{equation}
-		\sigma_{pred,i}^2 = V_i + \sigma_i^2 + \sigma_{sport}^2 + \sum_{w \in \text{top-}m} p_w \cdot V_w
+		\sigma_{pred,i}^2 = V_i + \sigma_i^2 + \sigma_{sport}^2 + \sum_{w \in \text{top-}m} p_w \left( V_w + \sigma_w^2 \right)
 	\end{equation}
 	
 	Because the errors are normally distributed in log space, the actual match percentage follows a log-normal distribution. You can provide a 95\% Confidence Interval for a competitor's expected percentage:
