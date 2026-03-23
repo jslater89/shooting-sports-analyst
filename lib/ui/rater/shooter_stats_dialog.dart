@@ -116,6 +116,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildEventLines() {
+    final scaleFactor = widget.rating is LatentLogRating ? (widget.rating as LatentLogRating).settings.scaleFactor : 1.0;
     _eventLines = displayedStats.events
       .map((e) => Tooltip(
       waitDuration: Duration(milliseconds: 500),
@@ -143,7 +144,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                       flex: 2,
                       child: Align(
                           alignment: Alignment.centerRight,
-                          child: Text("${e.ratingChange.toStringAsFixed(2)}",
+                          child: Text("${(e.ratingChange * scaleFactor).toStringAsFixed(2)}",
                               style:
                               Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
                     )
@@ -222,6 +223,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       if(entry.matchEntry.dq) {
         matchName += " (DQ)";
       }
+
+      if(widget.rating is LatentLogRating) {
+        final sf = (widget.rating as LatentLogRating).settings.scaleFactor;
+        entry.ratingChange *= sf;
+      }
+
       widgets.add(ClickableLink(
         onTap: () {
           _launchScoreView(entry.divisionEntered, entry.match);
@@ -519,8 +526,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         }
         else if(rating is LatentLogRating) {
           e as LatentLogRatingEvent;
-          final sf = e.settings.scaleFactor;
-          error = sqrt(max(0, e.newVariance)) * sf / 2;
+          error = sqrt(e.newVariance) * e.settings.scaleFactor / 2;
         }
 
         var plusError = measureRating + error;

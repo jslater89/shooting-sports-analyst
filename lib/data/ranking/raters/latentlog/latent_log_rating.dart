@@ -57,11 +57,10 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   double get displayRating => rating * settings.scaleFactor + settings.scaleOffset;
   double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
-  double get displayCurrentVariance => currentVariance * settings.scaleFactor * settings.scaleFactor;
+  double get displayCurrentVariance => varianceToday * settings.scaleFactor * settings.scaleFactor;
   double get displayVolatility => volatility * settings.scaleFactor * settings.scaleFactor;
 
-  double get ratingStandardDeviation => sqrt(variance);
-  double get currentVarianceStandardDeviation => sqrt(currentVariance);
+  double get currentStandardDeviation => sqrt(varianceToday);
   double get displayStandardDeviation => sqrt(displayVariance);
   double get displayCurrentStandardDeviation => sqrt(displayCurrentVariance);
   double get displayVolatilityStandardDeviation => sqrt(displayVolatility);
@@ -72,21 +71,21 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   double get volatility => wrappedRating.doubleData[_DoubleKeys.volatility.index];
   set volatility(double v) => wrappedRating.doubleData[_DoubleKeys.volatility.index] = v;
 
-  double get currentVariance {
-    if(currentVarianceTimestamp.isSameDay(DateTime.now())) {
+  double get varianceToday {
+    if(varianceTodayTimestamp.isSameDay(DateTime.now())) {
       return wrappedRating.doubleData[_DoubleKeys.currentVariance.index];
     }
     else {
       final updated = calculateCurrentVariance();
       wrappedRating.doubleData[_DoubleKeys.currentVariance.index] = updated;
-      currentVarianceTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      varianceTodayTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       return updated;
     }
   }
-  set currentVariance(double v) => wrappedRating.doubleData[_DoubleKeys.currentVariance.index] = v;
+  set varianceToday(double v) => wrappedRating.doubleData[_DoubleKeys.currentVariance.index] = v;
 
-  int get currentVarianceTimestamp => wrappedRating.intData[_IntKeys.currentVarianceTimestamp.index];
-  set currentVarianceTimestamp(int v) => wrappedRating.intData[_IntKeys.currentVarianceTimestamp.index] = v;
+  int get varianceTodayTimestamp => wrappedRating.intData[_IntKeys.currentVarianceTimestamp.index];
+  set varianceTodayTimestamp(int v) => wrappedRating.intData[_IntKeys.currentVarianceTimestamp.index] = v;
 
   int get lastCommitTimestamp => wrappedRating.intData[_IntKeys.lastCommitTimestamp.index];
   set lastCommitTimestamp(int v) => wrappedRating.intData[_IntKeys.lastCommitTimestamp.index] = v;
@@ -111,7 +110,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     var daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
     var ratingPeriodsSinceLastCommit = daysSinceLastCommit / ratingPeriodLengthInDays;
     var newVariance = variance + settings.skillDriftRate * ratingPeriodsSinceLastCommit;
-    return min(settings.startingVariance, newVariance);
+    return min(settings.maximumVariance, newVariance);
   }
 
   @override
@@ -160,14 +159,14 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   LatentLogRating.copy(LatentLogRating other) : this.settings = other.settings, super.copy(other) {
     this.volatility = other.volatility;
-    this.currentVariance = other.currentVariance;
+    this.varianceToday = other.varianceToday;
     this.lastCommitTimestamp = other.lastCommitTimestamp;
-    this.currentVarianceTimestamp = other.currentVarianceTimestamp;
+    this.varianceTodayTimestamp = other.varianceTodayTimestamp;
     this.lengthInStages = other.lengthInStages;
   }
 
   @override
   String toString() {
-    return "name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${volatility.toStringAsFixed(2)} ($hashCode)";
+    return "$name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${volatility.toStringAsFixed(2)} ($hashCode)";
   }
 }

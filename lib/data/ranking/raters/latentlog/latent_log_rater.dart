@@ -1,12 +1,14 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_settings.dart';
@@ -14,11 +16,15 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("LatentLogRater");
 
 /// A rating system that uses a latent log-ratio model to calculate ratings.
 class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   static const _scoreFloor = 0.01;
+  static const _volatilityScaleFactor = 1.0;
 
   static const oldVarianceKey = "latentLogOldVariance";
   static const oldVolatilityKey = "latentLogOldVolatility";
@@ -93,7 +99,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       date: date,
       initialRating: 0,
       initialVariance: settings.startingVariance,
-      initialVolatility: settings.sportVolatility,
+      initialVolatility: sqrt((0.05 * settings.startingVariance * _volatilityScaleFactor) * settings.startingVariance * _volatilityScaleFactor),
       settings: settings,
     );
   }
@@ -182,6 +188,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       baselineResidual += weight * residual;
     }
 
+    // If baseline robustness is enabled, apply a Huber-style taper to
+    // the baseline weights to downweight extreme outliers.
     if (totalWeight > 0 && settings.baselineRobustnessZ > 0) {
       final rawBaseline =
           baselineResidual / (totalWeight + _matchDifficultyPriorPrecision);
@@ -211,6 +219,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       }
     }
 
+    // If weak field observation variance is enabled, calculate additional
+    // observation noise for small/degenerate fields.
     final weakFieldVariance = _weakFieldObservationVariance(
       validShooters,
       scores,
@@ -245,16 +255,37 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   }
 
   RatingChange? _calculateRatingChangeForShooter({
+    /// The match being processed.
     required ShootingMatch match,
+
+    /// The shooter being processed.
     required ShooterRating shooter,
+
+    /// The aged variance of the shooter, accounting for time since the last update.
     required double shooterVariance,
+
+    /// The date of the match being processed.
     required DateTime matchDate,
+
+    /// The sum of the baseline residuals.
     required double baselineResidualSum,
+
+    /// The total weight of the baseline.
     required double totalBaselineWeight,
+
+    /// The weak field observation variance.
     required double weakFieldVariance,
+
+    /// The scores of the competitors.
     required Map<ShooterRating, RelativeScore> scores,
+
+    /// The score evidence of the competitors.
     required Map<ShooterRating, double> competitorScoreEvidence,
+
+    /// The tail noise (i.e. additional variance) of the competitors.
     required Map<ShooterRating, double> competitorTailNoise,
+
+    /// The weights of the competitors.
     required Map<ShooterRating, double> competitorWeights,
   }) {
     shooter as LatentLogRating;
@@ -341,56 +372,84 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // Effective observation noise propagates uncertainty from the baseline
     // estimate and pairwise estimate into the Kalman filter, rather than
-    // treating them as known quantities. This naturally damps updates in
-    // small/weak fields without ad-hoc multipliers.
-    final effectiveObsNoise =
+    // treating them as known quantities.
+    final totalObsNoise =
         settings.sportVolatility +
         shooter.volatility +
         shooterTailNoise +
         baselineVariance +
-        pairwiseBlendWeight * pairwiseBlendWeight * pairwiseVariance;
-    final totalObsNoise = effectiveObsNoise + weakFieldVariance;
-    final kalmanDenominator = shooterVariance + totalObsNoise;
-    final zScore = innovation / sqrt(kalmanDenominator);
+        pairwiseBlendWeight * pairwiseBlendWeight * pairwiseVariance +
+        weakFieldVariance;
+    final totalNoise = shooterVariance + totalObsNoise;
+    final zScore = innovation / sqrt(totalNoise);
 
     // Student-t robust weight: damp outlier innovations. The z-score is
-    // now computed against effectiveObsNoise, so this is correctly calibrated.
+    // now computed against observation noise only, so this is correctly calibrated.
     const nuMin = 2;
     const nuMax = 30;
     final nu = (nuMin + 0.5 * scores.length).clamp(nuMin, nuMax);
-    final weight = (nu + 1) / (nu + zScore * zScore);
-    innovation = innovation * weight;
+    final weight = min(1.0, (nu + 1) / (nu + zScore * zScore));
+    final dampedInnovation = innovation * weight;
 
-    final kalmanGain = shooterVariance / kalmanDenominator;
-    final newRating = shooter.rating + kalmanGain * innovation;
+    final kalmanGain = shooterVariance / totalNoise;
+    final newRating = shooter.rating + kalmanGain * dampedInnovation;
 
-    final innovationVariance = innovation * innovation;
+    final denoisedInnovationVariance = max(0, innovation * innovation - shooterVariance - settings.sportVolatility);
+
     final innovationCorrection =
         settings.surpriseAdaptationRate *
-        max(0.0, innovationVariance - kalmanDenominator);
+        max(0.0, denoisedInnovationVariance - totalNoise);
     final newVariance = min(
-      settings.startingVariance,
+      settings.maximumVariance,
       shooterVariance * (1 - kalmanGain) + innovationCorrection,
     );
+
+    final maxVolatility = settings.maximumVariance * _volatilityScaleFactor;
+
+    // 1% of starting variance (i.e., 'minimal')—we don't want to use 1% of maximum
+    // because maximum may be very liberal, and we want this to be more like
+    // an epsilon than a meaningful limit.
+    final minVolatility = 0.01 * settings.startingVariance * _volatilityScaleFactor;
+
+    // Clamp observations to 3SD
+    final maxInstantaneousVariance = max(
+      9.0 * shooter.volatility,
+      minVolatility
+    );
+
+    final clampedInstantaneousVariance = min(
+      maxInstantaneousVariance,
+      newVariance,
+    );
+
+    final certainty =
+        1.0 - (shooterVariance / settings.maximumVariance).clamp(0.0, 1.0);
+    final effectiveAdaptationRate = settings.volatilityAdaptationRate * max(0.25, certainty);
     final newVolatility =
-        (shooter.volatility * (1 - settings.volatilityAdaptationRate) +
-                settings.volatilityAdaptationRate * innovationVariance)
+        (shooter.volatility * (1 - effectiveAdaptationRate) +
+                effectiveAdaptationRate * clampedInstantaneousVariance * _volatilityScaleFactor)
             .clamp(
-              0.5 * settings.sportVolatility,
-              3 * settings.sportVolatility,
+              minVolatility,
+              maxVolatility,
             );
 
     // Change is relative to the _committed_ variance, not the calculated current
     // variance-with-aging.
     final varianceChange = newVariance - shooter.variance;
     final volatilityChange = newVolatility - shooter.volatility;
+    final displayVarianceChange = settings.scaleFactor * (sqrt(newVariance) - sqrt(shooter.variance));
+    final displayVolatilityChange = settings.scaleFactor * (sqrt(newVolatility) - sqrt(shooter.volatility));
+    final displayInnovationCorrection = settings.scaleFactor * (sqrt(newVariance + innovationCorrection) - sqrt(newVariance));
 
     final stagesForEvent = byStage ? 1.0 : match.stages.length.toDouble();
 
     return RatingChange(
       change: {
         RatingSystem.ratingChangeKey: newRating - shooter.rating,
-        LatentLogRater.oldVarianceKey: shooterVariance,
+        // Committed variance before this match (not time-aged). Matches
+        // varianceChange so oldVariance + varianceChange is the new committed
+        // variance on the event (charts / history).
+        LatentLogRater.oldVarianceKey: shooter.variance,
         LatentLogRater.oldVolatilityKey: shooter.volatility,
         LatentLogRater.varianceChangeKey: varianceChange,
         LatentLogRater.volatilityChangeKey: volatilityChange,
@@ -399,7 +458,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       infoLines: [
         "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
         "Rating ± Change: {{rating}}/{{change}}",
-        "Variance ± Change: {{variance}}/{{varianceChange}}",
+        "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} surprise)",
         "Volatility ± Change: {{volatility}}/{{volatilityChange}}",
         "Considered {{opponents}} opponents",
       ],
@@ -419,33 +478,38 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         ),
         RatingEventInfoElement.double(
           name: "rating",
-          doubleValue: newRating,
+          doubleValue: (newRating * settings.scaleFactor) + settings.scaleOffset,
           numberFormat: "%00.0f",
         ),
         RatingEventInfoElement.double(
           name: "change",
-          doubleValue: newRating - shooter.rating,
+          doubleValue: (newRating - shooter.rating) * settings.scaleFactor,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
           name: "variance",
-          doubleValue: newVariance,
-          numberFormat: "%00.2f",
+          doubleValue: sqrt(newVariance) * settings.scaleFactor,
+          numberFormat: "%00.1f",
         ),
         RatingEventInfoElement.double(
           name: "varianceChange",
-          doubleValue: varianceChange,
+          doubleValue: displayVarianceChange,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "innovationCorrection",
+          doubleValue: displayInnovationCorrection,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
           name: "volatility",
-          doubleValue: newVolatility,
-          numberFormat: "%00.4f",
+          doubleValue: sqrt(newVolatility) * settings.scaleFactor,
+          numberFormat: "%00.1f",
         ),
         RatingEventInfoElement.double(
           name: "volatilityChange",
-          doubleValue: volatilityChange,
-          numberFormat: "%00.4f",
+          doubleValue: displayVolatilityChange,
+          numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.int(
           name: "opponents",
@@ -631,6 +695,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return nearbyOpponents.toList();
   }
 
+  // Below: predictions
+
   @override
   bool get supportsPrediction => true;
 
@@ -644,4 +710,184 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
   @override
   bool get predictionsOutputRatios => true;
+
+  @override
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
+    List<AlgorithmPrediction> predictions = [];
+
+    List<LatentLogRating> sortedRatings = ratings.cast<LatentLogRating>().sorted((a, b) => b.rating.compareTo(a.rating));
+
+    List<_PresumedWinnerPrediction> presumedWinners = _presumedWinnersClosedForm(sortedRatings);
+
+    for(var rating in sortedRatings) {
+      /// We use the probability-weighted log ratio to calculate the median
+      /// log ratio, so that we can correctly center the confidence interval.
+      ///
+      /// It is the expected log difference from the competitor's rating to the
+      /// presumed winners' ratings, weighted by the presumed winner's win
+      /// probability.
+      ///
+      /// This is their sum (i.e. their weighted average by win probability).
+      double probabilityWeightedLogDifference = 0.0;
+
+      /// The probability-weighted ratios are the expected final scores in ratio
+      /// space for the competitor against each presumed winner, weighted by the
+      /// presumed winner's win probability.
+      ///
+      /// This is their sum (i.e. their weighted average by win probability).
+      double probabilityWeightedRatio = 0.0;
+
+      /// The probability-weighted winner rating variance, used for the
+      /// prediction band.
+      double probabilityWeightedWinnerVariance = 0.0;
+
+      /// Probability-weighted sum of presumed winners' behavioral variances
+      /// (same weighting as [probabilityWeightedWinnerVariance]).
+      double probabilityWeightedWinnerExcessVolatility = 0.0;
+
+      for(var presumedWinner in presumedWinners) {
+        final winProbability = presumedWinner.winProbability;
+
+        final logDifference = rating.rating - presumedWinner.shooter.rating;
+        probabilityWeightedLogDifference += logDifference * winProbability;
+
+        final winnerVariance =
+          matchDate != null ?
+            presumedWinner.shooter.variance : //presumedWinner.shooter.calculateCurrentVariance(asOfDate: matchDate) :
+            presumedWinner.shooter.variance;
+
+        final correctionTerm = (winnerVariance + settings.sportVolatility) / 2;
+        final weightedRatio = exp(logDifference + correctionTerm) * winProbability;
+        probabilityWeightedRatio += weightedRatio;
+        probabilityWeightedWinnerVariance += winnerVariance * winProbability;
+        probabilityWeightedWinnerExcessVolatility +=
+            max(0, presumedWinner.shooter.volatility - presumedWinner.shooter.variance) * winProbability;
+      }
+
+      final ratingVariance =
+        matchDate != null ?
+          rating.variance : //rating.calculateCurrentVariance(asOfDate: matchDate) :
+          rating.variance;
+      final kappa = settings.predictionBehavioralVolatilityKappa;
+      final ratingExcessVolatility = max(0, rating.volatility - rating.variance);
+      final predictiveVariance =
+        ratingVariance
+        + 2 * settings.predictionSportVariance
+        + probabilityWeightedWinnerVariance
+        + (ratingExcessVolatility + probabilityWeightedWinnerExcessVolatility) * kappa;
+
+      final oneSigmaUpper = exp(probabilityWeightedLogDifference + sqrt(predictiveVariance));
+      final oneSigma = oneSigmaUpper - probabilityWeightedRatio;
+
+      // We'll fill in places in a second pass
+      predictions.add(AlgorithmPrediction(
+        shooter: rating,
+        mean: probabilityWeightedRatio,
+        sigma: oneSigma,
+        settings: settings,
+        algorithm: this,
+        meanRatio: probabilityWeightedRatio,
+        oneSigmaRatio: oneSigma,
+        shiftRatio: 0.0,
+      ));
+    }
+
+    var sortedPredictions = predictions.sorted((a, b) => b.mean.compareTo(a.mean));
+    for(var (centerPlace, prediction) in sortedPredictions.indexed) {
+      prediction.medianPlace = centerPlace + 1;
+      bool hasBestPlace = false;
+      bool hasWorstPlace = false;
+      for(var (i, other) in sortedPredictions.indexed) {
+        if(prediction == other) {
+          continue;
+        }
+
+        if(other.mean > prediction.highPrediction) {
+          prediction.highPlace = i + 1;
+          hasBestPlace = true;
+        }
+        if(other.mean > prediction.lowPrediction) {
+          prediction.lowPlace = i + 1;
+          hasWorstPlace = true;
+        }
+      }
+      if(!hasBestPlace) {
+        prediction.highPlace = centerPlace + 1;
+      }
+      if(!hasWorstPlace) {
+        prediction.lowPlace = centerPlace + 1;
+      }
+    }
+
+    return predictions;
+  }
+
+  List<_PresumedWinnerPrediction> _presumedWinnersClosedForm(List<LatentLogRating> sortedRatings, {DateTime? matchDate}) {
+    List<_PresumedWinnerPrediction> predictions = [];
+    // Take the top 10% or top 3 if there are fewer than 30 ratings.
+    int topN = (sortedRatings.length * 0.25).ceil();
+    if (topN < 5) {
+      topN = 5;
+    }
+    List<LatentLogRating> topRatings = sortedRatings.take(topN).toList();
+
+    // For each top rating, calculate the expected percentage.
+    for (var rating in topRatings) {
+      final ratingVariance =
+        matchDate != null ?
+          rating.calculateCurrentVariance(asOfDate: matchDate) :
+          rating.variance;
+      List<double> pairwiseProbabilities = [];
+      for (var opponent in sortedRatings) {
+        if (opponent == rating) {
+          continue;
+        }
+
+        final opponentVariance =
+          matchDate != null ?
+            opponent.calculateCurrentVariance(asOfDate: matchDate) :
+            opponent.variance;
+
+        double numerator = rating.rating - opponent.rating;
+        // all properties are in variance units
+
+        double denominator = sqrt(
+          ratingVariance
+          + opponentVariance
+          + 2 * settings.predictionSportVariance
+        );
+
+        double probability = Normal.cdf(numerator / denominator);
+        pairwiseProbabilities.add(probability);
+      }
+      double winProbability = pairwiseProbabilities.reduce((a, b) => a * b);
+      predictions.add(_PresumedWinnerPrediction(shooter: rating, winProbability: winProbability));
+    }
+
+    return _PresumedWinnerPrediction.normalize(predictions);
+  }
+
+  List<_PresumedWinnerPrediction> _presumedWinnersMonteCarlo(List<ShooterRating> sortedRatings) {
+    throw UnimplementedError();
+  }
+
+}
+
+/// The probability that a given competitor is the presumed winner of the match, for the purposes
+/// of generating a winner mixture for predictions.
+class _PresumedWinnerPrediction {
+  final LatentLogRating shooter;
+  final double winProbability;
+
+  _PresumedWinnerPrediction({
+    required this.shooter,
+    required this.winProbability,
+  });
+
+  /// Normalize so that all probabilities sum to 1.
+  static List<_PresumedWinnerPrediction> normalize(List<_PresumedWinnerPrediction> predictions) {
+    double totalProbability = predictions.map((p) => p.winProbability).sum;
+    _log.v("Total probability before normalization: $totalProbability");
+    return predictions.map((p) => _PresumedWinnerPrediction(shooter: p.shooter, winProbability: p.winProbability / totalProbability)).toList();
+  }
 }

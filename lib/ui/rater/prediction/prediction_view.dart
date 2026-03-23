@@ -340,7 +340,7 @@ class PredictionViewModel extends ChangeNotifier {
 
   void setPredictions(List<AlgorithmPrediction> predictions, {bool notify = true}) {
     this.predictions = [...predictions];
-    this.predictions.sort((a, b) => b.ordinal.compareTo(a.ordinal));
+    this.predictions.sort((a, b) => b.mean.compareTo(a.mean));
     searchedPredictions = this.predictions;
     minValue = 10000;
     maxValue = -10000;
@@ -582,6 +582,7 @@ class PredictionListRow extends StatelessWidget {
                 flex: PredictionListViewScreen._whiskerPlotFlex,
                 child: Tooltip(
                   message: "68% confidence: ${boxLowPercent.toStringAsFixed(1)}-${boxHighPercent.toStringAsFixed(1)}%\n"
+                      "Mid: ${meanPercent.toStringAsFixed(1)}%\n"
                       "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
                       outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
                   child: BoxAndWhiskerPlot(

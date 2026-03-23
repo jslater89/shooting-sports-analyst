@@ -11,6 +11,7 @@ import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart";
 import "package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart";
 import "package:shooting_sports_analyst/ui/colors.dart";
+import "package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart";
 import "package:shooting_sports_analyst/ui/widget/score_row.dart";
 
 extension LatentLogRatingsUi on LatentLogRater {
@@ -79,8 +80,24 @@ extension LatentLogRatingsUi on LatentLogRater {
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ratingFlex, child: Text(rating.displayRating.round().toString(), textAlign: TextAlign.end)),
             Expanded(flex: _lastChangeFlex, child: Text(displayDelta.round().toString(), textAlign: TextAlign.end)),
-            Expanded(flex: _varianceFlex, child: Text(rating.displayCurrentStandardDeviation.toStringAsFixed(1), textAlign: TextAlign.end)),
-            Expanded(flex: _volatilityFlex, child: Text(rating.displayVolatilityStandardDeviation.toStringAsFixed(1), textAlign: TextAlign.end)),
+            Expanded(
+              flex: _varianceFlex,
+              child: MaybeTooltip(
+                message: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(1)}",
+                child:
+                  Text(
+                    "${rating.displayStandardDeviation.toStringAsFixed(1)}",
+                    textAlign: TextAlign.end,
+                  )
+                )
+              ),
+            Expanded(
+              flex: _volatilityFlex,
+              child: Text(
+                rating.displayVolatilityStandardDeviation.toStringAsFixed(1),
+                textAlign: TextAlign.end,
+              ),
+            ),
             Expanded(flex: _matchesFlex, child: Text(rating.lengthInMatches.toString(), textAlign: TextAlign.end)),
             Expanded(flex: _stagesFlex, child: Text(rating.lengthInStages.toString(), textAlign: TextAlign.end)),
             Expanded(flex: _paddingFlex, child: Text("")),

@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import "dart:math";
+
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:shooting_sports_analyst/config/config.dart";
@@ -83,46 +85,29 @@ class LatentLogSettingsWidget
   }
 }
 
-enum _VarianceBasis { internalUnits, displayScaled }
-
 class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   late LatentLogSettings settings;
 
-  _VarianceBasis _varianceBasis = _VarianceBasis.internalUnits;
-
   final TextEditingController _scaleOffsetController = TextEditingController();
   final TextEditingController _scaleFactorController = TextEditingController();
-  final TextEditingController _sportVolatilityInternal =
-      TextEditingController();
-  final TextEditingController _sportVolatilityScaled = TextEditingController();
+  final TextEditingController _sportVolatilityInternal =TextEditingController();
   final TextEditingController _skillDriftInternal = TextEditingController();
-  final TextEditingController _skillDriftScaled = TextEditingController();
-  final TextEditingController _startingVarianceInternal =
+  final TextEditingController _startingVarianceInternal = TextEditingController();
+  final TextEditingController _maximumVarianceInternal = TextEditingController();
+  final TextEditingController _matchDifficultyInternal = TextEditingController();
+  final TextEditingController _predictionSportInternal = TextEditingController();
+  final TextEditingController _predictionBehavioralKappaController =
       TextEditingController();
-  final TextEditingController _startingVarianceScaled = TextEditingController();
-  final TextEditingController _matchDifficultyInternal =
-      TextEditingController();
-  final TextEditingController _matchDifficultyScaled = TextEditingController();
-  final TextEditingController _volatilityAdaptController =
-      TextEditingController();
-  final TextEditingController _surpriseAdaptController =
-      TextEditingController();
-  final TextEditingController _pairwiseBlendController =
-      TextEditingController();
-  final TextEditingController _baselineRobustnessZController =
-      TextEditingController();
-  final TextEditingController _tailNoiseStartPercentController =
-      TextEditingController();
-  final TextEditingController _tailNoiseVarianceController =
-      TextEditingController();
-  final TextEditingController _weakFieldVarianceController =
-      TextEditingController();
-  final TextEditingController _weakFieldMaxSizeController =
-      TextEditingController();
-  final TextEditingController _weakFieldWeakFinishThresholdController =
-      TextEditingController();
-  final TextEditingController _weakFieldWeakFractionThresholdController =
-      TextEditingController();
+  final TextEditingController _volatilityAdaptController = TextEditingController();
+  final TextEditingController _surpriseAdaptController = TextEditingController();
+  final TextEditingController _pairwiseBlendController = TextEditingController();
+  final TextEditingController _baselineRobustnessZController = TextEditingController();
+  final TextEditingController _tailNoiseStartPercentController = TextEditingController();
+  final TextEditingController _tailNoiseVarianceController = TextEditingController();
+  final TextEditingController _weakFieldVarianceController = TextEditingController();
+  final TextEditingController _weakFieldMaxSizeController = TextEditingController();
+  final TextEditingController _weakFieldWeakFinishThresholdController = TextEditingController();
+  final TextEditingController _weakFieldWeakFractionThresholdController = TextEditingController();
 
   @override
   void initState() {
@@ -135,13 +120,15 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         if (widget.controller._shouldValidate) {
           _validateText();
           widget.controller._shouldValidate = false;
-        } else if (widget.controller._restoreDefaults) {
+        }
+        else if (widget.controller._restoreDefaults) {
           settings = widget.controller._currentSettings;
           _fillTextFieldsFromSettings();
           widget.controller._restoreDefaults = false;
-        } else {
+        }
+        else {
           settings = widget.controller._currentSettings;
-          _fillTextFieldsFromSettings();
+          _fillTextFieldsFromSettings(shouldSetScaleFactor: false);
         }
       });
     });
@@ -168,44 +155,25 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       _onScaleFactorTextChanged();
     });
     attachNumericListener(_sportVolatilityInternal, () {
-      if (_varianceBasis == _VarianceBasis.internalUnits) {
-        _validateText();
-      }
-    });
-    attachNumericListener(_sportVolatilityScaled, () {
-      if (_varianceBasis == _VarianceBasis.displayScaled) {
-        _validateText();
-      }
+      _validateText();
     });
     attachNumericListener(_skillDriftInternal, () {
-      if (_varianceBasis == _VarianceBasis.internalUnits) {
-        _validateText();
-      }
-    });
-    attachNumericListener(_skillDriftScaled, () {
-      if (_varianceBasis == _VarianceBasis.displayScaled) {
-        _validateText();
-      }
+      _validateText();
     });
     attachNumericListener(_startingVarianceInternal, () {
-      if (_varianceBasis == _VarianceBasis.internalUnits) {
-        _validateText();
-      }
+      _validateText();
     });
-    attachNumericListener(_startingVarianceScaled, () {
-      if (_varianceBasis == _VarianceBasis.displayScaled) {
-        _validateText();
-      }
+    attachNumericListener(_maximumVarianceInternal, () {
+      _validateText();
     });
     attachNumericListener(_matchDifficultyInternal, () {
-      if (_varianceBasis == _VarianceBasis.internalUnits) {
-        _validateText();
-      }
+      _validateText();
     });
-    attachNumericListener(_matchDifficultyScaled, () {
-      if (_varianceBasis == _VarianceBasis.displayScaled) {
-        _validateText();
-      }
+    attachNumericListener(_predictionSportInternal, () {
+      _validateText();
+    });
+    attachNumericListener(_predictionBehavioralKappaController, () {
+      _validateText();
     });
     attachNumericListener(_volatilityAdaptController, () {
       if (!widget.controller._restoreDefaults) {
@@ -264,13 +232,12 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _scaleOffsetController.dispose();
     _scaleFactorController.dispose();
     _sportVolatilityInternal.dispose();
-    _sportVolatilityScaled.dispose();
     _skillDriftInternal.dispose();
-    _skillDriftScaled.dispose();
     _startingVarianceInternal.dispose();
-    _startingVarianceScaled.dispose();
+    _maximumVarianceInternal.dispose();
     _matchDifficultyInternal.dispose();
-    _matchDifficultyScaled.dispose();
+    _predictionSportInternal.dispose();
+    _predictionBehavioralKappaController.dispose();
     _volatilityAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
@@ -284,127 +251,53 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     super.dispose();
   }
 
-  void _fillTextFieldsFromSettings() {
+  void _fillTextFieldsFromSettings({bool shouldSetScaleFactor = true}) {
     _scaleOffsetController.text = settings.scaleOffset.toStringAsFixed(1);
-    _scaleFactorController.text = settings.scaleFactor.toStringAsFixed(1);
-    _pairwiseBlendController.text = settings.pairwiseBlendWeight
-        .toStringAsFixed(4);
-    _baselineRobustnessZController.text = settings.baselineRobustnessZ
-        .toStringAsFixed(3);
-    _tailNoiseStartPercentController.text = settings.tailNoiseStartPercent
-        .toStringAsFixed(3);
-    _tailNoiseVarianceController.text = settings.tailNoiseVariance
-        .toStringAsFixed(3);
-    _weakFieldVarianceController.text = settings.weakFieldVariance
-        .toStringAsFixed(3);
-    _weakFieldMaxSizeController.text = settings.weakFieldMaxSize
-        .toStringAsFixed(1);
-    _weakFieldWeakFinishThresholdController.text = settings
-        .weakFieldWeakFinishThreshold
-        .toStringAsFixed(3);
-    _weakFieldWeakFractionThresholdController.text = settings
-        .weakFieldWeakFractionThreshold
-        .toStringAsFixed(3);
-    _writeVarianceControllersFromSettings(_VarianceUpdateMode.both);
-  }
+    if(shouldSetScaleFactor) _scaleFactorController.text = settings.scaleFactor.toStringAsFixed(1);
 
-  void _writeVarianceControllersFromSettings(_VarianceUpdateMode mode) {
-    final sf = settings.scaleFactor;
-    bool updateInternal =
-        mode == _VarianceUpdateMode.both ||
-        mode == _VarianceUpdateMode.internalOnly;
-    bool updateScaled =
-        mode == _VarianceUpdateMode.both ||
-        mode == _VarianceUpdateMode.scaledOnly;
+    _sportVolatilityInternal.text = settings.sportVolatility.toStringAsFixed(4);
+    _skillDriftInternal.text = settings.skillDriftRate.toStringAsFixed(6);
+    _startingVarianceInternal.text = settings.startingVariance.toStringAsFixed(4);
+    _maximumVarianceInternal.text = settings.maximumVariance.toStringAsFixed(4);
+    _matchDifficultyInternal.text = settings.matchDifficultyVariance.toStringAsFixed(4);
+    _predictionSportInternal.text = settings.predictionSportVariance.toStringAsFixed(5);
+    _predictionBehavioralKappaController.text =
+        settings.predictionBehavioralVolatilityKappa.toStringAsFixed(3);
+    _volatilityAdaptController.text = settings.volatilityAdaptationRate.toStringAsFixed(4);
+    _surpriseAdaptController.text = settings.surpriseAdaptationRate.toStringAsFixed(4);
 
-    if (updateInternal) {
-      _sportVolatilityInternal.text = settings.sportVolatility.toStringAsFixed(
-        4,
-      );
-      _skillDriftInternal.text = settings.skillDriftRate.toStringAsFixed(6);
-      _startingVarianceInternal.text = settings.startingVariance
-          .toStringAsFixed(4);
-      _matchDifficultyInternal.text = settings.matchDifficultyVariance
-          .toStringAsFixed(4);
-    }
-    if (updateScaled) {
-      _sportVolatilityScaled.text = (settings.sportVolatility * sf)
-          .toStringAsFixed(2);
-      _skillDriftScaled.text = (settings.skillDriftRate * sf).toStringAsFixed(
-        2,
-      );
-      _startingVarianceScaled.text = (settings.startingVariance * sf)
-          .toStringAsFixed(2);
-      _matchDifficultyScaled.text = (settings.matchDifficultyVariance * sf)
-          .toStringAsFixed(2);
-    }
-
-    // Only update these if we're updating both; they're always active and should never
-    // be updated when updating scaled values.
-    if (mode == _VarianceUpdateMode.both) {
-      _volatilityAdaptController.text = settings.volatilityAdaptationRate
-          .toStringAsFixed(4);
-      _surpriseAdaptController.text = settings.surpriseAdaptationRate
-          .toStringAsFixed(4);
-    }
+    _pairwiseBlendController.text = settings.pairwiseBlendWeight.toStringAsFixed(4);
+    _baselineRobustnessZController.text = settings.baselineRobustnessZ.toStringAsFixed(4);
+    _tailNoiseStartPercentController.text = settings.tailNoiseStartPercent.toStringAsFixed(4);
+    _tailNoiseVarianceController.text = settings.tailNoiseVariance.toStringAsFixed(4);
+    _weakFieldVarianceController.text = settings.weakFieldVariance.toStringAsFixed(4);
+    _weakFieldMaxSizeController.text = settings.weakFieldMaxSize.toStringAsFixed(1);
+    _weakFieldWeakFinishThresholdController.text = settings.weakFieldWeakFinishThreshold.toStringAsFixed(4);
+    _weakFieldWeakFractionThresholdController.text = settings.weakFieldWeakFractionThreshold.toStringAsFixed(4);
   }
 
   void _onScaleFactorTextChanged() {
-    _validateText();
+    _validateText(changedScaleFactor: true);
     if (widget.controller.lastError == null) {
       widget.controller.settingsChanged();
     }
   }
 
   double? _parseVariance({
-    required TextEditingController internalC,
-    required TextEditingController scaledC,
+    required TextEditingController controller,
   }) {
-    final sf = double.tryParse(_scaleFactorController.text);
-    if (sf == null || sf <= 0) {
-      widget.controller.lastError = "Scale factor must be a positive number";
-      return null;
-    }
-    if (_varianceBasis == _VarianceBasis.internalUnits) {
-      return double.tryParse(internalC.text);
-    }
-    final scaled = double.tryParse(scaledC.text);
-    if (scaled == null) {
-      return null;
-    }
-    return scaled / sf;
+    return double.tryParse(controller.text);
   }
 
-  void _validateText() {
+  void _validateText({bool changedScaleFactor = false}) {
     widget.controller.lastError = null;
 
     final scaleOffset = double.tryParse(_scaleOffsetController.text);
-    final scaleFactor = double.tryParse(_scaleFactorController.text);
-    final pairwise = double.tryParse(_pairwiseBlendController.text);
-    final baselineRobustnessZ = double.tryParse(
-      _baselineRobustnessZController.text,
-    );
-    final tailNoiseStartPercent = double.tryParse(
-      _tailNoiseStartPercentController.text,
-    );
-    final tailNoiseVariance = double.tryParse(
-      _tailNoiseVarianceController.text,
-    );
-    final weakFieldVariance = double.tryParse(
-      _weakFieldVarianceController.text,
-    );
-    final weakFieldMaxSize = double.tryParse(_weakFieldMaxSizeController.text);
-    final weakFieldWeakFinishThreshold = double.tryParse(
-      _weakFieldWeakFinishThresholdController.text,
-    );
-    final weakFieldWeakFractionThreshold = double.tryParse(
-      _weakFieldWeakFractionThresholdController.text,
-    );
-
     if (scaleOffset == null) {
       widget.controller.lastError = "Scale offset formatted incorrectly";
       return;
     }
+    final scaleFactor = double.tryParse(_scaleFactorController.text);
     if (scaleFactor == null) {
       widget.controller.lastError = "Scale factor formatted incorrectly";
       return;
@@ -413,89 +306,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       widget.controller.lastError = "Scale factor must be positive";
       return;
     }
-    if (pairwise == null) {
-      widget.controller.lastError =
-          "Pairwise blend weight formatted incorrectly";
-      return;
-    }
-    if (pairwise < 0) {
-      widget.controller.lastError = "Pairwise blend weight must be nonnegative";
-      return;
-    }
-    if (baselineRobustnessZ == null) {
-      widget.controller.lastError =
-          "Baseline robustness z formatted incorrectly";
-      return;
-    }
-    if (baselineRobustnessZ < 0) {
-      widget.controller.lastError = "Baseline robustness z must be nonnegative";
-      return;
-    }
-    if (tailNoiseStartPercent == null) {
-      widget.controller.lastError =
-          "Tail noise start percent formatted incorrectly";
-      return;
-    }
-    if (tailNoiseStartPercent <= 0 || tailNoiseStartPercent >= 1) {
-      widget.controller.lastError =
-          "Tail noise start percent must be between 0 and 1";
-      return;
-    }
-    if (tailNoiseVariance == null) {
-      widget.controller.lastError = "Tail noise variance formatted incorrectly";
-      return;
-    }
-    if (tailNoiseVariance < 0) {
-      widget.controller.lastError = "Tail noise variance must be nonnegative";
-      return;
-    }
-    if (weakFieldVariance == null) {
-      widget.controller.lastError = "Weak-field variance formatted incorrectly";
-      return;
-    }
-    if (weakFieldVariance < 0) {
-      widget.controller.lastError = "Weak-field variance must be nonnegative";
-      return;
-    }
-    if (weakFieldMaxSize == null) {
-      widget.controller.lastError = "Weak-field max size formatted incorrectly";
-      return;
-    }
-    if (weakFieldMaxSize <= 2) {
-      widget.controller.lastError =
-          "Weak-field max size must be greater than 2";
-      return;
-    }
-    if (weakFieldWeakFinishThreshold == null) {
-      widget.controller.lastError =
-          "Weak-field weak-finish threshold formatted incorrectly";
-      return;
-    }
-    if (weakFieldWeakFinishThreshold <= 0 ||
-        weakFieldWeakFinishThreshold >= 1) {
-      widget.controller.lastError =
-          "Weak-field weak-finish threshold must be between 0 and 1";
-      return;
-    }
-    if (weakFieldWeakFractionThreshold == null) {
-      widget.controller.lastError =
-          "Weak-field weak-fraction threshold formatted incorrectly";
-      return;
-    }
-    if (weakFieldWeakFractionThreshold < 0 ||
-        weakFieldWeakFractionThreshold >= 1) {
-      widget.controller.lastError =
-          "Weak-field weak-fraction threshold must be in [0, 1)";
-      return;
-    }
 
-    final sportV = _parseVariance(
-      internalC: _sportVolatilityInternal,
-      scaledC: _sportVolatilityScaled,
-    );
-    if (widget.controller.lastError != null) {
-      return;
-    }
+    final sportV = _parseVariance(controller: _sportVolatilityInternal);
     if (sportV == null) {
       widget.controller.lastError = "Sport volatility formatted incorrectly";
       return;
@@ -505,13 +317,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final drift = _parseVariance(
-      internalC: _skillDriftInternal,
-      scaledC: _skillDriftScaled,
-    );
-    if (widget.controller.lastError != null) {
-      return;
-    }
+    final drift = _parseVariance(controller: _skillDriftInternal);
     if (drift == null) {
       widget.controller.lastError = "Skill drift rate formatted incorrectly";
       return;
@@ -521,13 +327,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final startVar = _parseVariance(
-      internalC: _startingVarianceInternal,
-      scaledC: _startingVarianceScaled,
-    );
-    if (widget.controller.lastError != null) {
-      return;
-    }
+    final startVar = _parseVariance(controller: _startingVarianceInternal);
     if (startVar == null) {
       widget.controller.lastError = "Starting variance formatted incorrectly";
       return;
@@ -537,21 +337,18 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final matchDiff = _parseVariance(
-      internalC: _matchDifficultyInternal,
-      scaledC: _matchDifficultyScaled,
-    );
-    if (widget.controller.lastError != null) {
+    final maxVar = _parseVariance(controller: _maximumVarianceInternal);
+    if (maxVar == null) {
+      widget.controller.lastError = "Maximum variance formatted incorrectly";
       return;
     }
-    if (matchDiff == null) {
-      widget.controller.lastError =
-          "Match difficulty variance formatted incorrectly";
+    if (maxVar <= 0) {
+      widget.controller.lastError = "Maximum variance must be positive";
       return;
     }
-    if (matchDiff <= 0) {
+    if (maxVar < startVar) {
       widget.controller.lastError =
-          "Match difficulty variance must be positive";
+          "Maximum variance must be at least starting variance";
       return;
     }
 
@@ -579,28 +376,169 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    settings.scaleOffset = scaleOffset;
-    settings.scaleFactor = scaleFactor;
-    settings.sportVolatility = sportV;
-    settings.skillDriftRate = drift;
-    settings.startingVariance = startVar;
-    settings.matchDifficultyVariance = matchDiff;
-    settings.volatilityAdaptationRate = volAdapt;
-    settings.surpriseAdaptationRate = surp;
-    settings.pairwiseBlendWeight = pairwise;
-    settings.baselineRobustnessZ = baselineRobustnessZ;
-    settings.tailNoiseStartPercent = tailNoiseStartPercent;
-    settings.tailNoiseVariance = tailNoiseVariance;
-    settings.weakFieldVariance = weakFieldVariance;
-    settings.weakFieldMaxSize = weakFieldMaxSize;
-    settings.weakFieldWeakFinishThreshold = weakFieldWeakFinishThreshold;
-    settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
+    final pairwise = double.tryParse(_pairwiseBlendController.text);
+    if (pairwise == null) {
+      widget.controller.lastError =
+          "Pairwise blend weight formatted incorrectly";
+      return;
+    }
+    if (pairwise < 0) {
+      widget.controller.lastError = "Pairwise blend weight must be nonnegative";
+      return;
+    }
 
-    final updateMode = switch (_varianceBasis) {
-      _VarianceBasis.internalUnits => _VarianceUpdateMode.scaledOnly,
-      _VarianceBasis.displayScaled => _VarianceUpdateMode.internalOnly,
-    };
-    _writeVarianceControllersFromSettings(updateMode);
+    final matchDiff = _parseVariance(controller: _matchDifficultyInternal);
+    if (matchDiff == null) {
+      widget.controller.lastError =
+          "Match difficulty variance formatted incorrectly";
+      return;
+    }
+    if (matchDiff <= 0) {
+      widget.controller.lastError =
+          "Match difficulty variance must be positive";
+      return;
+    }
+
+    final baselineRobustnessZ = double.tryParse(
+      _baselineRobustnessZController.text,
+    );
+    if (baselineRobustnessZ == null) {
+      widget.controller.lastError =
+          "Baseline robustness z formatted incorrectly";
+      return;
+    }
+    if (baselineRobustnessZ < 0) {
+      widget.controller.lastError = "Baseline robustness z must be nonnegative";
+      return;
+    }
+
+    final tailNoiseStartPercent = double.tryParse(
+      _tailNoiseStartPercentController.text,
+    );
+    if (tailNoiseStartPercent == null) {
+      widget.controller.lastError =
+          "Tail noise start percent formatted incorrectly";
+      return;
+    }
+    if (tailNoiseStartPercent <= 0 || tailNoiseStartPercent >= 1) {
+      widget.controller.lastError =
+          "Tail noise start percent must be between 0 and 1";
+      return;
+    }
+
+    final tailNoiseVariance = double.tryParse(
+      _tailNoiseVarianceController.text,
+    );
+    if (tailNoiseVariance == null) {
+      widget.controller.lastError = "Tail noise variance formatted incorrectly";
+      return;
+    }
+    if (tailNoiseVariance < 0) {
+      widget.controller.lastError = "Tail noise variance must be nonnegative";
+      return;
+    }
+
+    final weakFieldVariance = double.tryParse(
+      _weakFieldVarianceController.text,
+    );
+    if (weakFieldVariance == null) {
+      widget.controller.lastError = "Weak-field variance formatted incorrectly";
+      return;
+    }
+    if (weakFieldVariance < 0) {
+      widget.controller.lastError = "Weak-field variance must be nonnegative";
+      return;
+    }
+
+    final weakFieldMaxSize = double.tryParse(_weakFieldMaxSizeController.text);
+    if (weakFieldMaxSize == null) {
+      widget.controller.lastError = "Weak-field max size formatted incorrectly";
+      return;
+    }
+    if (weakFieldMaxSize <= 2) {
+      widget.controller.lastError =
+          "Weak-field max size must be greater than 2";
+      return;
+    }
+
+    final weakFieldWeakFinishThreshold = double.tryParse(
+      _weakFieldWeakFinishThresholdController.text,
+    );
+    if (weakFieldWeakFinishThreshold == null) {
+      widget.controller.lastError =
+          "Weak-field weak-finish threshold formatted incorrectly";
+      return;
+    }
+    if (weakFieldWeakFinishThreshold <= 0 ||
+        weakFieldWeakFinishThreshold >= 1) {
+      widget.controller.lastError =
+          "Weak-field weak-finish threshold must be between 0 and 1";
+      return;
+    }
+
+    final weakFieldWeakFractionThreshold = double.tryParse(
+      _weakFieldWeakFractionThresholdController.text,
+    );
+    if (weakFieldWeakFractionThreshold == null) {
+      widget.controller.lastError =
+          "Weak-field weak-fraction threshold formatted incorrectly";
+      return;
+    }
+    if (weakFieldWeakFractionThreshold < 0 ||
+        weakFieldWeakFractionThreshold >= 1) {
+      widget.controller.lastError =
+          "Weak-field weak-fraction threshold must be in [0, 1)";
+      return;
+    }
+
+    final predSport = _parseVariance(controller: _predictionSportInternal);
+    if (predSport == null) {
+      widget.controller.lastError =
+          "Prediction sport variance formatted incorrectly";
+      return;
+    }
+    if (predSport < 0) {
+      widget.controller.lastError =
+          "Prediction sport variance must be nonnegative";
+      return;
+    }
+
+    final predKappa = double.tryParse(
+      _predictionBehavioralKappaController.text,
+    );
+    if (predKappa == null) {
+      widget.controller.lastError =
+          "Prediction behavioral kappa formatted incorrectly";
+      return;
+    }
+    if (predKappa < 0 || predKappa > 2) {
+      widget.controller.lastError =
+          "Prediction behavioral kappa must be between 0 and 2";
+      return;
+    }
+
+    setState(() {
+      settings.scaleOffset = scaleOffset;
+      settings.scaleFactor = scaleFactor;
+      settings.sportVolatility = sportV;
+      settings.skillDriftRate = drift;
+      settings.startingVariance = startVar;
+      settings.maximumVariance = maxVar;
+      settings.volatilityAdaptationRate = volAdapt;
+      settings.surpriseAdaptationRate = surp;
+      settings.pairwiseBlendWeight = pairwise;
+      settings.matchDifficultyVariance = matchDiff;
+      settings.baselineRobustnessZ = baselineRobustnessZ;
+      settings.tailNoiseStartPercent = tailNoiseStartPercent;
+      settings.tailNoiseVariance = tailNoiseVariance;
+      settings.weakFieldVariance = weakFieldVariance;
+      settings.weakFieldMaxSize = weakFieldMaxSize;
+      settings.weakFieldWeakFinishThreshold = weakFieldWeakFinishThreshold;
+      settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
+      settings.predictionSportVariance = predSport;
+      settings.predictionBehavioralVolatilityKappa = predKappa;
+    });
+
     widget.controller.lastError = null;
   }
 
@@ -631,49 +569,29 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
                 HelpButton(helpTopicId: latentLogConfigHelpId),
               ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Variance parameters: ",
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  ToggleButtons(
-                    isSelected: [
-                      _varianceBasis == _VarianceBasis.internalUnits,
-                      _varianceBasis == _VarianceBasis.displayScaled,
-                    ],
-                    onPressed: (i) {
-                      setState(() {
-                        _validateText();
-                        _varianceBasis = i == 0
-                            ? _VarianceBasis.internalUnits
-                            : _VarianceBasis.displayScaled;
-                        final updateMode =
-                            _varianceBasis == _VarianceBasis.internalUnits
-                            ? _VarianceUpdateMode.scaledOnly
-                            : _varianceBasis == _VarianceBasis.displayScaled
-                            ? _VarianceUpdateMode.internalOnly
-                            : _VarianceUpdateMode.both;
-                        _writeVarianceControllersFromSettings(updateMode);
-                      });
-                    },
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("Internal"),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("Scaled"),
-                      ),
-                    ],
-                  ),
-                ],
+            if(widget.controller.lastError != null)
+              Text(
+                widget.controller.lastError!,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Theme.of(context).colorScheme.error),
               ),
+            const _LatentLogSectionHeading("Scaling Parameters", compactTop: true),
+            _LatentLogLabeledNumericRow(
+              label: "Scale offset (display points)",
+              tooltip:
+                  "Additive offset for top-line rating display: display = internal × scale factor + offset.",
+              controller: _scaleOffsetController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
             ),
+            _LatentLogLabeledNumericRow(
+              label: "Scale factor",
+              tooltip:
+                  "Linear multiplier from internal log units to display rating points. Changing this immediately rescales the × Scale column from current internal values.",
+              controller: _scaleFactorController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            const _LatentLogSectionHeading("Core Parameters"),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -696,29 +614,13 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
                 ),
               ],
             ),
-            _LatentLogLabeledNumericRow(
-              label: "Scale offset (display points)",
-              tooltip:
-                  "Additive offset for top-line rating display: display = internal × scale factor + offset.",
-              controller: _scaleOffsetController,
-              fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
-            ),
-            _LatentLogLabeledNumericRow(
-              label: "Scale factor",
-              tooltip:
-                  "Linear multiplier from internal log units to display rating points. Changing this immediately rescales the × Scale column from current internal values.",
-              controller: _scaleFactorController,
-              fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
-            ),
             _LatentLogVarianceRow(
               label: "Sport volatility",
               tooltip:
-                  "Irreducible log-space variance σ²_sport (internal); scaled column is σ²_sport × scale factor.",
+                  "Irreducible variance of the sport; all ratings have this much noise in addition to their own variance.",
               internalController: _sportVolatilityInternal,
-              scaledController: _sportVolatilityScaled,
-              varianceBasis: _varianceBasis,
+              scaledValue: sqrt(settings.sportVolatility) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
@@ -727,10 +629,10 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Skill drift / period",
               tooltip:
-                  "Variance added per rating period from skill drift (internal); scaled is × scale factor.",
+                  "Ratings gain roughly this much variance per week from skill drift.",
               internalController: _skillDriftInternal,
-              scaledController: _skillDriftScaled,
-              varianceBasis: _varianceBasis,
+              scaledValue: (sqrt(settings.sportVolatility + settings.skillDriftRate) - sqrt(settings.sportVolatility)) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
@@ -739,34 +641,38 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Starting variance",
               tooltip:
-                  "Initial / clamp variance for new competitors (internal); scaled is × scale factor.",
+                  "Committed variance for brand-new competitors (internal prior width). Must not exceed maximum variance; scaled is × scale factor.",
               internalController: _startingVarianceInternal,
-              scaledController: _startingVarianceScaled,
-              varianceBasis: _varianceBasis,
+              scaledValue: sqrt(settings.startingVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
             _LatentLogVarianceRow(
-              label: "Match difficulty τ²",
+              label: "Maximum variance",
               tooltip:
-                  "Bayesian prior variance on match difficulty. Smaller = stronger shrinkage in small fields. sqrt(τ²) ≈ ±% finish (1SD) of match-to-match difficulty variation.",
-              internalController: _matchDifficultyInternal,
-              scaledController: _matchDifficultyScaled,
-              varianceBasis: _varianceBasis,
+                  "Upper cap on committed rating variance after updates and on time-aged variance from skill drift. Can exceed starting variance so veterans may carry more uncertainty than the new-shooter prior.",
+              internalController: _maximumVarianceInternal,
+              scaledValue: sqrt(settings.maximumVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
-            _LatentLogLabeledNumericRow(
+            _LatentLogVarianceRow(
               label: "Volatility adaptation β",
               tooltip:
-                  "Dimensionless β in (0, 1): EMA weight for per-competitor volatility updates.",
-              controller: _volatilityAdaptController,
+                  "Dimensionless β in (0, 1): EMA weight for per-competitor volatility updates. Scaled value is approximate number of rating events included.",
+              internalController: _volatilityAdaptController,
+              scaledValue: (1 / settings.volatilityAdaptationRate),
+              scaledValuePrecision: 1,
               fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
             _LatentLogLabeledNumericRow(
               label: "Surprise adaptation γ",
@@ -784,6 +690,19 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
             ),
+            const _LatentLogSectionHeading("Small / Degenerate Field Parameters"),
+            _LatentLogVarianceRow(
+              label: "Match difficulty τ²",
+              tooltip:
+                  "Baseline difficulty for small fields. Smaller = stronger pull toward average difficulty. Values between 0.05 and 0.25 are reasonable for USPSA.",
+              internalController: _matchDifficultyInternal,
+              scaledValue: sqrt(settings.matchDifficultyVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
             _LatentLogLabeledNumericRow(
               label: "Baseline robustness z",
               tooltip:
@@ -800,21 +719,29 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
             ),
-            _LatentLogLabeledNumericRow(
+            _LatentLogVarianceRow(
               label: "Tail noise variance",
               tooltip:
                   "Maximum extra observation variance assigned to the deepest tail. Larger values trust very weak finishes less; 0 disables tail-noise inflation.",
-              controller: _tailNoiseVarianceController,
+              internalController: _tailNoiseVarianceController,
+              scaledValue: sqrt(settings.tailNoiseVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
-            _LatentLogLabeledNumericRow(
+            _LatentLogVarianceRow(
               label: "Weak-field variance",
               tooltip:
                   "Maximum additional match-level observation variance for tiny, bottom-heavy fields. Larger values suppress pathological gains more aggressively; 0 disables.",
-              controller: _weakFieldVarianceController,
+              internalController: _weakFieldVarianceController,
+              scaledValue: sqrt(settings.weakFieldVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
             _LatentLogLabeledNumericRow(
               label: "Weak-field max size",
@@ -840,6 +767,27 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
             ),
+            const _LatentLogSectionHeading("Prediction Parameters"),
+            _LatentLogVarianceRow(
+              label: "Prediction sport σ²",
+              tooltip:
+                  "Idiosyncratic per-competitor sport noise for prediction bands. Common-mode match difficulty cancels in relative predictions; only this fraction enters the band. Does not affect rating updates.",
+              internalController: _predictionSportInternal,
+              scaledValue: sqrt(settings.predictionSportVariance) * settings.scaleFactor,
+              scaledValuePrecision: 2,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
+            _LatentLogLabeledNumericRow(
+              label: "Prediction behavioral κ",
+              tooltip:
+                  "Fraction of behavioral variance (σ²) added to predictive bands: κ × (focal σ² + Σ p_w σ_w²). The update rule still uses full σ² in observation noise; κ only scales overlap with rating variance when forming bands. 0 = ignore behavioral volatility in bands.",
+              controller: _predictionBehavioralKappaController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
             SwitchListTile(
               title: const Text("Rate by stage"),
               subtitle: const Text(
@@ -854,6 +802,33 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LatentLogSectionHeading extends StatelessWidget {
+  const _LatentLogSectionHeading(this.title, {this.compactTop = false});
+
+  final String title;
+  final bool compactTop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 4,
+          top: compactTop ? 4 : 12,
+          bottom: 2,
+        ),
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
         ),
       ),
     );
@@ -909,20 +884,30 @@ class _LatentLogLabeledNumericRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Tooltip(
-            message: tooltip,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 8),
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodyLarge,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 8),
+            child: Row(
+              spacing: 8 * uiScaleFactor,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Tooltip(
+                  message: tooltip,
+                  child: Icon(
+                  Icons.info_outline,
+                    size: 16 * uiScaleFactor,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -938,8 +923,8 @@ class _LatentLogVarianceRow extends StatelessWidget {
     required this.label,
     required this.tooltip,
     required this.internalController,
-    required this.scaledController,
-    required this.varianceBasis,
+    required this.scaledValue,
+    required this.scaledValuePrecision,
     required this.fieldWidth,
     required this.columnGap,
     required this.labelStyle,
@@ -949,8 +934,8 @@ class _LatentLogVarianceRow extends StatelessWidget {
   final String label;
   final String tooltip;
   final TextEditingController internalController;
-  final TextEditingController scaledController;
-  final _VarianceBasis varianceBasis;
+  final double scaledValue;
+  final int scaledValuePrecision;
   final double fieldWidth;
   final double columnGap;
   final TextStyle? labelStyle;
@@ -958,47 +943,44 @@ class _LatentLogVarianceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final editInternal = varianceBasis == _VarianceBasis.internalUnits;
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Tooltip(
-            message: tooltip,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 8),
-              child: Text(
-                label,
-                style: labelStyle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 8),
+            child: Row(
+              spacing: 8 * uiScaleFactor,
+              children: [
+                Text(
+                  label,
+                  style: labelStyle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Tooltip(
+                  message: tooltip,
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 16 * uiScaleFactor,
+                  ),
+                )
+              ],
             ),
           ),
         ),
-        if (editInternal) ...[
-          _LatentLogNumericField(
-            controller: internalController,
-            fieldWidth: fieldWidth,
-          ),
-          SizedBox(width: columnGap),
-          _LatentLogVarianceDisplaySlot(
-            controller: scaledController,
-            fieldWidth: fieldWidth,
-            textStyle: displayTextStyle,
-          ),
-        ] else ...[
-          _LatentLogVarianceDisplaySlot(
-            controller: internalController,
-            fieldWidth: fieldWidth,
-            textStyle: displayTextStyle,
-          ),
-          SizedBox(width: columnGap),
-          _LatentLogNumericField(
-            controller: scaledController,
-            fieldWidth: fieldWidth,
-          ),
-        ],
+        _LatentLogNumericField(
+          controller: internalController,
+          fieldWidth: fieldWidth,
+        ),
+        SizedBox(width: columnGap),
+        _LatentLogVarianceDisplaySlot(
+          value: scaledValue,
+          valuePrecision: scaledValuePrecision,
+          fieldWidth: fieldWidth,
+          textStyle: displayTextStyle,
+        ),
       ],
     );
   }
@@ -1007,12 +989,14 @@ class _LatentLogVarianceRow extends StatelessWidget {
 /// Read-only mirror of the computed value (no focus, no TextField) so the inactive column is display-only.
 class _LatentLogVarianceDisplaySlot extends StatelessWidget {
   const _LatentLogVarianceDisplaySlot({
-    required this.controller,
+    required this.value,
+    required this.valuePrecision,
     required this.fieldWidth,
     this.textStyle,
   });
 
-  final TextEditingController controller;
+  final double value;
+  final int valuePrecision;
   final double fieldWidth;
   final TextStyle? textStyle;
 
@@ -1021,24 +1005,18 @@ class _LatentLogVarianceDisplaySlot extends StatelessWidget {
     final style = textStyle ?? Theme.of(context).textTheme.bodyLarge;
     return SizedBox(
       width: fieldWidth,
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                controller.text,
-                textAlign: TextAlign.end,
-                style: style,
-              ),
-            ),
-          );
-        },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            value.toStringAsFixed(valuePrecision),
+            textAlign: TextAlign.end,
+            style: style,
+          ),
+        ),
       ),
     );
   }
 }
 
-enum _VarianceUpdateMode { both, internalOnly, scaledOnly }

@@ -2182,6 +2182,8 @@ class RatingProjectLoader {
   }
 
   bool _pubstomp(Map<String, ShooterRating> wrappedRatings, List<RelativeMatchScore> scores) {
+    if(sport.pubstompProvider == null) return false;
+
     if(scores.length < 2) return false;
 
     var sorted = scores.sorted((a, b) => b.ratio.compareTo(a.ratio));
