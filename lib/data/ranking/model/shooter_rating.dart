@@ -123,9 +123,13 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   double get rating => wrappedRating.rating;
   set rating(double v) => wrappedRating.rating = v;
 
-  String formattedRating() {
-    return rating.toStringWithSignificantDigits(3);
-  }
+  /// The scaled rating, if the rating system has a scaling
+  /// factor or offset.
+  ///
+  /// The default implementation returns the rating unchanged.
+  double get scaledRating => rating;
+
+  String get formattedRating => rating.round().toString();
 
   /// All of the rating events in this shooter's history, ordered
   /// from newest to oldest.

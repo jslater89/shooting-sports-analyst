@@ -71,4 +71,16 @@ class ThemeColors {
       return const Color.fromARGB(255, 109, 7, 0);
     }
   }
+
+  static Color equalContrastBlue(BuildContext context) {
+    return const Color.fromARGB(255, 17, 119, 204);
+  }
+
+  static Color equalContrastGreen(BuildContext context) {
+    return const Color.fromARGB(255, 17, 136, 17);
+  }
+
+  static Color equalContrastRed(BuildContext context) {
+    return const Color.fromARGB(255, 221, 51, 17);
+  }
 }

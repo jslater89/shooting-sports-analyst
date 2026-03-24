@@ -20,7 +20,7 @@ class InversePlace extends PointsModel {
     else if(scores.length == 1) {
       return {
         scores.keys.first: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
         })
       };
     }
@@ -62,7 +62,7 @@ class InversePlace extends PointsModel {
       var change = shootersBeat.toDouble();
 
       changes[rating] = RatingChange(change: {
-        RatingSystem.ratingKey: change,
+        RatingSystem.ratingChangeKey: change,
       });
 
     }

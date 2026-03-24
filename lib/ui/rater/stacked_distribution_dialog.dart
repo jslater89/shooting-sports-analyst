@@ -12,9 +12,12 @@ import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("StackedDistributionDialog");
 
 class RatingDistributionDialog extends StatefulWidget {
   const RatingDistributionDialog({
@@ -48,6 +51,8 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
   late TextEditingController controller;
   late DistributionFitTests fitTests;
 
+  double _scaleOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -57,8 +62,24 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
     ratingValues = widget.statistics.allRatings.toList();
     minRating = ratingValues.min;
     maxRating = ratingValues.max;
+
     controller = TextEditingController(text: AvailableEstimator.fromEstimator(estimator).uiLabel);
     fitTests = widget.statistics.fitTests;
+
+    if(minRating < 1.0) {
+      _rescaleRatings();
+      _log.i("Rescaled ratings: new range ${minRating}..${maxRating}");
+      // Rerun the fit and fit tests
+      changeDistribution(estimator);
+    }
+  }
+
+  void _rescaleRatings() {
+    // Rescale the ratings to start at 1.0
+    _scaleOffset = ((-minRating) + 1.0).ceilToDouble();
+    ratingValues = ratingValues.map((e) => e + _scaleOffset).toList();
+    minRating = ratingValues.min;
+    maxRating = ratingValues.max;
   }
 
   void changeDistribution(ContinuousDistributionEstimator estimator) {
@@ -104,7 +125,7 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
     }
 
     for(var bucket in widget.statistics.histogram.keys) {
-      var bucketStart = bucket * widget.statistics.histogramBucketSize;
+      var bucketStart = (bucket * widget.statistics.histogramBucketSize) + _scaleOffset;
       var bucketEnd = bucketStart + widget.statistics.histogramBucketSize;
       // var bucketCenter = bucketStart + (widget.statistics.histogramBucketSize / 2);
 
@@ -151,6 +172,7 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
               distribution: distribution,
               distributionIgnoresLabels: ignoredLabels,
               data: showingCdf ? ratingValues : null,
+              scaleOffset: _scaleOffset,
             )),
             const SizedBox(height: 10),
             Text(distribution.parameterString),

@@ -19,7 +19,7 @@ class PercentFinish extends PointsModel {
     else if(scores.length == 1) {
       return {
         scores.keys.first: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
         })
       };
     }
@@ -28,7 +28,7 @@ class PercentFinish extends PointsModel {
 
     for(var entry in scores.entries) {
       changes[entry.key] = RatingChange(change: {
-        RatingSystem.ratingKey: entry.value.percentage,
+        RatingSystem.ratingChangeKey: entry.value.percentage,
       });
     }
 

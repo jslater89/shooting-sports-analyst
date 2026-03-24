@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -116,8 +117,16 @@ RaterStatistics getRatingStatistics({
 }
 
 RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings, ContinuousDistributionEstimator estimator) {
+
+  double scaleFactor = 1.0;
+  double scaleOffset = 0.0;
+  if(algorithm is LatentLogRater) {
+    scaleFactor = algorithm.settings.scaleFactor;
+    scaleOffset = algorithm.settings.scaleOffset;
+  }
+
   var count = ratings.length;
-  var allRatings = ratings.map((r) => r.rating).toList()..sort();
+  var allRatings = ratings.map((r) => (r.rating * scaleFactor) + scaleOffset).toList()..sort();
   var allConnectivities = ratings.map((r) => r.connectivity).toList()..sort();
 
   var ratingDistribution = estimator.estimate(allRatings);
@@ -151,8 +160,9 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
   var yearOfEntryHistogram = <int, int>{};
 
   for(var rating in ratings) {
+    final scaledRating = (rating.rating * scaleFactor) + scaleOffset;
     // Buckets 100 wide
-    var bucket = (0 + (rating.rating / ratingBucketSize).floor());
+    var bucket = (0 + (scaledRating / ratingBucketSize).floor());
 
     histogram.increment(bucket);
 
@@ -169,7 +179,7 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
 
   for(var classification in sport.classifications.values) {
     var shootersInClass = ratings.where((r) => r.lastClassification == classification);
-    var ratingsInClass = shootersInClass.map((r) => r.rating);
+    var ratingsInClass = shootersInClass.map((r) => (r.rating * scaleFactor) + scaleOffset);
 
     ratingsByClass[classification] = ratingsInClass.sorted((a, b) => a.compareTo(b));
     averagesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.average : 0;

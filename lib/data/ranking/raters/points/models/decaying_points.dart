@@ -22,7 +22,7 @@ class DecayingPoints extends PointsModel {
     else if(scores.length == 1) {
       return {
         scores.keys.first: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
+          RatingSystem.ratingChangeKey: 0,
         })
       };
     }
@@ -38,7 +38,7 @@ class DecayingPoints extends PointsModel {
       var change = points;
 
       changes[rating] = RatingChange(change: {
-        RatingSystem.ratingKey: change,
+        RatingSystem.ratingChangeKey: change,
       });
     }
 

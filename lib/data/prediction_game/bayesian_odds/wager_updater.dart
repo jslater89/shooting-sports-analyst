@@ -26,6 +26,8 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart'
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -103,6 +105,9 @@ class BayesianWagerUpdater {
     }
     else if(algorithm is Glicko2Rater) {
       lengthInStages = Glicko2Rating.getLengthInStages(subjectRating.wrappedRating);
+    }
+    else if(algorithm is LatentLogRater) {
+      lengthInStages = LatentLogRating.getLengthInStages(subjectRating.wrappedRating);
     }
     else {
       throw ArgumentError("Unsupported algorithm: ${algorithm}");

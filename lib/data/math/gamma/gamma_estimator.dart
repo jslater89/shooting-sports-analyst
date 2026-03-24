@@ -22,6 +22,8 @@ class GammaEstimator implements ContinuousDistributionEstimator {
   /// Returns a [GammaDistribution] fitted to the provided data
   /// Throws [ArgumentError] if the data is empty or contains non-positive values
   GammaDistribution estimate(List<double> data) {
+    // Copy data to avoid modifying the original list
+    data = [...data];
     if (data.isEmpty) {
       throw ArgumentError("Data list cannot be empty");
     }

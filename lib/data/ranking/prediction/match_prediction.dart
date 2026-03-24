@@ -106,9 +106,16 @@ class AlgorithmPrediction {
   double get upperWhisker => mean + twoSigma + shift;
   double get lowerWhisker => mean - twoSigma + shift;
 
+  /// The lower bound of the 1-sigma confidence interval.
   double get lowPrediction => mean - oneSigma + shift;
+
+  /// The lower bound of the 0.5-sigma confidence interval.
   double get halfLowPrediction => mean - oneSigma / 2 + shift / 2;
+
+  /// The upper bound of the 0.5-sigma confidence interval.
   double get halfHighPrediction => mean + (oneSigma + shift) / 2;
+
+  /// The upper bound of the 1-sigma confidence interval.
   double get highPrediction => mean + (oneSigma + shift);
 
   double get upperBoxWhiskerMidpoint => (upperBox + upperWhisker) / 2;

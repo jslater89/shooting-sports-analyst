@@ -51,7 +51,7 @@ class PointsRatingEvent extends RatingEvent {
       ratingChange = double.nan;
     }
     else {
-      ratingChange += change.change[RatingSystem.ratingKey]!;
+      ratingChange += change.change[RatingSystem.ratingChangeKey]!;
     }
   }
 }

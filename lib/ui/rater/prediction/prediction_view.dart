@@ -142,7 +142,7 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
                           line += "${pred.shooter.getName(suffixes: false)},";
                           line += "${pred.shooter.originalMemberNumber},";
                           line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
-                          line += "${pred.shooter.rating.round()},";
+                          line += "$pred.shooter.formattedRating,";
                           line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
                           if(outcome != null) {
@@ -251,12 +251,33 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
 
     List<double> percentErrors = [];
     List<int> placeErrors = [];
+    int correct68 = 0;
+    int correct95 = 0;
+    int aboveMean = 0;
+    int belowMean = 0;
     for(var pred in outcome.actualResults.keys) {
-      double percentError = (pred.mean - outcome.actualResults[pred]!.percent);
+      double percentOutcome = outcome.actualResults[pred]!.percent;
+      int placeOutcome = outcome.actualResults[pred]!.place;
+      double percentError = (pred.meanRatio! - percentOutcome);
+      if(percentError >= -pred.oneSigmaRatio! && percentError <= pred.oneSigmaRatio!) {
+        correct68 += 1;
+      }
+      double twoSigmaRatio = 2 * pred.oneSigmaRatio!;
+      if(percentError >= -twoSigmaRatio && percentError <= twoSigmaRatio) {
+        correct95 += 1;
+      }
+      if(percentOutcome > pred.meanRatio!) {
+        aboveMean += 1;
+      }
+      if(percentOutcome < pred.meanRatio!) {
+        belowMean += 1;
+      }
       percentErrors.add(percentError);
-      int placeError = (pred.medianPlace - outcome.actualResults[pred]!.place);
+      int placeError = (pred.medianPlace - placeOutcome);
       placeErrors.add(placeError);
     }
+    _log.i("Above mean: $aboveMean (${(aboveMean / outcome.actualResults.length * 100).toStringAsPrecision(3)}%) Below mean: $belowMean (${(belowMean / outcome.actualResults.length * 100).toStringAsPrecision(3)}%)");
+    _log.i("68% correct: $correct68 (${(correct68 / outcome.actualResults.length * 100).toStringAsPrecision(3)}%) 95% correct: $correct95 (${(correct95 / outcome.actualResults.length * 100).toStringAsPrecision(3)}%)");
 
     double percentRmsError = sqrt(percentErrors.map((e) => e * e).average);
     double placeRmsError = sqrt(placeErrors.map((e) => e * e).average);
@@ -340,7 +361,7 @@ class PredictionViewModel extends ChangeNotifier {
 
   void setPredictions(List<AlgorithmPrediction> predictions, {bool notify = true}) {
     this.predictions = [...predictions];
-    this.predictions.sort((a, b) => b.ordinal.compareTo(a.ordinal));
+    this.predictions.sort((a, b) => b.mean.compareTo(a.mean));
     searchedPredictions = this.predictions;
     minValue = 10000;
     maxValue = -10000;
@@ -502,14 +523,23 @@ class PredictionListRow extends StatelessWidget {
     double meanPercent = (model.percentFloor + prediction.mean / model.highPrediction * model.percentMult) * 100;
     double whiskerLowPercent = (model.percentFloor + prediction.lowerWhisker / model.highPrediction * model.percentMult) * 100;
     double whiskerHighPercent = (model.percentFloor + prediction.upperWhisker / model.highPrediction * model.percentMult) * 100;
+    double winPercent = 100;
     double? outcomePercent;
 
     List<double> referenceLines = [];
+    List<Color> referenceLineColors = [];
+
+    // Add a 100% reference line if the prediction can win.
+    if(whiskerHighPercent > winPercent) {
+      referenceLines.add(winPercent);
+      referenceLineColors.add(ThemeColors.equalContrastBlue(context));
+    }
+
     var outcome = model.outcomes[prediction];
     if(outcome != null) {
       if(outcome.percent > 0.2) {
         outcomePercent = outcome.percent * 100;
-        referenceLines = [outcomePercent];
+        referenceLines.add(outcomePercent);
       }
     }
 
@@ -559,7 +589,7 @@ class PredictionListRow extends StatelessWidget {
               ),
               Expanded(
                 flex: PredictionListViewScreen._ratingFlex,
-                child: Text(prediction.shooter.rating.round().toString(), textAlign: TextAlign.end),
+                child: Text(prediction.shooter.formattedRating, textAlign: TextAlign.end),
               ),
               Expanded(
                 flex: PredictionListViewScreen._95ciFlex,
@@ -582,6 +612,7 @@ class PredictionListRow extends StatelessWidget {
                 flex: PredictionListViewScreen._whiskerPlotFlex,
                 child: Tooltip(
                   message: "68% confidence: ${boxLowPercent.toStringAsFixed(1)}-${boxHighPercent.toStringAsFixed(1)}%\n"
+                      "Mid: ${meanPercent.toStringAsFixed(1)}%\n"
                       "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
                       outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
                   child: BoxAndWhiskerPlot(
@@ -600,6 +631,8 @@ class PredictionListRow extends StatelessWidget {
                     boxSize: 12 * uiScaleFactor,
                     strokeWidth: 1.5,
                     referenceLines: referenceLines,
+                    referenceLineColors: referenceLineColors,
+                    referenceLineColor: ThemeColors.equalContrastGreen(context),
                   ),
                 )
               ),

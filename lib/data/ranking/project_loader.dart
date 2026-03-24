@@ -1953,6 +1953,11 @@ class RatingProjectLoader {
       );
 
       for(var rating in scoreMap.keys) {
+        if(update[rating] == null) {
+          // This can happen if the rating system declines to
+          // calculate a rating change for this shooter.
+          continue;
+        }
         var score = scoreMap[rating]!;
         // You only get one rating change per match.
         if (changes[rating.wrappedRating]!.isEmpty) {
@@ -2177,6 +2182,8 @@ class RatingProjectLoader {
   }
 
   bool _pubstomp(Map<String, ShooterRating> wrappedRatings, List<RelativeMatchScore> scores) {
+    if(sport.pubstompProvider == null) return false;
+
     if(scores.length < 2) return false;
 
     var sorted = scores.sorted((a, b) => b.ratio.compareTo(a.ratio));

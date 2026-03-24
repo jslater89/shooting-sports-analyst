@@ -102,3 +102,6 @@ research/**/*.pdf
 *.synctex(busy)
 *.synctex.gz(busy)
 *.synctex.gz(busy)
+*.bib
+*.bbl
+*.blg

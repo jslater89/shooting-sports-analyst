@@ -372,8 +372,8 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     return Container(
       padding: EdgeInsets.all(2),
-      width: sizeModel.cardWidth.toDouble(),
-      height: sizeModel.cardHeight.toDouble(),
+      width: sizeModel.cardWidth.roundToDouble(),
+      height: sizeModel.cardHeight.roundToDouble(),
       alignment: Alignment.center,
       child: Card(
         child: Padding(
@@ -472,11 +472,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var match = context.read<BroadcastBoothModel>().latestMatch;
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
-
     return Scrollbar(
       thumbVisibility: true,
       controller: verticalScrollController,
       child: TableView.builder(
+        clipBehavior: Clip.hardEdge,
         horizontalDetails: ScrollableDetails.horizontal(
           physics: innerScrollPhysics,
           controller: horizontalScrollController,
@@ -506,10 +506,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
           TableSpanDecoration? decoration;
 
           if(column == 0) {
-            extent = FixedTableSpanExtent(_shooterColumnWidth * sc.tableTextSize.fontSizeFactor);
+            extent = FixedTableSpanExtent((_shooterColumnWidth * sc.tableTextSize.fontSizeFactor).roundToDouble());
           }
           else {
-            extent = FixedTableSpanExtent(_stageColumnWidth * sc.tableTextSize.fontSizeFactor);
+            extent = FixedTableSpanExtent((_stageColumnWidth * sc.tableTextSize.fontSizeFactor).roundToDouble());
           }
 
           // Vertical line after the 'total' column.
