@@ -220,7 +220,7 @@ class _DivisionListEntry extends StatelessWidget {
             Expanded(flex: _DivisionListKey._nameFlex, child: Text(entry.shooterName ?? "Unknown")),
             Expanded(flex: _DivisionListKey._memberNumberFlex, child: Text(rating?.memberNumber ?? entry.shooterMemberNumbers.firstOrNull ?? "(n/a)")),
             Expanded(flex: _DivisionListKey._classFlex, child: Text(classification?.shortDisplayName ?? "(n/a)")),
-            Expanded(flex: _DivisionListKey._ratingFlex, child: Text(rating?.formattedRating() ?? "(unrated)")),
+            Expanded(flex: _DivisionListKey._ratingFlex, child: Text(rating?.formattedRating ?? "(unrated)")),
             Expanded(flex: _DivisionListKey._squadFlex, child: Text(entry.squad ?? "(n/a)")),
             Expanded(flex: _DivisionListKey._paddingFlex, child: Container()),
           ],

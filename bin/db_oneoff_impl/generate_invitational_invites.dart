@@ -473,7 +473,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
           buffer.write("Match slot,");
         }
         else {
-          buffer.write("${invitation.rating.formattedRating()},");
+          buffer.write("${invitation.rating.formattedRating},");
         }
         buffer.write('"${match?.name ?? "Elo slot"}",');
         buffer.write("${match?.date != null ? programmerYmdFormat.format(match!.date) : "Elo slot"},");
@@ -830,7 +830,7 @@ class Invitation {
       "name": rating.name,
       "email": rating.email ?? "",
       "groups": groups.map((g) => g.name).toList(),
-      "rating": double.tryParse(rating.formattedRating()) ?? 0,
+      "rating": double.tryParse(rating.formattedRating) ?? 0,
       "matchInvitations": earnedAtMatches.mapIndexed((i, match) => {
         "matchName": match.name,
         "matchDate": programmerYmdFormat.format(match.date),

@@ -229,7 +229,7 @@ class _CompetitorRow extends StatelessWidget {
           children: [
             Expanded(flex: _CompetitorKey._nameFlex, child: Text(competitor.shooterName ?? "Unknown")),
             if(hasDivisions) Expanded(flex: _CompetitorKey._divisionFlex, child: Text(division?.shortDisplayName ?? "(n/a)")),
-            Expanded(flex: _CompetitorKey._ratingFlex, child: Text(rating?.formattedRating() ?? "(unrated)")),
+            Expanded(flex: _CompetitorKey._ratingFlex, child: Text(rating?.formattedRating ?? "(unrated)")),
           ],
         ),
       ),

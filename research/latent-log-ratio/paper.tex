@@ -20,7 +20,7 @@
 		
 		There are adaptations to Elo and Glicko for continuous, non-zero-sum games, but they are just that: adaptations. All make compromises to shoehorn the continuous nature of the game into the binary, head-to-head model of the rating system.
 		
-		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model uses the logarithmic structure of multiplicative performance ratios to eliminate the winner's-curse bias inherent in percentage scoring while preserving globally log-linear rating semantics for prediction. It combines a linear-time match baseline with selective pairwise residual corrections, a robust and weakly regularized leave-one-out baseline estimator, score-dependent tail noise for very weak finishes, a match-context weak-field uncertainty term for tiny bottom-heavy fields, per-competitor behavioral volatility updated with a certainty-scaled exponential moving average on a clamped posterior-variance surrogate, and innovation-based adaptive variance (with Student-$t$ downweighting of the mean update only) to prevent the monotonic certainty collapse common in basic Kalman filters.
+		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model uses the logarithmic structure of multiplicative performance ratios to eliminate the winner's-curse bias inherent in percentage scoring while preserving globally log-linear rating semantics for prediction. It combines a linear-time match baseline with selective pairwise residual corrections, innovation-based adaptive variance (with Student-$t$ downweighting of the mean update only) to prevent the monotonic certainty collapse common in basic Kalman filters, and a variety of measures to combat observed issues with small or degenerate fields.
 		
 		Though designed with practical shooting in mind, the mathematics are not specific to that sport, and the system should function well when applied to any game where a ratio-to-winner finish order can be established.
 	\end{abstract}
@@ -38,7 +38,7 @@
 	\end{itemize}
 	If the match winner performs exceptionally well, every other competitor's percentage drops, mathematically suggesting the field performed poorly when they did not.
 	
-	\subsection{The Logarithmic Bridge}
+	\subsection{The Logarithmic Bridge}	
 	Let $P_i$ denote a competitor's absolute performance on any positive ratio scale where larger is better, and let $P_{max}$ denote the winning performance in the match. The match percentage is then
 	\begin{equation}
 		S_i = \frac{P_i}{P_{max}}
@@ -59,7 +59,7 @@
 	\begin{equation}
 		\ln\left(\frac{P_A}{P_B}\right) \approx R_A - R_B
 	\end{equation}
-	Thus, the winner's score appears only as a nuisance normalization constant in the published percentages; it does not survive pairwise comparison in log space. The resulting quantity is the pure ratio of the competitors' absolute performances, independent of who won the match or by how much. In time-plus sports, this same derivation applies by choosing $P_i$ to be any proportional speed variable such as $T_{min}/T_i$, which yields $\ln(S_A) - \ln(S_B) = \ln(T_B/T_A)$.
+	Thus, the winner's score appears only as a nuisance normalization constant in the published percentages; it does not survive pairwise comparison in log space, an idea derived from compositional data analysis\cite{aitchison1982compositional}. The resulting quantity is the pure ratio of the competitors' absolute performances, independent of who won the match or by how much. In time-plus sports, this same derivation applies by choosing $P_i$ to be any proportional speed variable such as $T_{min}/T_i$, which yields $\ln(S_A) - \ln(S_B) = \ln(T_B/T_A)$.
 	
 	\subsection{Ratings as Expected Log-Ratios}
 	This cancellation property leads directly to the model's core identity. Since ratings $R_i$ represent expected log-performance, the difference between any two ratings is the expected log-ratio of their performances:
@@ -72,7 +72,7 @@
 		E\!\left[\frac{S_i}{S_j}\right] \approx \exp(R_i - R_j)
 	\end{equation}
 	
-	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. This relationship remains exact throughout the implemented model. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
+	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
 	
 	\section{System Architecture and Algorithm}
 	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space, augmented with a per-competitor volatility estimate.
@@ -86,18 +86,18 @@
 	\end{itemize}
 	
 	\subsection{System Parameters}
-	The Latent Log-Ratio system is parameterized by several distinct components.
+	The parameters to the Latent Log-Ratio system fall into four categories: scaling, to convert the internal log units to user-friendly display numbers; core parameters, which drive the main algorithm; parameters that improve performance on small or degenerate fields; and parameters that improve observed performance when converting from ratings to predicted ratios.
 	
 	\subsubsection*{Scaling (Display $s$, $b$)}
 	\begin{itemize}
-		\item \textbf{$s$, $b$ (Display Scale):} User-facing ratings use an affine map $R^{\mathrm{disp}} = s\cdot R + b$ (defaults are sport-specific in software). Variance and volatility in display space scale as $s^2$ times latent variance; display standard deviations scale as $|s|$ times latent standard deviation.
+		\item \textbf{$s$, $b$ (Display Scale):} User-facing ratings use an affine map $R^{\mathrm{disp}} = s\cdot R + b$. Variance and volatility in display space scale as $s^2$ times latent variance; display standard deviations scale as $|s|$ times latent standard deviation.
 	\end{itemize}
 	
 	\subsubsection*{Core Parameters}
 	\begin{itemize}
 		\item \textbf{$\sigma_{sport}^2$ (Sport Volatility):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
 		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
-		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates and after drift aging.
+		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates, surprise adaptation, and after drift aging.
 		\item \textbf{$\sigma_{drift}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
 		\item \textbf{$\beta$ (Volatility Adaptation Rate):} Base rate for the behavioral-volatility EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
 		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
@@ -153,7 +153,7 @@
 		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
 	\end{equation}
 	
-	\textbf{Step 4: Calculate Local Baseline ($B_{local}$)}\\
+	\textbf{Step 4: Calculate Local Baseline ($B_{\mathrm{local}}$)}\\
 	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. Beating someone rated far above you provides a different signal than beating someone rated far below you.
 	
 	For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (in the practical shooting context, we choose `top and nearby'). For each opponent $j$, compute the log-space pairwise residual:
@@ -376,7 +376,59 @@
 	
 	Because of these drawbacks, a \textbf{Hybrid Scaling} approach is generally preferred over a universal reference time. By applying the additive padding $k$ only to stages where $T_{min} < T_{floor}$, the model safely bounds the extreme punishment of micro-stages and time bonuses, while leaving standard field courses unadjusted to preserve the mathematical reality of proportional pace.
 	
-	\section{Benefits Over Glicko-2 and Logistic Models}
+	\section{The Prediction System and Confidence Intervals}
+	\label{sec:prediction}
+	
+	Because ratings operate in log space, predicted finish ratios use log-normal bookkeeping. The system constructs a mixture distribution over plausible winners to calculate expected finish percentages and predictive confidence intervals.
+	
+	\subsection{Expected Finish Ratio}
+	Let $p_w$ be the mixture weights established by the candidate probabilities. Calculating the expected finish ratio $S_i$ using a closed-form approximation requires resolving two distinct statistical boundaries: the Extreme Value behavior of the winner, and the right-truncation of the percentage scale.
+	
+	\subsubsection*{The Max Order Correction ($\Delta_w$)}
+	In wide-open fields with many realistic contenders, the actual match winner will not shoot their average expected performance; they will be the maximum order statistic of the contender pool. To correct for this without requiring a full Monte Carlo simulation, we calculate the effective number of contenders using the Inverse Participation Ratio (IPR), which naturally filters out the long tail of unlikely winners:
+	\begin{equation}
+		N_{\mathrm{eff}} = \left(\sum_w p_w^2\right)^{-1}
+	\end{equation}
+	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. The presumed winner's rating is then shifted upward by this extreme-value expectation scaled by their total pool volatility:
+	\begin{equation}
+		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + \sigma_w^2 + \sigma_{\mathrm{pred}}^2}
+	\end{equation}
+	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), $\Delta_w$ gracefully vanishes to zero, preserving unbiased predictions.
+	
+	\subsubsection*{The Truncation Correction ($\Lambda_{iw}$)}
+	Because $S_i$ represents a score relative to the match winner, it is strictly bounded by $S_i \le 1.0$. Conditioning the prediction on $w$ being the winner implicitly conditions the expected ratio on $L_i \le L_w$. We enforce this physical ceiling by defining a right-truncation modifier (truncated at $0$ in log space) for the log-normal expectation:
+	\begin{equation}
+		\Lambda_{iw} = \frac{\Phi\!\left(-\frac{\tilde{\mu}_{iw} + \sigma_{iw}^2}{\sigma_{iw}}\right)}{\Phi\!\left(-\frac{\tilde{\mu}_{iw}}{\sigma_{iw}}\right)}
+	\end{equation}
+	where $\Phi$ is the standard normal CDF, and the pairwise variance is $\sigma_{iw}^2 = V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2$. The denominator isolates the probability mass to the universe where $w$ beats $i$, and the numerator perfectly cancels the mass of the unconstrained integral that lies above 1.0.
+	
+	\subsubsection*{The Final Expected Ratio}
+	By the law of total expectation over the random winner, applying both the max order shift and the truncation boundary, the expected ratio of competitor $i$ to the winner is:
+	\begin{equation}
+		\hat{S}_i = p_i (1.0) + \sum_{w \neq i} p_w \left[ \exp\!\left(\tilde{\mu}_{iw} + \frac{\sigma_{iw}^2}{2}\right) \cdot \Lambda_{iw} \right]
+	\end{equation}
+	The isolated $p_i$ term handles the mixture branch where $i$ is the presumed winner, yielding a ratio of exactly 1.0. For all other candidate winners, this formulation safely resolves the winner's curse bias in large fields while strictly obeying the $100\%$ scaling maximum.
+	
+	\subsection{Predictive Variance and Confidence Intervals}
+	To generate predictive confidence intervals, we first calculate the total log-space predictive variance. Let $\bar{\sigma}_w^2 = \sum_w p_w \sigma_w^2$ denote the probability-weighted behavioral variance of the presumed winner mixture. Predictive variance in log space is:
+	\begin{equation}
+		\varsigma_i^2 = V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \sum_w p_w \Big(V_w^{\mathrm{age}} + \kappa\left(\sigma_i^2 + \bar{\sigma}_w^2\right)\Big)
+	\end{equation}
+	The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic noise for both the focal competitor and the uncertain winner in the ratio. The parameter $\kappa \in [0,1]$ allows the system designer to tune how much of a competitor's inherent behavioral volatility ($\sigma_i^2$) is projected into their published predictive interval.
+	
+	Because the rating system operates in log space, confidence intervals in ratio space are fundamentally multiplicative. We define the geometric standard deviation as:
+	\begin{equation}
+		\mathrm{GSD}_i = \exp\!\left(\sqrt{\varsigma_i^2}\right)
+	\end{equation}
+	The $\pm 1\sigma$ predictive bounds are applied multiplicatively to the truncated expected mean:
+	\begin{equation}
+		S_{i,\mathrm{lower}} = \frac{\hat{S}_i}{\mathrm{GSD}_i}, \qquad S_{i,\mathrm{upper}} = \hat{S}_i \times \mathrm{GSD}_i
+	\end{equation}
+	Notably, while the expected mean $\hat{S}_i$ is strictly bounded to $1.0$, the upper confidence interval $S_{i,\mathrm{upper}}$ is permitted to exceed $1.0$. This is physically meaningful: an upper bound of $1.02$ indicates that a competitor's $+1\sigma$ performance would theoretically exceed the presumed winner's expected performance by 2\%, visually indicating to users that the competitor has a realistic probability of winning the match.
+	
+	\section{Comparison with Earlier Work}
+	
+	\subsection{Glicko-2}
 	\begin{enumerate}
 		\item \textbf{Algorithmic Efficiency:} Glicko-2 requires $\mathcal{O}(N^2)$ pairwise comparisons. A 300-person match yields 44,850 comparisons per competitor. The Latent Log-Ratio model computes the match baseline in $\mathcal{O}(N)$ and adds pairwise corrections against $k$ selected opponents per competitor, yielding $\mathcal{O}(N \cdot k)$ total complexity. With $k = 20$--$30$, a 300-person match requires 6,000--9,000 pairwise comparisons total, rather than 44,850 per competitor.
 		
@@ -393,50 +445,10 @@
 		This decomposition makes each parameter independently interpretable and tunable. In Glicko-2, a competitor bombing a single stage can drastically inflate their RD (via the volatility $\rightarrow$ RD pathway), destabilizing future updates. Here, a single bad performance primarily affects $\sigma_i^2$ (which adapts gradually via the certainty-scaled EMA and a capped driving term) and may trigger a modest $V_i$ increase (via the innovation term), but neither mechanism produces the runaway instability that Glicko-2's volatility iteration can exhibit.
 	\end{enumerate}
 	
-	\section{The Prediction System and Confidence Intervals}
-	\label{sec:prediction}
+	\subsection{Multiplayer Elo}
 	
-	Because ratings operate in log space, predicted finish ratios use log-normal bookkeeping. The current implementation builds a \textbf{closed-form} mixture over plausible winners; Monte Carlo winner sampling is not wired in (reserved for future contested-field use).
-	
-	\subsection{Candidate Winners and Win Probabilities}
-	Predicting the winner of a massively multiplayer continuous game requires evaluating the probability that a competitor's performance draw exceeds all other draws simultaneously in a given match. Because the winner is determined by the maximum order statistic of the field, high epistemic variance can actually be an asset for winning: an erratic ``dark horse'' has a thicker right tail, giving them a higher probability of outrunning a massive 100-person field than a highly consistent, average competitor. 
-	
-	\subsubsection*{Primary Method: Monte Carlo Simulation}
-	To correctly model this joint probability and the maximum order statistic, the preferred method for calculating win probabilities is a Monte Carlo simulation. 
-	
-	For each iteration $k \in \{1, \dots, K\}$:
-	\begin{enumerate}
-		\item Draw a latent match performance for every competitor $i$: 
-		$l_{i,k} \sim \mathcal{N}(R_i,\; V_i + \sigma_{pred}^2)$.
-		\item Identify the winner of the iteration: $w_k = \arg\max_i (l_{i,k})$.
-	\end{enumerate}
-	The simulated win probability $p_w$ for competitor $w$ is simply their fraction of total victories over $K$ iterations. Behavioral volatilities $\sigma_i^2$ are omitted from the draw variance; they govern update magnitude and predictive confidence intervals, but are not modeled as epistemic uncertainty about true underlying skill for the purposes of win-probability mapping.
-	
-	To improve computational efficiency, application-specific optimizations can be applied to the simulation. For example, the system might only simulate the top quartile of the field by rating, or terminate the simulation early once a specific proportion of the probability mass (e.g., 99\%) is confidently allocated to a small subset of top competitors.
-	
-	\subsubsection*{Fast Approximation: Closed-Form Product}
-	In real-time applications where zero-latency UI updates are strictly required, a closed-form Naive Bayes approximation can be used instead. We sort competitors by latent rating $R$ and select candidate winners $w$ as the top $m = \max(5, \lceil 0.25 N\rceil)$. For each candidate, a product of pairwise normal CDFs gives an unnormalized weight:
-	\begin{equation}
-		\tilde{p}_w = \prod_{j \neq w} \Phi\!\left(\frac{R_w - R_j}{\sqrt{V_w + V_j + 2\sigma_{pred}^2}}\right),
-	\end{equation}
-	where $\Phi$ is the standard normal CDF. We then normalize the weights: $p_w = \tilde{p}_w / \sum_{w'} \tilde{p}_{w'}$. 
-	
-	While computationally trivial, this method assumes that pairwise victories are statistically independent, which they are not (all comparisons rely on the same draw $l_w$). This approximation systematically underestimates the win probability of high-variance competitors in large fields, and the unnormalized weights $\tilde{p}_w$ decay exponentially toward zero in tightly contested fields. However, it functions adequately as a fast heuristic for matches with a clear favorite.
-	
-	\subsection{Expected Finish Ratio}
-	Let $p_w$ be the mixture weights established by either the Monte Carlo or closed-form method. By the law of total expectation over the random winner, the expected ratio of competitor $i$ to the winner is
-	\begin{equation}
-		\hat{S}_i = \sum_w p_w \exp\!\left(R_i - R_w + \frac{V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{pred}^2}{2}\right).
-	\end{equation}
-	The term $(V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{pred}^2)/2$ is the standard log-normal mean correction when the reference difference $(L_i - L_w)$ is modeled as Gaussian with variance $V_i^{\mathrm{age}} + V_w + 2\sigma_{pred}^2$ in log space. Behavioral volatility $\sigma^2$ does not enter this mean correction.
-	
-	\subsection{Predictive variance and reported ``one sigma''}
-	Let $\mu^{\mathrm{log}}_i = \sum_w p_w (R_i - R_w)$ be the probability-weighted mean log gap to mixture winners. Let $\bar{\sigma}_w^2 = \sum_w p_w \sigma_w^2$ denote the probability-weighted behavioral variance of the presumed winner mixture. Predictive variance in log space is
-	\begin{equation}
-		\varsigma_i^2 = V_i^{\mathrm{age}} + 2\sigma_{pred}^2 + \sum_w p_w V_w^{\mathrm{age}} + \kappa\left(\sigma_i^2 + \bar{\sigma}_w^2\right).
-	\end{equation}
-	The sport contribution $2\sigma_{pred}^2$ is idiosyncratic noise for both the focal competitor and the uncertain winner in the ratio. The term $\kappa(\sigma_i^2 + \bar{\sigma}_w^2)$ adds a \emph{fraction} of behavioral variance to the band: $\kappa=0$ recovers bands that ignore $\sigma^2$; the update rule continues to use full $\sigma_i^2$ in $R_{\mathrm{obs},i}$ regardless of $\kappa$.
-	
-	Strictly speaking, a full posterior predictive distribution for a single match observation would include the entire aleatoric variance ($\kappa=1$). However, because behavioral variance can be heavy-tailed, fully exponentiating it in log-space can produce visually uninformative, extreme upper bounds. The parameter $\kappa$ allows the system designer to decouple the presentation of epistemic rating confidence from aleatoric match-to-match consistency, tuning how much of a competitor's inherent volatility is projected into their published predictive interval.
-	
+	\subsection{TrueSkill and OpenSkill}
+
+	\bibliographystyle{ieeetr}
+	\bibliography{paper}
 \end{document}

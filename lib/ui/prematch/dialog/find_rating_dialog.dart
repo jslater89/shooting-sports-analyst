@@ -159,7 +159,7 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
                 return ListTile(
                   enabled: !inUse,
                   title: Text(nameText),
-                  subtitle: Text("${rating.lastClassification?.shortDisplayName ?? "(n/a)"} - ${rating.formattedRating()} - ${rating.memberNumber}"),
+                  subtitle: Text("${rating.lastClassification?.shortDisplayName ?? "(n/a)"} - ${rating.formattedRating} - ${rating.memberNumber}"),
                   onTap: () => Navigator.of(context).pop(rating),
                 );
               },

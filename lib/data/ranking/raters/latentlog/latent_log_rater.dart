@@ -60,6 +60,25 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   }
 
   @override
+  double scaleRating(double rating) {
+    return rating * settings.scaleFactor + settings.scaleOffset;
+  }
+
+  double unscaleRating(double rating) {
+    return (rating - settings.scaleOffset) / settings.scaleFactor;
+  }
+
+  @override
+  String formatNumericRating(double rating) {
+    return (rating * settings.scaleFactor + settings.scaleOffset).round().toString();
+  }
+
+  @override
+  String formatRating(ShooterRating rating) {
+    return formatNumericRating(rating.rating);
+  }
+
+  @override
   RatingMode get mode => RatingMode.wholeEvent;
 
   @override
@@ -96,11 +115,20 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     required Sport sport,
     required DateTime date,
   }) {
+    double initialRating = 0;
+
+    var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
+    if(ratingMultiplier != 1.0) {
+      // LLR ratings are literally just log performance multipliers/ratios, so we can use the
+      // multiplier almost directly.
+      initialRating = log(ratingMultiplier);
+    }
+
     return LatentLogRating(
       shooter,
       sport: sport,
       date: date,
-      initialRating: 0,
+      initialRating: initialRating,
       initialVariance: settings.startingVariance,
       initialVolatility: sqrt((0.05 * settings.startingVariance * _volatilityScaleFactor) * settings.startingVariance * _volatilityScaleFactor),
       settings: settings,
@@ -716,7 +744,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
     List<AlgorithmPrediction> predictions = [];
 
-    List<LatentLogRating> sortedRatings = ratings.cast<LatentLogRating>().sorted((a, b) => b.rating.compareTo(a.rating));
+    List<LatentLogRating> sortedRatings = ratings.cast<LatentLogRating>().where((r) => r.length > 0).sorted((a, b) => b.rating.compareTo(a.rating));
+
+    if(sortedRatings.isEmpty) {
+      return [];
+    }
 
     if(sortedRatings.length < 2) {
       return [
@@ -740,16 +772,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       _presumedWinnersClosedForm(sortedRatings, matchDate: _predictionsUseAgedRatings ? matchDate : null);
 
     for(var rating in sortedRatings) {
-      /// We use the probability-weighted log ratio to calculate the median
-      /// log ratio, so that we can correctly center the confidence interval.
-      ///
-      /// It is the expected log difference from the competitor's rating to the
-      /// presumed winners' ratings, weighted by the presumed winner's win
-      /// probability.
-      ///
-      /// This is their sum (i.e. their weighted average by win probability).
-      double probabilityWeightedLogDifference = 0.0;
-
       /// The probability-weighted ratios are the expected final scores in ratio
       /// space for the competitor against each presumed winner, weighted by the
       /// presumed winner's win probability.
@@ -770,19 +792,54 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           rating.calculateCurrentVariance(asOfDate: matchDate) : //rating.variance :
           rating.variance;
 
+      // Account for the tendency for extreme values to dominate in close fields.
+      // i.e., if you have 10 evenly-matched competitors favored, the winner is the
+      // one who has a +2SD day (more or less). Tight fields implement the winner's
+      // curse: you'll do worse than you would against a simple weighted mean because
+      // the winner _must_ shoot better than the mean to beat his peers.
+      double sumOfSquaredWinProbabilities = 0.0;
+      for(var p in presumedWinners) {
+        sumOfSquaredWinProbabilities += p.winProbability * p.winProbability;
+      }
+      final nEff = 1.0 / sumOfSquaredWinProbabilities;
+      final eMax = Normal.quantile((nEff - 0.375) / (nEff + 0.25));
+
       for(var presumedWinner in presumedWinners) {
         final winProbability = presumedWinner.winProbability;
 
-        final logDifference = rating.rating - presumedWinner.shooter.rating;
-        probabilityWeightedLogDifference += logDifference * winProbability;
+        if(rating == presumedWinner.shooter) {
+          // probabilityWeightedLogDifference += 0.0;
+
+          // We contribute 1.0 * p_w to the ratio (i.e. we finish at exactly 100% of ourself by
+          // definition)
+          probabilityWeightedRatio += 1.0 * presumedWinner.winProbability;
+          probabilityWeightedWinnerVariance += ratingVariance * presumedWinner.winProbability;
+          probabilityWeightedWinnerVolatility += rating.volatility * presumedWinner.winProbability;
+          continue;
+        }
+
+        final winnerDrawStdDev = sqrt(
+          presumedWinner.shooter.variance +
+          settings.predictionBehavioralVolatilityKappa * presumedWinner.shooter.volatility +
+          2 * settings.predictionSportVariance
+        );
+        final effectiveWinnerRating = presumedWinner.shooter.rating + winnerDrawStdDev * eMax;
+
+        final logDifference = rating.rating - effectiveWinnerRating;
 
         final winnerVariance =
           matchDate != null && _predictionsUseAgedRatings ?
             presumedWinner.shooter.calculateCurrentVariance(asOfDate: matchDate) :
             presumedWinner.shooter.variance;
 
-        final correctionTerm = (winnerVariance + ratingVariance + 2 * settings.predictionSportVariance) / 2;
-        final weightedRatio = exp(logDifference + correctionTerm) * winProbability;
+        final pairwiseVariance = winnerVariance + ratingVariance + 2 * settings.predictionSportVariance;
+
+        final truncationCorrectionNumerator = -((logDifference + pairwiseVariance) / sqrt(pairwiseVariance));
+        final truncationCorrectionDenominator = -(logDifference / sqrt(pairwiseVariance));
+        final truncationCorrection = Normal.cdf(truncationCorrectionNumerator) / Normal.cdf(truncationCorrectionDenominator);
+
+        final correctionTerm = pairwiseVariance / 2;
+        final weightedRatio = exp(logDifference + correctionTerm) * truncationCorrection * winProbability;
         probabilityWeightedRatio += weightedRatio;
         probabilityWeightedWinnerVariance += winnerVariance * winProbability;
         probabilityWeightedWinnerVolatility +=
@@ -796,7 +853,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         + probabilityWeightedWinnerVariance
         + (rating.volatility + probabilityWeightedWinnerVolatility) * kappa;
 
-      final oneSigmaUpper = exp(probabilityWeightedLogDifference + sqrt(predictiveVariance));
+      final geometricSD = exp(sqrt(predictiveVariance));
+      final oneSigmaUpper = probabilityWeightedRatio * geometricSD;
       final oneSigma = oneSigmaUpper - probabilityWeightedRatio;
 
       // We'll fill in places in a second pass

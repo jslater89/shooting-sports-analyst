@@ -55,6 +55,9 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   LatentLogSettings settings;
 
+  double get scaledRating => displayRating;
+  String get formattedRating => displayRating.round().toString();
+
   double get displayRating => rating * settings.scaleFactor + settings.scaleOffset;
   double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
   double get displayCurrentVariance => varianceToday * settings.scaleFactor * settings.scaleFactor;

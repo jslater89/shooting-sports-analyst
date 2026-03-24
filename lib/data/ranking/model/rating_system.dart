@@ -137,6 +137,14 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     return "${formatNumericRating(rating.rating)}";
   }
 
+  /// Scale a rating to a new range, if the rating system has a scaling
+  /// factor or offset.
+  ///
+  /// The default implementation returns the rating unchanged.
+  double scaleRating(double rating) {
+    return rating;
+  }
+
   /// Return a representation of a numeric rating suitable for display in e.g.
   /// a table.
   ///

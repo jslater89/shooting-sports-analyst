@@ -186,7 +186,7 @@ class _RatingLinksEntry extends StatelessWidget {
     var rating = model.matchedRegistrations[entry];
     String ratingString = "(n/a)";
     if(rating != null) {
-      ratingString = "${rating.name} - ${rating.lastClassification?.shortDisplayName ?? "(unclassified)"} - (${rating.formattedRating()})";
+      ratingString = "${rating.name} - ${rating.lastClassification?.shortDisplayName ?? "(unclassified)"} - (${rating.formattedRating})";
     }
 
     Widget ratingText = Text(ratingString);

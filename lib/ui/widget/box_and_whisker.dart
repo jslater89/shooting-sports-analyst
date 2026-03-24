@@ -21,6 +21,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
     this.boxSize,
     this.referenceLines = const [],
     this.referenceLineColor = Colors.green,
+    this.referenceLineColors = const [],
     this.whiskerColor,
     this.lowerBoxColor,
     this.upperBoxColor,
@@ -37,13 +38,21 @@ class BoxAndWhiskerPlot extends StatelessWidget {
 
   final PlotDirection direction;
 
+  /// Reference lines to draw on the plot. These are drawn as lines across the plot at the given values.
   final List<double> referenceLines;
+
+  /// The color to draw all reference lines. Used for any line that does not have an entry in [referenceLineColors].
+  final Color referenceLineColor;
+
+  /// The colors to draw each reference line. The list may be shorter than [referenceLines], in which case
+  /// the first N values here are used for the first N reference lines, and the remaining lines are drawn with
+  /// the color in [referenceLineColor], or left as the default color.
+  final List<Color> referenceLineColors;
 
   final double? rangeMin;
   final double? rangeMax;
   final double? boxSize;
   final double strokeWidth;
-  final Color referenceLineColor;
   final Color? whiskerColor;
   final Color? lowerBoxColor;
   final Color? upperBoxColor;
@@ -83,6 +92,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
             upperQuartile: upperQuartile,
             whiskerColor: finalWhiskerColor,
             referenceLines: referenceLines,
+            referenceLineColors: referenceLineColors,
             referenceLineColor: referenceLineColor,
             medianStrokeColor: finalMedianStrokeColor,
           ),
@@ -111,6 +121,7 @@ class _BoxPlotPainter extends CustomPainter {
   final bool fillBox;
   final List<double> referenceLines;
   final Color referenceLineColor;
+  final List<Color> referenceLineColors;
   final Color medianStrokeColor;
 
   _BoxPlotPainter({
@@ -129,6 +140,7 @@ class _BoxPlotPainter extends CustomPainter {
     required this.fillBox,
     required this.referenceLines,
     required this.referenceLineColor,
+    required this.referenceLineColors,
     required this.medianStrokeColor,
   });
 
@@ -170,10 +182,14 @@ class _BoxPlotPainter extends CustomPainter {
     var mainDimension = (direction == PlotDirection.horizontal ? size.width : size.height);
     double halfHeight = (crossDimension / 2).roundToDouble();
 
-    Paint referenceLinePaint = Paint();
-    referenceLinePaint.strokeWidth = strokeWidth;
-    referenceLinePaint.color = referenceLineColor;
-    referenceLinePaint.strokeCap = StrokeCap.butt;
+    List<Paint> referenceLinePaints = [];
+    for(var i = 0; i < referenceLines.length; i++) {
+      Paint referenceLinePaint = Paint();
+      referenceLinePaint.strokeWidth = strokeWidth;
+      referenceLinePaint.color = referenceLineColors.length > i ? referenceLineColors[i] : referenceLineColor;
+      referenceLinePaint.strokeCap = StrokeCap.butt;
+      referenceLinePaints.add(referenceLinePaint);
+    }
 
     // The ratio of values to pixels
     double valueToPixel = 0.0;
@@ -243,7 +259,9 @@ class _BoxPlotPainter extends CustomPainter {
     canvas.drawLine(_offsetFor(upperWhiskerEnd, crossStart), _offsetFor(upperWhiskerEnd, crossEnd), linePaint);
     canvas.drawLine(_offsetFor(upperWhiskerStart, halfHeight), _offsetFor(upperWhiskerEnd, halfHeight), linePaint);
 
-    for(var line in lines) {
+    for(var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var referenceLinePaint = referenceLinePaints[i];
       canvas.drawLine(_offsetFor(line, crossStart), _offsetFor(line, crossEnd), referenceLinePaint);
     }
   }
@@ -274,6 +292,9 @@ class _BoxPlotPainter extends CustomPainter {
       || o.rangeMin != rangeMin
       || o.rangeMax != rangeMax
       || strokeWidth != strokeWidth
+      || o.referenceLines != referenceLines
+      || o.referenceLineColors != referenceLineColors
+      || o.referenceLineColor != referenceLineColor
     ;
   }
 

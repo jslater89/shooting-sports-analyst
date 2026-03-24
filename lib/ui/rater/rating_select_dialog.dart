@@ -104,7 +104,7 @@ class _RatingSelectDialogState extends State<RatingSelectDialog> {
                     });
                   },
                   title: Text(ratings[index].name),
-                  subtitle: Text("${ratings[index].memberNumber} - ${ratings[index].formattedRating()}")
+                  subtitle: Text("${ratings[index].memberNumber} - ${ratings[index].formattedRating}")
                 ),
                 itemCount: ratings.length,
               ),
