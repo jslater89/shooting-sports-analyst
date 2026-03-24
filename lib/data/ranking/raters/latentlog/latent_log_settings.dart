@@ -3,23 +3,23 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 class LatentLogSettings extends RaterSettings {
   static const defaultScaleOffset = 1000.0;
   static const defaultScaleFactor = 2250.0;
-  static const defaultSportVolatility = 0.0024;
-  static const defaultSkillDriftRate = 0.000129;
-  static const defaultStartingVariance = 0.0216;
+  static const defaultSportVolatility = 0.0008;
+  static const defaultSkillDriftRate = 0.000016;
+  static const defaultStartingVariance = 0.0108;
   static const defaultMaximumVariance = 0.0216;
-  static const defaultVolatilityAdaptationRate = 0.10;
-  static const defaultSurpriseAdaptationRate = 0.07;
+  static const defaultVolatilityAdaptationRate = 0.25;
+  static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
   static const defaultMatchDifficultyVariance = 0.10;
   static const defaultTailNoiseStartPercent = 0.60;
-  static const defaultTailNoiseVariance = 0.06;
+  static const defaultTailNoiseVariance = 0.04;
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultWeakFieldVariance = 0.50;
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
-  static const defaultPredictionSportVariance = 0.0012;
-  static const defaultPredictionBehavioralVolatilityKappa = 0.0;
+  static const defaultPredictionSportVariance = 0.0002;
+  static const defaultPredictionBehavioralVolatilityKappa = 0.5;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
