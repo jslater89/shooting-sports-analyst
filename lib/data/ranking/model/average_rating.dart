@@ -20,4 +20,14 @@ class AverageRating {
     required this.averageOfIntermediates,
     required this.window,
   });
+
+  AverageRating scale({double scaleOffset = 0.0, double scaleFactor = 1.0}) {
+    return AverageRating(
+      firstRating: firstRating * scaleFactor + scaleOffset,
+      minRating: minRating * scaleFactor + scaleOffset,
+      maxRating: maxRating * scaleFactor + scaleOffset,
+      averageOfIntermediates: averageOfIntermediates * scaleFactor + scaleOffset,
+      window: window,
+    );
+  }
 }

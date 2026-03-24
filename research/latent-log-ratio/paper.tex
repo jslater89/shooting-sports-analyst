@@ -20,7 +20,7 @@
 		
 		There are adaptations to Elo and Glicko for continuous, non-zero-sum games, but they are just that: adaptations. All make compromises to shoehorn the continuous nature of the game into the binary, head-to-head model of the rating system.
 		
-		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model uses the logarithmic structure of multiplicative performance ratios to eliminate the winner's-curse bias inherent in percentage scoring while preserving globally log-linear rating semantics for prediction. It combines a linear-time match baseline with selective pairwise residual corrections, a robust and weakly regularized leave-one-out baseline estimator, score-dependent tail noise for very weak finishes, a match-context weak-field uncertainty term for tiny bottom-heavy fields, per-competitor behavioral volatility tracked via exponential moving averages, and innovation-based adaptive variance to prevent the monotonic certainty collapse common in basic Kalman filters.
+		This paper proposes a Latent Log-Ratio Model, a Bayesian state-space approach that operates directly on ratio-space finishes. The model uses the logarithmic structure of multiplicative performance ratios to eliminate the winner's-curse bias inherent in percentage scoring while preserving globally log-linear rating semantics for prediction. It combines a linear-time match baseline with selective pairwise residual corrections, a robust and weakly regularized leave-one-out baseline estimator, score-dependent tail noise for very weak finishes, a match-context weak-field uncertainty term for tiny bottom-heavy fields, per-competitor behavioral volatility updated with a certainty-scaled exponential moving average on a clamped posterior-variance surrogate, and innovation-based adaptive variance (with Student-$t$ downweighting of the mean update only) to prevent the monotonic certainty collapse common in basic Kalman filters.
 		
 		Though designed with practical shooting in mind, the mathematics are not specific to that sport, and the system should function well when applied to any game where a ratio-to-winner finish order can be established.
 	\end{abstract}
@@ -81,44 +81,194 @@
 	Each competitor $i$ is defined by three variables:
 	\begin{itemize}
 		\item \textbf{$R_i$ (Rating):} The expected mean of their natural log performance. An average baseline competitor can be anchored at 0.
-		\item \textbf{$V_i$ (Variance):} The uncertainty in the rating. High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.
-		\item \textbf{$\sigma_i^2$ (Competitor Volatility):} A running estimate of how erratic the competitor's performances are (behavioral noise for update damping). Tracks whether a competitor is consistent or prone to large swings. It is analogous in role to Glicko-2's volatility, but computed via an exponential moving average rather than iterative root-finding. Win-probability mixture weights still omit $\sigma_i^2$ (not uncertainty about who wins); optional scaled $\kappa\sigma_i^2$ may enter only posterior-predictive bands (see \S\,\ref{sec:prediction}).
+		\item \textbf{$V_i$ (Variance):} The epistemic uncertainty in a rating: ``how big is the distribution of the possible underlying skill variable around the rating?'' High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.
+		\item \textbf{$\sigma_i^2$ (Competitor Volatility):} The aleatoric uncertainty in a rating: ``how much does a competitor's performance naturally vary from event to event?'' Tracks whether a competitor is consistent or prone to large swings.
 	\end{itemize}
 	
 	\subsection{System Parameters}
+	The Latent Log-Ratio system is parameterized by several distinct components.
+	
+	\subsubsection*{Scaling (Display $s$, $b$)}
 	\begin{itemize}
 		\item \textbf{$s$, $b$ (Display Scale):} User-facing ratings use an affine map $R^{\mathrm{disp}} = s\cdot R + b$ (defaults are sport-specific in software). Variance and volatility in display space scale as $s^2$ times latent variance; display standard deviations scale as $|s|$ times latent standard deviation.
-		\item \textbf{$\sigma_{sport}^2$ (Sport Volatility):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor. (This value will ordinarily grow substantially when considering individual stages vs. matches as the rating event.)
-		\item \textbf{$\sigma_{drift}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods (then capped at $V_{\max}$ in software; see $V_{\max}$ below).
-		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The committed variance assigned to competitors with no rating history (prior width for new shooters).
-		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates and after drift aging. Defaults to $V_{\mathrm{start}}$ for backward compatibility but may be set larger so veterans can carry more epistemic uncertainty without widening the new-shooter prior.
-		\item \textbf{$\beta$ (Volatility Adaptation Rate):} Controls how quickly the per-competitor volatility $\sigma_i^2$ adapts to recent results. A value of 0.1--0.15 gives an effective lookback window of approximately 7--10 matches.
+	\end{itemize}
+	
+	\subsubsection*{Core Parameters}
+	\begin{itemize}
+		\item \textbf{$\sigma_{sport}^2$ (Sport Volatility):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
+		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
+		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates and after drift aging.
+		\item \textbf{$\sigma_{drift}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
+		\item \textbf{$\beta$ (Volatility Adaptation Rate):} Base rate for the behavioral-volatility EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
 		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
 		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
+	\end{itemize}
+	
+	\subsubsection*{Small and Degenerate Fields}
+	\begin{itemize}
+		\item \textbf{$\tau^2$ (Match Difficulty Prior Variance):} A weak prior variance on the match baseline. Its precision $1/\tau^2$ acts as a virtual anchor at zero match difficulty and is best treated as a light regularization term.
+		\item \textbf{$c$ (Baseline Robustness Threshold):} A Huber-style threshold, measured in residual standard deviations, used to downweight extreme field anchors when estimating match baseline.
 		\item \textbf{$s_0$ (Tail Noise Start Percentage):} The finish percentage below which very weak results begin receiving additional observation noise. Above $s_0$, the ordinary variance model is used.
 		\item \textbf{$\xi^2$ (Tail Noise Variance):} The maximum additional observation variance applied to the deepest tail. Larger values make the model more skeptical of very weak finishes without changing the log-ratio mean link.
 		\item \textbf{$\omega^2$ (Weak-Field Variance):} The maximum additional match-context observation variance applied when a field is both small and bottom-heavy.
 		\item \textbf{$n_{max}$ (Weak-Field Max Size):} The field size at or above which weak-field damping decays to zero.
 		\item \textbf{$s_w$ (Weak Finish Threshold):} The finish threshold below which a non-winning score counts as ``weak'' for weak-field detection.
 		\item \textbf{$q_0$ (Weak Fraction Threshold):} The minimum fraction of weak non-winners required before the weak-field term activates.
-		\item \textbf{$c$ (Baseline Robustness Threshold):} A Huber-style threshold, measured in residual standard deviations, used to downweight extreme field anchors when estimating match baseline.
-		\item \textbf{$\tau^2$ (Match Difficulty Prior Variance):} A weak prior variance on the match baseline. Its precision $1/\tau^2$ acts as a virtual anchor at zero match difficulty and is best treated as a light regularization term rather than a literal estimate of real-world match-to-match difficulty.
-		\item \textbf{$\sigma_{pred}^2$ (Prediction Sport Variance):} Idiosyncratic sport noise used only in the prediction pipeline (win-probability denominators and predictive variance). It is typically set smaller than $\sigma_{sport}^2$ because common-mode match difficulty largely cancels in relative finish ratios; the rating update continues to use the full $\sigma_{sport}^2$.
-		\item \textbf{$\kappa$ (Prediction Behavioral Scale):} Dimensionless coefficient in $[0,1]$ (typically $\ll 1$) that scales how much per-competitor behavioral variance $\sigma_i^2$ enters \emph{posterior predictive} variance for finish-ratio bands. The rating update still uses full $\sigma_i^2$ in the effective observation noise; $\kappa$ addresses overlap between epistemic rating uncertainty $V_i$ and EMA-estimated $\sigma_i^2$ when forming bands, not a second independent draw in the filter.
 	\end{itemize}
 	
-	\subsection{Match Processing Loop}
-	Matches are processed completely online (sequentially). The core baseline computation is $\mathcal{O}(N)$; the optional pairwise residual correction adds $\mathcal{O}(N \cdot k)$ where $k$ is the number of selected opponents per competitor (typically 20--30), yielding total complexity of $\mathcal{O}(N \cdot k)$.
+	\subsubsection*{Prediction Parameters}
+	\begin{itemize}
+		\item \textbf{$\sigma_{pred}^2$ (Prediction Sport Variance):} Idiosyncratic sport noise used only in the prediction pipeline (win-probability denominators and predictive variance).
+		\item \textbf{$\kappa$ (Prediction Behavioral Scale):} Dimensionless coefficient in $[0,1]$ that scales how much per-competitor behavioral variance $\sigma_i^2$ enters \emph{posterior predictive} variance for finish-ratio bands.
+	\end{itemize}
+	
+	\subsection{The Core Match Processing and Update Loop}
+	This section describes the idealized core filter using only the primary parameters. It assumes normally distributed log-ratios, strict ratio scales, and statistically well-behaved fields. The computational complexity is $\mathcal{O}(N \cdot k)$ where $k$ is the number of pairwise opponents evaluated per competitor.
 	
 	\textbf{Step 1: Calculate Log-Scores}\\
-	Floor match percentages at a minimal value $S_{floor}$ (e.g., 0.01) to prevent undefined logarithms, then convert to log space:
+	Convert match percentages to log space:
+	\begin{equation}
+		L_i = \ln(S_i)
+	\end{equation}
+	\textit{Note: The core loop assumes strictly positive $S_i$. Safe boundaries and tail non-linearities are handled in the extended model (Section 2.4).}
+	
+	\textbf{Step 2: Calculate Core Competitor Weights}\\
+	Let $V_i^{\mathrm{age}}$ denote the competitor's rating variance \emph{after} applying skill drift from their last committed update through the match date. Determine how much influence a competitor should have on establishing the match's structural difficulty:
+	\begin{equation}
+		W_i = \frac{1}{V_i^{\mathrm{age}} + \sigma_{sport}^2 + \sigma_i^2}
+	\end{equation}
+	High-variance and high-volatility competitors naturally receive less influence.
+	
+	\textbf{Step 3: Establish the Core Match Baseline ($B$)}\\
+	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores:
+	\begin{equation}
+		a_i = R_i - L_i
+	\end{equation}
+	To avoid circularity (competitor $i$ influencing their own baseline anchor), we form a precision-weighted leave-one-out estimate for each competitor:
+	\begin{equation}
+		B_{-i} = \frac{\sum_{j \neq i} W_j a_j}{\sum_{j \neq i} W_j}
+	\end{equation}
+	The baseline acts as the global mathematical anchor, answering: ``How difficult was this match compared to the known skill level of the field?'' The estimation variance of this baseline estimate under the weighted mean is:
+	\begin{equation}
+		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
+	\end{equation}
+	
+	\textbf{Step 4: Calculate Local Baseline ($B_{local}$)}\\
+	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. Beating someone rated far above you provides a different signal than beating someone rated far below you.
+	
+	For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (in the practical shooting context, we choose `top and nearby'). For each opponent $j$, compute the log-space pairwise residual:
+	\begin{equation}
+		\delta_{ij} = (L_i - L_j) - (R_i - R_j) = (L_i - R_i) + (R_j - L_j) = (L_i - R_i) + a_j
+	\end{equation}
+	This measures how much better competitor $i$ performed against opponent $j$ relative to their ratings. The winner's curse is eliminated organically because the baseline anchor cancels out in $(L_i - L_j)$.
+	
+	The appearance of $a_j$ allows us to reframe our pairwise comparison as a local baseline $B_{local}$ in the same manner as the global match baseline $B$:
+	
+
+	\begin{equation}
+		B_{local} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}, \qquad \mathrm{Var}(B_{local}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j}
+	\end{equation}
+	
+	\textbf{Step 5: Calculate Observed Performance ($P_i$)}\\
+	Blend the baseline-derived performance with the pairwise residual correction:
+	\begin{equation}
+		P_i = L_i + (1 - \alpha_i) \cdot B_{-i} + \alpha_i \cdot B_{local}
+	\end{equation}
+	When $\alpha = 0$, this reduces to the pure baseline model. The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
+	
+	\textbf{Step 6: Total Observation Variance and Innovation}\\
+	The raw innovation measures how surprising the competitor's observed performance was relative to their current rating:
+	\begin{equation}
+		e_i = P_i - R_i
+	\end{equation}
+	Because $B_{-i}$ and $B_{local}$ are estimates, not perfectly known quantities, we must explicitly propagate their estimation variance. In large, well-known fields, this estimation variance becomes tiny. In small or highly uncertain fields, correctly carrying this variance forward prevents systematic over-updating.
+	
+	The total effective observation variance is the sum of the fundamental measurement noise and the structural estimation variances:
+	\begin{equation}
+		R_{\mathrm{obs},i} = \sigma_{sport}^2 + \sigma_i^2 + (1 - \alpha_i^2)\cdot\mathrm{Var}(B_{-i}) + \alpha_i^2 \cdot \mathrm{Var}(B_{local})
+	\end{equation}
+	
+	Define the total system variance against which the innovation is judged, and construct the standard Kalman gain:
+	\begin{equation}
+		T_i = V_i^{\mathrm{age}} + R_{\mathrm{obs},i}, \qquad K_i = \frac{V_i^{\mathrm{age}}}{T_i}
+	\end{equation}
+	
+	A brief sidebar: $B_{-i}$ and $B_{local}$ are not independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field used for $B_{-i}$, a known property of weighted means dictates that their covariance is exactly the variance of the global mean:
+	
+	\begin{equation}
+		\mathrm{Cov}(B_{-i},B_{local}) = \mathrm{Var}(B_{-i})
+	\end{equation}
+	
+	Let the observed baseline be the convex combination used in Step 5:
+	
+	\begin{equation}
+		B_{obs} = (1 - \alpha_i) B_{-i} + \alpha_i B_{local}
+	\end{equation}
+	
+	Calculating the exact variance using standard rules $\mathrm{Var}(X + Y) = \mathrm{Var}(X) + \mathrm{Var}(Y) + 2\mathrm{Cov}(X, Y)$ allows the cross-terms to collapse:
+	
+	\begin{align}
+		\mathrm{Var}(B_{\mathrm{obs}}) &= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Cov}(B_{-i}, B_{\mathrm{local}}) \nonumber\\
+		&= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Var}(B_{-i}) \nonumber\\
+		&= \left[ (1 - \alpha_i)^2 + 2\alpha_i(1 - \alpha_i) \right] \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) \nonumber\\
+		&= \left[ 1 - 2\alpha_i + \alpha_i^2 + 2\alpha_i - 2\alpha_i^2 \right] \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) \nonumber\\
+		&= (1 - \alpha_i^2) \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}})
+	\end{align}
+	
+	\textbf{Step 7: Update Rating}\\
+	The rating moves toward the observation using the standard Kalman mean update:
+	\begin{equation}
+		R_i \leftarrow R_i + K_i \cdot e_i
+	\end{equation}
+	
+	\textbf{Step 8: Update Committed Variance (Two-Stage Surprise)}\\
+	To avoid the monotonic collapse of $V_i$ common in basic Kalman filters, the variance update uses the innovation $e_i$. We form a sport-stripped squared residual and compare the excess to the full predicted innovation variance $T_i$:
+	\begin{equation}
+		E_i = \max\!\left(0,\; e_i^2 - V_i^{\mathrm{age}} - \sigma_{sport}^2\right)
+	\end{equation}
+	\begin{equation}
+		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(0,\; E_i - T_i\right)\right)
+	\end{equation}
+	When $E_i \le T_i$, the correction vanishes and $V_i$ shrinks via standard posterior geometry. When $E_i > T_i$, extra epistemic variance is injected. Highly erratic competitors inflate $\sigma_i^2$ (and hence $T_i$), meaning the same raw $e_i$ is less likely to register as ``surprising'' for $V_i$.
+	
+	\textbf{Step 9: Update Competitor Volatility}\\
+	Behavioral volatility $\sigma_i^2$ tracks how much a competitor's performance naturally varies. Define floor and ceiling bounds:
+	\begin{equation}
+		\sigma_{i,\mathrm{lo}}^2 = 0.01\, V_{\mathrm{start}}, \qquad \sigma_{i,\mathrm{hi}}^2 = V_{\max}
+	\end{equation}
+	Let $V_i^{+}$ denote the committed variance just computed in Step~8. We form an instantaneous target that bounds the behavioral variance response to an extreme event if epistemic uncertainty $V_i^{+}$ has already widened:
+	\begin{equation}
+		q_i = \mathrm{clamp}\left(V_i^{+},\; \sigma_{i,\mathrm{lo}}^2,9\,\sigma_i^2\right)
+	\end{equation}
+	Define an update certainty $c_i \in [0,1]$ from the prior epistemic variance, reducing volatility gain for competitors whose variance is already high:
+	\begin{equation}
+		c_i = 1 - \min\!\left(1,\frac{V_i^{\mathrm{age}}}{V_{\max}}\right), \qquad \beta_i^{\mathrm{eff}} = \beta \cdot \max\!\left(0.25,\; c_i\right)
+	\end{equation}
+	Apply the certainty-scaled exponential moving average:
+	\begin{equation}
+		\sigma_i^2 \leftarrow \mathrm{clamp}\!\left((1 - \beta_i^{\mathrm{eff}})\,\sigma_i^2 + \beta_i^{\mathrm{eff}}\, q_i,\; \sigma_{i,\mathrm{lo}}^2,\; \sigma_{i,\mathrm{hi}}^2\right)
+	\end{equation}
+	
+	\textbf{Step 10: Apply Aging Between Matches}\\
+	Between rating periods, true skill may drift. We increase uncertainty relative to the elapsed time $\Delta t$ (measured in rating periods) since the competitor's last match:
+	\begin{equation}
+		V_i \leftarrow \min(V_{\max},\; V_i + \sigma_{drift}^2 \times \Delta t)
+	\end{equation}
+	
+	\subsection{Extended Logic for Small and Degenerate Fields}
+	Real-world match data routinely violates the assumptions of the pure core loop: fields can be tiny, individual finishes can be extreme outliers, and severe geometric non-linearities exist in the deep tail of ratio scoring\footnote{After an acquaintance whose match performances revealed these additional complexities, the author refers to them collectively as `the Yang pathology'.}. The extended model introduces the parameters from the ``Small and Degenerate Fields'' configuration to robustify the process. These modifications are injected directly into specific steps of the core loop.
+	
+	\subsubsection*{A. Log-Score Flooring and Deep-Tail Noise ($\eta(S_i)$)}
+	\emph{Modifies Step 1 and Step 2.}\\
+	Very weak finishes are not reliable linear evidence about top-end skill separation. A competitor finishing at 20\% of the winner is worse than one finishing at 40\%, but the 20\% finisher does not provide proportionally trustworthy information about how far the winner sits above the rest of the field in latent space. Deep-tail results are often contaminated by penalties, stage failures, or the nonlinear geometry of far-tail fractions.
+	
+	A naive fix would compress the log-score directly, but this destroys the model's clean log-linear predictive semantics. Instead, we keep the expected mean link intact and introduce score-dependent skepticism in the observation variance.
+	
+	First, floor the percentages to prevent undefined logarithms:
 	\begin{equation}
 		L_i = \ln(\max(S_{floor}, S_i))
 	\end{equation}
-	To preserve global log-linearity while reducing overconfidence in extremely weak finishes, the implementation keeps this mean link exactly intact and instead introduces score-dependent tail noise in the observation variance.
-	
-	\textbf{Step 2: Calculate Competitor Weights}\\
-	Determine how much influence a competitor should have on establishing the match's difficulty. High-variance and high-volatility competitors have less influence. Very weak finishes can also receive additional observation variance:
+	Second, introduce a piecewise tail-noise term that grows quadratically below the threshold $s_0$:
 	\begin{equation}
 		\eta(S_i) =
 		\begin{cases}
@@ -126,220 +276,72 @@
 			\xi^2 \left(\frac{s_0 - S_i}{s_0}\right)^2, & S_i < s_0
 		\end{cases}
 	\end{equation}
+	This tail noise is added directly to the denominators of the competitor weights in Step 2 and the pairwise weighting in Step 4:
 	\begin{equation}
-		W_i = \frac{1}{V_i + \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i)}
+		W_i \leftarrow \frac{1}{V_i^{\mathrm{age}} + \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i)}
 	\end{equation}
-	This construction is deliberately asymmetric between mean and variance. The observed score remains
-	\begin{equation}
-		L_i = \ln(\max(S_{floor}, S_i))
-	\end{equation}
-	so the globally log-linear interpretation of rating differences is preserved exactly. Tail handling enters only through uncertainty: as a finish moves deeper into the weak tail, the model treats it as less precise evidence about latent skill rather than as evidence with a different mean.
 	
-	\subsubsection*{Why Tail Noise Is Needed}
-	In many practical-shooting datasets, very weak finishes are not reliable linear evidence about top-end skill separation. A competitor finishing at 20\% of the winner is certainly worse than one finishing at 40\%, but it does not follow that the 20\% finisher provides proportionally trustworthy information about how far the winner sits above the rest of the field in latent skill space. Deep-tail results are often contaminated by penalties, stage failures, equipment problems, or simply the nonlinear geometry of ratio scoring in the far tail.
+	\subsubsection*{B. Baseline Regularization and Robustness ($\tau^2, c$)}
+	\emph{Modifies Step 3.}\\
+	To prevent extreme outliers from dragging the global mathematical anchor, the baseline estimate is wrapped in a light zero-centered prior and a Huber-style robustness taper.
 	
-	A naive fix would be to compress the log-score itself with a nonlinear map. That can work as a robust update heuristic, but it destroys the model's clean predictive semantics: once the mean link is no longer $\ln(S_i)$, rating differences are no longer trivially interpretable as log-performance ratios. The tail-noise approach instead keeps the central identity intact and expresses skepticism in the probabilistically appropriate place, namely the observation variance.
-	
-	The piecewise definition of $\eta(S_i)$ encodes two desiderata:
-	\begin{enumerate}
-		\item For ordinary finishes ($S_i \ge s_0$), the model should reduce to the standard latent log-ratio update, so $\eta(S_i) = 0$.
-		\item For weak finishes ($S_i < s_0$), the extra variance should increase smoothly as the score deteriorates, so that extremely weak results have less leverage in baseline anchoring, pairwise residual averaging, and the final Kalman update.
-	\end{enumerate}
-	
-	The quadratic form
-	\begin{equation}
-		\eta(S_i) = \xi^2 \left(\frac{s_0 - S_i}{s_0}\right)^2
-	\end{equation}
-	is not the only possible choice, but it has several practical advantages: it is continuous at the threshold, it is monotone in tail depth, it is cheap to compute, and it avoids introducing a second kink in the update geometry. Most importantly, it leaves the mean observation untouched while making low-end results progressively less influential as evidence.
-	
-	\textbf{Step 3: Establish the Match Baseline ($B$)}\\
-	Calculate per-competitor baseline residuals by comparing the field's expected ratings against their log-scores:
-	\begin{equation}
-		a_i = R_i - L_i
-	\end{equation}
-	A raw baseline estimate is then:
+	Compute a raw, prior-regularized baseline:
 	\begin{equation}
 		B_{raw} = \frac{\sum_{i=1}^N W_i a_i}{\sum_{i=1}^N W_i + \tau^{-2}}
 	\end{equation}
-	The implementation then robustifies the field anchor with a Huber-style taper. Standardize each residual relative to the raw center:
+	Standardize each residual relative to this raw center and compute a tapered robust weight:
 	\begin{equation}
-		z_i = \frac{a_i - B_{raw}}{\sqrt{1/W_i}}
+		z_i = \frac{a_i - B_{raw}}{\sqrt{1/W_i}}, \qquad \tilde{W}_i = W_i \cdot \min\!\left(1, \frac{c}{|z_i|}\right)
 	\end{equation}
-	and define robustified baseline weights
+	The final leave-one-out match baseline and its estimation variance used in Step 3 are replaced by:
 	\begin{equation}
-		\tilde{W}_i = W_i \cdot \min\!\left(1, \frac{c}{|z_i|}\right)
-	\end{equation}
-	with the convention that the multiplier is 1 when $z_i = 0$ or $c \le 0$. The robust baseline summary is then
-	\begin{equation}
-		B = \frac{\sum_{i=1}^N \tilde{W}_i a_i}{\sum_{i=1}^N \tilde{W}_i}
-	\end{equation}
-	\textit{Note: $B$ acts as the mathematical anchor, answering: ``How difficult was this match compared to the known skill level of the field?''}
-	
-	\textbf{Step 4: Calculate Pairwise Residuals ($D_i$)}\\
-	The match baseline captures the average difficulty of the field, but discards structural information about \textit{whom} each competitor outperformed. In a match with widely varying skill levels, this information is valuable: beating someone rated far above you is a stronger signal than beating someone rated far below you.
-	
-	For each competitor $i$, the implementation unions several heuristics: the top 10\% of the field by match finish (30\% when the field has fewer than 10 competitors), the top 10\% by rating, and competitors whose finish ratios lie within a multiplicative band around $i$'s ratio (with a wider band in very small fields). For each selected opponent $j$, compute the pairwise residual in log space:
-	\begin{equation}
-		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
-	\end{equation}
-	This measures how much better or worse competitor $i$ performed against opponent $j$ relative to what their ratings predicted. The winner's curse is eliminated by the underlying log-ratio geometry, while the score-dependent tail-noise term reduces the leverage of extremely weak finishes through the weights rather than by altering the mean link.
-	
-	Compute a precision-weighted average of the pairwise residuals:
-	\begin{equation}
-		D_i = \frac{\sum_{j \in \mathcal{S}_i} w_j \cdot \delta_{ij}}{\sum_{j \in \mathcal{S}_i} w_j}, \quad w_j = \frac{1}{V_j + \sigma_{sport}^2 + \sigma_j^2 + \eta(S_j)}
-	\end{equation}
-	where $\mathcal{S}_i$ is the selected opponent set for competitor $i$.
-	
-	\textbf{Step 5: Calculate Observed Performance ($P_i$)}\\
-	Blend the baseline-derived performance with the pairwise residual correction. Use the leave-one-out baseline $B_{-i}$ (see \S\,``Propagating Estimation Uncertainty'') to avoid circularity:
-	\begin{equation}
-		P_i = L_i + B_{-i} + \alpha_i \cdot D_i
-	\end{equation}
-	When $\alpha = 0$, this reduces to the pure baseline model. As $\alpha$ increases, the structural information about specific opponent matchups contributes more to the observed performance estimate. In software, the nominal blend weight $\alpha$ is multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of pairwise opponents increases toward 10, so sparse opponent sets rely more on the baseline.
-	
-	\subsection{The Update Rule}
-	For each competitor, update their rating, variance, and volatility.
-	
-	\textbf{Step 1: Calculate the Innovation}\\
-	The innovation measures how surprising the competitor's observed performance was relative to their current rating:
-	\begin{equation}
-		e_i = P_i - R_i
+		B_{-i} = \frac{\sum_{j \neq i} \tilde{W}_j a_j}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}, \qquad \mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
 	\end{equation}
 	
-	\textbf{Step 2: Calculate the Kalman Gain ($K_i$)}\\
-	The Kalman gain balances how much to trust the new observation versus the prior rating. The competitor's own volatility $\sigma_i^2$ enters as additional observation noise, so that erratic competitors receive smaller per-match updates. The schematic form is
-	\begin{equation}
-		K_i = \frac{V_i}{V_i + \sigma_{sport}^2 + \sigma_i^2},
-	\end{equation}
-	but in software $\sigma_{sport}^2 + \sigma_i^2$ is replaced by the full effective observation noise $R_{\mathrm{obs},i}$ from \S\,``Propagating Estimation Uncertainty''.
+	\subsubsection*{C. Match-Context Weak-Field Damping ($\sigma_{path}^2$)}
+	\label{sec:weakfield}
+	\emph{Modifies Step 6.}\\
+	Tiny matches in which a large share of the non-winners finish extremely far behind the winner are structurally pathological. The match as a whole provides little trustworthy information about elite top-end skill separation. To model this, we introduce a match-level variance penalty.
 	
-	\textbf{Step 3: Update Rating}
-	\begin{equation}
-		R_i \leftarrow R_i + K_i \cdot e_i
-	\end{equation}
-	
-	\textbf{Step 4: Update Variance (Innovation-Based Adaptive Kalman)}\\
-	A standard Kalman filter variance update $V_i \leftarrow V_i(1 - K_i)$ monotonically decreases $V_i$. Over time, this causes the system to become excessively certain about every competitor's rating, regardless of whether recent results support that certainty. To prevent this, we augment the standard update with an innovation-based correction. Let $R_{\mathrm{obs},i}$ denote the \emph{full} effective observation noise from \S\,``Propagating Estimation Uncertainty'' (including baseline and pairwise estimation uncertainty, tail noise, and weak-field terms). After the Student-$t$ robust weighting is applied to $e_i$, the implementation uses
-	\begin{equation}
-		V_i \leftarrow \min\!\left(V_{\max}, \; V_i(1 - K_i) + \gamma \cdot \max\!\left(0, \; e_i^2 - (V_i + R_{\mathrm{obs},i})\right)\right)
-	\end{equation}
-	where $V_{\max}$ is the configured maximum committed variance (not necessarily equal to $V_{\mathrm{start}}$).
-	
-	The $\max$ term activates only when the squared innovation exceeds the expected innovation variance. In plain terms: if a competitor's result is more surprising than the model predicted it should be, the variance increases to reflect reduced certainty. If the result is within expectations, the variance decreases normally.
-	
-	This is a well-known extension of the Kalman filter (innovation-based adaptive filtering). It provides the same qualitative behavior as Glicko-2's volatility-driven RD adaptation---surprising results make the system more responsive, consistent results make it more stable---but requires no iterative root-finding.
-	
-	Note that the interaction with $\sigma_i^2$ is self-consistent: erratic competitors (high $\sigma_i^2$) have a higher expected innovation variance, so it takes a genuinely extreme result to trigger a $V_i$ increase. Consistent competitors (low $\sigma_i^2$) are more sensitive to moderate surprises.
-	
-	\textbf{Step 5: Update Competitor Volatility}\\
-	Track how erratic each competitor's performances are using an exponential moving average of squared innovations:
-	\begin{equation}
-		\sigma_i^2 \leftarrow (1 - \beta) \cdot \sigma_i^2 + \beta \cdot e_i^2
-	\end{equation}
-	
-	This adapts in $\mathcal{O}(1)$ per update: one multiply-add operation. A competitor who consistently performs near their rating will have low $\sigma_i^2$; a competitor who oscillates between brilliant and terrible performances will have high $\sigma_i^2$. The system naturally adjusts: consistent competitors get more responsive updates (higher $K_i$), erratic competitors get more conservative updates (lower $K_i$).
-	
-	Clamp $\sigma_i^2$ within $[0.01\,V_{\max},\, V_{\max}]$. The ceiling tracks the same scale as the cap on committed rating variance $V_i$; it is no longer tied to $V_{\mathrm{start}}$, so a tight prior for new competitors does not automatically shrink the allowable behavioral-volatility range for experienced shooters. This decouples behavioral volatility limits from $\sigma_{sport}^2$: tightening sport noise for the Kalman gain no longer shrinks the allowable range for $\sigma_i^2$. The floor keeps a small minimum behavioral noise term.
-	
-	New competitors initialize $\sigma_{i,\mathrm{init}}^2$ to the geometric mean of those endpoints,
-	\begin{equation}
-		\sigma_{i,\mathrm{init}}^2 = \sqrt{(0.05\,V_{\mathrm{start}})\,V_{\mathrm{start}}} = \sqrt{0.05}\,V_{\mathrm{start}}.
-	\end{equation}
-	Thus behavioral noise starts mid-band on a multiplicative scale rather than at $\sigma_{sport}^2$, which would double-count uncertainty already carried by $V_{\mathrm{start}}$ and observation noise for shooters with no history.
-	
-	\textbf{Step 6: Apply Aging Between Matches}\\
-	Between rating periods, increase uncertainty to reflect the possibility that true skill has drifted:
-	\begin{equation}
-		V_i \leftarrow V_i + \sigma_{drift}^2 \times \Delta t
-	\end{equation}
-	where $\Delta t$ is the elapsed time in rating periods since the competitor's last match. The implementation stores committed $V_i$ capped at $V_{\max}$ and applies the same cap when computing time-aged variance for display and predictions.
-	
-	\subsection{Propagating Estimation Uncertainty}
-	The baseline $B$ and pairwise residual $D_i$ from the Match Processing Loop are \emph{estimates}, not known quantities. In the basic algorithm above, the Kalman gain treats the observation noise as $\sigma_{sport}^2 + \sigma_i^2$, implicitly assuming that $B$ and $D_i$ are measured perfectly. In reality, both carry estimation variance that depends on the field: a baseline anchored by 50 well-known competitors is far more precise than one anchored by 2 newcomers. Ignoring this causes systematic over-updating in small or uncertain fields.
-	
-	\subsubsection*{Leave-One-Out Baseline}
-	To avoid circularity (competitor $i$ influencing their own baseline), replace $B$ with a leave-one-out estimate formed from the robustified weights:
-	\begin{equation}
-		B_{-i} = \frac{\sum_{j \neq i} \tilde{W}_j a_j}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
-	\end{equation}
-	
-	The variance of this estimate under the precision-weighted mean with prior regularization is:
-	\begin{equation}
-		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
-	\end{equation}
-	
-	In large fields with well-known competitors, $\sum_{j \neq i} \tilde{W}_j$ is large and the prior is negligible, so $\mathrm{Var}(B_{-i})$ remains tiny. In small or structurally weird fields, robust downweighting and the weak prior both act as stabilizers: extreme anchors lose leverage, and the baseline is gently shrunk toward average difficulty rather than being allowed to run away.
-	
-	\subsubsection*{Pairwise Estimation Variance}
-	The pairwise residual $D_i$ is itself a precision-weighted mean over the opponent set $\mathcal{S}_i$. Its estimation variance is:
-	\begin{equation}
-		\mathrm{Var}(D_i) = \frac{1}{\sum_{j \in \mathcal{S}_i} w_j}
-	\end{equation}
-	
-	Since $D_i$ enters the observed performance scaled by the effective blend weight $\alpha_i$ (including the taper toward small opponent sets), its contribution to the total observation variance is $\alpha_i^2 \cdot \mathrm{Var}(D_i)$. Where earlier formulas write $\alpha$, read $\alpha_i$ for the tapered value used in code.
+	Define a small-field taper that decays to zero at $n_{max}$:
 
-	\subsubsection*{Weak-Field Match-Context Damping}
-	Some pathological cases are not well-described by per-competitor tail noise alone: tiny matches in which a large share of the non-winners finish extremely far behind the winner. In such fields, the issue is not merely that one weak finish is noisy, but that the match as a whole provides little trustworthy information about top-end skill separation. To model this, introduce a match-level variance term that depends on field size and weak-field composition.
-	
-	Let $N$ be the field size and define a small-field taper
 	\begin{equation}
 		f_{size}(N) = \max\!\left(0,\frac{n_{max} - N}{n_{max} - 2}\right)
 	\end{equation}
-	so that two-person fields receive the full size penalty and fields with $N \ge n_{max}$ receive none.
-	
-	Let $\mathcal{W}$ be the set of non-winners whose finish percentages fall below the weak threshold:
-	\begin{equation}
-		\mathcal{W} = \{j : \text{$j$ is not the winner and } S_j < s_w\}
-	\end{equation}
-	and define the weak non-winner fraction
-	\begin{equation}
-		q = \frac{|\mathcal{W}|}{N - 1}
-	\end{equation}
-	If $q < q_0$, no weak-field penalty is applied. Otherwise, define a severity term by measuring how far the weak finishes extend below the threshold in log space:
+	Let $\mathcal{W}$ be the set of non-winners whose scores fall below $s_w$, and define the weak fraction $q = \frac{|\mathcal{W}|}{N - 1}$. If $q < q_0$, no penalty applies. Otherwise, define a depth severity term:
 	\begin{equation}
 		g = \min\!\left(1,\frac{1}{|\mathcal{W}| \cdot (-\ln s_w)} \sum_{j \in \mathcal{W}} \max\!\left(0,\ln\!\left(\frac{s_w}{\max(S_{floor}, S_j)}\right)\right)\right)
 	\end{equation}
-	The match-level pathology score is then
+	The match-level pathology variance is $\sigma_{path}^2 = \omega^2 \cdot (f_{size}(N) \cdot q \cdot g)$. This is added directly into the total observation variance computed in Step 6:
 	\begin{equation}
-		p =
-		\begin{cases}
-			0, & q < q_0 \\
-			f_{size}(N) \cdot q \cdot g, & q \ge q_0
-		\end{cases}
+		R_{obs,i} \leftarrow R_{obs,i} + \sigma_{path}^2
 	\end{equation}
-	and the resulting weak-field observation variance is
-	\begin{equation}
-		\sigma_{path}^2 = \omega^2 \cdot p
-	\end{equation}
-	This term is shared across competitors in the same match. Conceptually, it says: ``this field may be real, but it is not an especially precise instrument for measuring elite-vs-elite skill.'' Current USPSA-oriented implementation defaults are $s_0 = 0.60$, $\xi^2 = 0.06$, $\omega^2 = 0.50$, $n_{max} = 10$, $s_w = 0.60$, and $q_0 = 0.40$.
+	This elegantly throttles the Kalman update $K_i$ for the entire field, formalizing the heuristic: ``this match may be real, but it is not a precise instrument.''
 	
-	\subsubsection*{Effective Observation Noise}
-	Combining all variance sources, the total observation noise for competitor $i$'s performance estimate is:
-	\begin{equation}
-		R_{obs,i} = \sigma_{sport}^2 + \sigma_i^2 + \eta(S_i) + \mathrm{Var}(B_{-i}) + \alpha_i^2 \cdot \mathrm{Var}(D_i) + \sigma_{path}^2
-	\end{equation}
+	\subsubsection*{D. Robust Outlier Weighting for the Mean Update (Student-$t$)}
+	\emph{Modifies Step 7.}\\
+	Even with correct observation noise, individual match results can be corrupted by equipment failure or procedural penalties. We introduce a heavy-tailed Student-$t$ downweighting factor for extreme innovations.
 	
-	This replaces $\sigma_{sport}^2 + \sigma_i^2$ in the Kalman gain (Step~2 of the Update Rule), the innovation-based variance update (Step~4), and the $z$-score used for robust weighting:
+	Calculate a normalized $z$-score against the total system uncertainty $T_i$ from Step 6:
 	\begin{equation}
-		K_i = \frac{V_i}{V_i + R_{obs,i}}, \qquad z_i = \frac{e_i}{\sqrt{V_i + R_{obs,i}}}
+		z_i = \frac{e_i}{\sqrt{T_i}}
 	\end{equation}
-	
-	The effect is automatic and principled: large fields with strong opponents and non-pathological finishes produce small $R_{obs,i}$ (close to the original $\sigma_{sport}^2 + \sigma_i^2$), so rating updates proceed normally. Small fields, uncertain opponents, extremely weak individual finishes, and tiny bottom-heavy fields inflate $R_{obs,i}$, which simultaneously reduces $K_i$ (smaller updates) and reduces $|z_i|$ (making the Student-$t$ robust weight less aggressive). No deformation of the log-ratio mean link is required.
-	
-	\subsubsection*{Robust Outlier Weighting}
-	Even with correct observation noise, individual match results can be corrupted by equipment failure, rule violations, or other non-skill factors. A Student-$t$ weight on the innovation provides a final layer of robustness:
+	Define a robust scalar using a degrees-of-freedom parameter $\nu = \mathrm{clamp}(2 + 0.5N,\,2,\,30)$:
 	\begin{equation}
-		w_t(z_i) = \frac{\nu + 1}{\nu + z_i^2}
+		w_t(z_i) = \min\!\left(1,\frac{\nu + 1}{\nu + z_i^2}\right)
 	\end{equation}
-	where $\nu$ scales with field size (e.g., $\nu = \mathrm{clamp}(2 + 0.5N, \; 2, \; 30)$). The weighted innovation $e_i \leftarrow w_t(z_i) \cdot e_i$ is used in all subsequent update steps. Because $z_i$ is now computed against the full $R_{obs,i}$, the threshold for ``surprising'' is correctly calibrated: a $z$-score of 3 in a 100-person match genuinely indicates an outlier, whereas the same raw innovation in a 2-person match would produce a much smaller $z$-score (due to the large $\mathrm{Var}(B_{-i})$ term), and the Student-$t$ weight would remain close to 1.
+	The rating update in Step 7 is replaced by:
+	\begin{equation}
+		R_i \leftarrow R_i + K_i \cdot w_t(z_i) \cdot e_i
+	\end{equation}
+	Crucially, this downweighting applies \emph{only} to the mean rating update. The variance surprise logic (Step 8) and behavioral volatility EMA (Step 9) continue to use the raw, undiscounted $e_i$, allowing the model to acknowledge extreme events as uncertainty without corrupting the central estimate of true skill.
 	
 	\subsection{Handling Non-Ratio Anomalies: Time Bonuses and Micro-Stages}
-	
 	The Latent Log-Ratio model fundamentally assumes that the scoring data exists on a \textbf{Ratio Scale} (where zero represents an absolute absence of time, and ratios between values are physically meaningful). However, specific rule sets can violate this assumption:
 	
 	\begin{enumerate}
 		\item \textbf{Time Bonuses (ICORE):} Rules that subtract fixed time for accuracy can result in near-zero or even negative stage times. This converts the data into an Interval Scale, where log-ratios are mathematically undefined or heavily distorted.
-		\item \textbf{Micro-Stages (Speed Shoots):} Even without bonuses, very fast stages (e.g., a 2.0-second stage) cause artificial volatility magnification. A 0.5-second stumble on a 2.0-second stage yields a massive 25\% ratio penalty, whereas a 0.5-second stumble on a 20-second stage is mathematically negligible. 
+		\item \textbf{Micro-Stages (Speed Shoots):} Even without bonuses, very fast stages (e.g., a 2.0-second stage) cause artificial volatility magnification. A 0.5-second stumble on a 2.0-second stage yields a massive 20\% ratio penalty ($T_{min}/T = 2.0 / 2.5 = 0.8$), whereas a 0.5-second stumble on a 20-second stage is mathematically negligible. 
 	\end{enumerate}
 	
 	\subsubsection*{Additive Time Normalization (Time Padding)}
@@ -385,10 +387,10 @@
 			\item $\sigma_{sport}^2$: the irreducible noise of the sport for \emph{updates} (a global constant, tuned once),
 			\item $\sigma_{pred}^2$: idiosyncratic sport noise used only in \emph{predictions} (win probabilities and predictive bands; typically smaller than $\sigma_{sport}^2$),
 			\item $V_i$: measurement uncertainty in each competitor's rating (adapts via the Kalman filter),
-			\item $\sigma_i^2$: per-competitor behavioral volatility for \emph{updates} (adapts via EMA); optionally scaled by $\kappa$ for \emph{predictive} bands only,
+			\item $\sigma_i^2$: per-competitor behavioral volatility for \emph{updates} (certainty-scaled EMA toward a clamped target); optionally scaled by $\kappa$ for \emph{predictive} bands only,
 			\item $\sigma_{drift}^2$: skill drift over time (a global constant for the aging function).
 		\end{itemize}
-		This decomposition makes each parameter independently interpretable and tunable. In Glicko-2, a competitor bombing a single stage can drastically inflate their RD (via the volatility $\rightarrow$ RD pathway), destabilizing future updates. Here, a single bad performance primarily affects $\sigma_i^2$ (which adapts gradually via the EMA) and may trigger a modest $V_i$ increase (via the innovation term), but neither mechanism produces the runaway instability that Glicko-2's volatility iteration can exhibit.
+		This decomposition makes each parameter independently interpretable and tunable. In Glicko-2, a competitor bombing a single stage can drastically inflate their RD (via the volatility $\rightarrow$ RD pathway), destabilizing future updates. Here, a single bad performance primarily affects $\sigma_i^2$ (which adapts gradually via the certainty-scaled EMA and a capped driving term) and may trigger a modest $V_i$ increase (via the innovation term), but neither mechanism produces the runaway instability that Glicko-2's volatility iteration can exhibit.
 	\end{enumerate}
 	
 	\section{The Prediction System and Confidence Intervals}
@@ -396,31 +398,45 @@
 	
 	Because ratings operate in log space, predicted finish ratios use log-normal bookkeeping. The current implementation builds a \textbf{closed-form} mixture over plausible winners; Monte Carlo winner sampling is not wired in (reserved for future contested-field use).
 	
-	\subsection{Candidate winners and win probabilities}
-	Sort competitors by latent rating $R$. Candidate winners are the top $m = \max(5, \lceil 0.25 N\rceil)$ by rating (upper quartile, at least five). For each candidate $w$, a product of pairwise normal CDFs gives an unnormalized weight:
+	\subsection{Candidate Winners and Win Probabilities}
+	Predicting the winner of a massively multiplayer continuous game requires evaluating the probability that a competitor's performance draw exceeds all other draws simultaneously in a given match. Because the winner is determined by the maximum order statistic of the field, high epistemic variance can actually be an asset for winning: an erratic ``dark horse'' has a thicker right tail, giving them a higher probability of outrunning a massive 100-person field than a highly consistent, average competitor. 
+	
+	\subsubsection*{Primary Method: Monte Carlo Simulation}
+	To correctly model this joint probability and the maximum order statistic, the preferred method for calculating win probabilities is a Monte Carlo simulation. 
+	
+	For each iteration $k \in \{1, \dots, K\}$:
+	\begin{enumerate}
+		\item Draw a latent match performance for every competitor $i$: 
+		$l_{i,k} \sim \mathcal{N}(R_i,\; V_i + \sigma_{pred}^2)$.
+		\item Identify the winner of the iteration: $w_k = \arg\max_i (l_{i,k})$.
+	\end{enumerate}
+	The simulated win probability $p_w$ for competitor $w$ is simply their fraction of total victories over $K$ iterations. Behavioral volatilities $\sigma_i^2$ are omitted from the draw variance; they govern update magnitude and predictive confidence intervals, but are not modeled as epistemic uncertainty about true underlying skill for the purposes of win-probability mapping.
+	
+	To improve computational efficiency, application-specific optimizations can be applied to the simulation. For example, the system might only simulate the top quartile of the field by rating, or terminate the simulation early once a specific proportion of the probability mass (e.g., 99\%) is confidently allocated to a small subset of top competitors.
+	
+	\subsubsection*{Fast Approximation: Closed-Form Product}
+	In real-time applications where zero-latency UI updates are strictly required, a closed-form Naive Bayes approximation can be used instead. We sort competitors by latent rating $R$ and select candidate winners $w$ as the top $m = \max(5, \lceil 0.25 N\rceil)$. For each candidate, a product of pairwise normal CDFs gives an unnormalized weight:
 	\begin{equation}
 		\tilde{p}_w = \prod_{j \neq w} \Phi\!\left(\frac{R_w - R_j}{\sqrt{V_w + V_j + 2\sigma_{pred}^2}}\right),
 	\end{equation}
-	where $\Phi$ is the standard normal CDF and $\sigma_{pred}^2$ is the prediction-only sport variance (Section~2). Behavioral volatilities $\sigma_i^2$ are \emph{omitted}: they are not modeled as uncertainty about who wins. Normalize $p_w = \tilde{p}_w / \sum_{w'} \tilde{p}_{w'}$.
+	where $\Phi$ is the standard normal CDF. We then normalize the weights: $p_w = \tilde{p}_w / \sum_{w'} \tilde{p}_{w'}$. 
 	
-	\subsection{Expected finish ratio}
-	Let $p_w$ be the mixture weights from the previous subsection. By the law of total expectation over the random winner, the expected ratio of competitor $i$ to the winner is
+	While computationally trivial, this method assumes that pairwise victories are statistically independent, which they are not (all comparisons rely on the same draw $l_w$). This approximation systematically underestimates the win probability of high-variance competitors in large fields, and the unnormalized weights $\tilde{p}_w$ decay exponentially toward zero in tightly contested fields. However, it functions adequately as a fast heuristic for matches with a clear favorite.
+	
+	\subsection{Expected Finish Ratio}
+	Let $p_w$ be the mixture weights established by either the Monte Carlo or closed-form method. By the law of total expectation over the random winner, the expected ratio of competitor $i$ to the winner is
 	\begin{equation}
-		\hat{S}_i = \sum_w p_w \exp\!\left(R_i - R_w + \frac{V_w + \sigma_{sport}^2}{2}\right).
+		\hat{S}_i = \sum_w p_w \exp\!\left(R_i - R_w + \frac{V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{pred}^2}{2}\right).
 	\end{equation}
-	The term $(V_w + \sigma_{sport}^2)/2$ is the standard log-normal mean correction when the reference (winner) performance is modeled as Gaussian with variance $V_w + \sigma_{sport}^2$ in log space; behavioral volatility does not enter this correction. Posterior variances $V$ are the committed values stored on each rating (not time-aged variance).
+	The term $(V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{pred}^2)/2$ is the standard log-normal mean correction when the reference difference $(L_i - L_w)$ is modeled as Gaussian with variance $V_i^{\mathrm{age}} + V_w + 2\sigma_{pred}^2$ in log space. Behavioral volatility $\sigma^2$ does not enter this mean correction.
 	
 	\subsection{Predictive variance and reported ``one sigma''}
 	Let $\mu^{\mathrm{log}}_i = \sum_w p_w (R_i - R_w)$ be the probability-weighted mean log gap to mixture winners. Let $\bar{\sigma}_w^2 = \sum_w p_w \sigma_w^2$ denote the probability-weighted behavioral variance of the presumed winner mixture. Predictive variance in log space is
 	\begin{equation}
-		\varsigma_i^2 = V_i + 2\sigma_{pred}^2 + \sum_w p_w V_w + \kappa\left(\sigma_i^2 + \bar{\sigma}_w^2\right).
+		\varsigma_i^2 = V_i^{\mathrm{age}} + 2\sigma_{pred}^2 + \sum_w p_w V_w^{\mathrm{age}} + \kappa\left(\sigma_i^2 + \bar{\sigma}_w^2\right).
 	\end{equation}
 	The sport contribution $2\sigma_{pred}^2$ is idiosyncratic noise for both the focal competitor and the uncertain winner in the ratio. The term $\kappa(\sigma_i^2 + \bar{\sigma}_w^2)$ adds a \emph{fraction} of behavioral variance to the band: $\kappa=0$ recovers bands that ignore $\sigma^2$; the update rule continues to use full $\sigma_i^2$ in $R_{\mathrm{obs},i}$ regardless of $\kappa$.
 	
-	The UI reports an asymmetric one-standard-deviation \emph{upper} excursion in ratio space: the level $\exp(\mu^{\mathrm{log}}_i + \varsigma_i)$ relative to the mean $\hat{S}_i$,
-	\begin{equation}
-		\Delta^{\mathrm{1\sigma}}_i = \exp\!\left(\mu^{\mathrm{log}}_i + \varsigma_i\right) - \hat{S}_i,
-	\end{equation}
-	rather than a symmetric $\pm 1\sigma$ interval or normal 95\% bounds.
+	Strictly speaking, a full posterior predictive distribution for a single match observation would include the entire aleatoric variance ($\kappa=1$). However, because behavioral variance can be heavy-tailed, fully exponentiating it in log-space can produce visually uninformative, extreme upper bounds. The parameter $\kappa$ allows the system designer to decouple the presentation of epistemic rating confidence from aleatoric match-to-match consistency, tuning how much of a competitor's inherent volatility is projected into their published predictive interval.
 	
 \end{document}

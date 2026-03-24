@@ -126,6 +126,10 @@ class HistogramLabel {
 ///
 /// If [data] is provided, the chart will display an empirical CDF instead of the
 /// histogram.
+///
+/// [scaleOffset] is the offset to apply to the ratings, in the same units as the ratings,
+/// provided if the raw rating data was scaled to remove values < 1.0, and will be used
+/// to re-offset the display labels.
 class StackedDistributionChart extends StatelessWidget {
   const StackedDistributionChart({
     super.key,
@@ -133,6 +137,7 @@ class StackedDistributionChart extends StatelessWidget {
     this.data,
     this.distribution,
     this.distributionIgnoresLabels = const [],
+    this.scaleOffset = 0.0,
   });
 
   bool get showCdf => data != null;
@@ -140,6 +145,7 @@ class StackedDistributionChart extends StatelessWidget {
   final List<HistogramBucket> buckets;
   final ContinuousDistribution? distribution;
   final List<HistogramLabel> distributionIgnoresLabels;
+  final double scaleOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +210,7 @@ class StackedDistributionChart extends StatelessWidget {
         else {
           prob = distribution!.probability(r);
         }
-        pdfData.add(_PdfStep(value: r, probability: prob));
+        pdfData.add(_PdfStep(value: r - scaleOffset, probability: prob));
         if(prob > probMax) {
           probMax = prob;
         }
@@ -272,7 +278,7 @@ class StackedDistributionChart extends StatelessWidget {
       data!.sort();
       for(var (index, value) in data!.indexed) {
         // empirical CDF is the proportion of values less than or equal to the current value
-        cdfData.add(_PdfStep(value: value, probability: index / data!.length));
+        cdfData.add(_PdfStep(value: value - scaleOffset, probability: index / data!.length));
       }
       cdfSeries = charts.Series<_PdfStep, double>(
         id: "cdf",
@@ -290,7 +296,7 @@ class StackedDistributionChart extends StatelessWidget {
         List<_HistogramStep> classHistData = [];
         for(var data in classHist) {
           var count = data.count;
-          classHistData.add(_HistogramStep(label: data.label, bucketStart: data._bucketCenter, count: count, color: data.color));
+          classHistData.add(_HistogramStep(label: data.label, bucketStart: data._bucketCenter - scaleOffset, count: count, color: data.color));
         }
         var series = charts.Series<_HistogramStep, double>(
           colorFn: (data, index) => data.color.toChartsColor(),
@@ -328,7 +334,7 @@ class StackedDistributionChart extends StatelessWidget {
         ),
       ],
       domainAxis: charts.NumericAxisSpec(
-        viewport: charts.NumericExtents(minBucketStart - (bucketSize * 0.25), maxBucketStart + (bucketSize * 1.25)),
+        viewport: charts.NumericExtents(minBucketStart - (bucketSize * 0.25) - scaleOffset, maxBucketStart + (bucketSize * 1.25) - scaleOffset),
         renderSpec: charts.SmallTickRendererSpec(
           labelStyle: charts.TextStyleSpec(
             color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),

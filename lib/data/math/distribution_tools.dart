@@ -74,8 +74,10 @@ extension StatisticalTests on ContinuousDistribution {
 
     double sum = 0.0;
 
+    const epsilon = 1e-10;
     for (final value in data) {
-      final density = probability(value);
+      // 0 ratings are permitted, so we add a small epsilon to avoid log(0)
+      final density = probability(value + epsilon);
 
       // If any point has zero density, the likelihood is zero and log likelihood is -∞
       if (density <= 0) {

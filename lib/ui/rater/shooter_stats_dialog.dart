@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
@@ -272,6 +273,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var eventLines = _eventLines ?? _buildEventLines();
     var historyLines = _historyLines ?? _buildHistoryLines();
 
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
       title: Column(
         mainAxisSize: MainAxisSize.min,
@@ -330,36 +332,39 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     controller: _leftController,
                     child: SingleChildScrollView(
                       controller: _leftController,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        // mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(height: 10),
-                          DropdownMenu<int>(
-                            initialSelection: 0,
-                            label: Text("Period"),
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry(value: 0, label: "Career"),
-                              ...careerStats.years.map((e) => DropdownMenuEntry(value: e, label: e.toString())).toList(),
-                            ],
-                            onSelected: (value) {
-                              if(value != null) {
-                                var stats = careerStats.statsForYear(value);
-                                if(stats != null) {
-                                  setState(() {
-                                    // rebuild chart and event table
-                                    _eventLines = null;
-                                    _historyLines = null;
-                                    _series = null;
-                                    _chart = null;
-                                    displayedStats = stats;
-                                  });
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 8.0 * uiScaleFactor),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          // mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(height: 10),
+                            DropdownMenu<int>(
+                              initialSelection: 0,
+                              label: Text("Period"),
+                              dropdownMenuEntries: [
+                                DropdownMenuEntry(value: 0, label: "Career"),
+                                ...careerStats.years.map((e) => DropdownMenuEntry(value: e, label: e.toString())).toList(),
+                              ],
+                              onSelected: (value) {
+                                if(value != null) {
+                                  var stats = careerStats.statsForYear(value);
+                                  if(stats != null) {
+                                    setState(() {
+                                      // rebuild chart and event table
+                                      _eventLines = null;
+                                      _historyLines = null;
+                                      _series = null;
+                                      _chart = null;
+                                      displayedStats = stats;
+                                    });
+                                  }
                                 }
-                              }
-                            },
-                          ),
-                          ..._buildShooterStats(context),
-                        ],
+                              },
+                            ),
+                            ..._buildShooterStats(context),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -747,13 +752,26 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }
 
     AverageRating average;
+    bool byStage = displayedStats.byStage;
+    int averageWindow = byStage ? 30 : 5;
     if(displayedStats.isCareer) {
-      average = widget.rating.averageRating();
+      average = widget.rating.averageRating(
+        window: averageWindow,
+      );
     }
     else {
       average = widget.rating.averageRatingByDate(start: displayedStats.start, end: displayedStats.end);
     }
     var lifetimeAverage = widget.rating.averageRating(window: careerStats.careerStats.events.length);
+
+    final rating = widget.rating;
+    double currentRating = rating.rating;
+    if(rating is LatentLogRating) {
+      average = average.scale(scaleOffset: rating.settings.scaleOffset, scaleFactor: rating.settings.scaleFactor);
+      lifetimeAverage = lifetimeAverage.scale(scaleOffset: rating.settings.scaleOffset, scaleFactor: rating.settings.scaleFactor);
+      currentRating = rating.displayRating;
+    }
+
 
     int powerFactorsPresent = 0;
     if(displayedStats.majorEntries > 0) powerFactorsPresent += 1;
@@ -775,7 +793,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 4, child: Text("Current rating", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.rating.rating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${currentRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
@@ -788,7 +806,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating (${displayedStats.isCareer ? "past 30 events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Average rating (${displayedStats.isCareer ? "past $averageWindow events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${average.averageOfIntermediates.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -802,7 +820,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Min-max rating (${displayedStats.isCareer ? "past 30 events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Min-max rating (${displayedStats.isCareer ? "past $averageWindow events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
