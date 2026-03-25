@@ -34,7 +34,7 @@ enum _IntKeys {
 }
 
 class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
-  static const ratingPeriodLengthInDays = 7;
+  static const ratingPeriodLengthInDays = 365;
 
   LatentLogRating(MatchEntry shooter, {
     required this.settings,

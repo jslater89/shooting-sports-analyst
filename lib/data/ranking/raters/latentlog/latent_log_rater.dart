@@ -879,8 +879,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           // definition)
           ownPresumedWinProbability = presumedWinner.winProbability;
           probabilityWeightedRatio += 1.0 * presumedWinner.winProbability;
-          probabilityWeightedWinnerVariance += ratingVariance * presumedWinner.winProbability;
-          probabilityWeightedWinnerDispersion += rating.dispersion * presumedWinner.winProbability;
           continue;
         }
 
@@ -912,11 +910,14 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
             presumedWinner.shooter.dispersion * winProbability;
       }
 
+      final notWinnerProbability = 1.0 - ownPresumedWinProbability;
       final predictiveVariance =
-        ratingVariance
-        + 2 * settings.predictionSportVariance
-        + probabilityWeightedWinnerVariance
-        + (rating.dispersion + probabilityWeightedWinnerDispersion) * kappa;
+        notWinnerProbability * (
+          ratingVariance +
+          2 * settings.predictionSportVariance
+          + (rating.dispersion * kappa)
+        )
+        + probabilityWeightedWinnerDispersion * kappa;
 
       final geometricSD = exp(sqrt(predictiveVariance));
       final oneSigmaUpper = probabilityWeightedRatio * geometricSD;

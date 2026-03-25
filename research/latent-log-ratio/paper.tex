@@ -421,14 +421,14 @@
 	\subsubsection*{The Final Expected Ratio}
 	By the law of total expectation over the random winner, applying both the max order shift and the truncation boundary, the expected ratio of competitor $i$ to the winner is:
 	\begin{equation}
-		\hat{S}_i = p_i (1.0) + \sum_{w \neq i} p_w \left[ \exp\!\left(\tilde{\mu}_{iw} + \frac{\sigma_{iw}^2}{2}\right) \cdot \Lambda_{iw} \right]
+		\hat{S}_i = (p_i \cdot 1.0) + \sum_{w \neq i} p_w \left[ \exp\!\left(\tilde{\mu}_{iw} + \frac{\sigma_{iw}^2}{2}\right) \cdot \Lambda_{iw} \right]
 	\end{equation}
 	The isolated $p_i$ term handles the mixture branch where $i$ is the presumed winner, yielding a ratio of exactly 1.0. For all other candidate winners, this formulation safely resolves the winner's curse bias in large fields while strictly obeying the $100\%$ scaling maximum.
 	
 	\subsection{Predictive Variance and Confidence Intervals}
 	To generate predictive confidence intervals, we first calculate the total log-space predictive variance. Predictive variance in log space is:
 	\begin{equation}
-		\varsigma_i^2 = V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \sum_w p_w \Big(V_w^{\mathrm{age}} + \kappa\left(\sigma_i^2 + \sigma_w^2\right)\Big)
+		\varsigma_i^2 = \left(1 - p_i\right)\Big(V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \kappa\sigma_i^2\Big) + \sum_w p_w \left(V_w^{\mathrm{age}} + \kappa\sigma_w^2\right)
 	\end{equation}
 	The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic noise for both the focal competitor and the uncertain winner in the ratio. The parameter $\kappa \in [0,1]$ allows the system designer to tune how much of a competitor's inherent performance dispersion ($\sigma_i^2$) is projected into their published predictive interval. 
 	

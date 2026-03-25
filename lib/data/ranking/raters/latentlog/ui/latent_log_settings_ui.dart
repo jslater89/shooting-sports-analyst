@@ -647,7 +647,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             ),
             const _LatentLogSectionHeading("Core Parameters"),
             _LatentLogVarianceRow(
-              label: "Sport volatility",
+              label: "Sport variance",
               tooltip:
                   "Irreducible variance of the sport; all ratings have this much noise in addition to their own variance.",
               internalController: _sportVarianceInternal,
@@ -661,9 +661,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Skill drift / period",
               tooltip:
-                  "Ratings gain roughly this much variance per month from skill drift.",
+                  "Ratings gain roughly this much variance per year from skill drift.",
               internalController: _skillDriftInternal,
-              scaledValue: (sqrt(baselineVariance + settings.skillDriftRate) - sqrt(baselineVariance)) * settings.scaleFactor,
+              scaledValue: sqrt(settings.skillDriftRate) * settings.scaleFactor,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,

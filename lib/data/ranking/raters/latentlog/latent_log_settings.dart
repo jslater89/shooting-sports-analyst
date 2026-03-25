@@ -85,7 +85,7 @@ class LatentLogSettings extends RaterSettings {
   /// Interpretation: the amount by which competitor variance increases over one
   /// rating period. How much wider 1SD gets over time. Rating periods are 30 days.
   ///
-  /// Tuning: e.g. σ_drift should grow by ±5% over one year (12 rating periods)
+  /// Tuning: e.g. σ_drift should grow by ±5% over one year (1 rating period).
   /// -> delta-v per year = ln(1.10)^2 - ln(1.05)^2.
   ///      justification: 5% initial 1SD, 10% 1SD at the end of the year. change
   ///      in variance is the difference between initial_sigma^2 and final_sigma^2.
