@@ -366,16 +366,16 @@ class _ScoreListState extends State<ScoreList> {
 
                     switch(model.value.ratingMode) {
                       case RatingDisplayMode.preMatch:
-                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: true).round();
-                        text = r.toString();
+                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: true);
+                        text = rating.formatNumericRating(r);
                         break;
                       case RatingDisplayMode.postMatch:
-                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: false).round();
-                        text = r.toString();
+                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: false);
+                        text = rating.formatNumericRating(r);
                         break;
                       case RatingDisplayMode.change:
                         var r = rating.changeForEvent(widget.match!, null);
-                        if(r != null) text = r.toStringAsFixed(1);
+                        if(r != null) text = rating.formatNumericRating(r);
                         break;
                       case RatingDisplayMode.none:
                         text = "(n/a)";

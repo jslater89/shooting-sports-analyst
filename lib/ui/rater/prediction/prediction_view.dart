@@ -370,7 +370,8 @@ class PredictionViewModel extends ChangeNotifier {
     minRating = double.infinity;
     maxRating = double.negativeInfinity;
 
-    highPrediction = this.predictions.isEmpty ? 0.0 : (this.predictions[0].center + this.predictions[0].upperBox) / 2;
+    // Expected score may not be 100%.
+    highPrediction = this.predictions.isEmpty ? 0.0 : (1.0 / this.predictions[0].center);
 
     for(var p in this.predictions) {
       minValue = min(minValue, p.lowerWhisker);

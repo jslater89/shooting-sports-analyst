@@ -3,29 +3,32 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 class LatentLogSettings extends RaterSettings {
   // Default scale generates roughly Elo-style numbers between 0 and 2000,
   // per Shooting Sports Analyst tradition.
-  static const defaultScaleOffset = 1200.0;
+  static const defaultScaleOffset = 1330.0;
   static const defaultScaleFactor = 1400.0;
+
   static const defaultSportVolatility = 0.0008;
-  static const defaultSkillDriftRate = 0.000016;
+  static const defaultSkillDriftRate = 0.000012;
   static const defaultStartingVariance = 0.0108;
   static const defaultMaximumVariance = 0.0216;
-  static const defaultDispersionAdaptationRate = 0.25;
+  static const defaultIntraclassCorrelation = 0.3;
+  static const defaultDispersionAdaptationRate = 0.05;
   static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
   static const defaultMatchDifficultyVariance = 0.10;
+  static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.60;
   static const defaultTailNoiseVariance = 0.04;
-  static const defaultBaselineRobustnessZ = 2.5;
   static const defaultWeakFieldVariance = 0.50;
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
-  static const defaultPredictionSportVariance = 0.0002;
-  static const defaultPredictionBehavioralDispersionKappa = 0.25;
+  static const defaultPredictionSportVariance = 0.0001;
+  static const defaultPredictionBehavioralDispersionKappa = 0.20;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
   static const _scaleFactorKey = "latentLogScaleFactor";
+  static const _intraclassCorrelationKey = "latentLogIntraclassCorrelation";
   static const _sportVolatilityKey = "latentLogSportVolatility";
   static const _skillDriftRateKey = "latentLogSkillDriftRate";
   static const _startingVarianceKey = "latentLogStartingVariance";
@@ -159,6 +162,16 @@ class LatentLogSettings extends RaterSettings {
   /// -> 1: pairwise residuals fully applied.
   /// -> > 1: pairwise residuals applied with additional emphasis.
   double pairwiseBlendWeight = defaultPairwiseBlendWeight;
+
+  /// The intraclass correlation coefficient, i.e. ρ from the paper.
+  ///
+  /// Interpretation: the field average uncertainty is a regularization term that
+  /// is added to the observation noise to prevent catastrophic certainty collapse
+  /// in large, unestablished fields.
+  ///
+  /// Tuning: dimensionless, nonnegative.
+  /// -> 0: disable field average uncertainty.
+  double intraclassCorrelation = defaultIntraclassCorrelation;
 
   /// Robustness threshold for baseline residuals, measured in residual standard deviations.
   ///
@@ -321,6 +334,7 @@ class LatentLogSettings extends RaterSettings {
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
     this.baselineRobustnessZ = defaultBaselineRobustnessZ,
+    this.intraclassCorrelation = defaultIntraclassCorrelation,
     this.tailNoiseStartPercent = defaultTailNoiseStartPercent,
     this.tailNoiseVariance = defaultTailNoiseVariance,
     this.weakFieldVariance = defaultWeakFieldVariance,
@@ -342,6 +356,7 @@ class LatentLogSettings extends RaterSettings {
     json[_skillDriftRateKey] = skillDriftRate;
     json[_startingVarianceKey] = startingVariance;
     json[_maximumVarianceKey] = maximumVariance;
+    json[_intraclassCorrelationKey] = intraclassCorrelation;
     json[_dispersionAdaptationRateKey] = dispersionAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
@@ -376,6 +391,9 @@ class LatentLogSettings extends RaterSettings {
     if (maximumVariance < startingVariance) {
       maximumVariance = startingVariance;
     }
+    intraclassCorrelation =
+        (json[_intraclassCorrelationKey] ?? defaultIntraclassCorrelation)
+            as double;
     dispersionAdaptationRate =
         (json[_dispersionAdaptationRateKey] ?? defaultDispersionAdaptationRate)
             as double;

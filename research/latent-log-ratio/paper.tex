@@ -97,6 +97,7 @@
 		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
 		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates, surprise adaptation, and after drift aging.
 		\item \textbf{$\sigma_{\mathrm{drift}}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{\mathrm{drift}}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
+		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} The fraction of epistemic variance assumed to be shared demographically by unrated or high-variance competitors at the same match. Prevents certainty collapse (the ``Day 1'' rating explosion) in fields with little history by explicitly bounding the baseline variance to a cohort asymptote.
 		\item \textbf{$\beta$ (Dispersion Adaptation Rate):} Base rate for the performance dispersion EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
 		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
 		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
@@ -137,7 +138,7 @@
 	\end{equation}
 	High-variance and high-dispersion competitors naturally receive less influence.
 	
-	\textbf{Step 3: Establish the Core Match Baseline ($B$)}\\
+	\textbf{Step 3: Establish the Core Match Baseline ($B_{-i}$)}\\
 	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores:
 	\begin{equation}
 		a_i = R_i - L_i
@@ -150,13 +151,18 @@
 	\begin{equation}
 		B_{-i} = \frac{\sum_{j \neq i} W_j a_j}{\sum_{j \neq i} W_j}
 	\end{equation}
-	The baseline acts as the global mathematical anchor, answering: ``Based on the known skill of the field and the percentages shot, what was the absolute latent skill of the 100\% mark?'' The estimation variance of this baseline under the weighted mean is:
+	The baseline acts as the global mathematical anchor, answering: ``Based on the known skill of the field and the percentages shot, what was the absolute latent skill of the 100\% mark?'' 
+	
+	Under a naive assumption of independent priors, the estimation variance of this baseline would simply be $1 / \sum_{j \neq i} W_j$. However, this introduces a critical pathology in fields dominated by new or unrated competitors (e.g., the first match of a new division). Because the variance of an independent mean scales with $1/N$, averaging a large unrated field collapses the baseline variance to zero, creating an immovable anchor that forces the winner's rating to artificially explode to absorb the entire relative performance gap.
+	
+	In reality, unrated competitors at a specific match are not drawn from the global prior independently; they share a local demographic bias (a cohort effect). To formalize this missing off-diagonal covariance in an $\mathcal{O}(N)$ framework, we introduce $\rho$, the intraclass correlation of priors. The true baseline variance asymptotes to the precision-weighted average epistemic uncertainty of the field, scaled by $\rho$ and a finite-field taper (where $M = N - 1$ is the number of opponents):
 	\begin{equation}
-		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
+		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j} + \rho \left(\frac{M-1}{M}\right) \frac{\sum_{j \neq i} W_j V_j^{\mathrm{age}}}{\sum_{j \neq i} W_j}
 	\end{equation}
+	This guarantees that a large field of unknown competitors provides a \emph{floating} anchor rather than a rigid one, correctly suppressing the Kalman gain for the winner and preserving their epistemic uncertainty.
 	
 	\textbf{Step 4: Calculate Local Baseline ($B_{\mathrm{local}}$)}\\
-	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (e.g., competitors in the same division or shooting squad). For each opponent $j$, compute the log-space pairwise residual:
+	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (e.g., competitors shooting the same schedule, or competitors close in rating or finish). For each opponent $j$, compute the log-space pairwise residual:
 	\begin{equation}
 		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
 	\end{equation}
@@ -166,9 +172,12 @@
 	\begin{equation}
 		\delta_{ij} = (L_i - R_i) + (R_j - L_j) = (L_i - R_i) + a_j
 	\end{equation}
-	The appearance of $a_j$ allows us to reframe our pairwise comparison as a local baseline $B_{\mathrm{local}}$ in the exact same manner as the global match baseline:
+	The appearance of $a_j$ allows us to reframe our pairwise comparison as a local baseline $B_{\mathrm{local}}$ in the exact same manner as the global match baseline. To ensure the local baseline properly inherits the cohort uncertainty of the subset, we apply the same hierarchical variance formulation:
 	\begin{equation}
-		B_{\mathrm{local}} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}, \qquad \mathrm{Var}(B_{\mathrm{local}}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j}
+		B_{\mathrm{local}} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}
+	\end{equation}
+	\begin{equation}
+		\mathrm{Var}(B_{\mathrm{local}}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j} + \rho \left(\frac{|\mathcal{S}_i|-1}{|\mathcal{S}_i|}\right) \frac{\sum_{j \in \mathcal{S}_i} W_j V_j^{\mathrm{age}}}{\sum_{j \in \mathcal{S}_i} W_j}
 	\end{equation}
 	
 	\textbf{Step 5: Calculate Observed Performance ($O_i$)}\\
@@ -185,9 +194,9 @@
 	\begin{equation}
 		e_i = O_i - R_i
 	\end{equation}
-	Because $B_{-i}$ and $B_{local}$ are estimates, not perfectly known quantities, we must explicitly propagate their estimation variance. In large, well-known fields, this estimation variance becomes tiny. In small or highly uncertain fields, correctly carrying this variance forward prevents systematic over-updating.
+	Because $B_{-i}$ and $B_{local}$ are estimates, not perfectly known quantities, we must explicitly propagate their estimation variance. By formalizing the cohort covariance inside the baseline variances in Steps 3 and 4, the structural uncertainty of the field is already correctly captured; no arbitrary field-level penalty is required.
 	
-	The total effective observation variance is the sum of the fundamental measurement noise and the structural estimation variances:
+	The total effective observation variance is simply the sum of the fundamental measurement noise and the structural estimation variances:
 	\begin{equation}
 		R_{\mathrm{obs},i} = \sigma_{\mathrm{sport}}^2 + \sigma_i^2 + (1 - \alpha_i^2)\cdot\mathrm{Var}(B_{-i}) + \alpha_i^2 \cdot \mathrm{Var}(B_{local})
 	\end{equation}
@@ -197,7 +206,7 @@
 		T_i = V_i^{\mathrm{age}} + R_{\mathrm{obs},i}, \qquad K_i = \frac{V_i^{\mathrm{age}}}{T_i}
 	\end{equation}
 	
-	Note that $B_{-i}$ and $B_{local}$ are not strictly independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field used for $B_{-i}$, a known property of weighted means dictates that their covariance is exactly the variance of the global mean:
+	Note that $B_{-i}$ and $B_{local}$ are not strictly independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field used for $B_{-i}$, and because both are subject to the same latent cohort bias, a known property of weighted means dictates that their covariance is exactly the variance of the global mean:
 	
 	\begin{equation}
 		\mathrm{Cov}(B_{-i},B_{local}) = \mathrm{Var}(B_{-i})
@@ -305,7 +314,7 @@
 		B_{-i} = \frac{\sum_{j \neq i} \tilde{W}_j a_j}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}, \qquad \mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} \tilde{W}_j + \tau^{-2}}
 	\end{equation}
 	
-	\subsubsection*{C. Match-Context Weak-Field Damping ($\sigma_{path}^2$)}
+	\subsubsection*{C. Match-Context Weak-Field Damping ($\sigma_{\mathrm{path}}^2$)}
 	\label{sec:weakfield}
 	\emph{Modifies Step 6.}\\
 	Tiny matches in which a large share of the non-winners finish extremely far behind the winner are structurally pathological. The match as a whole provides little trustworthy information about elite top-end skill separation. To model this, we introduce a match-level variance penalty.
@@ -319,9 +328,9 @@
 	\begin{equation}
 		g = \min\!\left(1,\frac{1}{|\mathcal{W}| \cdot (-\ln s_w)} \sum_{j \in \mathcal{W}} \max\!\left(0,\ln\!\left(\frac{s_w}{\max(S_{\mathrm{floor}}, S_j)}\right)\right)\right)
 	\end{equation}
-	The match-level pathology variance is $\sigma_{path}^2 = \omega^2 \cdot (f_{size}(N) \cdot q \cdot g)$. This is added directly into the total observation variance computed in Step 6:
+	The match-level pathology variance is $\sigma_{\mathrm{path}}^2 = \omega^2 \cdot (f_{size}(N) \cdot q \cdot g)$. This is added directly into the total observation variance computed in Step 6:
 	\begin{equation}
-		R_{obs,i} \leftarrow R_{obs,i} + \sigma_{path}^2
+		R_{obs,i} \leftarrow R_{obs,i} + \sigma_{\mathrm{path}}^2
 	\end{equation}
 	This elegantly throttles the Kalman update $K_i$ for the entire field, formalizing the heuristic: ``this match may be real, but it is not a precise instrument.''
 	
@@ -398,7 +407,7 @@
 	\end{equation}
 	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. The presumed winner's rating is then shifted upward by this extreme-value expectation scaled by their total pool dispersion:
 	\begin{equation}
-		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + \sigma_w^2 + \sigma_{\mathrm{pred}}^2}
+		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + (\kappa \cdot \sigma_w^2) + \sigma_{\mathrm{pred}}^2}
 	\end{equation}
 	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), $\Delta_w$ gracefully vanishes to zero, preserving unbiased predictions.
 	
@@ -434,11 +443,10 @@
 	Notably, while the expected mean $\hat{S}_i$ is strictly bounded to $1.0$, the upper confidence interval $S_{i,\mathrm{upper}}$ is permitted to exceed $1.0$. This is physically meaningful: an upper bound of $1.02$ indicates that a competitor's $+1\sigma$ performance would theoretically exceed the presumed winner's expected performance by 2\%, visually indicating to users that the competitor has a realistic probability of winning the match.
 	
 	\section{Comparison with Earlier Work}
+	In the course of producing analysis on the shooting sports over several years, the author has read about and experimented with a number of rating algorithms.
 	
 	\subsection{Glicko-2}
-	\begin{enumerate}
-		\item \textbf{Algorithmic Efficiency:} Glicko-2 requires $\mathcal{O}(N^2)$ pairwise comparisons. A 300-person match yields 44,850 comparisons per competitor. The Latent Log-Ratio model computes the match baseline in $\mathcal{O}(N)$ and adds pairwise corrections against $k$ selected opponents per competitor, yielding $\mathcal{O}(N \cdot k)$ total complexity. With $k = 20$--$30$, a 300-person match requires 6,000--9,000 pairwise comparisons total, rather than 44,850 per competitor.
-		
+	\begin{enumerate}		
 		\item \textbf{Native Representation of Performance Distances:} Logistic models represent the outcome of a pairwise comparison as a probability in $(0, 1)$, which is correct for binary win/loss but introduces information loss for continuous margins. A pairwise expected score of $0.95$ could correspond to a 5\% performance margin or a 50\% margin---the sigmoid saturates at the extremes, compressing large differences into a narrow band. The latent log-ratio model preserves the log-ratio structure of performance distances globally: a competitor who performs at twice the level of another has a log-gap of $\ln(2) \approx 0.69$, regardless of whether both are elite or both are novices. Pathological deep-tail updates are handled by observation-noise inflation rather than by deforming this distance scale, so prediction remains analytically simple.
 		
 		\item \textbf{Explicit Separation of Variance Sources:} Rather than routing all uncertainty through a single mechanism (e.g., Glicko-2's Rating Deviation, which conflates measurement uncertainty, skill drift, and competitor consistency), the model explicitly separates:
@@ -451,6 +459,8 @@
 		\end{itemize}
 		This decomposition makes each parameter independently interpretable and tunable. In Glicko-2, a competitor bombing a single stage can drastically inflate their RD (via the volatility $\rightarrow$ RD pathway), destabilizing future updates. Here, a single bad performance primarily affects $\sigma_i^2$ (which adapts gradually via the certainty-scaled EMA and a capped driving term) and may trigger a modest $V_i$ increase (via the innovation term), but neither mechanism produces the runaway instability that Glicko-2's volatility iteration can exhibit.
 	\end{enumerate}
+	
+	\subsection{Pairwise Elo}
 	
 	\subsection{Multiplayer Elo}
 	

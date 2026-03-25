@@ -98,6 +98,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _predictionSportInternal = TextEditingController();
   final TextEditingController _predictionBehavioralKappaController =
       TextEditingController();
+  final TextEditingController _intraclassCorrelationController = TextEditingController();
   final TextEditingController _dispersionAdaptController = TextEditingController();
   final TextEditingController _surpriseAdaptController = TextEditingController();
   final TextEditingController _pairwiseBlendController = TextEditingController();
@@ -175,6 +176,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     attachNumericListener(_predictionBehavioralKappaController, () {
       _validateText();
     });
+    attachNumericListener(_intraclassCorrelationController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
     attachNumericListener(_dispersionAdaptController, () {
       if (!widget.controller._restoreDefaults) {
         _validateText();
@@ -238,6 +244,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _matchDifficultyInternal.dispose();
     _predictionSportInternal.dispose();
     _predictionBehavioralKappaController.dispose();
+    _intraclassCorrelationController.dispose();
     _dispersionAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
@@ -265,6 +272,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         settings.predictionBehavioralDispersionKappa.toStringAsFixed(3);
     _dispersionAdaptController.text = settings.dispersionAdaptationRate.toStringAsFixed(4);
     _surpriseAdaptController.text = settings.surpriseAdaptationRate.toStringAsFixed(4);
+    _intraclassCorrelationController.text = settings.intraclassCorrelation.toStringAsFixed(3);
 
     _pairwiseBlendController.text = settings.pairwiseBlendWeight.toStringAsFixed(4);
     _baselineRobustnessZController.text = settings.baselineRobustnessZ.toStringAsFixed(4);
@@ -349,6 +357,20 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     if (maxVar < startVar) {
       widget.controller.lastError =
           "Maximum variance must be at least starting variance";
+      return;
+    }
+
+    final intraclassCorrelation = double.tryParse(_intraclassCorrelationController.text);
+    if (intraclassCorrelation == null) {
+      widget.controller.lastError = "Intraclass correlation formatted incorrectly";
+      return;
+    }
+    if (intraclassCorrelation > 1) {
+      widget.controller.lastError = "Intraclass correlation must be between 0 and 1";
+      return;
+    }
+    if (intraclassCorrelation <= 0) {
+      widget.controller.lastError = "Intraclass correlation must be positive";
       return;
     }
 
@@ -574,24 +596,6 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
                 widget.controller.lastError!,
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(color: Theme.of(context).colorScheme.error),
               ),
-            const _LatentLogSectionHeading("Scaling Parameters", compactTop: true),
-            _LatentLogLabeledNumericRow(
-              label: "Scale offset (display points)",
-              tooltip:
-                  "Additive offset for top-line rating display: display = internal × scale factor + offset.",
-              controller: _scaleOffsetController,
-              fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
-            ),
-            _LatentLogLabeledNumericRow(
-              label: "Scale factor",
-              tooltip:
-                  "Linear multiplier from internal log units to display rating points. Changing this immediately rescales the × Scale column from current internal values.",
-              controller: _scaleFactorController,
-              fieldWidth: fieldWidth,
-              trailingSpacerWidth: trailingSpacerWidth,
-            ),
-            const _LatentLogSectionHeading("Core Parameters"),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -607,13 +611,39 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
                 SizedBox(
                   width: fieldWidth,
                   child: Text(
-                    "× Scale",
+                    "Scaled",
                     textAlign: TextAlign.end,
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
                 ),
               ],
             ),
+            const _LatentLogSectionHeading("Scaling Parameters", compactTop: true),
+            _LatentLogVarianceRow(
+              label: "Scale offset (display points)",
+              tooltip:
+                  "Additive offset for top-line rating display: display = internal × scale factor + offset. The scaled value is an approximate minimum display rating.",
+              internalController: _scaleOffsetController,
+              scaledValue: -0.95 * settings.scaleFactor + settings.scaleOffset,
+              scaledValuePrecision: 0,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
+            _LatentLogVarianceRow(
+              label: "Scale factor",
+              tooltip:
+                  "Linear multiplier from internal log units to display rating points. The scaled value is an approximate maximum display rating.",
+              internalController: _scaleFactorController,
+              scaledValue: 0.5 * settings.scaleFactor + settings.scaleOffset,
+              scaledValuePrecision: 0,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const _LatentLogSectionHeading("Core Parameters"),
             _LatentLogVarianceRow(
               label: "Sport volatility",
               tooltip:
@@ -662,12 +692,20 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
+            _LatentLogLabeledNumericRow(
+              label: "Intraclass correlation ρ",
+              tooltip:
+                  "Dimensionless ρ ∈ [0, 1]: minimum baseline uncertainty factor for large fields of unrated competitors..",
+              controller: _intraclassCorrelationController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
             _LatentLogVarianceRow(
               label: "Dispersion adaptation β",
               tooltip:
-                  "Dimensionless β in (0, 1): EMA weight for per-competitor volatility updates. Scaled value is approximate number of rating events included.",
+                  "Dimensionless β in (0, 1): Smoothing factor for per-competitor dispersion EMA. Scaled value is the half-life in number of rating events.",
               internalController: _dispersionAdaptController,
-              scaledValue: (1 / settings.dispersionAdaptationRate),
+              scaledValue: log(0.5) / log(1 - settings.dispersionAdaptationRate),
               scaledValuePrecision: 1,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
