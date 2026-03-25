@@ -16,11 +16,11 @@
 	\maketitle
 	
 	\begin{abstract}
-		Traditional Bayesian rating systems like Elo, Glicko, and TrueSkill were designed for zero-sum or ordinal competitions. Applying them to continuous, proportional-scoring sports (e.g., practical shooting, racing) introduces severe structural friction. Existing systems either discard continuous margins of victory entirely, or fall victim to the ``winner's curse''—a mathematical artifact where an outlier winning performance artificially deflates the apparent skill of the entire field.
+		Traditional rating systems like Elo, Glicko, and TrueSkill were designed for zero-sum or ordinal competitions. Applying them to continuous, proportional-scoring sports (e.g., practical shooting, racing) introduces severe structural friction. Existing systems either discard continuous margins of victory entirely, or fall victim to the ``winner's curse''—a mathematical artifact where an outlier winning performance artificially deflates the apparent skill of the entire field.
 		
 		This paper proposes the Latent Log-Ratio Model, a Bayesian state-space approach that operates natively on continuous, ratio-to-winner scoring. By leveraging the logarithmic structure of multiplicative performances, the model cleanly isolates pairwise skill gaps and exactly cancels the winner's nuisance variance.
 		
-		The system features $\mathcal{O}(N)$ complexity in its simplest form, explicitly decoupled 
+		The system features $\mathcal{O}(N)$ complexity in its simplest form, explicitly decoupled tracking of epistemic uncertainty and aleatoric performance dispersion, and a selection of statistical weapons to handle degenerate fields without artifacting. Finally, it retains trivial reversibility from ratings to performance ratios, enabling the generation of predictions over complete fields of competitors.
 	\end{abstract}
 	
 	\section{Key Insights and Concepts}
@@ -142,35 +142,39 @@
 	\begin{equation}
 		a_i = R_i - L_i
 	\end{equation}
-	To avoid circularity (competitor $i$ influencing their own baseline anchor), we form a precision-weighted leave-one-out estimate for each competitor:
+	Recall from Section 1.3 that $L_i = \ln(P_i) - \ln(P_{max})$. Substituting this yields:
+	\begin{equation}
+		a_i = (R_i - \ln(P_i)) + \ln P_{max}
+	\end{equation}
+	Because the expected value of a competitor's performance error $(R_i - \ln(P_i))$ is zero, $a_i$ acts as a noisy observation of the winner's latent absolute performance. To avoid circularity (competitor $i$ influencing their own baseline anchor), we form a precision-weighted leave-one-out consensus estimate of the winner's performance for each competitor:
 	\begin{equation}
 		B_{-i} = \frac{\sum_{j \neq i} W_j a_j}{\sum_{j \neq i} W_j}
 	\end{equation}
-	The baseline acts as the global mathematical anchor, answering: ``How difficult was this match compared to the known skill level of the field?'' The estimation variance of this baseline estimate under the weighted mean is:
+	The baseline acts as the global mathematical anchor, answering: ``Based on the known skill of the field and the percentages shot, what was the absolute latent skill of the 100\% mark?'' The estimation variance of this baseline under the weighted mean is:
 	\begin{equation}
 		\mathrm{Var}(B_{-i}) = \frac{1}{\sum_{j \neq i} W_j}
 	\end{equation}
 	
 	\textbf{Step 4: Calculate Local Baseline ($B_{\mathrm{local}}$)}\\
-	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. Beating someone rated far above you provides a different signal than beating someone rated far below you.
-	
-	For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (in the practical shooting context, we choose `top and nearby'). For each opponent $j$, compute the log-space pairwise residual:
+	The match baseline captures average field difficulty but discards structural information about \textit{whom} each competitor outperformed. For each competitor $i$, we select a subset of opponents $\mathcal{S}_i$ (e.g., competitors in the same division or shooting squad). For each opponent $j$, compute the log-space pairwise residual:
 	\begin{equation}
-		\delta_{ij} = (L_i - L_j) - (R_i - R_j) = (L_i - R_i) + (R_j - L_j) = (L_i - R_i) + a_j
+		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
 	\end{equation}
-	This measures how much better competitor $i$ performed against opponent $j$ relative to their ratings. The winner's curse is eliminated organically because the baseline anchor cancels out in $(L_i - L_j)$.
+	Crucially, because $L_i - L_j = \ln(P_i/P_{max}) - \ln(P_j/P_{max}) = \ln(P_i/P_j)$, the $P_{max}$ anchor cancels out entirely. This pairwise comparison isolates the pure relative performance margin and is structurally immune to the winner's curse.
 	
-	The appearance of $a_j$ allows us to reframe our pairwise comparison as a local baseline $B_{local}$ in the same manner as the global match baseline $B$:
-	
-
+	Through algebraic rearrangement, we can express this residual using the terms from Step 3:
 	\begin{equation}
-		B_{local} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}, \qquad \mathrm{Var}(B_{local}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j}
+		\delta_{ij} = (L_i - R_i) + (R_j - L_j) = (L_i - R_i) + a_j
+	\end{equation}
+	The appearance of $a_j$ allows us to reframe our pairwise comparison as a local baseline $B_{\mathrm{local}}$ in the exact same manner as the global match baseline:
+	\begin{equation}
+		B_{\mathrm{local}} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}, \qquad \mathrm{Var}(B_{\mathrm{local}}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j}
 	\end{equation}
 	
 	\textbf{Step 5: Calculate Observed Performance ($O_i$)}\\
 	Blend the baseline-derived performance with the pairwise residual correction:
 	\begin{equation}
-		O_i = L_i + (1 - \alpha_i) \cdot B_{-i} + \alpha_i \cdot B_{local}
+		O_i = L_i + (1 - \alpha_i) \cdot B_{-i} + \alpha_i \cdot B_{\mathrm{local}}
 	\end{equation}
 	When $\alpha = 0$, this reduces to the pure baseline model. The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
 	
