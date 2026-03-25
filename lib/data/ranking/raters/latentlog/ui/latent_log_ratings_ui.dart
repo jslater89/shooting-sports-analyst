@@ -40,14 +40,14 @@ extension LatentLogRatingsUi on LatentLogRater {
         Expanded(
           flex: _varianceFlex,
           child: Tooltip(
-            message: "Current rating variance (uncertainty).",
-            child: Text("Variance", textAlign: TextAlign.end),
+            message: "Approximate standard deviation of the rating..",
+            child: Text("Uncertainty", textAlign: TextAlign.end),
           ),
         ),
         Expanded(
           flex: _volatilityFlex,
           child: Tooltip(
-            message: "Performance dispersion: how much a competitor's rating tends to move from event to event.",
+            message: "How much a competitor's rating tends to move from event to event.",
             child: Text("Dispersion", textAlign: TextAlign.end),
           ),
         ),
