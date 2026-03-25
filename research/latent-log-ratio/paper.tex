@@ -93,7 +93,7 @@
 	
 	\subsubsection*{Core Parameters}
 	\begin{itemize}
-		\item \textbf{$\sigma_{\mathrm{sport}}^2$ (Sport Volatility):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
+		\item \textbf{$\sigma_{\mathrm{sport}}^2$ (Sport Variance):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
 		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
 		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates, surprise adaptation, and after drift aging.
 		\item \textbf{$\sigma_{\mathrm{drift}}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{\mathrm{drift}}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
@@ -465,6 +465,62 @@
 	\subsection{Multiplayer Elo}
 	
 	\subsection{TrueSkill and OpenSkill}
+	
+	\appendix
+	\section{Practical Initialization and Tuning Guide}
+	\label{app:tuning}
+	
+	Because the Latent Log-Ratio model decomposes uncertainty into strictly separated physical mechanisms, hand-tuning the system can be daunting. Tuning should follow a structured sequence: establish the core scale of the sport, set the structural priors, and finally tune the boundary pathology parameters. 
+	
+	\subsection{Phase 1: Baseline Initialization}
+	Begin by initializing the core parameters to mathematically derived rules of thumb, prioritizing the linear scale (standard deviation) over the squared space (variance).
+	
+	\begin{enumerate}
+		\item \textbf{Set the Sport Scale ($\sigma_{\mathrm{sport}}^2$):} 
+		Determine the typical absolute change in rating a competitor experiences from match to match in steady state. Set the sport variance such that its standard deviation matches this value: $\sqrt{\sigma_{\mathrm{sport}}^2} \approx \Delta R_{\mathrm{typical}}$.
+		
+		\item \textbf{Set Epistemic Bounds ($V_{\mathrm{start}}, V_{\max}$):} 
+		New competitors require enough variance to traverse the distribution rapidly. Set the starting variance to approximately 4 times the sport variance in linear space: $\sqrt{V_{\mathrm{start}}} = 4 \times \sqrt{\sigma_{\mathrm{sport}}^2}$. Set the absolute variance ceiling to double the starting variance: $V_{\max} = 2 \times V_{\mathrm{start}}$.
+		
+		\item \textbf{Initialize Structural Priors:} 
+		\begin{itemize}
+			\item Intraclass correlation ($\rho$): $0.30$
+			\item Dispersion adaptation rate ($\beta$): $0.05$
+			\item Surprise adaptation rate ($\gamma$): $0.10$
+			\item Match difficulty prior variance ($\tau^2$): $0.10$
+		\end{itemize}
+		
+		\item \textbf{Initialize Degenerate Field Parameters:} 
+		\begin{itemize}
+			\item Baseline robustness ($c$): $2.5$. Decrease if the sport yields highly homogeneous fields; increase if the sport is prone to frequent, severe outliers.
+			\item Tail noise ($\xi^2$): Set to $1.5\times$ the maximum standard deviation in linear space, yielding $\xi^2 = (1.5 \sqrt{V_{\max}})^2$.
+			\item Weak field variance ($\omega^2$): Set to $5\times$ the maximum standard deviation, yielding $\omega^2 = (5 \sqrt{V_{\max}})^2$.
+		\end{itemize}
+		
+		\item \textbf{Initialize Prediction Parameters:} 
+		\begin{itemize}
+			\item Prediction behavioral scale ($\kappa$): $0.25$.
+			\item Prediction sport variance ($\sigma_{\mathrm{pred}}^2$): Set to $10\%-25\%$ of the total desired variance in the final predictive error bars.
+		\end{itemize}
+	\end{enumerate}
+	
+	Generate an initial batch of ratings across the dataset using these base values, then proceed to diagnostic tuning.
+	
+	\subsection{Phase 2: Diagnostic Tuning and Troubleshooting}
+	Because parameters in a Bayesian state-space model interact dynamically, adjusting the wrong parameter to fix a symptom will often break a separate, correctly functioning mechanism. Use the following symptom-to-solution mappings to isolate adjustments.
+	
+	\subsubsection*{Symptom: The ``Day 1'' Rating Explosion}
+	\textbf{Observation:} A strong competitor dominates a field of mostly unrated or novice shooters. The system updates the winner to an absurdly high rating, while their epistemic variance ($V_i$) crashes to zero. \\
+	\textbf{Diagnosis:} The filter is falsely assuming that a large mass of unrated shooters constitutes a perfectly known 0.0 baseline. \\
+	\textbf{Solution:} Increase the Intraclass Correlation ($\rho$). This raises the minimum baseline uncertainty for unrated fields, floating the anchor and dampening the winner's Kalman gain without altering the underlying rating scale. \textit{Do not} attempt to fix this by lowering $V_{\mathrm{start}}$.
+	
+	\subsubsection*{Symptom: Sluggish Veterans and Wide Equilibrium Bands}
+	\textbf{Observation:} Highly active, established veterans see almost no rating movement, but their steady-state predictive bands (or $V_i$) remain wider than desired. \\
+	\textbf{Diagnosis:} The introduction of $\rho$ structurally raises the steady-state variance floor for the entire population (because the filter never fully trusts the absolute anchor of a match). \\
+	\textbf{Solution:} Decrease the Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$). $\rho$ and $\sigma_{\mathrm{drift}}^2$ exist in a direct feedback loop. By lowering the time drift, you allow veterans to settle into a tighter equilibrium while leaving $\rho$ in place to protect against the Day 1 explosion. 
+	
+	\subsubsection*{Symptom: The Yang Pathology}
+	
 
 	\bibliographystyle{ieeetr}
 	\bibliography{paper}

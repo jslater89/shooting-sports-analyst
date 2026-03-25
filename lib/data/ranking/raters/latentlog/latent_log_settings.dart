@@ -6,7 +6,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultScaleOffset = 1330.0;
   static const defaultScaleFactor = 1400.0;
 
-  static const defaultSportVolatility = 0.0008;
+  static const defaultSportVariance = 0.0008;
   static const defaultSkillDriftRate = 0.000012;
   static const defaultStartingVariance = 0.0108;
   static const defaultMaximumVariance = 0.0216;
@@ -14,6 +14,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultDispersionAdaptationRate = 0.05;
   static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
+
   static const defaultMatchDifficultyVariance = 0.10;
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.60;
@@ -22,6 +23,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
+
   static const defaultPredictionSportVariance = 0.0001;
   static const defaultPredictionBehavioralDispersionKappa = 0.20;
 
@@ -29,7 +31,7 @@ class LatentLogSettings extends RaterSettings {
   static const _scaleOffsetKey = "latentLogScaleOffset";
   static const _scaleFactorKey = "latentLogScaleFactor";
   static const _intraclassCorrelationKey = "latentLogIntraclassCorrelation";
-  static const _sportVolatilityKey = "latentLogSportVolatility";
+  static const _sportVarianceKey = "latentLogSportVolatility";
   static const _skillDriftRateKey = "latentLogSkillDriftRate";
   static const _startingVarianceKey = "latentLogStartingVariance";
   static const _maximumVarianceKey = "latentLogMaximumVariance";
@@ -76,19 +78,19 @@ class LatentLogSettings extends RaterSettings {
   /// -> 1.05 (edge of 1SD)
   /// -> ln(1.05) = 0.049 (log std. dev)
   /// -> 0.049^2 = 0.0024 (variance = sigma^2)
-  double sportVolatility = defaultSportVolatility;
+  double sportVariance = defaultSportVariance;
 
   /// The skill drift rate in variance units per rating period, i.e. σ_drift^2 from the paper.
   ///
   /// Interpretation: the amount by which competitor variance increases over one
-  /// rating period. How much wider 1SD gets over time. Rating periods are 1 week.
+  /// rating period. How much wider 1SD gets over time. Rating periods are 30 days.
   ///
-  /// Tuning: e.g. σ_drift should grow by ±5% over one year (52 rating periods)
+  /// Tuning: e.g. σ_drift should grow by ±5% over one year (12 rating periods)
   /// -> delta-v per year = ln(1.10)^2 - ln(1.05)^2.
   ///      justification: 5% initial 1SD, 10% 1SD at the end of the year. change
   ///      in variance is the difference between initial_sigma^2 and final_sigma^2.
   /// -> 0.0091 - 0.0024 = 0.0067 (variance)
-  /// -> 0.0067 / 52 = 0.000129 (variance per rating period)
+  /// -> 0.0067 / 12 = 0.000558 (variance per rating period)
   double skillDriftRate = defaultSkillDriftRate;
 
   /// The committed variance for brand-new competitors (prior width before any match).
@@ -291,7 +293,7 @@ class LatentLogSettings extends RaterSettings {
   /// The idiosyncratic per-competitor sport noise used for prediction bands,
   /// in variance units.
   ///
-  /// The full [sportVolatility] includes both common-mode match difficulty
+  /// The full [sportVariance] includes both common-mode match difficulty
   /// (conditions that affect the entire field similarly) and idiosyncratic
   /// per-competitor noise (individual stumbles, concentration lapses, lucky
   /// runs). In relative predictions (competitor's percentage of the winner),
@@ -301,13 +303,13 @@ class LatentLogSettings extends RaterSettings {
   ///
   /// This parameter controls how much sport noise enters the predictive
   /// variance. It does not affect the update rule, which continues to use
-  /// [sportVolatility].
+  /// [sportVariance].
   ///
-  /// Tuning: variance units, nonnegative, at most [sportVolatility].
+  /// Tuning: variance units, nonnegative, at most [sportVariance].
   /// -> 0: predictions use no sport noise (band reflects only rating uncertainty).
   /// -> ~0.0012: default; roughly half of σ²_sport, implying that about half
   ///    of match-to-match noise is common-mode difficulty.
-  /// -> sportVolatility: all sport noise is idiosyncratic (prediction band
+  /// -> sportVariance: all sport noise is idiosyncratic (prediction band
   ///    matches the full observation model).
   double predictionSportVariance = defaultPredictionSportVariance;
 
@@ -326,7 +328,7 @@ class LatentLogSettings extends RaterSettings {
     this.byStage = false,
     this.scaleOffset = defaultScaleOffset,
     this.scaleFactor = defaultScaleFactor,
-    this.sportVolatility = defaultSportVolatility,
+    this.sportVariance = defaultSportVariance,
     this.skillDriftRate = defaultSkillDriftRate,
     this.startingVariance = defaultStartingVariance,
     this.maximumVariance = defaultMaximumVariance,
@@ -352,7 +354,7 @@ class LatentLogSettings extends RaterSettings {
     json[_byStageKey] = byStage;
     json[_scaleOffsetKey] = scaleOffset;
     json[_scaleFactorKey] = scaleFactor;
-    json[_sportVolatilityKey] = sportVolatility;
+    json[_sportVarianceKey] = sportVariance;
     json[_skillDriftRateKey] = skillDriftRate;
     json[_startingVarianceKey] = startingVariance;
     json[_maximumVarianceKey] = maximumVariance;
@@ -378,8 +380,8 @@ class LatentLogSettings extends RaterSettings {
     byStage = (json[_byStageKey] ?? false) as bool;
     scaleOffset = (json[_scaleOffsetKey] ?? defaultScaleOffset) as double;
     scaleFactor = (json[_scaleFactorKey] ?? defaultScaleFactor) as double;
-    sportVolatility =
-        (json[_sportVolatilityKey] ?? defaultSportVolatility) as double;
+    sportVariance =
+        (json[_sportVarianceKey] ?? defaultSportVariance) as double;
     skillDriftRate =
         (json[_skillDriftRateKey] ?? defaultSkillDriftRate) as double;
     startingVariance =

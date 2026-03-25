@@ -90,7 +90,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
 
   final TextEditingController _scaleOffsetController = TextEditingController();
   final TextEditingController _scaleFactorController = TextEditingController();
-  final TextEditingController _sportVolatilityInternal =TextEditingController();
+  final TextEditingController _sportVarianceInternal =TextEditingController();
   final TextEditingController _skillDriftInternal = TextEditingController();
   final TextEditingController _startingVarianceInternal = TextEditingController();
   final TextEditingController _maximumVarianceInternal = TextEditingController();
@@ -155,7 +155,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       }
       _onScaleFactorTextChanged();
     });
-    attachNumericListener(_sportVolatilityInternal, () {
+    attachNumericListener(_sportVarianceInternal, () {
       _validateText();
     });
     attachNumericListener(_skillDriftInternal, () {
@@ -237,7 +237,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   void dispose() {
     _scaleOffsetController.dispose();
     _scaleFactorController.dispose();
-    _sportVolatilityInternal.dispose();
+    _sportVarianceInternal.dispose();
     _skillDriftInternal.dispose();
     _startingVarianceInternal.dispose();
     _maximumVarianceInternal.dispose();
@@ -262,7 +262,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _scaleOffsetController.text = settings.scaleOffset.toStringAsFixed(1);
     if(shouldSetScaleFactor) _scaleFactorController.text = settings.scaleFactor.toStringAsFixed(1);
 
-    _sportVolatilityInternal.text = settings.sportVolatility.toStringAsFixed(4);
+    _sportVarianceInternal.text = settings.sportVariance.toStringAsFixed(4);
     _skillDriftInternal.text = settings.skillDriftRate.toStringAsFixed(6);
     _startingVarianceInternal.text = settings.startingVariance.toStringAsFixed(4);
     _maximumVarianceInternal.text = settings.maximumVariance.toStringAsFixed(4);
@@ -315,7 +315,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final sportV = _parseVariance(controller: _sportVolatilityInternal);
+    final sportV = _parseVariance(controller: _sportVarianceInternal);
     if (sportV == null) {
       widget.controller.lastError = "Sport volatility formatted incorrectly";
       return;
@@ -542,7 +542,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     setState(() {
       settings.scaleOffset = scaleOffset;
       settings.scaleFactor = scaleFactor;
-      settings.sportVolatility = sportV;
+      settings.sportVariance = sportV;
       settings.skillDriftRate = drift;
       settings.startingVariance = startVar;
       settings.maximumVariance = maxVar;
@@ -571,6 +571,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     final fieldWidth = 108 * uiScaleFactor;
     final columnGap = 8 * uiScaleFactor;
     final trailingSpacerWidth = columnGap + fieldWidth;
+
+    final baselineVariance = settings.sportVariance;
 
     return SizedBox(
       width: panelWidth,
@@ -648,8 +650,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               label: "Sport volatility",
               tooltip:
                   "Irreducible variance of the sport; all ratings have this much noise in addition to their own variance.",
-              internalController: _sportVolatilityInternal,
-              scaledValue: sqrt(settings.sportVolatility) * settings.scaleFactor,
+              internalController: _sportVarianceInternal,
+              scaledValue: sqrt(settings.sportVariance) * settings.scaleFactor,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
@@ -659,9 +661,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Skill drift / period",
               tooltip:
-                  "Ratings gain roughly this much variance per week from skill drift.",
+                  "Ratings gain roughly this much variance per month from skill drift.",
               internalController: _skillDriftInternal,
-              scaledValue: (sqrt(settings.sportVolatility + settings.skillDriftRate) - sqrt(settings.sportVolatility)) * settings.scaleFactor,
+              scaledValue: (sqrt(baselineVariance + settings.skillDriftRate) - sqrt(baselineVariance)) * settings.scaleFactor,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,

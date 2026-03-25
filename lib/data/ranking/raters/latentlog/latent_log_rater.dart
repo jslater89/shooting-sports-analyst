@@ -27,7 +27,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   static const _dispersionScaleFactor = 1.0;
   static const _predictionsUseAgedRatings = true;
   /// A cap on the number of days to age a rating for predictions.
-  static const _predictionsAgeCapDays = 30;
+  static const _predictionsAgeCapDays = 90;
   static const _predictionsUseMonteCarlo = true;
   static const _predictionsMonteCarloTrials = 2000;
 
@@ -216,7 +216,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final weight =
           1.0 /
           (shooterVariance +
-              settings.sportVolatility +
+              settings.sportVariance +
               shooter.dispersion +
               tailNoise);
 
@@ -446,7 +446,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
     final totalObsNoise =
-        settings.sportVolatility +
+        settings.sportVariance +
         shooter.dispersion +
         shooterTailNoise +
         weakFieldVariance +
@@ -465,7 +465,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final kalmanGain = shooterVariance / totalNoise;
     final newRating = shooter.rating + kalmanGain * dampedInnovation;
 
-    final denoisedInnovationVariance = max(0, innovation * innovation - shooterVariance - settings.sportVolatility);
+    // Essentially the portion of the innovation not explained by shooter and sport variance.
+    final denoisedInnovationVariance = max(0, innovation * innovation - shooterVariance - settings.sportVariance);
 
     final innovationCorrection =
         settings.surpriseAdaptationRate *
@@ -508,7 +509,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final displayVarianceChange = settings.scaleFactor * (sqrt(newVariance) - sqrt(shooter.variance));
     final displayDispersionChange = settings.scaleFactor * (sqrt(newDispersion) - sqrt(shooter.dispersion));
 
-    final displayObservationNoise = settings.scaleFactor * (sqrt(totalObsNoise) - sqrt(shooter.variance));
+    final displayObservationNoise = settings.scaleFactor * (sqrt(totalObsNoise));
 
     final varianceWithoutSurprise = shooter.variance * (1 - kalmanGain);
     final displayInnovationCorrection = settings.scaleFactor * (sqrt(varianceWithoutSurprise + innovationCorrection) - sqrt(varianceWithoutSurprise));
@@ -533,7 +534,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} surprise)",
         "Dispersion ± Change: {{dispersion}}/{{dispersionChange}}",
         "Considered {{opponents}} opponents",
-        "Obs. noise: {{observationNoise}}, ",
+        "Obs. noise: {{observationNoise}}",
       ],
       infoData: [
         RatingEventInfoElement.int(
@@ -847,6 +848,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// (same weighting as [probabilityWeightedWinnerVariance]).
       double probabilityWeightedWinnerDispersion = 0.0;
 
+      double ownPresumedWinProbability = 0.0;
+
       final ratingVariance =
         matchDate != null && _predictionsUseAgedRatings ?
           rating.calculateCurrentVariance(asOfDate: matchDate) : //rating.variance :
@@ -874,6 +877,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
           // We contribute 1.0 * p_w to the ratio (i.e. we finish at exactly 100% of ourself by
           // definition)
+          ownPresumedWinProbability = presumedWinner.winProbability;
           probabilityWeightedRatio += 1.0 * presumedWinner.winProbability;
           probabilityWeightedWinnerVariance += ratingVariance * presumedWinner.winProbability;
           probabilityWeightedWinnerDispersion += rating.dispersion * presumedWinner.winProbability;
@@ -921,13 +925,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       if(probabilityWeightedRatio > 0.8) {
         _log.v("Rating: $rating");
         _log.v("Expectation/1σ:\t\t${probabilityWeightedRatio.toStringAsFixed(8)} / ${oneSigma.toStringAsFixed(8)}");
+        if(ownPresumedWinProbability > 0.0) {
+          _log.v("Own presumed p_w:\t\t${ownPresumedWinProbability.toStringAsFixed(8)}");
+        }
         _log.v("Predictive variance:\t\t${predictiveVariance.toStringAsFixed(8)}");
-        _log.v("Variance age component:\t${(ratingVariance - rating.variance).toStringAsFixed(8)}");
         _log.v("Rating variance:\t\t${ratingVariance.toStringAsFixed(8)}");
+        _log.v("Variance age component:\t${(ratingVariance - rating.variance).toStringAsFixed(8)}");
         _log.v("Prediction sport variance:\t${(2 * settings.predictionSportVariance).toStringAsFixed(8)}");
         _log.v("Weighted winner variance::\t${probabilityWeightedWinnerVariance.toStringAsFixed(8)}");
         _log.v("Weighted rating dispersion:\t${(rating.dispersion * kappa).toStringAsFixed(8)}");
         _log.v("Weighted winner dispersion:\t${(probabilityWeightedWinnerDispersion * kappa).toStringAsFixed(8)}");
+        _log.v("Kappa: \t\t\t${kappa.toStringAsFixed(2)}");
         _log.v("");
       }
 
