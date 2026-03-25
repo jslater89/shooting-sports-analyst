@@ -470,7 +470,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     final innovationCorrection =
         settings.surpriseAdaptationRate *
-        max(0.0, denoisedInnovationVariance - totalNoise);
+        max(0.0, innovation * innovation - totalNoise);
     final newVariance = min(
       settings.maximumVariance,
       shooterVariance * (1 - kalmanGain) + innovationCorrection,
