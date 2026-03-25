@@ -14,8 +14,8 @@ import 'package:shooting_sports_analyst/util.dart';
 enum _DoubleKeys {
   // rating and variance are stored in wrappedRating.rating and wrappedRating.error
 
-  /// The volatility parameter for this competitor.
-  volatility,
+  /// The dispersion parameter for this competitor.
+  dispersion,
 
   /// The current variance for this competitor, accounting for time since the last update.
   currentVariance,
@@ -42,7 +42,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     required super.date,
     required double initialRating,
     required double initialVariance,
-    required double initialVolatility,
+    required double initialDispersion,
   }) : super(
     shooter,
     intDataElements: _IntKeys.values.length,
@@ -50,7 +50,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   ) {
     this.rating = initialRating;
     this.variance = initialVariance;
-    this.volatility = initialVolatility;
+    this.dispersion = initialDispersion;
   }
 
   LatentLogSettings settings;
@@ -61,18 +61,18 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   double get displayRating => rating * settings.scaleFactor + settings.scaleOffset;
   double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
   double get displayCurrentVariance => varianceToday * settings.scaleFactor * settings.scaleFactor;
-  double get displayVolatility => volatility * settings.scaleFactor * settings.scaleFactor;
+  double get displayDispersion => dispersion * settings.scaleFactor * settings.scaleFactor;
 
   double get currentStandardDeviation => sqrt(varianceToday);
   double get displayStandardDeviation => sqrt(displayVariance);
   double get displayCurrentStandardDeviation => sqrt(displayCurrentVariance);
-  double get displayVolatilityStandardDeviation => sqrt(displayVolatility);
+  double get displayDispersionStandardDeviation => sqrt(displayDispersion);
 
   double get variance => wrappedRating.error;
   set variance(double v) => wrappedRating.error = v;
 
-  double get volatility => wrappedRating.doubleData[_DoubleKeys.volatility.index];
-  set volatility(double v) => wrappedRating.doubleData[_DoubleKeys.volatility.index] = v;
+  double get dispersion => wrappedRating.doubleData[_DoubleKeys.dispersion.index];
+  set dispersion(double v) => wrappedRating.doubleData[_DoubleKeys.dispersion.index] = v;
 
   double get varianceToday {
     if(varianceTodayTimestamp.isSameDay(DateTime.now())) {
@@ -141,7 +141,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
       e as LatentLogRatingEvent;
       rating += e.ratingChange;
       variance += e.varianceChange;
-      volatility += e.volatilityChange;
+      dispersion += e.dispersionChange;
       lengthInStages += e.stages;
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
       lastCommitTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
@@ -161,7 +161,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   }
 
   LatentLogRating.copy(LatentLogRating other) : this.settings = other.settings, super.copy(other) {
-    this.volatility = other.volatility;
+    this.dispersion = other.dispersion;
     this.varianceToday = other.varianceToday;
     this.lastCommitTimestamp = other.lastCommitTimestamp;
     this.varianceTodayTimestamp = other.varianceTodayTimestamp;
@@ -170,6 +170,6 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   @override
   String toString() {
-    return "$name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${volatility.toStringAsFixed(2)} ($hashCode)";
+    return "$name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${dispersion.toStringAsFixed(2)} ($hashCode)";
   }
 }

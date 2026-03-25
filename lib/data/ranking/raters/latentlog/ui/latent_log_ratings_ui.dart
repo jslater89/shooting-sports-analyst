@@ -40,15 +40,15 @@ extension LatentLogRatingsUi on LatentLogRater {
         Expanded(
           flex: _varianceFlex,
           child: Tooltip(
-            message: "Current rating variance (uncertainty) in display units, including drift since the last match.",
+            message: "Current rating variance (uncertainty).",
             child: Text("Variance", textAlign: TextAlign.end),
           ),
         ),
         Expanded(
           flex: _volatilityFlex,
           child: Tooltip(
-            message: "Per-competitor behavioral volatility in display units (EMA of squared innovations).",
-            child: Text("Volatility", textAlign: TextAlign.end),
+            message: "Performance dispersion: how much a competitor's rating tends to move from event to event.",
+            child: Text("Dispersion", textAlign: TextAlign.end),
           ),
         ),
         Expanded(flex: _matchesFlex, child: Text("Matches", textAlign: TextAlign.end)),
@@ -94,7 +94,7 @@ extension LatentLogRatingsUi on LatentLogRater {
             Expanded(
               flex: _volatilityFlex,
               child: Text(
-                rating.displayVolatilityStandardDeviation.toStringAsFixed(1),
+                rating.displayDispersionStandardDeviation.toStringAsFixed(1),
                 textAlign: TextAlign.end,
               ),
             ),

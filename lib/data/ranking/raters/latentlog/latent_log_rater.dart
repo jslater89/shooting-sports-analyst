@@ -24,15 +24,15 @@ final _log = SSALogger("LatentLogRater");
 /// A rating system that uses a latent log-ratio model to calculate ratings.
 class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   static const _scoreFloor = 0.01;
-  static const _volatilityScaleFactor = 1.0;
+  static const _dispersionScaleFactor = 1.0;
   static const _predictionsUseAgedRatings = true;
   static const _predictionsUseMonteCarlo = true;
   static const _predictionsMonteCarloTrials = 2000;
 
   static const oldVarianceKey = "latentLogOldVariance";
-  static const oldVolatilityKey = "latentLogOldVolatility";
+  static const oldDispersionKey = "latentLogOldDispersion";
   static const varianceChangeKey = "latentLogVarianceChange";
-  static const volatilityChangeKey = "latentLogVolatilityChange";
+  static const dispersionChangeKey = "latentLogDispersionChange";
   static const stagesKey = "latentLogStages";
 
   LatentLogRater({required this.settings});
@@ -97,9 +97,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       ratingChange: 0.0,
       oldRating: rating.rating,
       oldVariance: rating.variance,
-      oldVolatility: rating.volatility,
+      oldDispersion: rating.dispersion,
       varianceChange: 0.0,
-      volatilityChange: 0.0,
+      dispersionChange: 0.0,
       match: match,
       stage: stage,
       score: score,
@@ -130,7 +130,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       date: date,
       initialRating: initialRating,
       initialVariance: settings.startingVariance,
-      initialVolatility: sqrt((0.05 * settings.startingVariance * _volatilityScaleFactor) * settings.startingVariance * _volatilityScaleFactor),
+      initialDispersion: sqrt((0.05 * settings.startingVariance * _dispersionScaleFactor) * settings.startingVariance * _dispersionScaleFactor),
       settings: settings,
     );
   }
@@ -138,11 +138,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   @override
   String ratingsToCsv(List<ShooterRating<RatingEvent>> ratings) {
     StringBuffer csv = StringBuffer();
-    csv.writeln("Member#,Name,Rating,Variance,Volatility,Matches,Stages");
+    csv.writeln("Member#,Name,Rating,Variance,Dispersion,Matches,Stages");
     for (var r in ratings) {
       r as LatentLogRating;
       csv.writeln(
-        '${r.memberNumber},"${r.name}",${r.rating},${r.variance},${r.volatility},${r.lengthInMatches},${r.lengthInStages}',
+        '${r.memberNumber},"${r.name}",${r.rating},${r.variance},${r.dispersion},${r.lengthInMatches},${r.lengthInStages}',
       );
     }
     return csv.toString();
@@ -209,7 +209,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           1.0 /
           (shooterVariance +
               settings.sportVolatility +
-              shooter.volatility +
+              shooter.dispersion +
               tailNoise);
       competitorWeights[shooter] = weight;
       totalWeight += weight;
@@ -405,7 +405,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // treating them as known quantities.
     final totalObsNoise =
         settings.sportVolatility +
-        shooter.volatility +
+        shooter.dispersion +
         shooterTailNoise +
         (1 - pairwiseBlendWeightSquared) * baselineVariance +
         pairwiseBlendWeightSquared * localBaselineVariance +
@@ -434,27 +434,27 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       shooterVariance * (1 - kalmanGain) + innovationCorrection,
     );
 
-    final maxVolatility = settings.maximumVariance * _volatilityScaleFactor;
+    final maxVolatility = settings.maximumVariance * _dispersionScaleFactor;
 
     // 1% of starting variance (i.e., 'minimal')—we don't want to use 1% of maximum
     // because maximum may be very liberal, and we want this to be more like
     // an epsilon than a meaningful limit.
-    final minVolatility = 0.01 * settings.startingVariance * _volatilityScaleFactor;
+    final minVolatility = 0.01 * settings.startingVariance * _dispersionScaleFactor;
 
     // Clamp observations to 3SD
     final maxInstantaneousVariance = max(
-      9.0 * shooter.volatility,
+      9.0 * shooter.dispersion,
       minVolatility
     );
 
-    final clampedInstantaneousVariance = newVariance.clamp(minVolatility, maxInstantaneousVariance);
+    final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minVolatility, maxInstantaneousVariance);
 
     final certainty =
         1.0 - (shooterVariance / settings.maximumVariance).clamp(0.0, 1.0);
-    final effectiveAdaptationRate = settings.volatilityAdaptationRate * max(0.25, certainty);
+    final effectiveAdaptationRate = settings.dispersionAdaptationRate * max(0.25, certainty);
     final newVolatility =
-        (shooter.volatility * (1 - effectiveAdaptationRate) +
-        effectiveAdaptationRate * clampedInstantaneousVariance * _volatilityScaleFactor)
+        (shooter.dispersion * (1 - effectiveAdaptationRate) +
+        effectiveAdaptationRate * clampedInstantaneousVariance * _dispersionScaleFactor)
         .clamp(
           minVolatility,
           maxVolatility,
@@ -463,9 +463,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // Change is relative to the _committed_ variance, not the calculated current
     // variance-with-aging.
     final varianceChange = newVariance - shooter.variance;
-    final volatilityChange = newVolatility - shooter.volatility;
+    final dispersionChange = newVolatility - shooter.dispersion;
     final displayVarianceChange = settings.scaleFactor * (sqrt(newVariance) - sqrt(shooter.variance));
-    final displayVolatilityChange = settings.scaleFactor * (sqrt(newVolatility) - sqrt(shooter.volatility));
+    final displayDispersionChange = settings.scaleFactor * (sqrt(newVolatility) - sqrt(shooter.dispersion));
 
     final varianceWithoutSurprise = shooter.variance * (1 - kalmanGain);
     final displayInnovationCorrection = settings.scaleFactor * (sqrt(varianceWithoutSurprise + innovationCorrection) - sqrt(varianceWithoutSurprise));
@@ -479,16 +479,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         // varianceChange so oldVariance + varianceChange is the new committed
         // variance on the event (charts / history).
         LatentLogRater.oldVarianceKey: shooter.variance,
-        LatentLogRater.oldVolatilityKey: shooter.volatility,
+        LatentLogRater.oldDispersionKey: shooter.dispersion,
         LatentLogRater.varianceChangeKey: varianceChange,
-        LatentLogRater.volatilityChangeKey: volatilityChange,
+        LatentLogRater.dispersionChangeKey: dispersionChange,
         LatentLogRater.stagesKey: stagesForEvent,
       },
       infoLines: [
         "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
         "Rating ± Change: {{rating}}/{{change}}",
         "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} surprise)",
-        "Volatility ± Change: {{volatility}}/{{volatilityChange}}",
+        "Dispersion ± Change: {{dispersion}}/{{dispersionChange}}",
         "Considered {{opponents}} opponents",
       ],
       infoData: [
@@ -531,13 +531,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
-          name: "volatility",
+          name: "dispersion",
           doubleValue: sqrt(newVolatility) * settings.scaleFactor,
           numberFormat: "%00.1f",
         ),
         RatingEventInfoElement.double(
-          name: "volatilityChange",
-          doubleValue: displayVolatilityChange,
+          name: "dispersionChange",
+          doubleValue: displayDispersionChange,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.int(
@@ -814,13 +814,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           // definition)
           probabilityWeightedRatio += 1.0 * presumedWinner.winProbability;
           probabilityWeightedWinnerVariance += ratingVariance * presumedWinner.winProbability;
-          probabilityWeightedWinnerVolatility += rating.volatility * presumedWinner.winProbability;
+          probabilityWeightedWinnerVolatility += rating.dispersion * presumedWinner.winProbability;
           continue;
         }
 
         final winnerDrawStdDev = sqrt(
           presumedWinner.shooter.variance +
-          settings.predictionBehavioralVolatilityKappa * presumedWinner.shooter.volatility +
+          settings.predictionBehavioralDispersionKappa * presumedWinner.shooter.dispersion +
           2 * settings.predictionSportVariance
         );
         final effectiveWinnerRating = presumedWinner.shooter.rating + winnerDrawStdDev * eMax;
@@ -843,15 +843,15 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         probabilityWeightedRatio += weightedRatio;
         probabilityWeightedWinnerVariance += winnerVariance * winProbability;
         probabilityWeightedWinnerVolatility +=
-            presumedWinner.shooter.volatility * winProbability;
+            presumedWinner.shooter.dispersion * winProbability;
       }
 
-      final kappa = settings.predictionBehavioralVolatilityKappa;
+      final kappa = settings.predictionBehavioralDispersionKappa;
       final predictiveVariance =
         ratingVariance
         + 2 * settings.predictionSportVariance
         + probabilityWeightedWinnerVariance
-        + (rating.volatility + probabilityWeightedWinnerVolatility) * kappa;
+        + (rating.dispersion + probabilityWeightedWinnerVolatility) * kappa;
 
       final geometricSD = exp(sqrt(predictiveVariance));
       final oneSigmaUpper = probabilityWeightedRatio * geometricSD;

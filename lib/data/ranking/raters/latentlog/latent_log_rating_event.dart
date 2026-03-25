@@ -14,9 +14,9 @@ enum _IntKeys {
 
 enum _DoubleKeys {
   oldVariance,
-  oldVolatility,
+  oldDispersion,
   varianceChange,
-  volatilityChange,
+  dispersionChange,
 }
 
 class LatentLogRatingEvent extends RatingEvent {
@@ -32,9 +32,9 @@ class LatentLogRatingEvent extends RatingEvent {
     required double ratingChange,
     required double oldRating,
     required double oldVariance,
-    required double oldVolatility,
+    required double oldDispersion,
     required double varianceChange,
-    required double volatilityChange,
+    required double dispersionChange,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: ratingChange,
     oldRating: oldRating,
@@ -51,29 +51,29 @@ class LatentLogRatingEvent extends RatingEvent {
   )) {
     this.oldRating = oldRating;
     this.oldVariance = oldVariance;
-    this.oldVolatility = oldVolatility;
+    this.oldDispersion = oldDispersion;
     this.varianceChange = varianceChange;
-    this.volatilityChange = volatilityChange;
+    this.dispersionChange = dispersionChange;
     wrappedEvent.setMatchId(match.sourceIds.first, load: false);
   }
 
   double get oldVariance => wrappedEvent.doubleData[_DoubleKeys.oldVariance.index];
   set oldVariance(double v) => wrappedEvent.doubleData[_DoubleKeys.oldVariance.index] = v;
 
-  double get oldVolatility => wrappedEvent.doubleData[_DoubleKeys.oldVolatility.index];
-  set oldVolatility(double v) => wrappedEvent.doubleData[_DoubleKeys.oldVolatility.index] = v;
+  double get oldDispersion => wrappedEvent.doubleData[_DoubleKeys.oldDispersion.index];
+  set oldDispersion(double v) => wrappedEvent.doubleData[_DoubleKeys.oldDispersion.index] = v;
 
   double get varianceChange => wrappedEvent.doubleData[_DoubleKeys.varianceChange.index];
   set varianceChange(double v) => wrappedEvent.doubleData[_DoubleKeys.varianceChange.index] = v;
 
-  double get volatilityChange => wrappedEvent.doubleData[_DoubleKeys.volatilityChange.index];
-  set volatilityChange(double v) => wrappedEvent.doubleData[_DoubleKeys.volatilityChange.index] = v;
+  double get dispersionChange => wrappedEvent.doubleData[_DoubleKeys.dispersionChange.index];
+  set dispersionChange(double v) => wrappedEvent.doubleData[_DoubleKeys.dispersionChange.index] = v;
 
   LatentLogSettings settings;
 
   double get newRating => oldRating + ratingChange;
   double get newVariance => oldVariance + varianceChange;
-  double get newVolatility => oldVolatility + volatilityChange;
+  double get newDispersion => oldDispersion + dispersionChange;
 
   double get oldDisplayRating => oldRating * settings.scaleFactor + settings.scaleOffset;
   double get newDisplayRating => newRating * settings.scaleFactor + settings.scaleOffset;
@@ -81,8 +81,8 @@ class LatentLogRatingEvent extends RatingEvent {
   double get oldDisplayVariance => oldVariance * settings.scaleFactor;
   double get newDisplayVariance => newVariance * settings.scaleFactor;
 
-  double get oldDisplayVolatility => oldVolatility * settings.scaleFactor;
-  double get newDisplayVolatility => newVolatility * settings.scaleFactor;
+  double get oldDisplayDispersion => oldDispersion * settings.scaleFactor;
+  double get newDisplayDispersion => newDispersion * settings.scaleFactor;
 
   int get stages => wrappedEvent.intData[_IntKeys.stages.index];
   set stages(int v) => wrappedEvent.intData[_IntKeys.stages.index] = v;
@@ -96,9 +96,9 @@ class LatentLogRatingEvent extends RatingEvent {
   void apply(RatingChange change) {
     // LatentLog-specific keys
     oldVariance = change.change[LatentLogRater.oldVarianceKey]!;
-    oldVolatility = change.change[LatentLogRater.oldVolatilityKey]!;
+    oldDispersion = change.change[LatentLogRater.oldDispersionKey]!;
     varianceChange = change.change[LatentLogRater.varianceChangeKey]!;
-    volatilityChange = change.change[LatentLogRater.volatilityChangeKey]!;
+    dispersionChange = change.change[LatentLogRater.dispersionChangeKey]!;
     stages = change.change[LatentLogRater.stagesKey]!.round();
 
     // Base class keys — [RatingSystem.ratingKey] is the new absolute internal rating.

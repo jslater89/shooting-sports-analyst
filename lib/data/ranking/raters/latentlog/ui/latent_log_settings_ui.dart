@@ -98,7 +98,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _predictionSportInternal = TextEditingController();
   final TextEditingController _predictionBehavioralKappaController =
       TextEditingController();
-  final TextEditingController _volatilityAdaptController = TextEditingController();
+  final TextEditingController _dispersionAdaptController = TextEditingController();
   final TextEditingController _surpriseAdaptController = TextEditingController();
   final TextEditingController _pairwiseBlendController = TextEditingController();
   final TextEditingController _baselineRobustnessZController = TextEditingController();
@@ -175,7 +175,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     attachNumericListener(_predictionBehavioralKappaController, () {
       _validateText();
     });
-    attachNumericListener(_volatilityAdaptController, () {
+    attachNumericListener(_dispersionAdaptController, () {
       if (!widget.controller._restoreDefaults) {
         _validateText();
       }
@@ -238,7 +238,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _matchDifficultyInternal.dispose();
     _predictionSportInternal.dispose();
     _predictionBehavioralKappaController.dispose();
-    _volatilityAdaptController.dispose();
+    _dispersionAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
     _baselineRobustnessZController.dispose();
@@ -262,8 +262,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _matchDifficultyInternal.text = settings.matchDifficultyVariance.toStringAsFixed(4);
     _predictionSportInternal.text = settings.predictionSportVariance.toStringAsFixed(5);
     _predictionBehavioralKappaController.text =
-        settings.predictionBehavioralVolatilityKappa.toStringAsFixed(3);
-    _volatilityAdaptController.text = settings.volatilityAdaptationRate.toStringAsFixed(4);
+        settings.predictionBehavioralDispersionKappa.toStringAsFixed(3);
+    _dispersionAdaptController.text = settings.dispersionAdaptationRate.toStringAsFixed(4);
     _surpriseAdaptController.text = settings.surpriseAdaptationRate.toStringAsFixed(4);
 
     _pairwiseBlendController.text = settings.pairwiseBlendWeight.toStringAsFixed(4);
@@ -352,15 +352,15 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final volAdapt = double.tryParse(_volatilityAdaptController.text);
+    final volAdapt = double.tryParse(_dispersionAdaptController.text);
     if (volAdapt == null) {
       widget.controller.lastError =
-          "Volatility adaptation rate formatted incorrectly";
+          "Dispersion adaptation rate formatted incorrectly";
       return;
     }
     if (volAdapt <= 0 || volAdapt >= 1) {
       widget.controller.lastError =
-          "Volatility adaptation rate must be between 0 and 1";
+          "Dispersion adaptation rate must be between 0 and 1";
       return;
     }
 
@@ -524,7 +524,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.skillDriftRate = drift;
       settings.startingVariance = startVar;
       settings.maximumVariance = maxVar;
-      settings.volatilityAdaptationRate = volAdapt;
+      settings.dispersionAdaptationRate = volAdapt;
       settings.surpriseAdaptationRate = surp;
       settings.pairwiseBlendWeight = pairwise;
       settings.matchDifficultyVariance = matchDiff;
@@ -536,7 +536,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.weakFieldWeakFinishThreshold = weakFieldWeakFinishThreshold;
       settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
       settings.predictionSportVariance = predSport;
-      settings.predictionBehavioralVolatilityKappa = predKappa;
+      settings.predictionBehavioralDispersionKappa = predKappa;
     });
 
     widget.controller.lastError = null;
@@ -663,11 +663,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
             _LatentLogVarianceRow(
-              label: "Volatility adaptation β",
+              label: "Dispersion adaptation β",
               tooltip:
                   "Dimensionless β in (0, 1): EMA weight for per-competitor volatility updates. Scaled value is approximate number of rating events included.",
-              internalController: _volatilityAdaptController,
-              scaledValue: (1 / settings.volatilityAdaptationRate),
+              internalController: _dispersionAdaptController,
+              scaledValue: (1 / settings.dispersionAdaptationRate),
               scaledValuePrecision: 1,
               fieldWidth: fieldWidth,
               columnGap: columnGap,

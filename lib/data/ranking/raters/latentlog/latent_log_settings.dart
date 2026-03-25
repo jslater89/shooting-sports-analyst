@@ -9,7 +9,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultSkillDriftRate = 0.000016;
   static const defaultStartingVariance = 0.0108;
   static const defaultMaximumVariance = 0.0216;
-  static const defaultVolatilityAdaptationRate = 0.25;
+  static const defaultDispersionAdaptationRate = 0.25;
   static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
   static const defaultMatchDifficultyVariance = 0.10;
@@ -21,7 +21,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
   static const defaultPredictionSportVariance = 0.0002;
-  static const defaultPredictionBehavioralVolatilityKappa = 0.5;
+  static const defaultPredictionBehavioralDispersionKappa = 0.25;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
@@ -30,7 +30,7 @@ class LatentLogSettings extends RaterSettings {
   static const _skillDriftRateKey = "latentLogSkillDriftRate";
   static const _startingVarianceKey = "latentLogStartingVariance";
   static const _maximumVarianceKey = "latentLogMaximumVariance";
-  static const _volatilityAdaptationRateKey =
+  static const _dispersionAdaptationRateKey =
       "latentLogVolatilityAdaptationRate";
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
@@ -46,7 +46,7 @@ class LatentLogSettings extends RaterSettings {
       "latentLogWeakFieldWeakFractionThreshold";
   static const _predictionSportVarianceKey =
       "latentLogPredictionSportVariance";
-  static const _predictionBehavioralVolatilityKappaKey =
+  static const _predictionBehavioralDispersionKappaKey =
       "latentLogPredictionBehavioralVolatilityKappa";
 
   /// Whether to calculate ratings by stage (true) or by match (false).
@@ -122,7 +122,7 @@ class LatentLogSettings extends RaterSettings {
   /// -> 0.05: very stable σ_i^2, slow to reflect a real change in consistency.
   /// -> 0.10: default; moderate memory (~order of 10 events, very loosely).
   /// -> 0.15--0.20: responsive; use if σ_i^2 feels sluggish vs validation.
-  double volatilityAdaptationRate = defaultVolatilityAdaptationRate;
+  double dispersionAdaptationRate = defaultDispersionAdaptationRate;
 
   /// The surprise adaptation rate, i.e. γ from the paper.
   ///
@@ -306,8 +306,8 @@ class LatentLogSettings extends RaterSettings {
   /// bands that ignore behavioral volatility.
   ///
   /// Tuning: dimensionless, nonnegative; typical range 0 to 1.
-  double predictionBehavioralVolatilityKappa =
-      defaultPredictionBehavioralVolatilityKappa;
+  double predictionBehavioralDispersionKappa =
+      defaultPredictionBehavioralDispersionKappa;
 
   LatentLogSettings({
     this.byStage = false,
@@ -317,7 +317,7 @@ class LatentLogSettings extends RaterSettings {
     this.skillDriftRate = defaultSkillDriftRate,
     this.startingVariance = defaultStartingVariance,
     this.maximumVariance = defaultMaximumVariance,
-    this.volatilityAdaptationRate = defaultVolatilityAdaptationRate,
+    this.dispersionAdaptationRate = defaultDispersionAdaptationRate,
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
     this.baselineRobustnessZ = defaultBaselineRobustnessZ,
@@ -329,8 +329,8 @@ class LatentLogSettings extends RaterSettings {
     this.weakFieldWeakFractionThreshold = defaultWeakFieldWeakFractionThreshold,
     this.matchDifficultyVariance = defaultMatchDifficultyVariance,
     this.predictionSportVariance = defaultPredictionSportVariance,
-    this.predictionBehavioralVolatilityKappa =
-        defaultPredictionBehavioralVolatilityKappa,
+    this.predictionBehavioralDispersionKappa =
+        defaultPredictionBehavioralDispersionKappa,
   });
 
   @override
@@ -342,7 +342,7 @@ class LatentLogSettings extends RaterSettings {
     json[_skillDriftRateKey] = skillDriftRate;
     json[_startingVarianceKey] = startingVariance;
     json[_maximumVarianceKey] = maximumVariance;
-    json[_volatilityAdaptationRateKey] = volatilityAdaptationRate;
+    json[_dispersionAdaptationRateKey] = dispersionAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
     json[_baselineRobustnessZKey] = baselineRobustnessZ;
@@ -354,8 +354,8 @@ class LatentLogSettings extends RaterSettings {
     json[_weakFieldWeakFractionThresholdKey] = weakFieldWeakFractionThreshold;
     json[_matchDifficultyVarianceKey] = matchDifficultyVariance;
     json[_predictionSportVarianceKey] = predictionSportVariance;
-    json[_predictionBehavioralVolatilityKappaKey] =
-        predictionBehavioralVolatilityKappa;
+    json[_predictionBehavioralDispersionKappaKey] =
+        predictionBehavioralDispersionKappa;
   }
 
   @override
@@ -376,8 +376,8 @@ class LatentLogSettings extends RaterSettings {
     if (maximumVariance < startingVariance) {
       maximumVariance = startingVariance;
     }
-    volatilityAdaptationRate =
-        (json[_volatilityAdaptationRateKey] ?? defaultVolatilityAdaptationRate)
+    dispersionAdaptationRate =
+        (json[_dispersionAdaptationRateKey] ?? defaultDispersionAdaptationRate)
             as double;
     surpriseAdaptationRate =
         (json[_surpriseAdaptationRateKey] ?? defaultSurpriseAdaptationRate)
@@ -409,9 +409,9 @@ class LatentLogSettings extends RaterSettings {
     predictionSportVariance =
         (json[_predictionSportVarianceKey] ?? defaultPredictionSportVariance)
             as double;
-    predictionBehavioralVolatilityKappa =
-        (json[_predictionBehavioralVolatilityKappaKey] ??
-                defaultPredictionBehavioralVolatilityKappa)
+    predictionBehavioralDispersionKappa =
+        (json[_predictionBehavioralDispersionKappaKey] ??
+                defaultPredictionBehavioralDispersionKappa)
             as double;
   }
 }
