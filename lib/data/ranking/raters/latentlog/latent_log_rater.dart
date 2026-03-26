@@ -475,9 +475,14 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final kalmanGain = shooterVariance / totalNoise;
     final newRating = shooter.rating + kalmanGain * dampedInnovation;
 
+    // Momentum is a signed EMA over innovation.
+    final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
+    final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
+        effectiveMomentumAdaptationRate * innovation;
+
     // Use the stronger of surprise or momentum to add to variance.
     final surpriseCorrection = (innovation * innovation) - totalNoise;
-    final momentumCorrection = (shooter.momentum * shooter.momentum) / settings.momentumAdaptationRate;
+    final momentumCorrection = (newMomentum * newMomentum) / settings.momentumAdaptationRate;
     final strongerCorrection = max(surpriseCorrection, momentumCorrection);
 
     final innovationCorrection =
@@ -503,7 +508,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // Aleatoric noise (dispersion) is the portion of innovation not explained by:
     // 1. variance.
-    final denoisedInnovationVariance = max(0, pow(innovation - shooter.momentum, 2) - shooterVariance - settings.sportVariance);
+    // 2. inherent sport noise.
+    // and 3. an ongoing trend as tracked by momentum.
+    final denoisedInnovationVariance = max(0, pow(innovation - newMomentum, 2) - shooterVariance - settings.sportVariance);
     final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minimumDispersion, maxInstantaneousVariance);
 
     final effectiveDispersionAdaptationRate = settings.dispersionAdaptationRate * max(0.25, dispersionCertainty);
@@ -515,10 +522,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           maximumDispersion,
         );
 
-    // Momentum is a signed EMA over innovation.
-    final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
-    final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
-        effectiveMomentumAdaptationRate * innovation;
 
     // Change is relative to the _committed_ variance, not the calculated current
     // variance-with-aging.
@@ -1022,9 +1025,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           continue;
         }
 
+
+        final winnerVariance =
+          matchDate != null && _predictionsUseAgedRatings ?
+            presumedWinner.shooter.calculateCurrentVariance(asOfDate: matchDate) :
+            presumedWinner.shooter.variance;
+
+        final winnerCertainty = 1.0 - (winnerVariance / settings.maximumVariance).clamp(0.0, 1.0);
+
         final winnerDrawStdDev = sqrt(
-          presumedWinner.shooter.variance +
-          kappa * presumedWinner.shooter.dispersion +
+          winnerVariance +
+          kappa * winnerCertainty * presumedWinner.shooter.dispersion +
           settings.predictionSportVariance
         );
         final effectiveWinnerRating = presumedWinner.shooter.rating + winnerDrawStdDev * eMax;
@@ -1032,11 +1043,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final logDifference = rating.rating - effectiveWinnerRating;
         probabilityWeightedLogDifference += logDifference * winProbability;
         probabilityWeightedLogDifferences.add((pW: winProbability, muIW: logDifference));
-
-        final winnerVariance =
-          matchDate != null && _predictionsUseAgedRatings ?
-            presumedWinner.shooter.calculateCurrentVariance(asOfDate: matchDate) :
-            presumedWinner.shooter.variance;
 
         final pairwiseVariance = winnerVariance + ratingVariance + 2 * settings.predictionSportVariance;
 
@@ -1049,7 +1055,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         probabilityWeightedRatio += weightedRatio;
         probabilityWeightedWinnerVariance += winnerVariance * winProbability;
         probabilityWeightedWinnerDispersion +=
-            presumedWinner.shooter.dispersion * winProbability;
+            winnerCertainty * presumedWinner.shooter.dispersion * winProbability;
       }
 
       double betweenComponentVariance = ownPresumedWinProbability * probabilityWeightedLogDifference * probabilityWeightedLogDifference;
@@ -1058,11 +1064,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       }
 
       final notWinnerProbability = 1.0 - ownPresumedWinProbability;
+      final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);
       final withinComponentVariance =
         notWinnerProbability * (
           ratingVariance +
           2 * settings.predictionSportVariance
-          + (rating.dispersion * kappa)
+          + (ownCertainty * rating.dispersion * kappa)
         )
         + probabilityWeightedWinnerVariance
         + probabilityWeightedWinnerDispersion * kappa;

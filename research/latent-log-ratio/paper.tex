@@ -81,6 +81,7 @@
 		\item \textbf{$R_i$ (Rating):} The expected mean of their natural log performance. An average baseline competitor can be anchored at 0.
 		\item \textbf{$V_i$ (Variance):} The epistemic uncertainty in a rating: ``how big is the distribution of the possible underlying skill variable around the rating?'' High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.
 		\item \textbf{$\sigma_i^2$ (Performance Dispersion):} The aleatoric uncertainty in a rating: ``how much does a competitor's performance naturally vary from event to event?'' Tracks whether a competitor is consistent (i.e., sees generally small rating updates) or prone to large swings (sees large ones).
+		\item \textbf{$m_i$ (Innovation Momentum):} An exponential moving average of recent prediction errors. Used to distinguish directional skill trends (breakouts or collapses) from zero-mean aleatoric scatter.
 	\end{itemize}
 	
 	\subsection{System Parameters}
@@ -100,6 +101,7 @@
 		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} The fraction of epistemic variance assumed to be shared demographically by unrated or high-variance competitors at the same match. Prevents certainty collapse (the ``Day 1'' rating explosion) in fields with little history by explicitly bounding the baseline variance to a cohort asymptote.
 		\item \textbf{$\beta$ (Dispersion Adaptation Rate):} Base rate for the performance dispersion EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
 		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
+		\item \textbf{$\lambda$ (Momentum Decay Rate):} The base ratefor the innovation momentum tracker.
 		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
 	\end{itemize}
 	
@@ -194,11 +196,16 @@
 	\begin{equation}
 		e_i = O_i - R_i
 	\end{equation}
-	Because $B_{-i}$ and $B_{local}$ are estimates, not perfectly known quantities, we must explicitly propagate their estimation variance. By formalizing the cohort covariance inside the baseline variances in Steps 3 and 4, the structural uncertainty of the field is already correctly captured; no arbitrary field-level penalty is required.
 	
-	The total effective observation variance is simply the sum of the fundamental measurement noise and the structural estimation variances:
+	To prevent a highly uncertain competitor from being artificially shielded from updates by their own behavioral dispersion, we strictly subordinate aleatoric throttling to epistemic certainty. We define a certainty factor $c_i \in [0,1]$ and an effective discounted dispersion $\tilde{\sigma}_i^2$:
 	\begin{equation}
-		R_{\mathrm{obs},i} = \sigma_{\mathrm{sport}}^2 + \sigma_i^2 + (1 - \alpha_i^2)\cdot\mathrm{Var}(B_{-i}) + \alpha_i^2 \cdot \mathrm{Var}(B_{local})
+		c_i = 1 - \min\!\left(1,\frac{V_i^{\mathrm{age}}}{V_{\max}}\right), \qquad \tilde{\sigma}_i^2 = \sigma_i^2 \cdot c_i
+	\end{equation}
+	For an established veteran, $c_i \approx 1.0$ and their full behavioral dispersion is respected. For a new or highly uncertain competitor, $c_i$ approaches $0$, ensuring the filter remains fluid.
+	
+	Because $B_{-i}$ and $B_{local}$ are estimates, we explicitly propagate their estimation variance. The total effective observation variance is the sum of fundamental measurement noise, effective dispersion, and structural estimation variance:
+	\begin{equation}
+		R_{\mathrm{obs},i} = \sigma_{\mathrm{sport}}^2 + \tilde{\sigma}_i^2 + (1 - \alpha_i^2)\cdot\mathrm{Var}(B_{-i}) + \alpha_i^2 \cdot \mathrm{Var}(B_{local})
 	\end{equation}
 	
 	Define the total system variance against which the innovation is judged, and construct the standard Kalman gain:
@@ -206,8 +213,7 @@
 		T_i = V_i^{\mathrm{age}} + R_{\mathrm{obs},i}, \qquad K_i = \frac{V_i^{\mathrm{age}}}{T_i}
 	\end{equation}
 	
-	Note that $B_{-i}$ and $B_{local}$ are not strictly independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field used for $B_{-i}$, and because both are subject to the same latent cohort bias, a known property of weighted means dictates that their covariance is exactly the variance of the global mean:
-	
+	Note that $B_{-i}$ and $B_{local}$ are not independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field used for $B_{-i}$, a known property of subset means dictates that their covariance is exactly the variance of the global mean. Crucially, this identity remains mathematically exact even under the uniform off-diagonal covariance introduced by the latent cohort bias $\rho$:
 	\begin{equation}
 		\mathrm{Cov}(B_{-i},B_{local}) = \mathrm{Var}(B_{-i})
 	\end{equation}
@@ -234,33 +240,37 @@
 		R_i \leftarrow R_i + K_i \cdot e_i
 	\end{equation}
 	
-	\textbf{Step 8: Update Committed Variance (Surprise Adaptation)}\\
-	To avoid the monotonic collapse of $V_i$ common in basic Kalman filters, the variance update uses the raw innovation $e_i$. We compare the squared innovation directly to the total predicted innovation variance $T_i$:
+	\textbf{Step 8: Update Momentum and Committed Variance (Surprise Adaptation)}\\
+	To avoid the monotonic collapse of $V_i$ common in basic Kalman filters, the model monitors for structural breaks in skill. First, update the competitor's innovation momentum:
 	\begin{equation}
-		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(0,\; e_i^2 - T_i\right)\right)
+		m_i \leftarrow (1 - \lambda) m_i + \lambda e_i
 	\end{equation}
-	When $e_i^2 \le T_i$, the correction vanishes and $V_i$ shrinks via standard posterior geometry. When $e_i^2 > T_i$, the observation falls outside the model's total expected uncertainty, and extra epistemic variance is injected to allow the rating to rapidly adapt to a latent skill change. Because $T_i$ includes the competitor's performance dispersion $\sigma_i^2$, highly erratic competitors inherently generate wider $T_i$ bounds, meaning the same raw error $e_i$ is appropriately less likely to register as a structural ``surprise.''
+	
+	We then evaluate the system for a variance surprise using a dual-threshold checking both catastrophic single-event shock and persistent directional momentum. The rating variance adapts according to:
+	\begin{equation}
+		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(0,\; e_i^2 - T_i,\; \frac{m_i^2}{\lambda} - T_i \right)\right)
+	\end{equation}
+	When the squared error $e_i^2$ or the scaled momentum exceeds the model's expected uncertainty $T_i$, extra epistemic variance is injected. By tracking momentum, the system recognizes that a string of moderate, unidirectional errors (which individually fail to breach $T_i$) is statistically impossible under a collapsed $V_i$, shattering the variance floor and restoring high Kalman gains to track rapid skill breakouts.
 	
 	\textbf{Step 9: Update Performance Dispersion}\\
-	Behavioral dispersion $\sigma_i^2$ tracks how much a competitor's performance naturally varies. Define floor and ceiling bounds:
+	Behavioral dispersion tracks the zero-mean scatter of a competitor's performance. Define floor and ceiling bounds:
 	\begin{equation}
-		\sigma_{i,\mathrm{lo}}^2 = 0.01\, V_{\mathrm{start}}, \qquad \sigma_{i,\mathrm{hi}}^2 = V_{\max}
+		\sigma_{i,\mathrm{lo}}^2 = 0.001\, V_{\mathrm{start}}, \qquad \sigma_{i,\mathrm{hi}}^2 = V_{\max}
 	\end{equation}
-	To isolate the behavioral component of the error, we form a sport-stripped squared residual ($E_i$) by subtracting the expected epistemic uncertainty and the irreducible sport noise from the raw squared innovation:
+	To isolate true erratic execution from underlying skill trends, we calculate the trend-adjusted squared residual by subtracting the momentum $m_i$ from the raw innovation $e_i$:
 	\begin{equation}
-		E_i = \max\!\left(0,\; e_i^2 - V_i^{\mathrm{age}} - \sigma_{\mathrm{sport}}^2\right)
+		E_i = \max\!\left(0,\; (e_i - m_i)^2 - V_i^{\mathrm{age}} - \sigma_{\mathrm{sport}}^2\right)
 	\end{equation}
-	We form an instantaneous target that represents the competitor's realized behavioral variance for the current observation, bounding it to prevent extreme single-event destabilization:
+	This crucial substitution prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
+	
+	We form an instantaneous target representing the realized behavioral variance for the current observation:
 	\begin{equation}
 		q_i = \mathrm{clamp}\left(E_i,\; \sigma_{i,\mathrm{lo}}^2,\; 9\,\sigma_i^2\right)
 	\end{equation}
-	Define an update certainty $c_i \in [0,1]$ from the prior epistemic variance, reducing dispersion gain for competitors whose variance is already high:
+	Re-using the certainty factor $c_i$ defined in Step 6, we construct an effective EMA rate $\beta_i^{\mathrm{eff}}$ to inhibit dispersion growth for unrated or long-inactive competitors:
 	\begin{equation}
-		c_i = 1 - \min\!\left(1,\frac{V_i^{\mathrm{age}}}{V_{\max}}\right), \qquad \beta_i^{\mathrm{eff}} = \beta \cdot \max\!\left(0.25,\; c_i\right)
+		\beta_i^{\mathrm{eff}} = \beta \cdot \max\!\left(0.25,\; c_i\right)
 	\end{equation}
-	
-	The use of aged variance $V_i^{\mathrm{age}}$ in $c_i$ inhibits dispersion growth for long-inactive competitors. If a competitor returns after a long absence, high innovation is safely absorbed by the epistemic variance via the surprise adaptation in Step 8. This prevents potentially erroneous growth in performance dispersion, naturally loosening the Kalman filter to allow the latent rating to move freely in the event that the competitor's true skill has changed during the period of inactivity.
-	
 	Apply the certainty-scaled exponential moving average:
 	\begin{equation}
 		\sigma_i^2 \leftarrow \mathrm{clamp}\!\left((1 - \beta_i^{\mathrm{eff}})\,\sigma_i^2 + \beta_i^{\mathrm{eff}}\, q_i,\; \sigma_{i,\mathrm{lo}}^2,\; \sigma_{i,\mathrm{hi}}^2\right)
@@ -408,7 +418,7 @@
 	\end{equation}
 	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. The presumed winner's rating is then shifted upward by this extreme-value expectation scaled by their total pool dispersion:
 	\begin{equation}
-		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + (\kappa \cdot \sigma_w^2) + \sigma_{\mathrm{pred}}^2}
+		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
 	\end{equation}
 	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), $\Delta_w$ gracefully vanishes to zero, preserving unbiased predictions.
 	
@@ -427,15 +437,31 @@
 	The isolated $p_i$ term handles the mixture branch where $i$ is the presumed winner, yielding a ratio of exactly 1.0. For all other candidate winners, this formulation safely resolves the winner's curse bias in large fields while strictly obeying the $100\%$ scaling maximum.
 	
 	\subsection{Predictive Variance and Confidence Intervals}
-	To generate predictive confidence intervals, we first calculate the total log-space predictive variance. Predictive variance in log space is:
-	\begin{equation}
-		\varsigma_i^2 = \left(1 - p_i\right)\Big(V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \kappa\sigma_i^2\Big) + \sum_{w \neq i} p_w \left(V_w^{\mathrm{age}} + \kappa\sigma_w^2\right)
-	\end{equation}
-	The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic noise for both the focal competitor and the uncertain winner in the ratio. The parameter $\kappa \in [0,1]$ allows the system designer to tune how much of a competitor's inherent performance dispersion ($\sigma_i^2$) is projected into their published predictive interval. 
+	To generate predictive confidence intervals, we calculate the total log-space predictive variance using the Law of Total Variance over the mixture distribution of possible winners. The total variance is the sum of the average predictive uncertainty assuming the winner is known (Within-Component) and the variance introduced by the uncertainty of who wins (Between-Component).
 	
-	Because the rating system operates in log space, confidence intervals in ratio space are fundamentally multiplicative. We define the geometric standard deviation as:
+	The Within-Component variance evaluates the pairwise uncertainty against the presumed winner. The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic noise for both the focal competitor and the uncertain winner. The parameter $\kappa \in [0,1]$ scales the projection of the certainty-discounted behavioral dispersion ($\tilde{\sigma}^2$):
 	\begin{equation}
-		\mathrm{GSD}_i = \exp\!\left(\sqrt{\varsigma_i^2}\right)
+		\varsigma_{i,\mathrm{within}}^2 = \left(1 - p_i\right)\Big(V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \kappa\tilde{\sigma}_i^2\Big) + \sum_{w \neq i} p_w \left(V_w^{\mathrm{age}} + \kappa\tilde{\sigma}_w^2\right)
+	\end{equation}
+	
+	Because the focal competitor's expected score shifts depending on which universe occurs, we must calculate the Between-Component variance. We first establish the unconditional expected log-score (Grand Mean) across all universes:
+	\begin{equation}
+		\bar{L}_i = \sum_{w \neq i} p_w \tilde{\mu}_{iw}
+	\end{equation}
+	
+	The Between-Component variance is the probability-weighted variance of the conditional means around this Grand Mean. In the specific universe where competitor $i$ wins, their conditional log-score is exactly $0$. The sum is therefore:
+	\begin{equation}
+		\varsigma_{i,\mathrm{between}}^2 = p_i (\bar{L}_i^2) + \sum_{w \neq i} p_w (\tilde{\mu}_{iw} - \bar{L}_i)^2
+	\end{equation}
+	
+	The total predictive variance in log space is the sum of both components:
+	\begin{equation}
+		\varsigma_{i,\mathrm{total}}^2 = \varsigma_{i,\mathrm{within}}^2 + \varsigma_{i,\mathrm{between}}^2
+	\end{equation}
+	
+	Because the rating system operates natively in log space, confidence intervals in ratio space are fundamentally multiplicative. We define the geometric standard deviation as:
+	\begin{equation}
+		\mathrm{GSD}_i = \exp\!\left(\sqrt{\varsigma_{i,\mathrm{total}}^2}\right)
 	\end{equation}
 	The $\pm 1\sigma$ predictive bounds are applied multiplicatively to the truncated expected mean:
 	\begin{equation}
@@ -471,58 +497,70 @@
 	\section{Practical Initialization and Tuning Guide}
 	\label{app:tuning}
 	
-	Because the Latent Log-Ratio model decomposes uncertainty into strictly separated physical mechanisms, hand-tuning the system can be daunting. Tuning should follow a structured sequence: establish the core scale of the sport, set the structural priors, and finally tune the boundary pathology parameters. 
+	Because the Latent Log-Ratio model decomposes uncertainty into strictly separated physical mechanisms, attempting to tune the model intuitively using human-readable standard deviations often leads to severe pathologies (e.g., the ``Square Root Deception,'' where users misjudge the gravitational pull of precision-weighted means).
 	
-	\subsection{Phase 1: Baseline Initialization}
-	Begin by initializing the core parameters to mathematically derived rules of thumb, prioritizing the linear scale (standard deviation) over the squared space (variance).
+	Tuning must follow a structured, normalized sequence. The irreducible match noise of the sport acts as the fundamental physical anchor ($1.0\,\mathrm{SV}$). All epistemic and aleatoric variances are set as multiples of this unit, followed by adjusting the dimensionless adaptation rates.
 	
+	\subsection{Phase 1: Determine the Anchor ($1.0\,\mathrm{SV}$)}
+	The Sport Variance ($\sigma_{\mathrm{sport}}^2$) represents the inherent, irreducible background noise of a single match observation in the sport (environmental factors, lighting, stage design). 
 	\begin{enumerate}
-		\item \textbf{Set the Sport Scale ($\sigma_{\mathrm{sport}}^2$):} 
-		Determine the typical absolute change in rating a competitor experiences from match to match in steady state. Set the sport variance such that its standard deviation matches this value: $\sqrt{\sigma_{\mathrm{sport}}^2} \approx \Delta R_{\mathrm{typical}}$.
-		
-		\item \textbf{Set Epistemic Bounds ($V_{\mathrm{start}}, V_{\max}$):} 
-		New competitors require enough variance to traverse the distribution rapidly. Set the starting variance to approximately 4 times the sport variance in linear space: $\sqrt{V_{\mathrm{start}}} = 4 \times \sqrt{\sigma_{\mathrm{sport}}^2}$. Set the absolute variance ceiling to double the starting variance: $V_{\max} = 2 \times V_{\mathrm{start}}$.
-		
-		\item \textbf{Initialize Structural Priors:} 
-		\begin{itemize}
-			\item Intraclass correlation ($\rho$): $0.30$
-			\item Dispersion adaptation rate ($\beta$): $0.05$
-			\item Surprise adaptation rate ($\gamma$): $0.10$
-			\item Match difficulty prior variance ($\tau^2$): $0.10$
-		\end{itemize}
-		
-		\item \textbf{Initialize Degenerate Field Parameters:} 
-		\begin{itemize}
-			\item Baseline robustness ($c$): $2.5$. Decrease if the sport yields highly homogeneous fields; increase if the sport is prone to frequent, severe outliers.
-			\item Tail noise ($\xi^2$): Set to $1.5\times$ the maximum standard deviation in linear space, yielding $\xi^2 = (1.5 \sqrt{V_{\max}})^2$.
-			\item Weak field variance ($\omega^2$): Set to $5\times$ the maximum standard deviation, yielding $\omega^2 = (5 \sqrt{V_{\max}})^2$.
-		\end{itemize}
-		
-		\item \textbf{Initialize Prediction Parameters:} 
-		\begin{itemize}
-			\item Prediction behavioral scale ($\kappa$): $0.25$.
-			\item Prediction sport variance ($\sigma_{\mathrm{pred}}^2$): Set to $10\%-25\%$ of the total desired variance in the final predictive error bars.
-		\end{itemize}
+		\item Identify a cohort of highly consistent, active veterans.
+		\item Measure the steady-state variance of their log-score residuals.
+		\item Base $\sigma_{\mathrm{sport}}^2 \equiv 1.0\,\mathrm{SV}$ on this empirical variance. If a consistent pro fluctuates by $\pm 3\%$ match-to-match, $\sqrt{1.0\,\mathrm{SV}} \approx 0.03$. 
 	\end{enumerate}
 	
-	Generate an initial batch of ratings across the dataset using these base values, then proceed to diagnostic tuning.
+	Because this empirical measurement inherently contains its own estimation error, and indeed is challenging to measure in sports where environmental factors like weather or course difficulty disguise the underlying signal, small adjustments to $\sigma_{\mathrm{sport}}^2$ may be practically useful. By tweaking \emph{just} the Sport Variance (while holding the epistemic parameters like $V_{\mathrm{start}}$ and $\sigma_{\mathrm{drift}}^2$ at their established absolute values), it acts as a thermodynamic ``temperature'' dial for the model:
+	\begin{itemize}
+		\item \textbf{Raising Sport Variance (Cooling):} The model assumes the environment is noisier than strictly measured. Total expected uncertainty ($T_i$) grows relative to the immutable physical match residuals ($e_i$). This drops the Kalman gain slightly and makes the non-linear Variance Surprise ($e_i^2 > T_i$) harder to trigger, resulting in a smoother, less reactive filter. Moving too far in this direction will yield a filter that fails to update on true changes to the underlying competitor variables.
+		\item \textbf{Lowering Sport Variance (Heating):} The model assumes a more sterile environment than measured. $T_i$ shrinks, making the filter more reactive. Moving too far in this direction will yield highly volatile ratings, over-updating on normal fluctuations.
+	\end{itemize}
 	
-	\subsection{Phase 2: Diagnostic Tuning and Troubleshooting}
-	Because parameters in a Bayesian state-space model interact dynamically, adjusting the wrong parameter to fix a symptom will often break a separate, correctly functioning mechanism. Use the following symptom-to-solution mappings to isolate adjustments.
+	\subsection{Phase 2: Establish the Golden Ratios (Units of $\mathrm{SV}$)}
+	With the baseline $1.0\,\mathrm{SV}$ defined, initialize the system's variance-space parameters as relative multiples of this anchor.
 	
-	\subsubsection*{Symptom: The ``Day 1'' Rating Explosion}
-	\textbf{Observation:} A strong competitor dominates a field of mostly unrated or novice shooters. The system updates the winner to an absurdly high rating, while their epistemic variance ($V_i$) crashes to zero. \\
-	\textbf{Diagnosis:} The filter is falsely assuming that a large mass of unrated shooters constitutes a perfectly known 0.0 baseline. \\
-	\textbf{Solution:} Increase the Intraclass Correlation ($\rho$). This raises the minimum baseline uncertainty for unrated fields, floating the anchor and dampening the winner's Kalman gain without altering the underlying rating scale. \textit{Do not} attempt to fix this by lowering $V_{\mathrm{start}}$.
+	\begin{itemize}
+		\item \textbf{Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$): $0.5\,\mathrm{SV}$ per year (Range: $0.1 - 1.0$).} 
+		Adult motor skills degrade slowly. Half a match's worth of uncertainty per year allows veterans to remain stable while preventing absolute certainty collapse.
+		\item \textbf{Starting Variance ($V_{\mathrm{start}}$): $25.0\,\mathrm{SV}$ (Range: $20.0 - 40.0$).} 
+		New competitors require enough variance to traverse the demographic distribution rapidly. Yields a Day 1 Kalman gain of roughly $0.96$.
+		\item \textbf{Maximum Variance ($V_{\max}$): $33.0\,\mathrm{SV}$ (Range: $30.0 - 50.0$).} 
+		An absolute computational ceiling slightly higher than $V_{\mathrm{start}}$, allowing returning shooters or massive variance surprises to snap the Kalman gain back to near 1.0 without overflowing the arithmetic.
+		\item \textbf{Initial Dispersion ($\sigma_{i,\mathrm{init}}^2$): $0.1\,\mathrm{SV}$ (Range: $0.05 - 0.25$).} 
+		Competitors must be treated as consistent until proven otherwise. Initializing dispersion at a fraction of $\mathrm{SV}$ ensures the Kalman denominator remains small, allowing unhindered early rating convergence.
+		\item \textbf{Tail Noise ($\xi^2$): $\approx 33.0\,\mathrm{SV}$.} 
+		Requires empirical tuning based on the sport's deep-tail geometry. Set high enough to collapse the update weight of catastrophic failures to near-zero, if needed.
+		\item \textbf{Weak-Field Variance ($\omega^2$): $\approx 200.0\,\mathrm{SV}$.} 
+		A massive structural penalty applied to degenerate, small-and-weak fields, ensuring they provide virtually no mathematically rigid evidence about elite top-end skill separation.
+		\item \textbf{Prediction Sport Variance ($\sigma_{\mathrm{pred}}^2$): $0.0\,\mathrm{SV}$.} 
+		Philosophically, predictive uncertainty should scale with the competitors' actual historical behaviors. Set this to zero and use $\kappa$ (see Phase 3) to widen predictive error bars. Only inject flat $\sigma_{\mathrm{pred}}^2$ if $\kappa$ is fully saturated at $1.0$ and predictions remain too narrow, or if the underlying conditions of the sport produce idiosyncratic variance that cannot be attributed to differences in competitor skill.
+	\end{itemize}
 	
-	\subsubsection*{Symptom: Sluggish Veterans and Wide Equilibrium Bands}
-	\textbf{Observation:} Highly active, established veterans see almost no rating movement, but their steady-state predictive bands (or $V_i$) remain wider than desired. \\
-	\textbf{Diagnosis:} The introduction of $\rho$ structurally raises the steady-state variance floor for the entire population (because the filter never fully trusts the absolute anchor of a match). \\
-	\textbf{Solution:} Decrease the Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$). $\rho$ and $\sigma_{\mathrm{drift}}^2$ exist in a direct feedback loop. By lowering the time drift, you allow veterans to settle into a tighter equilibrium while leaving $\rho$ in place to protect against the Day 1 explosion. 
+	\subsection{Phase 3: Dimensionless Parameters and Thresholds}
+	Finally, tune the adaptation rates, blend weights, and Huber thresholds.
 	
-	\subsubsection*{Symptom: The Yang Pathology}
+	\begin{itemize}
+		\item \textbf{Prediction Behavioral Scale ($\kappa$):} Range: $0.0 - 1.0$. Use as the primary tool for predictive error bar size control. It scales how much of a competitor's behavioral dispersion ($\sigma_i^2$) is projected into their published predictive bands.
+		\item \textbf{Cohort Intraclass Correlation ($\rho$): $0.3$ (Range: $0.1 - 0.3$).} 
+		Prefer the lowest value that reliably eliminates the ``Day 1 Rating Explosion'' (the artifact where unrated fields collapse baseline variance to zero). The observed symptom of this problem is early competitors in weak or unknown fields climbing to the top of the ratings, while empirically higher-skilled competitors struggle to reach the same region after the cold start has completed.
+		\item \textbf{Momentum Adaptation Rate ($\lambda$): $0.2$} 
+		Controls the EMA for tracking directional skill trends. The half-life of an exponential moving average is given by $ln(0.5) / ln(1 - \alpha)$.
+		The default yields a half-life of $\approx 3.1$ events. A relatively short half-life (according to the schedule of the sport) yields faster reaction to both the beginning and end of a streak.
+		\item \textbf{Dispersion Adaptation Rate ($\beta$): $0.1$.} 
+		Controls the EMA for behavioral volatility.The default value of $0.1$ yields a half-life of $\approx 6.6$ events, smoothing erratic behavior over the course of a long season. A somewhat longer window than $\lambda$ reduces variance 
+		\item \textbf{Surprise Adaptation Rate ($\gamma$): $0.1$.} 
+		Controls how aggressively $V_i$ inflates when the momentum or squared error breaches expected variance. Depends on event frequency and the nature of skill shocks in the sport.
+		\item \textbf{Pairwise Blend Weight ($\alpha$): $0.1$ (Range: $0.0 - 1.0$).} 
+		Empirically, precision-weighted global baselines are more reliable than sparse pairwise links. However, blending a small amount of pairwise data ($\alpha=0.1$) allows the system to catch localized environmental signals (e.g., competitors scheduled for different days with different weather) or asymmetries in field composition (e.g., a weak center but a strong top end) that the global baseline smooths over.
+		\item \textbf{Match Difficulty Prior Variance ($\tau^2$): $0.0313$.} 
+		Its precision $1/\tau^2 = 32$ acts exactly like the inclusion of $1$ unrated competitor ($V_{\max} \approx 32\,\mathrm{SV}$) anchored at zero. This provides light pull-to-average regularization to stabilize degenerate 2- or 3-shooter fields without overriding robust data.
+		\item \textbf{Baseline Robustness ($c$): $2.5$.} 
+		A Huber-style threshold marking the boundary between $L_2$ (squared) and $L_1$ (absolute) penalty weighting. A value of 2.5 means the filter trusts residuals normally up to 2.5 standard deviations, but linearly downweights the influence of outliers beyond that. Lower values (e.g., 2.0) aggressively clip outliers in highly volatile sports; higher values (3.0+) trust the field's arithmetic mean more strictly.
+		\item \textbf{Tail Noise Start ($s_0$): $0.6$.} 
+		The finish percentage below which the $\xi^2$ tail noise begins applying. Tune depending on the severity of the winner's curse and the geometry of the sport's deep tail.
+		\item \textbf{Weak-Field Thresholds ($n_{\mathrm{max}}, s_w, q_0$):} 
+		Highly dependent on sport demographics. Define the size and shape of a match that should be legally penalized by $\omega^2$.
+	\end{itemize}
 	
-
 	\bibliographystyle{ieeetr}
 	\bibliography{paper}
 \end{document}

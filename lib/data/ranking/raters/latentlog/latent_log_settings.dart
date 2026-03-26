@@ -27,7 +27,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
 
   static const defaultPredictionSportVariance = 0.0;
-  static const defaultPredictionBehavioralDispersionKappa = 0.50;
+  static const defaultPredictionBehavioralDispersionKappa = 0.75;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
