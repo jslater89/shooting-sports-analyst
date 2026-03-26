@@ -968,6 +968,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// This is their sum (i.e. their weighted average by win probability).
       double probabilityWeightedRatio = 0.0;
 
+      /// The probability-weighted log difference between the competitor and the
+      /// presumed winners, i.e. the component of the between-component variance
+      /// multiplied by p_i.
+      double probabilityWeightedLogDifference = 0.0;
+
+      /// The win probability and log difference between the competitor and each
+      /// presumed winner, i.e. the components of [probabilityWeightedLogDifference],
+      /// i.e. the components of the between-component variance that occur in the
+      /// sum and are weighted by p_w.
+      List<({double pW, double muIW})> probabilityWeightedLogDifferences = [];
+
       /// The probability-weighted winner rating variance, used for the
       /// prediction band.
       double probabilityWeightedWinnerVariance = 0.0;
@@ -976,6 +987,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// (same weighting as [probabilityWeightedWinnerVariance]).
       double probabilityWeightedWinnerDispersion = 0.0;
 
+      /// The win probability of the focal competitor as the presumed winner.
       double ownPresumedWinProbability = 0.0;
 
       final ratingVariance =
@@ -1013,11 +1025,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final winnerDrawStdDev = sqrt(
           presumedWinner.shooter.variance +
           kappa * presumedWinner.shooter.dispersion +
-          2 * settings.predictionSportVariance
+          settings.predictionSportVariance
         );
         final effectiveWinnerRating = presumedWinner.shooter.rating + winnerDrawStdDev * eMax;
 
         final logDifference = rating.rating - effectiveWinnerRating;
+        probabilityWeightedLogDifference += logDifference * winProbability;
+        probabilityWeightedLogDifferences.add((pW: winProbability, muIW: logDifference));
 
         final winnerVariance =
           matchDate != null && _predictionsUseAgedRatings ?
@@ -1038,16 +1052,22 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
             presumedWinner.shooter.dispersion * winProbability;
       }
 
+      double betweenComponentVariance = ownPresumedWinProbability * probabilityWeightedLogDifference * probabilityWeightedLogDifference;
+      for(var (pW: double winProbability, muIW: double logDifference) in probabilityWeightedLogDifferences) {
+        betweenComponentVariance += winProbability * pow(logDifference - probabilityWeightedLogDifference, 2);
+      }
+
       final notWinnerProbability = 1.0 - ownPresumedWinProbability;
-      final predictiveVariance =
+      final withinComponentVariance =
         notWinnerProbability * (
           ratingVariance +
           2 * settings.predictionSportVariance
           + (rating.dispersion * kappa)
         )
+        + probabilityWeightedWinnerVariance
         + probabilityWeightedWinnerDispersion * kappa;
 
-      final geometricSD = exp(sqrt(predictiveVariance));
+      final geometricSD = exp(sqrt(withinComponentVariance + betweenComponentVariance));
       final oneSigmaUpper = probabilityWeightedRatio * geometricSD;
       final oneSigma = oneSigmaUpper - probabilityWeightedRatio;
 
@@ -1057,7 +1077,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         if(ownPresumedWinProbability > 0.0) {
           _log.v("Own presumed p_w:\t\t${ownPresumedWinProbability.toStringAsFixed(8)}");
         }
-        _log.v("Predictive variance:\t\t${predictiveVariance.toStringAsFixed(8)}");
+        _log.v("Predictive variance:\t\t${withinComponentVariance.toStringAsFixed(8)}");
         _log.v("Rating variance:\t\t${ratingVariance.toStringAsFixed(8)}");
         _log.v("Variance age component:\t${(ratingVariance - rating.variance).toStringAsFixed(8)}");
         _log.v("Prediction sport variance:\t${(2 * settings.predictionSportVariance).toStringAsFixed(8)}");

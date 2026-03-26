@@ -3,22 +3,21 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 class LatentLogSettings extends RaterSettings {
   // Default scale generates roughly Elo-style numbers between 0 and 2000,
   // per Shooting Sports Analyst tradition.
-  static const defaultScaleOffset = 1330.0;
-  static const defaultScaleFactor = 1400.0;
+  static const defaultScaleOffset = 1425.0;
+  static const defaultScaleFactor = 1500.0;
 
-  static const defaultSportVariance = 0.0010;
-  static const defaultSkillDriftRate = 0.00025;
-  static const defaultStartingVariance = 0.0200;
-  /// Initial per-competitor behavioral variance σ_i² for new shooters; legacy default was 0.1 × σ²_sport.
-  static const defaultStartingDispersion = 0.0005;
+  static const defaultSportVariance = 0.0012;
+  static const defaultSkillDriftRate = 0.0005;
+  static const defaultStartingVariance = 0.0300;
   static const defaultMaximumVariance = 0.0400;
+  static const defaultStartingDispersion = 0.000120;
   static const defaultIntraclassCorrelation = 0.3;
   static const defaultDispersionAdaptationRate = 0.10;
   static const defaultMomentumAdaptationRate = 0.20;
-  static const defaultSurpriseAdaptationRate = 0.0750;
+  static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
 
-  static const defaultMatchDifficultyVariance = 0.10;
+  static const defaultMatchDifficultyVariance = 0.03125;
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.60;
   static const defaultTailNoiseVariance = 0.04;
@@ -27,8 +26,8 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
 
-  static const defaultPredictionSportVariance = 0.0002;
-  static const defaultPredictionBehavioralDispersionKappa = 0.25;
+  static const defaultPredictionSportVariance = 0.0;
+  static const defaultPredictionBehavioralDispersionKappa = 0.50;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
