@@ -2,6 +2,9 @@
 alwaysApply: true
 ---
 
+# Responses
+The chat window does not render MathJAX/MathML. Please write out math in code blocks.
+
 # If style
 Prefer:
 

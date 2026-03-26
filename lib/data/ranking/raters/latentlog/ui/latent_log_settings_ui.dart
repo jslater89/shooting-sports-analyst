@@ -14,6 +14,7 @@ import "package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.da
 import "package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_settings.dart";
 import "package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart";
+import "package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart";
 
 class LatentLogSettingsUi
     extends RatingSystemUi<LatentLogSettings, LatentLogSettingsController> {
@@ -93,6 +94,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _sportVarianceInternal =TextEditingController();
   final TextEditingController _skillDriftInternal = TextEditingController();
   final TextEditingController _startingVarianceInternal = TextEditingController();
+  final TextEditingController _startingDispersionInternal = TextEditingController();
   final TextEditingController _maximumVarianceInternal = TextEditingController();
   final TextEditingController _matchDifficultyInternal = TextEditingController();
   final TextEditingController _predictionSportInternal = TextEditingController();
@@ -100,6 +102,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       TextEditingController();
   final TextEditingController _intraclassCorrelationController = TextEditingController();
   final TextEditingController _dispersionAdaptController = TextEditingController();
+  final TextEditingController _momentumAdaptController = TextEditingController();
   final TextEditingController _surpriseAdaptController = TextEditingController();
   final TextEditingController _pairwiseBlendController = TextEditingController();
   final TextEditingController _baselineRobustnessZController = TextEditingController();
@@ -164,6 +167,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     attachNumericListener(_startingVarianceInternal, () {
       _validateText();
     });
+    attachNumericListener(_startingDispersionInternal, () {
+      _validateText();
+    });
     attachNumericListener(_maximumVarianceInternal, () {
       _validateText();
     });
@@ -187,6 +193,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       }
     });
     attachNumericListener(_surpriseAdaptController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
+    attachNumericListener(_momentumAdaptController, () {
       if (!widget.controller._restoreDefaults) {
         _validateText();
       }
@@ -240,12 +251,14 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _sportVarianceInternal.dispose();
     _skillDriftInternal.dispose();
     _startingVarianceInternal.dispose();
+    _startingDispersionInternal.dispose();
     _maximumVarianceInternal.dispose();
     _matchDifficultyInternal.dispose();
     _predictionSportInternal.dispose();
     _predictionBehavioralKappaController.dispose();
     _intraclassCorrelationController.dispose();
     _dispersionAdaptController.dispose();
+    _momentumAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
     _baselineRobustnessZController.dispose();
@@ -265,12 +278,14 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _sportVarianceInternal.text = settings.sportVariance.toStringAsFixed(4);
     _skillDriftInternal.text = settings.skillDriftRate.toStringAsFixed(6);
     _startingVarianceInternal.text = settings.startingVariance.toStringAsFixed(4);
+    _startingDispersionInternal.text = settings.startingDispersion.toStringAsFixed(6);
     _maximumVarianceInternal.text = settings.maximumVariance.toStringAsFixed(4);
     _matchDifficultyInternal.text = settings.matchDifficultyVariance.toStringAsFixed(4);
     _predictionSportInternal.text = settings.predictionSportVariance.toStringAsFixed(5);
     _predictionBehavioralKappaController.text =
         settings.predictionBehavioralDispersionKappa.toStringAsFixed(3);
     _dispersionAdaptController.text = settings.dispersionAdaptationRate.toStringAsFixed(4);
+    _momentumAdaptController.text = settings.momentumAdaptationRate.toStringAsFixed(4);
     _surpriseAdaptController.text = settings.surpriseAdaptationRate.toStringAsFixed(4);
     _intraclassCorrelationController.text = settings.intraclassCorrelation.toStringAsFixed(3);
 
@@ -345,6 +360,16 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
+    final startDisp = _parseVariance(controller: _startingDispersionInternal);
+    if (startDisp == null) {
+      widget.controller.lastError = "Starting dispersion formatted incorrectly";
+      return;
+    }
+    if (startDisp < 0) {
+      widget.controller.lastError = "Starting dispersion must be nonnegative";
+      return;
+    }
+
     final maxVar = _parseVariance(controller: _maximumVarianceInternal);
     if (maxVar == null) {
       widget.controller.lastError = "Maximum variance formatted incorrectly";
@@ -395,6 +420,18 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     if (surp < 0) {
       widget.controller.lastError =
           "Surprise adaptation rate must be nonnegative";
+      return;
+    }
+
+    final momentumAdapt = double.tryParse(_momentumAdaptController.text);
+    if (momentumAdapt == null) {
+      widget.controller.lastError =
+          "Momentum adaptation rate formatted incorrectly";
+      return;
+    }
+    if (momentumAdapt < 0 || momentumAdapt > 1) {
+      widget.controller.lastError =
+          "Momentum adaptation rate must be between 0 and 1";
       return;
     }
 
@@ -545,8 +582,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.sportVariance = sportV;
       settings.skillDriftRate = drift;
       settings.startingVariance = startVar;
+      settings.startingDispersion = startDisp;
       settings.maximumVariance = maxVar;
+      settings.intraclassCorrelation = intraclassCorrelation;
       settings.dispersionAdaptationRate = volAdapt;
+      settings.momentumAdaptationRate = momentumAdapt;
       settings.surpriseAdaptationRate = surp;
       settings.pairwiseBlendWeight = pairwise;
       settings.matchDifficultyVariance = matchDiff;
@@ -571,8 +611,6 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     final fieldWidth = 108 * uiScaleFactor;
     final columnGap = 8 * uiScaleFactor;
     final trailingSpacerWidth = columnGap + fieldWidth;
-
-    final baselineVariance = settings.sportVariance;
 
     return SizedBox(
       width: panelWidth,
@@ -624,7 +662,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Scale offset (display points)",
               tooltip:
-                  "Additive offset for top-line rating display: display = internal × scale factor + offset. The scaled value is an approximate minimum display rating.",
+                  "Additive offset for top-line rating display: display = internal × scale factor + offset.",
               internalController: _scaleOffsetController,
               scaledValue: -0.95 * settings.scaleFactor + settings.scaleOffset,
               scaledValuePrecision: 0,
@@ -632,6 +670,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Approximate minimum display rating"
             ),
             _LatentLogVarianceRow(
               label: "Scale factor",
@@ -644,6 +683,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Approximate maximum display rating"
             ),
             const _LatentLogSectionHeading("Core Parameters"),
             _LatentLogVarianceRow(
@@ -651,48 +691,70 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               tooltip:
                   "Irreducible variance of the sport; all ratings have this much noise in addition to their own variance.",
               internalController: _sportVarianceInternal,
-              scaledValue: sqrt(settings.sportVariance) * settings.scaleFactor,
+              scaledValue: sqrt(settings.sportVariance) * 100,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Inherent variance in the sport in ±% finish units",
+              displayValueLabel: "%"
             ),
             _LatentLogVarianceRow(
               label: "Skill drift / period",
               tooltip:
                   "Ratings gain roughly this much variance per year from skill drift.",
               internalController: _skillDriftInternal,
-              scaledValue: sqrt(settings.skillDriftRate) * settings.scaleFactor,
+              scaledValue: settings.skillDriftRate / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Skill drift in units of sport variance per year",
+              displayValueLabel: " SV/yr"
             ),
             _LatentLogVarianceRow(
               label: "Starting variance",
               tooltip:
                   "Committed variance for brand-new competitors (internal prior width). Must not exceed maximum variance; scaled is × scale factor.",
               internalController: _startingVarianceInternal,
-              scaledValue: sqrt(settings.startingVariance) * settings.scaleFactor,
+              scaledValue: settings.startingVariance / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Starting variance in units of sport variance",
+              displayValueLabel: " SV"
             ),
             _LatentLogVarianceRow(
               label: "Maximum variance",
               tooltip:
                   "Upper cap on committed rating variance after updates and on time-aged variance from skill drift. Can exceed starting variance so veterans may carry more uncertainty than the new-shooter prior.",
               internalController: _maximumVarianceInternal,
-              scaledValue: sqrt(settings.maximumVariance) * settings.scaleFactor,
+              scaledValue: settings.maximumVariance / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Maximum variance in units of sport variance",
+              displayValueLabel: " SV"
+            ),
+            _LatentLogVarianceRow(
+              label: "Starting dispersion σ_i²",
+              tooltip:
+                  "Initial per-competitor behavioral variance for new shooters (observation noise component). Scaled column is √(σ_i²) × scale factor.",
+              internalController: _startingDispersionInternal,
+              scaledValue: settings.startingDispersion / settings.sportVariance,
+              scaledValuePrecision: 2,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Starting dispersion in units of sport variance",
+              displayValueLabel: " SV"
             ),
             _LatentLogLabeledNumericRow(
               label: "Intraclass correlation ρ",
@@ -714,10 +776,22 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
             ),
+            _LatentLogVarianceRow(
+              label: "Momentum adaptation rate λ",
+              tooltip:
+                  "Dimensionless in [0, 1]: Smoothing factor for per-competitor momentum EMA. Scaled value is the half-life in number of rating events.",
+              internalController: _momentumAdaptController,
+              scaledValue: log(0.5) / log(1 - settings.momentumAdaptationRate),
+              scaledValuePrecision: 1,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+            ),
             _LatentLogLabeledNumericRow(
               label: "Surprise adaptation γ",
               tooltip:
-                  "Dimensionless γ ≥ 0: extra variance after unexpectedly large innovations.",
+                  "Dimensionless γ ≥ 0: scale factor for excess variance added from surprise/momentum.",
               controller: _surpriseAdaptController,
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
@@ -732,16 +806,22 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             ),
             const _LatentLogSectionHeading("Small / Degenerate Field Parameters"),
             _LatentLogVarianceRow(
-              label: "Match difficulty τ²",
+              label: "Tiny-field prior τ²",
               tooltip:
-                  "Baseline difficulty for small fields. Smaller = stronger pull toward average difficulty. Values between 0.05 and 0.25 are reasonable for USPSA.",
+                  "Damp updates in tiny fields of highly uncertain competitors.",
               internalController: _matchDifficultyInternal,
-              scaledValue: sqrt(settings.matchDifficultyVariance) * settings.scaleFactor,
+              scaledValue:
+                // prior precision => (1 / tau^2)
+                // "average competitor" => sportVariance + startingDispersion + startingVariance
+                // average competitor observation precision = 1 / (sportVariance + startingDispersion + startingVariance)
+                // nEff = (1 / tau^2) / (1 / (sportVariance + startingDispersion + startingVariance))
+                (1 / settings.matchDifficultyVariance) / (1 / (settings.sportVariance + settings.startingDispersion + settings.startingVariance)),
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Number of virtual competitors pulling field toward average difficulty"
             ),
             _LatentLogLabeledNumericRow(
               label: "Baseline robustness z",
@@ -764,24 +844,28 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               tooltip:
                   "Maximum extra observation variance assigned to the deepest tail. Larger values trust very weak finishes less; 0 disables tail-noise inflation.",
               internalController: _tailNoiseVarianceController,
-              scaledValue: sqrt(settings.tailNoiseVariance) * settings.scaleFactor,
+              scaledValue: settings.tailNoiseVariance / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Tail noise variance in units of sport variance",
+              displayValueLabel: " SV"
             ),
             _LatentLogVarianceRow(
               label: "Weak-field variance",
               tooltip:
                   "Maximum additional match-level observation variance for tiny, bottom-heavy fields. Larger values suppress pathological gains more aggressively; 0 disables.",
               internalController: _weakFieldVarianceController,
-              scaledValue: sqrt(settings.weakFieldVariance) * settings.scaleFactor,
+              scaledValue: settings.weakFieldVariance / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Weak-field variance in units of sport variance",
+              displayValueLabel: " SV"
             ),
             _LatentLogLabeledNumericRow(
               label: "Weak-field max size",
@@ -813,12 +897,14 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               tooltip:
                   "Idiosyncratic per-competitor sport noise for prediction bands. Common-mode match difficulty cancels in relative predictions; only this fraction enters the band. Does not affect rating updates.",
               internalController: _predictionSportInternal,
-              scaledValue: sqrt(settings.predictionSportVariance) * settings.scaleFactor,
+              scaledValue: settings.predictionSportVariance / settings.sportVariance,
               scaledValuePrecision: 2,
               fieldWidth: fieldWidth,
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Prediction sport variance in units of sport variance",
+              displayValueLabel: " SV"
             ),
             _LatentLogLabeledNumericRow(
               label: "Prediction behavioral κ",
@@ -962,6 +1048,8 @@ class _LatentLogVarianceRow extends StatelessWidget {
   const _LatentLogVarianceRow({
     required this.label,
     required this.tooltip,
+    this.displayValueLabel,
+    this.displayValueTooltip,
     required this.internalController,
     required this.scaledValue,
     required this.scaledValuePrecision,
@@ -973,6 +1061,8 @@ class _LatentLogVarianceRow extends StatelessWidget {
 
   final String label;
   final String tooltip;
+  final String? displayValueLabel;
+  final String? displayValueTooltip;
   final TextEditingController internalController;
   final double scaledValue;
   final int scaledValuePrecision;
@@ -1019,7 +1109,9 @@ class _LatentLogVarianceRow extends StatelessWidget {
           value: scaledValue,
           valuePrecision: scaledValuePrecision,
           fieldWidth: fieldWidth,
+          suffix: displayValueLabel,
           textStyle: displayTextStyle,
+          tooltip: displayValueTooltip,
         ),
       ],
     );
@@ -1032,13 +1124,17 @@ class _LatentLogVarianceDisplaySlot extends StatelessWidget {
     required this.value,
     required this.valuePrecision,
     required this.fieldWidth,
+    this.suffix,
     this.textStyle,
+    this.tooltip,
   });
 
   final double value;
   final int valuePrecision;
   final double fieldWidth;
+  final String? suffix;
   final TextStyle? textStyle;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -1049,10 +1145,13 @@ class _LatentLogVarianceDisplaySlot extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            value.toStringAsFixed(valuePrecision),
-            textAlign: TextAlign.end,
-            style: style,
+          child: MaybeTooltip(
+            message: tooltip,
+            child: Text(
+              "${value.toStringAsFixed(valuePrecision)}${suffix != null ? "$suffix" : ""}",
+              textAlign: TextAlign.end,
+              style: style,
+            ),
           ),
         ),
       ),

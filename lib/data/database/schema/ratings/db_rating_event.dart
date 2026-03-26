@@ -253,23 +253,27 @@ class RatingEventInfoElement {
   }) : type = RatingEventInfoType.string;
 
   String toString() {
-    switch(type) {
-      case RatingEventInfoType.int:
-        if(numberFormat != null) {
-          return sprintf(numberFormat!, [intValue!]);
-        }
-        else {
-          return "$intValue";
-        }
-      case RatingEventInfoType.double:
-        if(numberFormat != null) {
-          return sprintf(numberFormat!, [doubleValue!]);
-        }
-        else {
-          return "$doubleValue";
-        }
-      case RatingEventInfoType.string:
-        return stringValue!;
+    try {
+      switch(type) {
+        case RatingEventInfoType.int:
+          if(numberFormat != null) {
+            return sprintf(numberFormat!, [intValue!]);
+          }
+          else {
+            return "$intValue";
+          }
+        case RatingEventInfoType.double:
+          if(numberFormat != null) {
+            return sprintf(numberFormat!, [doubleValue!]);
+          }
+          else {
+            return "$doubleValue";
+          }
+        case RatingEventInfoType.string:
+          return stringValue!;
+      }
+    } catch(NullPointerException) {
+      throw Exception("Key $name is missing a value");
     }
   }
 }

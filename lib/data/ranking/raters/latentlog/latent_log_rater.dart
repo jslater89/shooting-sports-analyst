@@ -35,6 +35,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   static const oldDispersionKey = "latentLogOldDispersion";
   static const varianceChangeKey = "latentLogVarianceChange";
   static const dispersionChangeKey = "latentLogDispersionChange";
+  static const momentumChangeKey = "latentLogMomentumChange";
   static const stagesKey = "latentLogStages";
 
   LatentLogRater({required this.settings});
@@ -100,8 +101,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       oldRating: rating.rating,
       oldVariance: rating.variance,
       oldDispersion: rating.dispersion,
+      oldMomentum: rating.momentum,
       varianceChange: 0.0,
       dispersionChange: 0.0,
+      momentumChange: 0.0,
       match: match,
       stage: stage,
       score: score,
@@ -137,7 +140,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       date: date,
       initialRating: initialRating,
       initialVariance: settings.startingVariance,
-      initialDispersion: sqrt((0.05 * settings.startingVariance * _dispersionScaleFactor) * settings.startingVariance * _dispersionScaleFactor),
+      initialDispersion: settings.startingDispersion,
       settings: settings,
     );
   }
@@ -387,8 +390,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     double localBaselineVarianceSum = 0.0;
     int pairwiseOpponentCount = 0;
 
-    // Pairwise blending.
-    if (settings.pairwiseBlendWeight > 0) {
+    // Pairwise blending, conditioned on at least [weak field max size] opponents.
+    if (settings.pairwiseBlendWeight > 0 && validScoresCount >= settings.weakFieldMaxSize) {
       final pairwiseOpponents = _selectOpponents(shooter, scores, shooterRatio);
       pairwiseOpponentCount = pairwiseOpponents.length;
 
@@ -442,12 +445,19 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     var pairwiseBlendWeightSquared = pairwiseBlendWeight * pairwiseBlendWeight;
 
+    // How certain are we about the shooter's variance? If we're not very
+    // certain, we can neither use nor update the dispersion by very much—
+    // we don't know if we're varying around the mean because we don't know
+    // where the mean is.
+    final dispersionCertainty =
+        1.0 - (shooterVariance / settings.maximumVariance).clamp(0.0, 1.0);
+
     // Effective observation noise propagates uncertainty from the baseline
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
     final totalObsNoise =
         settings.sportVariance +
-        shooter.dispersion +
+        dispersionCertainty * shooter.dispersion +
         shooterTailNoise +
         weakFieldVariance +
         (1 - pairwiseBlendWeightSquared) * baselineVariance +
@@ -465,54 +475,67 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final kalmanGain = shooterVariance / totalNoise;
     final newRating = shooter.rating + kalmanGain * dampedInnovation;
 
-    // Essentially the portion of the innovation not explained by shooter and sport variance.
-    final denoisedInnovationVariance = max(0, innovation * innovation - shooterVariance - settings.sportVariance);
+    // Use the stronger of surprise or momentum to add to variance.
+    final surpriseCorrection = (innovation * innovation) - totalNoise;
+    final momentumCorrection = (shooter.momentum * shooter.momentum) / settings.momentumAdaptationRate;
+    final strongerCorrection = max(surpriseCorrection, momentumCorrection);
 
     final innovationCorrection =
         settings.surpriseAdaptationRate *
-        max(0.0, innovation * innovation - totalNoise);
+        max(0.0, strongerCorrection);
     final newVariance = min(
       settings.maximumVariance,
       shooterVariance * (1 - kalmanGain) + innovationCorrection,
     );
 
-    final maxVolatility = settings.maximumVariance * _dispersionScaleFactor;
+    final maximumDispersion = settings.maximumVariance * _dispersionScaleFactor;
 
-    // 1% of starting variance (i.e., 'minimal')—we don't want to use 1% of maximum
+    // 0.1% of starting variance (i.e., 'minimal')—we don't want to use 1% of maximum
     // because maximum may be very liberal, and we want this to be more like
     // an epsilon than a meaningful limit.
-    final minVolatility = 0.01 * settings.startingVariance * _dispersionScaleFactor;
+    final minimumDispersion = 0.001 * settings.startingVariance * _dispersionScaleFactor;
 
     // Clamp observations to 3SD
     final maxInstantaneousVariance = max(
       9.0 * shooter.dispersion,
-      minVolatility
+      minimumDispersion
     );
 
-    final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minVolatility, maxInstantaneousVariance);
+    // Aleatoric noise (dispersion) is the portion of innovation not explained by:
+    // 1. variance.
+    final denoisedInnovationVariance = max(0, pow(innovation - shooter.momentum, 2) - shooterVariance - settings.sportVariance);
+    final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minimumDispersion, maxInstantaneousVariance);
 
-    final certainty =
-        1.0 - (shooterVariance / settings.maximumVariance).clamp(0.0, 1.0);
-    final effectiveAdaptationRate = settings.dispersionAdaptationRate * max(0.25, certainty);
+    final effectiveDispersionAdaptationRate = settings.dispersionAdaptationRate * max(0.25, dispersionCertainty);
     final newDispersion =
-        (shooter.dispersion * (1 - effectiveAdaptationRate) +
-        effectiveAdaptationRate * clampedInstantaneousVariance * _dispersionScaleFactor)
+        (shooter.dispersion * (1 - effectiveDispersionAdaptationRate) +
+        effectiveDispersionAdaptationRate * clampedInstantaneousVariance * _dispersionScaleFactor)
         .clamp(
-          minVolatility,
-          maxVolatility,
+          minimumDispersion,
+          maximumDispersion,
         );
+
+    // Momentum is a signed EMA over innovation.
+    final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
+    final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
+        effectiveMomentumAdaptationRate * innovation;
 
     // Change is relative to the _committed_ variance, not the calculated current
     // variance-with-aging.
     final varianceChange = newVariance - shooter.variance;
     final dispersionChange = newDispersion - shooter.dispersion;
+    final momentumChange = newMomentum - shooter.momentum;
+
     final displayVarianceChange = settings.scaleFactor * (sqrt(newVariance) - sqrt(shooter.variance));
     final displayDispersionChange = settings.scaleFactor * (sqrt(newDispersion) - sqrt(shooter.dispersion));
+    final displayMomentumChange = settings.scaleFactor * momentumChange;
 
-    final displayObservationNoise = settings.scaleFactor * (sqrt(totalObsNoise));
+    final undriftedVariance = shooter.variance;
 
-    final varianceWithoutSurprise = shooter.variance * (1 - kalmanGain);
-    final displayInnovationCorrection = settings.scaleFactor * (sqrt(varianceWithoutSurprise + innovationCorrection) - sqrt(varianceWithoutSurprise));
+    final displayVarianceFromMomentum = settings.scaleFactor * (sqrt(undriftedVariance + max(0, momentumCorrection * settings.surpriseAdaptationRate)) - sqrt(undriftedVariance));
+    final displayVarianceFromSurprise = settings.scaleFactor * (sqrt(undriftedVariance + max(0, surpriseCorrection * settings.surpriseAdaptationRate)) - sqrt(undriftedVariance));
+
+    final displayInnovationCorrection = settings.scaleFactor * (sqrt(undriftedVariance + innovationCorrection) - sqrt(undriftedVariance));
 
     final stagesForEvent = byStage ? 1.0 : match.stages.length.toDouble();
 
@@ -526,15 +549,25 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         LatentLogRater.oldDispersionKey: shooter.dispersion,
         LatentLogRater.varianceChangeKey: varianceChange,
         LatentLogRater.dispersionChangeKey: dispersionChange,
+        LatentLogRater.momentumChangeKey: momentumChange,
         LatentLogRater.stagesKey: stagesForEvent,
       },
       infoLines: [
         "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
         "Rating ± Change: {{rating}}/{{change}}",
-        "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} surprise)",
+        "Momentum ± Change: {{momentum}}/{{momentumChange}}",
+        "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} mods)",
+        "Change from surprise/momentum: {{surpriseCorrection}}/{{momentumCorrection}}",
         "Dispersion ± Change: {{dispersion}}/{{dispersionChange}}",
         "Considered {{opponents}} opponents",
-        "Obs. noise: {{observationNoise}}",
+        "Global/local baseline: {{globalBaseline}}/{{localBaseline}}",
+        "Own variance (time drift): {{ownVariance}} ({{timeVariance}}) SV",
+        "Own dispersion: {{ownDispersion}} SV",
+        "Tail noise/weak field: {{tailNoise}}/{{weakField}} SV",
+        "Global/local noise: {{globalBaselineNoise}}/{{localBaselineNoise}} SV",
+        "Observation/total noise: {{observationNoise}}/{{totalNoise}} SV",
+        "z-score/damping/Kalman gain: {{innovationZScore}}/{{weight}}x/{{kalmanGain}}",
+        "Raw/damped innovation: {{innovation}}/{{dampedInnovation}}",
       ],
       infoData: [
         RatingEventInfoElement.int(
@@ -566,6 +599,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           numberFormat: "%00.1f",
         ),
         RatingEventInfoElement.double(
+          name: "timeVariance",
+          doubleValue: (shooterVariance - shooter.variance) / settings.sportVariance,
+          numberFormat: "%00.3f",
+        ),
+        RatingEventInfoElement.double(
           name: "varianceChange",
           doubleValue: displayVarianceChange,
           numberFormat: "%00.2f",
@@ -591,7 +629,97 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         ),
         RatingEventInfoElement.double(
           name: "observationNoise",
-          doubleValue: displayObservationNoise,
+          doubleValue: totalObsNoise / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "totalNoise",
+          doubleValue: totalNoise / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "tailNoise",
+          doubleValue: shooterTailNoise / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "weakField",
+          doubleValue: weakFieldVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "globalBaseline",
+          doubleValue: looBaseline,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "localBaseline",
+          doubleValue: localBaseline,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "globalBaselineNoise",
+          doubleValue: baselineVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "localBaselineNoise",
+          doubleValue: localBaselineVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "ownVariance",
+          doubleValue: shooterVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "ownDispersion",
+          doubleValue: shooter.dispersion / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "innovationZScore",
+          doubleValue: zScore,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "kalmanGain",
+          doubleValue: kalmanGain,
+          numberFormat: "%00.4f",
+        ),
+        RatingEventInfoElement.double(
+          name: "weight",
+          doubleValue: weight,
+          numberFormat: "%00.4f",
+        ),
+        RatingEventInfoElement.double(
+          name: "dampedInnovation",
+          doubleValue: dampedInnovation,
+          numberFormat: "%00.4f",
+        ),
+        RatingEventInfoElement.double(
+          name: "innovation",
+          doubleValue: innovation,
+          numberFormat: "%00.4f",
+        ),
+        RatingEventInfoElement.double(
+          name: "momentum",
+          doubleValue: newMomentum * settings.scaleFactor,
+          numberFormat: "%00.1f",
+        ),
+        RatingEventInfoElement.double(
+          name: "momentumChange",
+          doubleValue: displayMomentumChange,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "surpriseCorrection",
+          doubleValue: displayVarianceFromSurprise,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "momentumCorrection",
+          doubleValue: displayVarianceFromMomentum,
           numberFormat: "%00.2f",
         ),
       ],

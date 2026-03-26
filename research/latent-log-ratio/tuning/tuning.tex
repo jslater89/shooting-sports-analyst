@@ -1,0 +1,124 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\geometry{a4paper, margin=1in}
+
+\title{The Geometry of Uncertainty:\\A Tuning Guide for the Latent Log-Ratio Model}
+\author{}
+\date{}
+
+\begin{document}
+	
+	\maketitle
+	
+	\begin{abstract}
+		Tuning a Bayesian state-space model based on proportional scoring requires navigating complex interactions between measurement error, human execution noise, and epistemic uncertainty. Attempting to tune the model intuitively using human-readable standard deviations often leads to severe pathologies, a phenomenon termed the ``Square Root Deception.'' 
+		
+		This guide establishes a normalized tuning framework by defining the irreducible match noise of the sport as the fundamental mathematical unit ($1.0\,\text{SV}$). It provides a complete taxonomy of the model's noise sources, their target relative magnitudes, and a diagnostic guide for identifying and resolving structural traps like the ``Vicious Cycle of High Dispersion.''
+	\end{abstract}
+	
+	\section{The Square Root Deception}
+	The Latent Log-Ratio model fundamentally operates in variance space ($V = \sigma^2$) because variances of independent variables are strictly additive, and Fisher Information (the weight of evidence) is exactly proportional to precision ($1/V$).
+	
+	When exposing parameters to end-users or tuning via UI, it is customary to display scaled standard deviations (e.g., a display scale of $s=1400$). However, tuning by standard deviation introduces a severe cognitive distortion. For example, a display SD of $50$ appears to be twice as wide as an SD of $25$. In the mathematical reality of the filter, the variances are $2500$ and $625$. The narrower distribution does not exert twice the gravitational pull on a weighted mean; it exerts \textbf{four times} the pull.
+	
+	Because the Kalman filter utilizes precision-weighted (harmonic) means to aggregate field estimates, the math aggressively favors tighter distributions. To prevent tuning errors, system architects must discard the standard deviation scaling and tune the system entirely in relative variance space.
+	
+	\section{The Fundamental Unit: Sport Variance ($\text{SV}$)}
+	We normalize the entire architecture around a single physical anchor: the intrinsic, irreducible measurement noise of a single match. We define this parameter as exactly $1.0$ Sport Variance unit:
+	\begin{equation}
+		\sigma_{\mathrm{sport}}^2 \equiv 1.0\,\text{SV}
+	\end{equation}
+	If $\sqrt{\sigma_{\mathrm{sport}}^2} \approx 0.028$ in natural log space, then $1.0\,\text{SV}$ represents a baseline environmental fluctuation of approximately $\pm 2.8\%$ in a competitor's absolute finish ratio. All other system variances should be parameterized as multiples of this fundamental unit.
+	
+	\section{Taxonomy of Noise Sources and Golden Ratios}
+	
+	\subsection{Epistemic Uncertainty ($V_i$)}
+	Epistemic uncertainty represents the model's ignorance of a competitor's true latent skill. 
+	
+	\begin{itemize}
+		\item \textbf{Starting Variance ($V_{\mathrm{start}}$): $\approx 15.0$ to $20.0\,\text{SV}$}\\
+		\textit{The Physics:} The total demographic spread of human skill is vastly wider than the day-to-day noise of a single shooter.\\
+		\textit{The Math:} Yields an initial Kalman gain $K_i \approx 0.95$. The rating instantly snaps to the competitor's first match.
+		
+		\item \textbf{Maximum Variance ($V_{\max}$): $\approx 30.0$ to $40.0\,\text{SV}$}\\
+		\textit{The Math:} An absolute computational ceiling ($2 \times V_{\mathrm{start}}$) that allows returning shooters to move rapidly without overflowing the variance arithmetic.
+		
+		\item \textbf{Steady-State Veteran Variance ($V_{\mathrm{steady}}$): $\approx 0.3$ to $0.8\,\text{SV}$}\\
+		\textit{The Physics:} For an active, well-known veteran, the system is highly confident in their baseline skill, recognizing that any match-day fluctuation is due to the environment or their own execution noise, not a shift in their fundamental capability.
+		
+		\item \textbf{Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$): $\approx 0.1$ to $0.3\,\text{SV}$ per year}\\
+		\textit{The Physics:} Adult motor skills and visual processing indices degrade very slowly. A year of total rust injects only a fraction of a match's worth of latent uncertainty.
+	\end{itemize}
+	
+	\subsection{Aleatoric Dispersion ($\sigma_i^2$)}
+	Behavioral dispersion tracks how erratically a competitor executes on match day, decoupling their personal inconsistency from the global environment.
+	
+	\begin{itemize}
+		\item \textbf{Initial Dispersion ($\sigma_{i,\mathrm{init}}^2$): $\approx 0.2\,\text{SV}$}\\
+		\textit{Crucial Initializer:} Shooters must be treated as consistent until proven otherwise. Initializing dispersion low ensures the Kalman denominator remains small, allowing rapid early rating convergence.
+		\item \textbf{Consistent Pro Dispersion: $\approx 0.1$ to $0.5\,\text{SV}$}\\
+		The environment introduces more volatility than their physical execution.
+		\item \textbf{Average Shooter Dispersion: $\approx 1.0$ to $2.0\,\text{SV}$}\\
+		Execution noise contributes equally alongside environmental noise.
+		\item \textbf{Erratic Wildcard Dispersion: $\approx 3.0$ to $5.0\,\text{SV}$}\\
+		Execution mistakes dominate. This high dispersion heavily throttles their Kalman gain, acting as mathematical ``armor'' against extreme rating swings.
+	\end{itemize}
+	
+	\subsection{Structural and Cohort Uncertainty}
+	\begin{itemize}
+		\item \textbf{Cohort Intraclass Correlation ($\rho$): $0.1$ to $0.3$ (dimensionless)}\\
+		\textit{The Physics:} Unrated competitors at a specific match share a local demographic bias. $\rho$ bounds the baseline estimation variance to a non-zero asymptote, preventing the ``Day 1'' rating explosion when a winner dominates an unknown field.
+	\end{itemize}
+	
+	\subsection{Pathological Bounds}
+	\begin{itemize}
+		\item \textbf{Tail Noise ($\xi^2$) and Weak Field Variance ($\omega^2$): $\approx 50.0$ to $100.0\,\text{SV}$}\\
+		Massive structural penalties. By injecting up to $100\,\text{SV}$ of observation noise, the filter effectively rejects the proportional geometry of deep-tail finishes or degenerate matches, collapsing their update weight $W_i$ to near-zero.
+	\end{itemize}
+	
+	\subsection{Prediction Scaling}
+	\begin{itemize}
+		\item \textbf{Prediction Sport Variance ($\sigma_{\mathrm{pred}}^2$): $\approx 0.2$ to $0.5\,\text{SV}$}\\
+		Because a match aggregates multiple stages, regression to the mean dictates that whole-match volatility is generally tighter than single-event (stage or micro-match) update volatility.
+		\item \textbf{Behavioral Projection ($\kappa$): $0.10$ to $0.30$ (dimensionless)}\\
+		Discounts the transmission of $\sigma_i^2$ into the published error bars, acknowledging that highly erratic shooters rarely hit their absolute worst or best theoretical bounds over the course of an aggregated match.
+	\end{itemize}
+	
+	\section{Total Noise Composition}
+	To understand rating velocity, we analyze the total predicted innovation variance $T_i$ against which a match residual $e_i$ is judged:
+	\begin{equation}
+		T_i = V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2 + \sigma_i^2 + \mathrm{Var}(B_{\mathrm{obs}})
+	\end{equation}
+	\begin{itemize}
+		\item \textbf{For a New Shooter:} $T_i \approx 19.0 + 1.0 + 0.2 + 0.1 = 20.3\,\text{SV}$. Because $V_i$ makes up 94\% of the noise, $K_i \approx 0.94$. The rating moves instantly.
+		\item \textbf{For a Consistent Veteran:} $T_i \approx 0.5 + 1.0 + 0.2 + 0.1 = 1.8\,\text{SV}$. $V_i$ is only 27\% of the total noise, so $K_i \approx 0.27$. The rating is stable and slow.
+	\end{itemize}
+	
+	\section{Diagnostic Troubleshooting}
+	
+	\subsection{The Vicious Cycle of High Dispersion}
+	\textbf{Symptom:} A competitor's rating becomes permanently stuck, completely ignoring long streaks of excellent or terrible performances.\\
+	\textbf{Mechanism:} If a competitor's behavioral dispersion ($\sigma_i^2$) becomes massive (e.g., $> 5.0\,\text{SV}$), the denominator of the Kalman gain explodes, dropping $K_i$ to near-zero. Furthermore, because total system noise $T_i$ is massive, the variance surprise trigger $\max(0, e_i^2 - T_i)$ mathematically cannot activate. The competitor grows an ``armor'' of aleatoric noise that deflects both rating updates and epistemic variance awakenings.\\
+	\textbf{Solution:} 
+	\begin{enumerate}
+		\item Ensure $\sigma_{i,\mathrm{init}}^2$ is initialized strictly to a low value ($\approx 0.2\,\text{SV}$). Never initialize dispersion using $V_{\mathrm{start}}$.
+		\item Lower the Dispersion Target Clamp (e.g., from $9\times$ to $5\times$) to prevent single catastrophic equipment failures from permanently inflating the EMA.
+		\item Ensure the Variance Surprise is correctly comparing the raw squared error ($e_i^2$) directly against the fully laden $T_i$, so genuine skill shifts can still shatter the armor.
+	\end{enumerate}
+	
+	\subsection{The ``Day 1'' Rating Explosion}
+	\textbf{Symptom:} A strong competitor dominates an unrated field. The winner's rating skyrockets to an impossible value, and their variance crashes to zero.\\
+	\textbf{Mechanism:} The filter falsely applies the Central Limit Theorem to the field's unrated status. A mean of 100 novices collapses the baseline estimation variance to zero, acting as an immovable anchor. The winner is forced to absorb 100\% of the performance gap.\\
+	\textbf{Solution:} Increase the Cohort Intraclass Correlation ($\rho$). This strictly bounds the baseline variance asymptote to $\rho \cdot V_{\mathrm{field}}$, ensuring large unknown fields remain mathematically flexible tethers rather than rigid walls.
+	
+	\subsection{Sluggish Veterans and Wide Error Bands}
+	\textbf{Symptom:} The system generates robust predictions, but veteran error bars are wider than necessary, forcing the system designer to artificially shrink $\kappa$ and $\sigma_{\mathrm{pred}}^2$ to near-zero to achieve correct prediction calibration.\\
+	\textbf{Mechanism:} The structural injection of $\rho$ raises the natural steady-state floor of $V_i$ across the population. If time-drift $\sigma_{\mathrm{drift}}^2$ is left too high, $V_i$ never fully shrinks. The filter hoards epistemic uncertainty, starving the aleatoric components ($\sigma_{\mathrm{pred}}^2, \kappa$) of their proper predictive role.\\
+	\textbf{Solution:} Decrease the Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$). Allow $V_{\mathrm{steady}}$ for veterans to naturally compress to $\approx 0.5\,\text{SV}$. As $V_i$ shrinks, the predictive error bars will tighten organically, granting you the headroom to raise $\kappa$ and $\sigma_{\mathrm{pred}}^2$ back into mathematically sound ranges.
+	
+\end{document}

@@ -15,8 +15,10 @@ enum _IntKeys {
 enum _DoubleKeys {
   oldVariance,
   oldDispersion,
+  oldMomentum,
   varianceChange,
   dispersionChange,
+  momentumChange,
 }
 
 class LatentLogRatingEvent extends RatingEvent {
@@ -33,8 +35,10 @@ class LatentLogRatingEvent extends RatingEvent {
     required double oldRating,
     required double oldVariance,
     required double oldDispersion,
+    required double oldMomentum,
     required double varianceChange,
     required double dispersionChange,
+    required double momentumChange,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: ratingChange,
     oldRating: oldRating,
@@ -52,8 +56,10 @@ class LatentLogRatingEvent extends RatingEvent {
     this.oldRating = oldRating;
     this.oldVariance = oldVariance;
     this.oldDispersion = oldDispersion;
+    this.oldMomentum = oldMomentum;
     this.varianceChange = varianceChange;
     this.dispersionChange = dispersionChange;
+    this.momentumChange = momentumChange;
     wrappedEvent.setMatchId(match.sourceIds.first, load: false);
   }
 
@@ -63,11 +69,17 @@ class LatentLogRatingEvent extends RatingEvent {
   double get oldDispersion => wrappedEvent.doubleData[_DoubleKeys.oldDispersion.index];
   set oldDispersion(double v) => wrappedEvent.doubleData[_DoubleKeys.oldDispersion.index] = v;
 
+  double get oldMomentum => wrappedEvent.doubleData[_DoubleKeys.oldMomentum.index];
+  set oldMomentum(double v) => wrappedEvent.doubleData[_DoubleKeys.oldMomentum.index] = v;
+
   double get varianceChange => wrappedEvent.doubleData[_DoubleKeys.varianceChange.index];
   set varianceChange(double v) => wrappedEvent.doubleData[_DoubleKeys.varianceChange.index] = v;
 
   double get dispersionChange => wrappedEvent.doubleData[_DoubleKeys.dispersionChange.index];
   set dispersionChange(double v) => wrappedEvent.doubleData[_DoubleKeys.dispersionChange.index] = v;
+
+  double get momentumChange => wrappedEvent.doubleData[_DoubleKeys.momentumChange.index];
+  set momentumChange(double v) => wrappedEvent.doubleData[_DoubleKeys.momentumChange.index] = v;
 
   LatentLogSettings settings;
 
@@ -99,6 +111,7 @@ class LatentLogRatingEvent extends RatingEvent {
     oldDispersion = change.change[LatentLogRater.oldDispersionKey]!;
     varianceChange = change.change[LatentLogRater.varianceChangeKey]!;
     dispersionChange = change.change[LatentLogRater.dispersionChangeKey]!;
+    momentumChange = change.change[LatentLogRater.momentumChangeKey]!;
     stages = change.change[LatentLogRater.stagesKey]!.round();
 
     // Base class keys — [RatingSystem.ratingKey] is the new absolute internal rating.

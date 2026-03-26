@@ -15,7 +15,7 @@ import "package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart";
 import "package:shooting_sports_analyst/ui/widget/score_row.dart";
 
 extension LatentLogRatingsUi on LatentLogRater {
-  static const _paddingFlex = 4;
+  static const _paddingFlex = 2;
   static const _placeFlex = 2;
   static const _memberNumFlex = 3;
   static const _classFlex = 1;
@@ -23,7 +23,8 @@ extension LatentLogRatingsUi on LatentLogRater {
   static const _ratingFlex = 2;
   static const _lastChangeFlex = 2;
   static const _varianceFlex = 2;
-  static const _volatilityFlex = 2;
+  static const _dispersionFlex = 2;
+  static const _momentumFlex = 2;
   static const _matchesFlex = 2;
   static const _stagesFlex = 2;
 
@@ -45,10 +46,17 @@ extension LatentLogRatingsUi on LatentLogRater {
           ),
         ),
         Expanded(
-          flex: _volatilityFlex,
+          flex: _dispersionFlex,
           child: Tooltip(
             message: "How much a competitor's rating tends to move from event to event.",
             child: Text("Dispersion", textAlign: TextAlign.end),
+          ),
+        ),
+        Expanded(
+          flex: _momentumFlex,
+          child: Tooltip(
+            message: "The directional tendency of the rating change over time.",
+            child: Text("Momentum", textAlign: TextAlign.end),
           ),
         ),
         Expanded(flex: _matchesFlex, child: Text("Matches", textAlign: TextAlign.end)),
@@ -92,9 +100,16 @@ extension LatentLogRatingsUi on LatentLogRater {
                 )
               ),
             Expanded(
-              flex: _volatilityFlex,
+              flex: _dispersionFlex,
               child: Text(
                 rating.displayDispersionStandardDeviation.toStringAsFixed(1),
+                textAlign: TextAlign.end,
+              ),
+            ),
+            Expanded(
+              flex: _momentumFlex,
+              child: Text(
+                rating.displayMomentum.toStringAsFixed(1),
                 textAlign: TextAlign.end,
               ),
             ),

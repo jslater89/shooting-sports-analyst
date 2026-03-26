@@ -6,20 +6,23 @@ class LatentLogSettings extends RaterSettings {
   static const defaultScaleOffset = 1330.0;
   static const defaultScaleFactor = 1400.0;
 
-  static const defaultSportVariance = 0.0008;
-  static const defaultSkillDriftRate = 0.0002;
-  static const defaultStartingVariance = 0.0108;
-  static const defaultMaximumVariance = 0.0216;
+  static const defaultSportVariance = 0.0010;
+  static const defaultSkillDriftRate = 0.00025;
+  static const defaultStartingVariance = 0.0200;
+  /// Initial per-competitor behavioral variance σ_i² for new shooters; legacy default was 0.1 × σ²_sport.
+  static const defaultStartingDispersion = 0.0005;
+  static const defaultMaximumVariance = 0.0400;
   static const defaultIntraclassCorrelation = 0.3;
-  static const defaultDispersionAdaptationRate = 0.05;
-  static const defaultSurpriseAdaptationRate = 0.10;
+  static const defaultDispersionAdaptationRate = 0.10;
+  static const defaultMomentumAdaptationRate = 0.20;
+  static const defaultSurpriseAdaptationRate = 0.0750;
   static const defaultPairwiseBlendWeight = 0.10;
 
   static const defaultMatchDifficultyVariance = 0.10;
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.60;
   static const defaultTailNoiseVariance = 0.04;
-  static const defaultWeakFieldVariance = 0.50;
+  static const defaultWeakFieldVariance = 0.25;
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
@@ -34,10 +37,12 @@ class LatentLogSettings extends RaterSettings {
   static const _sportVarianceKey = "latentLogSportVolatility";
   static const _skillDriftRateKey = "latentLogSkillDriftRate";
   static const _startingVarianceKey = "latentLogStartingVariance";
+  static const _startingDispersionKey = "latentLogStartingDispersion";
   static const _maximumVarianceKey = "latentLogMaximumVariance";
   static const _dispersionAdaptationRateKey =
       "latentLogVolatilityAdaptationRate";
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
+  static const _momentumAdaptationRateKey = "latentLogMomentumAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
   static const _matchDifficultyVarianceKey = "latentLogMatchDifficultyVariance";
   static const _baselineRobustnessZKey = "latentLogBaselineRobustnessZ";
@@ -105,6 +110,11 @@ class LatentLogSettings extends RaterSettings {
   /// -> V_initial = 4^2 * 0.0024 = 0.0384
   double startingVariance = defaultStartingVariance;
 
+  /// Initial behavioral dispersion σ_i² for brand-new competitors (Kalman observation-noise component).
+  ///
+  /// Independent of [sportVariance]; tune in variance units. Scaled display uses √(σ_i²) × scale factor.
+  double startingDispersion = defaultStartingDispersion;
+
   /// Upper bound on committed rating variance after Kalman updates and after
   /// time-based skill drift in [LatentLogRating.calculateCurrentVariance].
   ///
@@ -128,6 +138,16 @@ class LatentLogSettings extends RaterSettings {
   /// -> 0.10: default; moderate memory (~order of 10 events, very loosely).
   /// -> 0.15--0.20: responsive; use if σ_i^2 feels sluggish vs validation.
   double dispersionAdaptationRate = defaultDispersionAdaptationRate;
+
+  /// Lower bound multiplier for certainty-weighted dispersion adaptation.
+  ///
+  /// Interpretation: dispersion adaptation uses max(momentumAdaptationRate, certainty)
+  /// where certainty grows as committed variance shrinks toward zero. Higher values keep
+  /// adaptation responsive even when uncertainty is high; lower values slow early-career
+  /// dispersion movement.
+  ///
+  /// Tuning: dimensionless in [0, 1].
+  double momentumAdaptationRate = defaultMomentumAdaptationRate;
 
   /// The surprise adaptation rate, i.e. γ from the paper.
   ///
@@ -331,8 +351,10 @@ class LatentLogSettings extends RaterSettings {
     this.sportVariance = defaultSportVariance,
     this.skillDriftRate = defaultSkillDriftRate,
     this.startingVariance = defaultStartingVariance,
+    this.startingDispersion = defaultStartingDispersion,
     this.maximumVariance = defaultMaximumVariance,
     this.dispersionAdaptationRate = defaultDispersionAdaptationRate,
+    this.momentumAdaptationRate = defaultMomentumAdaptationRate,
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
     this.baselineRobustnessZ = defaultBaselineRobustnessZ,
@@ -357,9 +379,11 @@ class LatentLogSettings extends RaterSettings {
     json[_sportVarianceKey] = sportVariance;
     json[_skillDriftRateKey] = skillDriftRate;
     json[_startingVarianceKey] = startingVariance;
+    json[_startingDispersionKey] = startingDispersion;
     json[_maximumVarianceKey] = maximumVariance;
     json[_intraclassCorrelationKey] = intraclassCorrelation;
     json[_dispersionAdaptationRateKey] = dispersionAdaptationRate;
+    json[_momentumAdaptationRateKey] = momentumAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
     json[_baselineRobustnessZKey] = baselineRobustnessZ;
@@ -386,6 +410,8 @@ class LatentLogSettings extends RaterSettings {
         (json[_skillDriftRateKey] ?? defaultSkillDriftRate) as double;
     startingVariance =
         (json[_startingVarianceKey] ?? defaultStartingVariance) as double;
+    startingDispersion = (json[_startingDispersionKey] as double?) ??
+        (0.1 * sportVariance);
     maximumVariance = (json[_maximumVarianceKey] ??
             json[_startingVarianceKey] ??
             defaultMaximumVariance)
@@ -398,6 +424,9 @@ class LatentLogSettings extends RaterSettings {
             as double;
     dispersionAdaptationRate =
         (json[_dispersionAdaptationRateKey] ?? defaultDispersionAdaptationRate)
+            as double;
+    momentumAdaptationRate =
+        (json[_momentumAdaptationRateKey] ?? defaultMomentumAdaptationRate)
             as double;
     surpriseAdaptationRate =
         (json[_surpriseAdaptationRateKey] ?? defaultSurpriseAdaptationRate)

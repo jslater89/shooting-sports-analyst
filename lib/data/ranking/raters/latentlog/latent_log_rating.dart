@@ -19,6 +19,9 @@ enum _DoubleKeys {
 
   /// The current variance for this competitor, accounting for time since the last update.
   currentVariance,
+
+  /// The momentum parameter for this competitor.
+  momentum,
 }
 
 enum _IntKeys {
@@ -43,6 +46,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     required double initialRating,
     required double initialVariance,
     required double initialDispersion,
+
   }) : super(
     shooter,
     intDataElements: _IntKeys.values.length,
@@ -51,6 +55,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     this.rating = initialRating;
     this.variance = initialVariance;
     this.dispersion = initialDispersion;
+    this.momentum = 0.0;
   }
 
   LatentLogSettings settings;
@@ -66,6 +71,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
   double get displayCurrentVariance => varianceToday * settings.scaleFactor * settings.scaleFactor;
   double get displayDispersion => dispersion * settings.scaleFactor * settings.scaleFactor;
+  double get displayMomentum => momentum * settings.scaleFactor;
 
   double get currentStandardDeviation => sqrt(varianceToday);
   double get displayStandardDeviation => sqrt(displayVariance);
@@ -77,6 +83,9 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   double get dispersion => wrappedRating.doubleData[_DoubleKeys.dispersion.index];
   set dispersion(double v) => wrappedRating.doubleData[_DoubleKeys.dispersion.index] = v;
+
+  double get momentum => wrappedRating.doubleData[_DoubleKeys.momentum.index];
+  set momentum(double v) => wrappedRating.doubleData[_DoubleKeys.momentum.index] = v;
 
   double get varianceToday {
     if(varianceTodayTimestamp.isSameDay(DateTime.now())) {
@@ -111,7 +120,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   /// Variance is a simple function of time since last update and skill drift rate.
   double calculateCurrentVariance({DateTime? asOfDate}) {
     asOfDate ??= DateTime.now();
-    if(asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
+    if(lastCommitTimestamp == 0 || asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
       return variance;
     }
     var daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
@@ -146,6 +155,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
       rating += e.ratingChange;
       variance += e.varianceChange;
       dispersion += e.dispersionChange;
+      momentum += e.momentumChange;
       lengthInStages += e.stages;
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
       lastCommitTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
@@ -165,6 +175,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   }
 
   LatentLogRating.copy(LatentLogRating other) : this.settings = other.settings, super.copy(other) {
+    this.momentum = other.momentum;
     this.dispersion = other.dispersion;
     this.varianceToday = other.varianceToday;
     this.lastCommitTimestamp = other.lastCommitTimestamp;
