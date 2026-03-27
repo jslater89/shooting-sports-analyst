@@ -812,7 +812,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               internalController: _matchDifficultyInternal,
               scaledValue:
                 // prior precision => (1 / tau^2)
-                // "average competitor" => sportVariance + startingDispersion + startingVariance
+                // "average new competitor" => sportVariance + startingDispersion + startingVariance
                 // average competitor observation precision = 1 / (sportVariance + startingDispersion + startingVariance)
                 // nEff = (1 / tau^2) / (1 / (sportVariance + startingDispersion + startingVariance))
                 (1 / settings.matchDifficultyVariance) / (1 / (settings.sportVariance + settings.startingDispersion + settings.startingVariance)),

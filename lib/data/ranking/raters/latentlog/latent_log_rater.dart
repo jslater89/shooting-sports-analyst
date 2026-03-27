@@ -571,8 +571,24 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         "Observation/total noise: {{observationNoise}}/{{totalNoise}} SV",
         "z-score/damping/Kalman gain: {{innovationZScore}}/{{weight}}x/{{kalmanGain}}",
         "Raw/damped innovation: {{innovation}}/{{dampedInnovation}}",
+        "Baseline residual/total weight: {{baselineResidual}}/{{totalWeight}}",
+        "Valid scores: {{validScoresCount}}",
       ],
       infoData: [
+        RatingEventInfoElement.double(
+          name: "baselineResidual",
+          doubleValue: baselineResidualSum,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "totalWeight",
+          doubleValue: totalBaselineWeight,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.int(
+          name: "validScoresCount",
+          intValue: validScoresCount,
+        ),
         RatingEventInfoElement.int(
           name: "finish",
           intValue: shooterScore.place,
