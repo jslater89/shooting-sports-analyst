@@ -5,6 +5,8 @@
  */
 
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_fetch_options.dart';
+import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
@@ -21,7 +23,10 @@ var _log = SSALogger("MatchSource");
 /// A MatchSource represents some way to retrieve match data from a remote source,
 /// like a database or website. Matches are keyed by a unique ID—for PractiScore, for
 /// instance, the key is the long-style UUID.
-abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchFetchOptions> {
+abstract class MatchSource<
+  T extends InternalMatchType,
+  S extends InternalMatchFetchOptions
+> {
   /// A name suitable for display.
   String get name;
 
@@ -39,8 +44,10 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   }
 
   String applyCode(String matchId) {
-    if(matchId.startsWith("$code:")) return matchId;
-    else return "$code:$matchId";
+    if (matchId.startsWith("$code:"))
+      return matchId;
+    else
+      return "$code:$matchId";
   }
 
   bool get isImplemented;
@@ -49,13 +56,16 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
 
   /// Whether the functionality of this source is degraded.
   bool get degraded => false;
+
   /// A user-readable reason for why the source is degraded.
   /// If [degraded] is false, this should be null.
   String? get degradedReason => null;
 
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
-  Future<Result<List<MatchSearchResult<T>>, MatchSourceError>> findMatches(String search);
+  Future<Result<List<MatchSearchResult<T>>, MatchSourceError>> findMatches(
+    String search,
+  );
 
   /// Given a search result, get the match it corresponds to.
   ///
@@ -71,7 +81,12 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// [MatchSourceError.typeMismatch].
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<T> result, {SportType? typeHint, Sport? sport, S? options});
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(
+    MatchSearchResult<T> result, {
+    SportType? typeHint,
+    Sport? sport,
+    S? options,
+  });
 
   /// Get a match identified by the given ID.
   ///
@@ -80,46 +95,64 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// [MatchSourceError.typeMismatch].
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport, S? options});
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(
+    String id, {
+    SportType? typeHint,
+    Sport? sport,
+    S? options,
+  });
 
-  static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(SourceIdsProvider match, {bool matchInProgress = false}) async {
+  static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(
+    SourceIdsProvider match, {
+    bool matchInProgress = false,
+  }) async {
     var source = MatchSourceRegistry().getByCodeOrNull(match.sourceCode);
 
-    if(source == null || !source.isImplemented) {
-      return Result.err(UnsupportedMatchType("No source for ${match.sourceCode}"));
+    if (source == null || !source.isImplemented) {
+      return Result.err(
+        UnsupportedMatchType("No source for ${match.sourceCode}"),
+      );
     }
 
     var preferredSourceId = getPreferredSourceId(match.sourceIds);
     source = maybeForwardToSSAServer(source, preferredSourceId);
 
     InternalMatchFetchOptions? options;
-    if(source is PSv2MatchSource) {
+    if (source is PSv2MatchSource) {
       options = PSv2MatchFetchOptions(
         downloadScoreLogs: matchInProgress,
+        ignoreUnknownDivisions: true,
+        fuzzyHitFactorDivisionMatching: true,
+      );
+    } else if (source is HitfactoRsMatchSource) {
+      options = HitfactoRsMatchFetchOptions(
+        downloadScoreLogs: false,
         ignoreUnknownDivisions: true,
         fuzzyHitFactorDivisionMatching: true,
       );
     }
 
     Sport? sport;
-    if(match is SportSourceIdsProvider) {
+    if (match is SportSourceIdsProvider) {
       sport = match.sport;
     }
 
-    var result = await source.getMatchFromId(preferredSourceId, sport: sport, options: options);
+    var result = await source.getMatchFromId(
+      preferredSourceId,
+      sport: sport,
+      options: options,
+    );
 
-    if(result.isOk()) {
+    if (result.isOk()) {
       var match = result.unwrap();
       var r = await AnalystDatabase().saveMatch(match);
-      if(r.isOk()) {
+      if (r.isOk()) {
         match.databaseId = r.unwrap().id;
         return Result.ok(match);
-      }
-      else {
+      } else {
         return Result.err(GeneralError(r.unwrapErr()));
       }
-    }
-    else {
+    } else {
       return Result.errFrom(result);
     }
   }
@@ -127,11 +160,22 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// If the app config specifies that UUID-style matches should be forwarded to the SSA server source,
   /// and the match ID is a UUID, and the current source is not already the SSA server source,
   /// return the SSA server source. Otherwise, return the current source.
-  static MatchSource maybeForwardToSSAServer(MatchSource currentSource, String matchId) {
-    var shouldForward = FlutterOrNative.configProvider.currentConfig.forwardUuidsToSSAServerSource && currentSource is! SSAServerMatchSource;
-    if(shouldForward && uuidRegex.hasMatch(matchId)) {
+  static MatchSource maybeForwardToSSAServer(
+    MatchSource currentSource,
+    String matchId,
+  ) {
+    var shouldForward =
+        FlutterOrNative
+            .configProvider
+            .currentConfig
+            .forwardUuidsToSSAServerSource &&
+        currentSource is! SSAServerMatchSource;
+    if (shouldForward && uuidRegex.hasMatch(matchId)) {
       _log.i("Forwarding UUID-style match ID to SSA server source");
-      return MatchSourceRegistry().getByCode(SSAServerMatchSource.ssaServerCode, currentSource);
+      return MatchSourceRegistry().getByCode(
+        SSAServerMatchSource.ssaServerCode,
+        currentSource,
+      );
     }
     return currentSource;
   }

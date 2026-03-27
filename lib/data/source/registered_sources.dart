@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_source.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
@@ -16,10 +17,10 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 class MatchSourceRegistry {
   static MatchSourceRegistry? _instance;
   factory MatchSourceRegistry() {
-    if(_instance == null) {
+    if (_instance == null) {
       _instance = MatchSourceRegistry._();
-      for(var source in _instance!._sources) {
-        if(source is SSAServerMatchSource) {
+      for (var source in _instance!._sources) {
+        if (source is SSAServerMatchSource) {
           source.initialize();
         }
       }
@@ -30,7 +31,8 @@ class MatchSourceRegistry {
   MatchSourceRegistry._();
 
   MatchSource getByCode(String code, MatchSource fallback) {
-    return sources.firstWhereOrNull((e) => e.handledCodes.contains(code)) ?? fallback;
+    return sources.firstWhereOrNull((e) => e.handledCodes.contains(code)) ??
+        fallback;
   }
 
   MatchSource? getByCodeOrNull(String code) {
@@ -42,9 +44,12 @@ class MatchSourceRegistry {
     PractiscoreHitFactorReportParser(ipscSport),
     PractiscoreHitFactorReportParser(pcslSport),
     PSv2MatchSource(),
+    HitfactoRsMatchSource(),
     SSAServerMatchSource(),
   ];
-  List<MatchSource> get sources => _sources.where((e) => e.isImplemented).toList(growable: false);
+  List<MatchSource> get sources =>
+      _sources.where((e) => e.isImplemented).toList(growable: false);
 
-  List<MatchSource> get practiscoreUrlSources => _sources.where((e) => e is PractiscoreHitFactorReportParser).toList();
+  List<MatchSource> get practiscoreUrlSources =>
+      _sources.where((e) => e is PractiscoreHitFactorReportParser).toList();
 }

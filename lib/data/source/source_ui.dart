@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_ui.dart';
+import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_source.dart';
+import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_ui.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report_ui.dart';
@@ -33,16 +35,15 @@ abstract class SourceUI {
   });
 
   static SourceUI forSource(MatchSource source) {
-    if(source is PSv2MatchSource) {
+    if (source is PSv2MatchSource) {
       return PSv2UI();
-    }
-    else if(source is PractiscoreHitFactorReportParser) {
+    } else if (source is HitfactoRsMatchSource) {
+      return HitfactoRsUI();
+    } else if (source is PractiscoreHitFactorReportParser) {
       return PractiscoreReportUI();
-    }
-    else if(source is SSAServerMatchSource) {
+    } else if (source is SSAServerMatchSource) {
       return SSAServerSourceUI();
     }
     throw StateError("No UI for source $source");
   }
-
 }

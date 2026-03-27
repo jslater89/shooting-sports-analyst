@@ -39,7 +39,11 @@ class ApplicationPreferences {
   /// The name of the last-selected fantasy points mode.
   String fantasyPointsModeName = FantasyPointsMode.off.name;
   @ignore
-  FantasyPointsMode get fantasyPointsMode => FantasyPointsMode.values.firstWhereOrNull((e) => e.name == fantasyPointsModeName) ?? FantasyPointsMode.off;
+  FantasyPointsMode get fantasyPointsMode =>
+      FantasyPointsMode.values.firstWhereOrNull(
+        (e) => e.name == fantasyPointsModeName,
+      ) ??
+      FantasyPointsMode.off;
   set fantasyPointsMode(FantasyPointsMode value) {
     fantasyPointsModeName = value.name;
   }
@@ -47,7 +51,11 @@ class ApplicationPreferences {
   /// The name of the last-selected rating display mode.
   String ratingDisplayModeName = RatingDisplayMode.preMatch.name;
   @ignore
-  RatingDisplayMode get ratingDisplayMode => RatingDisplayMode.values.firstWhereOrNull((e) => e.name == ratingDisplayModeName) ?? RatingDisplayMode.preMatch;
+  RatingDisplayMode get ratingDisplayMode =>
+      RatingDisplayMode.values.firstWhereOrNull(
+        (e) => e.name == ratingDisplayModeName,
+      ) ??
+      RatingDisplayMode.preMatch;
   set ratingDisplayMode(RatingDisplayMode value) {
     ratingDisplayModeName = value.name;
   }
@@ -55,7 +63,11 @@ class ApplicationPreferences {
   /// The name of the last selected match prediction mode.
   String matchPredictionModeName = MatchPredictionMode.none.name;
   @ignore
-  MatchPredictionMode get matchPredictionMode => MatchPredictionMode.values.firstWhereOrNull((e) => e.name == matchPredictionModeName) ?? MatchPredictionMode.none;
+  MatchPredictionMode get matchPredictionMode =>
+      MatchPredictionMode.values.firstWhereOrNull(
+        (e) => e.name == matchPredictionModeName,
+      ) ??
+      MatchPredictionMode.none;
   set matchPredictionMode(MatchPredictionMode value) {
     matchPredictionModeName = value.name;
   }
@@ -72,15 +84,25 @@ class ApplicationPreferences {
 
   List<RecentPredictionUrl> predictionSuggestions(String search) {
     recentPredictionUrls.sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
-    return recentPredictionUrls.where((e) =>
-      e.matchName.toLowerCase().contains(search.toLowerCase()) ||
-      e.url.toLowerCase().contains(search.toLowerCase())
-    ).toList();
+    return recentPredictionUrls
+        .where(
+          (e) =>
+              e.matchName.toLowerCase().contains(search.toLowerCase()) ||
+              e.url.toLowerCase().contains(search.toLowerCase()),
+        )
+        .toList();
   }
 
   void addRecentPredictionUrl(String url, String matchName) {
-    var newUrl = RecentPredictionUrl.create(url: url, matchName: matchName, lastUsed: DateTime.now());
-    recentPredictionUrls = [newUrl, ...recentPredictionUrls.where((e) => e.url != url)];
+    var newUrl = RecentPredictionUrl.create(
+      url: url,
+      matchName: matchName,
+      lastUsed: DateTime.now(),
+    );
+    recentPredictionUrls = [
+      newUrl,
+      ...recentPredictionUrls.where((e) => e.url != url),
+    ];
     if (recentPredictionUrls.length > 100) {
       recentPredictionUrls.sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
       recentPredictionUrls.removeRange(100, recentPredictionUrls.length);
@@ -89,7 +111,8 @@ class ApplicationPreferences {
 
   /// Whether event history or match history was shown most recently in the shooter stats dialog.
   @enumerated
-  ShooterStatsHistoryType shooterStatsHistoryType = ShooterStatsHistoryType.events;
+  ShooterStatsHistoryType shooterStatsHistoryType =
+      ShooterStatsHistoryType.events;
 
   /// Whether shooter history was sorted in ascending or descending order most recently.
   bool shooterStatsHistoryAscending = true;
@@ -105,14 +128,19 @@ class RecentPredictionUrl {
   DateTime lastUsed = DateTime.now();
 
   RecentPredictionUrl();
-  RecentPredictionUrl.create({required this.url, required this.matchName, required this.lastUsed});
+  RecentPredictionUrl.create({
+    required this.url,
+    required this.matchName,
+    required this.lastUsed,
+  });
 
   RecentPredictionUrl copyWith({DateTime? lastUsed}) {
-    return RecentPredictionUrl.create(url: url, matchName: matchName, lastUsed: lastUsed ?? this.lastUsed);
+    return RecentPredictionUrl.create(
+      url: url,
+      matchName: matchName,
+      lastUsed: lastUsed ?? this.lastUsed,
+    );
   }
 }
 
-enum ShooterStatsHistoryType {
-  events,
-  matches,
-}
+enum ShooterStatsHistoryType { events, matches }

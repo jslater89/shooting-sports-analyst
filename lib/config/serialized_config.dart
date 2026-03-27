@@ -47,7 +47,7 @@ class ConfigLoader {
 
   Future<bool> reload() async {
     File f = File("./config.toml");
-    if(!f.existsSync()) {
+    if (!f.existsSync()) {
       f.createSync();
     }
     try {
@@ -56,8 +56,7 @@ class ConfigLoader {
       config = deserialized;
       _log.i("Loaded config: $config");
       return true;
-    }
-    catch(e, st) {
+    } catch (e, st) {
       print("error loading config: $e $st");
       return false;
     }
@@ -76,7 +75,6 @@ class ConfigLoader {
     await save();
   }
 }
-
 
 @JsonSerializable()
 class SerializedConfig {
@@ -97,15 +95,24 @@ class SerializedConfig {
   int? ratingsContextProjectId;
 
   /// The base URL of an SSA server match data source.
-  @JsonKey(defaultValue: "https://parabellum.shootingsportsanalyst.com", includeIfNull: false)
+  @JsonKey(
+    defaultValue: "https://parabellum.shootingsportsanalyst.com",
+    includeIfNull: false,
+  )
   String ssaServerBaseUrl;
 
   /// The base64-encoded X25519 public key for the SSA server.
-  @JsonKey(defaultValue: "nt+FPpDMvdo9iwpyuNr5rZzs5CLNczhFY7Zcxf2TfD0=", includeIfNull: false)
+  @JsonKey(
+    defaultValue: "nt+FPpDMvdo9iwpyuNr5rZzs5CLNczhFY7Zcxf2TfD0=",
+    includeIfNull: false,
+  )
   String ssaServerX25519PubBase64;
 
   /// The base64-encoded Ed25519 public key for the SSA server.
-  @JsonKey(defaultValue: "QNr4wVng7Oa2yvMzJRQ2YDGFOsBQbEY3GfSWt2vt+EQ=", includeIfNull: false)
+  @JsonKey(
+    defaultValue: "QNr4wVng7Oa2yvMzJRQ2YDGFOsBQbEY3GfSWt2vt+EQ=",
+    includeIfNull: false,
+  )
   String ssaServerEd25519PubBase64;
 
   /// The directory to use for auto-importing matches, or null to disable auto-importing.
@@ -133,6 +140,10 @@ class SerializedConfig {
   @JsonKey(defaultValue: true, includeIfNull: false)
   bool forwardUuidsToSSAServerSource;
 
+  /// Optional API key for https://hitfacto.rs (sent as `X-API-Key`). Empty means unauthenticated requests.
+  @JsonKey(defaultValue: "")
+  String hitfactoRsApiKey;
+
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? ssaServerAuthIdentityName;
 
@@ -140,7 +151,8 @@ class SerializedConfig {
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? ssaServerAuthPrivateKeyPath;
 
-  factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
+  factory SerializedConfig.fromToml(Map<String, dynamic> json) =>
+      _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
   SerializedConfig({
@@ -157,6 +169,7 @@ class SerializedConfig {
     required this.autoImportDeletesAfterSkippingOverwrite,
     required this.autoImportFuzzyHitFactorDivisionMatching,
     required this.forwardUuidsToSSAServerSource,
+    required this.hitfactoRsApiKey,
     required this.ssaServerAuthIdentityName,
     required this.ssaServerAuthPrivateKeyPath,
   });
@@ -167,19 +180,34 @@ class SerializedConfig {
     builder.writeln("Config:");
     builder.writeln("\tlogLevel = ${logLevel.name}");
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
-    builder.writeln("\tplayRatingsCalculationCompleteAlert = $playRatingsCalculationCompleteAlert");
+    builder.writeln(
+      "\tplayRatingsCalculationCompleteAlert = $playRatingsCalculationCompleteAlert",
+    );
     builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
     builder.writeln("\tssaServerBaseUrl = $ssaServerBaseUrl");
     builder.writeln("\tssaServerX25519PubBase64 = $ssaServerX25519PubBase64");
     builder.writeln("\tssaServerEd25519PubBase64 = $ssaServerEd25519PubBase64");
     builder.writeln("\tautoImportDirectory = $autoImportDirectory");
     builder.writeln("\tautoImportOverwrites = $autoImportOverwrites");
-    builder.writeln("\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport");
-    builder.writeln("\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite");
-    builder.writeln("\tautoImportFuzzyHitFactorDivisionMatching = $autoImportFuzzyHitFactorDivisionMatching");
-    builder.writeln("\tforwardUuidsToSSAServerSource = $forwardUuidsToSSAServerSource");
+    builder.writeln(
+      "\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport",
+    );
+    builder.writeln(
+      "\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite",
+    );
+    builder.writeln(
+      "\tautoImportFuzzyHitFactorDivisionMatching = $autoImportFuzzyHitFactorDivisionMatching",
+    );
+    builder.writeln(
+      "\tforwardUuidsToSSAServerSource = $forwardUuidsToSSAServerSource",
+    );
+    builder.writeln(
+      "\thitfactoRsApiKey = ${hitfactoRsApiKey.isEmpty ? "(empty)" : "(set)"}",
+    );
     builder.writeln("\tssaServerAuthIdentityName = $ssaServerAuthIdentityName");
-    builder.writeln("\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath");
+    builder.writeln(
+      "\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath",
+    );
     return builder.toString();
   }
 
@@ -195,11 +223,14 @@ class SerializedConfig {
       autoImportDirectory: autoImportDirectory,
       autoImportOverwrites: autoImportOverwrites,
       autoImportDeletesAfterImport: autoImportDeletesAfterImport,
-      autoImportDeletesAfterSkippingOverwrite: autoImportDeletesAfterSkippingOverwrite,
+      autoImportDeletesAfterSkippingOverwrite:
+          autoImportDeletesAfterSkippingOverwrite,
+      autoImportFuzzyHitFactorDivisionMatching:
+          autoImportFuzzyHitFactorDivisionMatching,
       forwardUuidsToSSAServerSource: forwardUuidsToSSAServerSource,
+      hitfactoRsApiKey: hitfactoRsApiKey,
       ssaServerAuthIdentityName: ssaServerAuthIdentityName,
       ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
-      autoImportFuzzyHitFactorDivisionMatching: autoImportFuzzyHitFactorDivisionMatching,
     );
   }
 }
