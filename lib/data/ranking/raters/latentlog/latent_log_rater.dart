@@ -426,13 +426,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     var pairwiseBlendWeight = settings.pairwiseBlendWeight;
     if (pairwiseOpponentCount < 10) {
-      pairwiseBlendWeight = lerpAroundCenter(
+      pairwiseBlendWeight *= lerpAroundCenter(
         value: pairwiseOpponentCount.toDouble(),
         center: (10 + 2) / 2,
         rangeMin: 2,
         rangeMax: 10,
         minOut: 0,
-        centerOut: 1,
+        centerOut: 0.5,
         maxOut: 1,
       );
     }
