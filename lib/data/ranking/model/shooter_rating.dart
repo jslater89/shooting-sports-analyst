@@ -136,6 +136,11 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     return rating.round().toString();
   }
 
+  /// Format a numeric rating change for display.
+  String formatNumericRatingChange(double ratingChange) {
+    return ratingChange.round().toString();
+  }
+
   /// All of the rating events in this shooter's history, ordered
   /// from newest to oldest.
   ///

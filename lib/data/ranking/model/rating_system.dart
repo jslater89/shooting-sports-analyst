@@ -155,6 +155,15 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     return rating.toStringWithSignificantDigits(3);
   }
 
+  /// Return a representation of a numeric rating change suitable for display in e.g.
+  /// a table.
+  ///
+  /// The default implementation calls [formatNumericRating] on the rating change.
+  /// Rating systems with scaling factors or offsets may need an alternative implementation.
+  String formatNumericRatingChange(double ratingChange) {
+    return ratingChange.toStringWithSignificantDigits(3);
+  }
+
   /// Return [AlgorithmPrediction]s for the list of shooters.
   ///
   /// Provide a [seed] for repeatable predictions, if desired. [matchDate] may improve

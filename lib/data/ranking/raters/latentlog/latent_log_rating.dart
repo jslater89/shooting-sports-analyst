@@ -70,6 +70,10 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     return (rating * settings.scaleFactor + settings.scaleOffset).round().toString();
   }
 
+  String formatNumericRatingChange(double ratingChange) {
+    return (ratingChange * settings.scaleFactor).round().toString();
+  }
+
   DateTime? _cachedAgedRatingDate;
   double? _cachedAgedRating;
   double calculateAgedRating({DateTime? asOfDate}) {

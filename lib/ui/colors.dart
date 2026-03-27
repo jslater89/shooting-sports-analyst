@@ -83,4 +83,14 @@ class ThemeColors {
   static Color equalContrastRed(BuildContext context) {
     return const Color.fromARGB(255, 221, 51, 17);
   }
+
+  static Color fadedTextColor(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if(isDark) {
+      return Colors.grey[400]!;
+    }
+    else {
+      return Colors.grey[700]!;
+    }
+  }
 }

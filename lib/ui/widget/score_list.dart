@@ -375,7 +375,7 @@ class _ScoreListState extends State<ScoreList> {
                         break;
                       case RatingDisplayMode.change:
                         var r = rating.changeForEvent(widget.match!, null);
-                        if(r != null) text = rating.formatNumericRating(r);
+                        if(r != null) text = rating.formatNumericRatingChange(r);
                         break;
                       case RatingDisplayMode.none:
                         text = "(n/a)";

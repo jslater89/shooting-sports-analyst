@@ -192,6 +192,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _log.i("Loaded ${_projectName} at ${_selectedMatch} with ${activeTabs}");
 
     setState(() {
+      _sortMode = _settings.algorithm.supportedSorts.first;
       initialized = true;
     });
 

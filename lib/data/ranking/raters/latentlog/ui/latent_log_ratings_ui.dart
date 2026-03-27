@@ -77,50 +77,63 @@ extension LatentLogRatingsUi on LatentLogRater {
   }) {
     rating as LatentLogRating;
     final displayDelta = rating.lastMatchChange * settings.scaleFactor;
+    final seenYearsAgo = (DateTime.now().difference(rating.lastSeen).inDays / 365);
+    final String? ratingTooltip = seenYearsAgo > 1 ?
+      "Last active ${seenYearsAgo.toStringAsFixed(1)} years ago." :
+      null;
+
+    final rowContents = Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: Row(
+        children: [
+          Expanded(flex: _paddingFlex, child: Text("")),
+          Expanded(flex: _placeFlex, child: Text("$place")),
+          Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
+          Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
+          Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
+          Expanded(
+            flex: _ratingFlex,
+            child: MaybeTooltip(
+              message: ratingTooltip,
+              child: Text(sortMode == RatingSortMode.agedRating ? rating.formattedAgedRating : rating.formattedRating, textAlign: TextAlign.end)),
+            ),
+          Expanded(flex: _lastChangeFlex, child: Text(displayDelta.round().toString(), textAlign: TextAlign.end)),
+          Expanded(
+            flex: _varianceFlex,
+            child: MaybeTooltip(
+              message: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(1)}",
+              child:
+                Text(
+                  "${rating.displayStandardDeviation.toStringAsFixed(1)}",
+                  textAlign: TextAlign.end,
+                )
+              )
+            ),
+          Expanded(
+            flex: _dispersionFlex,
+            child: Text(
+              rating.displayDispersionStandardDeviation.toStringAsFixed(1),
+              textAlign: TextAlign.end,
+            ),
+          ),
+          Expanded(
+            flex: _momentumFlex,
+            child: Text(
+              rating.displayMomentum.toStringAsFixed(1),
+              textAlign: TextAlign.end,
+            ),
+          ),
+          Expanded(flex: _matchesFlex, child: Text(rating.lengthInMatches.toString(), textAlign: TextAlign.end)),
+          Expanded(flex: _stagesFlex, child: Text(rating.lengthInStages.toString(), textAlign: TextAlign.end)),
+          Expanded(flex: _paddingFlex, child: Text("")),
+        ],
+      ),
+    );
+
     return ScoreRow(
       color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: _paddingFlex, child: Text("")),
-            Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
-            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
-            Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
-            Expanded(flex: _ratingFlex, child: Text(sortMode == RatingSortMode.agedRating ? rating.formattedAgedRating : rating.formattedRating, textAlign: TextAlign.end)),
-            Expanded(flex: _lastChangeFlex, child: Text(displayDelta.round().toString(), textAlign: TextAlign.end)),
-            Expanded(
-              flex: _varianceFlex,
-              child: MaybeTooltip(
-                message: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(1)}",
-                child:
-                  Text(
-                    "${rating.displayStandardDeviation.toStringAsFixed(1)}",
-                    textAlign: TextAlign.end,
-                  )
-                )
-              ),
-            Expanded(
-              flex: _dispersionFlex,
-              child: Text(
-                rating.displayDispersionStandardDeviation.toStringAsFixed(1),
-                textAlign: TextAlign.end,
-              ),
-            ),
-            Expanded(
-              flex: _momentumFlex,
-              child: Text(
-                rating.displayMomentum.toStringAsFixed(1),
-                textAlign: TextAlign.end,
-              ),
-            ),
-            Expanded(flex: _matchesFlex, child: Text(rating.lengthInMatches.toString(), textAlign: TextAlign.end)),
-            Expanded(flex: _stagesFlex, child: Text(rating.lengthInStages.toString(), textAlign: TextAlign.end)),
-            Expanded(flex: _paddingFlex, child: Text("")),
-          ],
-        ),
-      ),
+      child: rowContents,
+      textColor: sortMode != RatingSortMode.agedRating && seenYearsAgo > 1 ? ThemeColors.fadedTextColor(context) : null,
     );
   }
 }

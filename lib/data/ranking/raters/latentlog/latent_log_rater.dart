@@ -59,8 +59,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
   @override
   List<RatingSortMode> get supportedSorts => [
-    RatingSortMode.rating,
     RatingSortMode.agedRating,
+    RatingSortMode.rating,
     RatingSortMode.classification,
     RatingSortMode.trend,
     RatingSortMode.error,
@@ -87,6 +87,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   @override
   String formatNumericRating(double rating) {
     return (rating * settings.scaleFactor + settings.scaleOffset).round().toString();
+  }
+
+  @override
+  String formatNumericRatingChange(double ratingChange) {
+    return (ratingChange * settings.scaleFactor).round().toString();
   }
 
   @override
