@@ -209,6 +209,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     Map<ShooterRating, double> competitorWeights = {};
     Map<ShooterRating, double> competitorBaselineResiduals = {};
     double baselineResidual = 0.0;
+    double weightedHistorySum = 0.0;
     double baselineVarianceSum = 0.0;
     double totalWeight = 0.0;
     Map<ShooterRating, double> competitorScoreEvidence = {};
@@ -245,6 +246,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       competitorWeights[shooter] = weight;
       baselineVarianceSum += weight * shooterVariance;
       totalWeight += weight;
+      weightedHistorySum += weight * shooter.length;
 
       final residual = agedRating - scoreEvidence;
       competitorBaselineResiduals[shooter] = residual;
@@ -260,6 +262,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final rawBaseline = baselineResidual / totalWeight;
       double robustResidualSum = 0.0;
       double robustWeightSum = 0.0;
+      double robustAverageHistorySum = 0.0;
       for (var shooter in validShooters) {
         final baseWeight = competitorWeights[shooter];
         final residual = competitorBaselineResiduals[shooter];
@@ -280,10 +283,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         competitorWeights[shooter] = effectiveWeight;
         robustResidualSum += effectiveWeight * residual;
         robustWeightSum += effectiveWeight;
+        robustAverageHistorySum += effectiveWeight * shooter.length;
       }
       if (robustWeightSum > 0) {
         baselineResidual = robustResidualSum;
         totalWeight = robustWeightSum;
+        weightedHistorySum = robustAverageHistorySum;
       }
     }
 
@@ -293,6 +298,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       validShooters,
       scores,
     );
+
+    final fieldMaturity = weightedHistorySum / totalWeight;
+    final newFieldVariance = settings.noveltyVariance
+      * (1 - ((log(fieldMaturity + 1) / log(settings.graphMaturityThreshold + 1)).clamp(0.0, 1.0)));
 
     for (var shooter in validShooters) {
       shooter as LatentLogRating;
@@ -309,6 +318,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         baselineVarianceSum: baselineVarianceSum,
         totalBaselineWeight: totalWeight,
         weakFieldVariance: weakFieldVariance,
+        fieldMaturity: fieldMaturity,
+        newFieldVariance: newFieldVariance,
         validScoresCount: validShooters.length,
         scores: scores,
         competitorScoreEvidence: competitorScoreEvidence,
@@ -348,6 +359,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     /// The weak field observation variance.
     required double weakFieldVariance,
+
+    /// The field maturity (i.e. precision-weighted mean history length).
+    required double fieldMaturity,
+
+    /// The new field variance.
+    required double newFieldVariance,
 
     /// The number of valid scores.
     required int validScoresCount,
@@ -474,11 +491,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
     final cleanObsNoise =
-      settings.sportVariance +
-      dispersionCertainty * shooter.dispersion +
-      (1 - pairwiseBlendWeightSquared) * baselineVariance +
-      pairwiseBlendWeightSquared * localBaselineVariance;
-    final totalObsNoise = cleanObsNoise + shooterTailNoise + weakFieldVariance;
+      settings.sportVariance
+      + dispersionCertainty * shooter.dispersion
+      + (1 - pairwiseBlendWeightSquared) * baselineVariance
+      + pairwiseBlendWeightSquared * localBaselineVariance;
+
+    final totalObsNoise =
+      cleanObsNoise
+      + shooterTailNoise
+      + weakFieldVariance
+      + newFieldVariance;
     final totalNoise = shooterVariance + totalObsNoise;
     final zScore = innovation / sqrt(totalNoise);
 
@@ -593,13 +615,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         "Global/local baseline: {{globalBaseline}}/{{localBaseline}}",
         "Own variance (time drift): {{ownVariance}} ({{timeVariance}}) SV",
         "Own dispersion: {{ownDispersion}} SV",
-        "Tail noise/weak field: {{tailNoise}}/{{weakField}} SV",
+        "Tail/weak field noise: {{tailNoise}}/{{weakField}} SV",
+        "Novelty noise/k: {{noveltyNoise}} SV, k = {{fieldMaturity}}",
         "Global/local noise: {{globalBaselineNoise}}/{{localBaselineNoise}} SV",
         "Observation/total noise: {{observationNoise}}/{{totalNoise}} SV",
         "z-score/damping/Kalman gain: {{innovationZScore}}/{{weight}}x/{{kalmanGain}}",
         "Raw/damped innovation: {{innovation}}/{{dampedInnovation}}",
         "Baseline residual/total weight: {{baselineResidual}}/{{totalWeight}}",
-        "Valid scores: {{validScoresCount}}",
       ],
       infoData: [
         RatingEventInfoElement.double(
@@ -611,10 +633,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           name: "totalWeight",
           doubleValue: totalBaselineWeight,
           numberFormat: "%00.2f",
-        ),
-        RatingEventInfoElement.int(
-          name: "validScoresCount",
-          intValue: validScoresCount,
         ),
         RatingEventInfoElement.int(
           name: "finish",
@@ -766,6 +784,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         RatingEventInfoElement.double(
           name: "momentumCorrection",
           doubleValue: displayVarianceFromMomentum,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "noveltyNoise",
+          doubleValue: newFieldVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "fieldMaturity",
+          doubleValue: fieldMaturity,
           numberFormat: "%00.2f",
         ),
       ],

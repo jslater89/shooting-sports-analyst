@@ -115,6 +115,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _weakFieldMaxSizeController = TextEditingController();
   final TextEditingController _weakFieldWeakFinishThresholdController = TextEditingController();
   final TextEditingController _weakFieldWeakFractionThresholdController = TextEditingController();
+  final TextEditingController _graphMaturityThresholdController =
+      TextEditingController();
+  final TextEditingController _noveltyVarianceController = TextEditingController();
 
   @override
   void initState() {
@@ -248,6 +251,16 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         _validateText();
       }
     });
+    attachNumericListener(_graphMaturityThresholdController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
+    attachNumericListener(_noveltyVarianceController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
   }
 
   @override
@@ -275,6 +288,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _weakFieldMaxSizeController.dispose();
     _weakFieldWeakFinishThresholdController.dispose();
     _weakFieldWeakFractionThresholdController.dispose();
+    _graphMaturityThresholdController.dispose();
+    _noveltyVarianceController.dispose();
     super.dispose();
   }
 
@@ -307,6 +322,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _weakFieldMaxSizeController.text = settings.weakFieldMaxSize.toStringAsFixed(1);
     _weakFieldWeakFinishThresholdController.text = settings.weakFieldWeakFinishThreshold.toStringAsFixed(4);
     _weakFieldWeakFractionThresholdController.text = settings.weakFieldWeakFractionThreshold.toStringAsFixed(4);
+    _graphMaturityThresholdController.text =
+        settings.graphMaturityThreshold.toStringAsFixed(1);
+    _noveltyVarianceController.text = settings.noveltyVariance.toStringAsFixed(4);
   }
 
   void _onScaleFactorTextChanged() {
@@ -548,6 +566,30 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
+    final graphMaturityThreshold = double.tryParse(
+      _graphMaturityThresholdController.text,
+    );
+    if (graphMaturityThreshold == null) {
+      widget.controller.lastError =
+          "Graph maturity threshold formatted incorrectly";
+      return;
+    }
+    if (graphMaturityThreshold <= 0) {
+      widget.controller.lastError =
+          "Graph maturity threshold must be positive";
+      return;
+    }
+
+    final noveltyVariance = double.tryParse(_noveltyVarianceController.text);
+    if (noveltyVariance == null) {
+      widget.controller.lastError = "Novelty variance formatted incorrectly";
+      return;
+    }
+    if (noveltyVariance < 0) {
+      widget.controller.lastError = "Novelty variance must be nonnegative";
+      return;
+    }
+
     final predSport = _parseVariance(controller: _predictionSportInternal);
     if (predSport == null) {
       widget.controller.lastError =
@@ -622,6 +664,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.weakFieldMaxSize = weakFieldMaxSize;
       settings.weakFieldWeakFinishThreshold = weakFieldWeakFinishThreshold;
       settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
+      settings.graphMaturityThreshold = graphMaturityThreshold;
+      settings.noveltyVariance = noveltyVariance;
       settings.predictionSportVariance = predSport;
       settings.predictionBehavioralDispersionKappa = predKappa;
       settings.meanReversionGraceYears = meanReversionGraceYears;
@@ -899,6 +943,28 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               controller: _weakFieldWeakFractionThresholdController,
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            _LatentLogLabeledNumericRow(
+              label: "Graph maturity threshold k_max",
+              tooltip:
+                  "Experience count where a competitor is treated as fully mature in novelty weighting. Larger values keep novelty damping active longer in new cohorts.",
+              controller: _graphMaturityThresholdController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            _LatentLogVarianceRow(
+              label: "Novelty variance ψ²",
+              tooltip:
+                  "Maximum topological-isolation variance penalty for immature fields. The active penalty scales by (1 - field maturity). 0 disables novelty damping.",
+              internalController: _noveltyVarianceController,
+              scaledValue: settings.noveltyVariance / settings.sportVariance,
+              scaledValuePrecision: 2,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Novelty variance in units of sport variance",
+              displayValueLabel: " SV",
             ),
             const _LatentLogSectionHeading("Prediction Parameters"),
             _LatentLogVarianceRow(

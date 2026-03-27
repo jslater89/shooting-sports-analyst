@@ -24,6 +24,8 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
+  static const defaultGraphMaturityThreshold = 200.0;
+  static const defaultNoveltyVariance = 0.0;
 
   static const defaultPredictionSportVariance = 0.0;
   static const defaultPredictionBehavioralDispersionKappa = 0.75;
@@ -53,6 +55,8 @@ class LatentLogSettings extends RaterSettings {
       "latentLogWeakFieldWeakFinishThreshold";
   static const _weakFieldWeakFractionThresholdKey =
       "latentLogWeakFieldWeakFractionThreshold";
+  static const _graphMaturityThresholdKey = "latentLogGraphMaturityThreshold";
+  static const _noveltyVarianceKey = "latentLogNoveltyVariance";
   static const _predictionSportVarianceKey =
       "latentLogPredictionSportVariance";
   static const _predictionBehavioralDispersionKappaKey =
@@ -286,6 +290,25 @@ class LatentLogSettings extends RaterSettings {
   /// -> 0.67: only very bottom-heavy fields trigger.
   double weakFieldWeakFractionThreshold = defaultWeakFieldWeakFractionThreshold;
 
+  /// Match-count threshold k_max for full graph maturity.
+  ///
+  /// Interpretation: each competitor contributes a maturity fraction
+  /// μ_i = min(1, k_i / k_max), where k_i is their match/stage history count.
+  /// Small values mature cohorts quickly; larger values keep novelty penalties
+  /// active for longer.
+  ///
+  /// Tuning: count-like scalar, positive.
+  double graphMaturityThreshold = defaultGraphMaturityThreshold;
+
+  /// Maximum novelty variance ψ² applied to topologically isolated fields.
+  ///
+  /// Interpretation: match-level variance penalty that scales by field novelty
+  /// (1 - \bar{μ}), where \bar{μ} is precision-weighted field maturity.
+  /// Zero disables novelty damping.
+  ///
+  /// Tuning: variance units, nonnegative.
+  double noveltyVariance = defaultNoveltyVariance;
+
   /// The idiosyncratic per-competitor sport noise used for prediction bands,
   /// in variance units.
   ///
@@ -364,6 +387,8 @@ class LatentLogSettings extends RaterSettings {
     this.weakFieldMaxSize = defaultWeakFieldMaxSize,
     this.weakFieldWeakFinishThreshold = defaultWeakFieldWeakFinishThreshold,
     this.weakFieldWeakFractionThreshold = defaultWeakFieldWeakFractionThreshold,
+    this.graphMaturityThreshold = defaultGraphMaturityThreshold,
+    this.noveltyVariance = defaultNoveltyVariance,
     this.predictionSportVariance = defaultPredictionSportVariance,
     this.predictionBehavioralDispersionKappa =
         defaultPredictionBehavioralDispersionKappa,
@@ -393,6 +418,8 @@ class LatentLogSettings extends RaterSettings {
     json[_weakFieldMaxSizeKey] = weakFieldMaxSize;
     json[_weakFieldWeakFinishThresholdKey] = weakFieldWeakFinishThreshold;
     json[_weakFieldWeakFractionThresholdKey] = weakFieldWeakFractionThreshold;
+    json[_graphMaturityThresholdKey] = graphMaturityThreshold;
+    json[_noveltyVarianceKey] = noveltyVariance;
     json[_predictionSportVarianceKey] = predictionSportVariance;
     json[_predictionBehavioralDispersionKappaKey] =
         predictionBehavioralDispersionKappa;
@@ -453,6 +480,11 @@ class LatentLogSettings extends RaterSettings {
         (json[_weakFieldWeakFractionThresholdKey] ??
                 defaultWeakFieldWeakFractionThreshold)
             as double;
+    graphMaturityThreshold =
+        (json[_graphMaturityThresholdKey] ?? defaultGraphMaturityThreshold)
+            as double;
+    noveltyVariance =
+        (json[_noveltyVarianceKey] ?? defaultNoveltyVariance) as double;
     predictionSportVariance =
         (json[_predictionSportVarianceKey] ?? defaultPredictionSportVariance)
             as double;
