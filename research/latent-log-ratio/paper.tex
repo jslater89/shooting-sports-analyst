@@ -199,6 +199,7 @@
 	Empirical testing on well-mixed, large-field matches demonstrates that $B_{\mathrm{local}}$ frequently converges with $B_{-i}$, allowing $\alpha$ to be tuned to 0 for a strictly $\mathcal{O}(N)$ global-only update. However, retaining the pairwise blend enables the model to gracefully handle stratified fields. In practical shooting, competitors often shoot in scheduled squads across multiple days, exposing them to varying environmental conditions (e.g., a ``super squad'' of elite competitors shooting in heavy rain, while the rest of the field shoots a different schedule in ideal weather). By blending in $B_{\mathrm{local}}$, the model leans on local peer comparisons---competitors facing the exact same physical and environmental topology---preventing the global baseline from washing out localized structural truths.
 
 	\textbf{Step 6: Total Observation Variance and Innovation}\\
+	\label{step6}
 	The raw innovation measures how surprising the competitor's observed performance was relative to their current rating:
 	\begin{equation}
 		e_i = O_i - R_i
@@ -641,17 +642,17 @@
 		\item \textbf{Skill Drift Rate ($\sigma_{\mathrm{drift}}^2$): $0.5\,\mathrm{SV}$ per year (Range: $0.1 - 1.0$).}
 		Adult motor skills degrade slowly. Half a match's worth of uncertainty per year allows veterans to remain stable while preventing absolute certainty collapse.
 		\item \textbf{Starting Variance ($V_{\mathrm{start}}$): $25.0\,\mathrm{SV}$ (Range: $20.0 - 40.0$).}
-		New competitors require enough variance to traverse the demographic distribution rapidly. Yields a Day 1 Kalman gain of roughly $0.96$.
+		New competitors require enough variance to traverse the demographic distribution rapidly. If competitor graphs often show an initial spike followed by decay, tune down slightly.
 		\item \textbf{Maximum Variance ($V_{\max}$): $33.0\,\mathrm{SV}$ (Range: $30.0 - 50.0$).}
-		An absolute computational ceiling slightly higher than $V_{\mathrm{start}}$, allowing returning shooters or massive variance surprises to snap the Kalman gain back to near 1.0 without overflowing the arithmetic.
+		An absolute computational ceiling slightly higher than $V_{\mathrm{start}}$, allowing returning shooters or massive variance surprises to snap the Kalman gain back to near 1.0 without overflowing the arithmetic. Note that the certainty parameter $c_i$ defined in \ref{step6}, Step 6, scales the update speed of dispersion $\sigma_i^2$ and momentum $m_i$, so $V_{\max}$ should be moved in proportion with $V_\mathrm{start}$ to prevent unintentional changes to the movement of other parameters.
 		\item \textbf{Initial Dispersion ($\sigma_{i,\mathrm{init}}^2$): $0.1\,\mathrm{SV}$ (Range: $0.05 - 0.25$).}
 		Competitors must be treated as consistent until proven otherwise. Initializing dispersion at a fraction of $\mathrm{SV}$ ensures the Kalman denominator remains small, allowing unhindered early rating convergence.
-		\item \textbf{Tail Noise ($\xi^2$): $\approx 33.0\,\mathrm{SV}$.}
+		\item \textbf{Tail Noise ($\xi^2$): $\approx 33.0\,\mathrm{SV}$:}
 		Requires empirical tuning based on the sport's deep-tail geometry. Set high enough to collapse the update weight of catastrophic failures to near-zero, if needed.
 		\item \textbf{Weak-Field Variance ($\omega^2$): $\approx 200.0\,\mathrm{SV}$.}
 		A massive structural penalty applied to degenerate, small-and-weak fields, ensuring they provide virtually no mathematically rigid evidence about elite top-end skill separation.
-		\item \textbf{Novelty Variance ($\psi^2$): $15.0 \mathrm{SV}$ (Range: $10.0 - 50.0$)
-		Novelty variance serves as a 
+		\item \textbf{Novelty Variance ($\psi^2$): $5.0 \mathrm{SV}$ (Range: $1.0 - 25.0$).}
+		Novelty variance serves as a light regularizing factor on fields of predominantly new competitors. It targets high-level competitors who appear and retire early in a dataset, earning incorrectly high ratings against a competitor graph that is not yet widely connected. $5.0$ represents minimal damping, but is experimentally sufficient to correct most unexpected outliers without unduly slowing the number of events required for new groups of ratings to converge.
 		\item \textbf{Prediction Sport Variance ($\sigma_{\mathrm{pred}}^2$): $0.0\,\mathrm{SV}$.}
 		Philosophically, predictive uncertainty should scale with the competitors' actual historical behaviors. Set this to zero and use $\kappa$ (see Phase 3) to widen predictive error bars. Only inject flat $\sigma_{\mathrm{pred}}^2$ if $\kappa$ is fully saturated at $1.0$ and predictions remain too narrow, or if the underlying conditions of the sport produce idiosyncratic variance that cannot be attributed to differences in competitor skill.
 	\end{itemize}
@@ -660,14 +661,14 @@
 	Finally, tune the adaptation rates, blend weights, and Huber thresholds.
 
 	\begin{itemize}
-		\item \textbf{Prediction Behavioral Scale ($\kappa$):} Range: $0.0 - 1.0$. Use as the primary tool for predictive error bar size control. It scales how much of a competitor's behavioral dispersion ($\sigma_i^2$) is projected into their published predictive bands.
+		\item \textbf{Prediction Behavioral Scale ($\kappa$):} \textbf{(Range: $0.0 - 1.0$).} Use as the primary tool for predictive error bar size control. It scales how much of a competitor's behavioral dispersion ($\sigma_i^2$) is projected into their published predictive bands.
 		\item \textbf{Cohort Intraclass Correlation ($\rho$): $0.3$ (Range: $\ge 0$).}
 		Prefer the lowest value that reliably eliminates the ``Day 1 Rating Explosion'' (the artifact where unrated fields collapse baseline variance to zero). The observed symptom of this problem is early competitors in weak or unknown fields climbing to the top of the ratings, while empirically higher-skilled competitors struggle to reach the same region after the cold start has completed. Increasing this parameter will damp early changes in any new group of ratings by increasing observational noise and thereby decreasing the Kalman gain.
 		\item \textbf{Momentum Adaptation Rate ($\lambda$): $0.2$}
 		Controls the EMA for tracking directional skill trends. The half-life of an exponential moving average is given by $ln(0.5) / ln(1 - \alpha)$.
 		The default yields a half-life of $\approx 3.1$ events. A relatively short half-life (according to the schedule of the sport) yields faster reaction to both the beginning and end of a streak.
 		\item \textbf{Dispersion Adaptation Rate ($\beta$): $0.1$.}
-		Controls the EMA for behavioral volatility.The default value of $0.1$ yields a half-life of $\approx 6.6$ events, smoothing erratic behavior over the course of a long season. A somewhat longer window than $\lambda$ reduces variance
+		Controls the EMA for behavioral volatility.The default value of $0.1$ yields a half-life of $\approx 6.6$ events. A long window relative to the sport's schedule (and to $\lambda$) prevents too-eager increases in dispersion, which can lead to the ``aleatoric armor'' pathology.
 		\item \textbf{Surprise Adaptation Rate ($\gamma$): $0.1$.}
 		Controls how aggressively $V_i$ inflates when the momentum or squared error breaches expected variance. Depends on event frequency and the nature of skill shocks in the sport.
 		\item \textbf{Pairwise Blend Weight ($\alpha$): $0.1$ (Range: $0.0 - 1.0$).}
@@ -678,6 +679,8 @@
 		The finish percentage below which the $\xi^2$ tail noise begins applying. Tune depending on the severity of the winner's curse and the geometry of the sport's deep tail.
 		\item \textbf{Weak-Field Thresholds ($n_{\mathrm{max}}, s_w, q_0$):}
 		Highly dependent on sport demographics. Define the size and shape of a match that should be legally penalized by $\omega^2$.
+		\item \textbf{Graph Maturity Threshold ($k_\mathrm{max}$): $8.0$.}
+		How quickly novelty variance $\psi^2$ decays as precision-weighted field history length grows. Dependent on sport demographics. For values between 5 and 20, the penalty reaches half strength at approximately $0.2 \cdot k_\mathrm{max}$.
 	\end{itemize}
 
 	\bibliographystyle{ieeetr}

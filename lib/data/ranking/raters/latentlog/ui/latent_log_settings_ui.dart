@@ -838,7 +838,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
             _LatentLogVarianceRow(
               label: "Dispersion adaptation β",
               tooltip:
-                  "Dimensionless β in (0, 1): Smoothing factor for per-competitor dispersion EMA. Scaled value is the half-life in number of rating events.",
+                  "Dimensionless β in (0, 1): Smoothing factor for per-competitor dispersion EMA.",
               internalController: _dispersionAdaptController,
               scaledValue: log(0.5) / log(1 - settings.dispersionAdaptationRate),
               scaledValuePrecision: 1,
@@ -846,11 +846,12 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Dispersion adaptation half-life in number of rating events",
             ),
             _LatentLogVarianceRow(
               label: "Momentum adaptation rate λ",
               tooltip:
-                  "Dimensionless in [0, 1]: Smoothing factor for per-competitor momentum EMA. Scaled value is the half-life in number of rating events.",
+                  "Dimensionless in [0, 1]: Smoothing factor for per-competitor momentum EMA.",
               internalController: _momentumAdaptController,
               scaledValue: log(0.5) / log(1 - settings.momentumAdaptationRate),
               scaledValuePrecision: 1,
@@ -858,6 +859,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               columnGap: columnGap,
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Momentum adaptation half-life in number of rating events",
             ),
             _LatentLogLabeledNumericRow(
               label: "Surprise adaptation γ",
