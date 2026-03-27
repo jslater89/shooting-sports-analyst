@@ -473,15 +473,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // Effective observation noise propagates uncertainty from the baseline
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
-    final totalObsNoise =
-        settings.sportVariance +
-        dispersionCertainty * shooter.dispersion +
-        shooterTailNoise +
-        weakFieldVariance +
-        (1 - pairwiseBlendWeightSquared) * baselineVariance +
-        pairwiseBlendWeightSquared * localBaselineVariance;
+    final cleanObsNoise =
+      settings.sportVariance +
+      dispersionCertainty * shooter.dispersion +
+      (1 - pairwiseBlendWeightSquared) * baselineVariance +
+      pairwiseBlendWeightSquared * localBaselineVariance;
+    final totalObsNoise = cleanObsNoise + shooterTailNoise + weakFieldVariance;
     final totalNoise = shooterVariance + totalObsNoise;
     final zScore = innovation / sqrt(totalNoise);
+
+    final obsQuality = cleanObsNoise / totalObsNoise;
 
     // Student-t robust weight: damp outlier innovations.
     const nuMin = 2;
@@ -494,12 +495,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final newRating = agedRating + kalmanGain * dampedInnovation;
 
     // Momentum is a signed EMA over innovation.
+    // We operate on 'clean' innovation, i.e. only that portion of innovation that
+    // is not explained by degenerate fields, tail noise, etc.
+    final structuralInnovation = dampedInnovation * obsQuality;
     final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
     final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
-        effectiveMomentumAdaptationRate * innovation;
+        effectiveMomentumAdaptationRate * structuralInnovation;
 
     // Use the stronger of surprise or momentum to add to variance.
-    final surpriseCorrection = (innovation * innovation) - totalNoise;
+    // For surprise, we explicitly don't want the full structural innovation, but we do want the clean innovation.
+    // We want to catch big outliers, but we don't want to catch big outliers caused by degenerate fields.
+    final cleanInnovation = innovation * obsQuality;
+    final surpriseCorrection = (cleanInnovation * cleanInnovation) - totalNoise;
     final momentumCorrection = (newMomentum * newMomentum) / settings.momentumAdaptationRate;
     final strongerCorrection = max(surpriseCorrection, momentumCorrection);
 
@@ -528,7 +535,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // 1. variance.
     // 2. inherent sport noise.
     // and 3. an ongoing trend as tracked by momentum.
-    final denoisedInnovationVariance = max(0, pow(innovation - newMomentum, 2) - shooterVariance - settings.sportVariance);
+    final denoisedInnovationVariance = max(0, pow(structuralInnovation - newMomentum, 2) - shooterVariance - settings.sportVariance);
     final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minimumDispersion, maxInstantaneousVariance);
 
     final effectiveDispersionAdaptationRate = settings.dispersionAdaptationRate * max(0.25, dispersionCertainty);
