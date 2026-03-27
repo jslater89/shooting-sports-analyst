@@ -24,13 +24,13 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
   static const defaultWeakFieldWeakFractionThreshold = 0.40;
-  static const defaultGraphMaturityThreshold = 200.0;
-  static const defaultNoveltyVariance = 0.0;
+  static const defaultGraphMaturityThreshold = 10.0;
+  static const defaultNoveltyVariance = 0.0120;
 
   static const defaultPredictionSportVariance = 0.0;
   static const defaultPredictionBehavioralDispersionKappa = 0.75;
   static const defaultMeanReversionGraceYears = 1.0;
-  static const defaultMeanReversionDecayRate = 0.03;
+  static const defaultMeanReversionDecayRate = 0.035;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
