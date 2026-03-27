@@ -7,10 +7,12 @@
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 
 enum RatingSortMode {
   rating,
+  agedRating,
   classification,
   firstName,
   lastName,
@@ -27,6 +29,8 @@ extension RatingSortModeNames on RatingSortMode {
     switch(this) {
       case RatingSortMode.rating:
         return "Rating";
+      case RatingSortMode.agedRating:
+        return "Aged Rating";
       case RatingSortMode.classification:
         return "Class";
       case RatingSortMode.error:
@@ -63,6 +67,17 @@ extension SortFunctions on RatingSortMode {
             return b.rating.compareTo(a.rating);
           }
         };
+      case RatingSortMode.agedRating:
+        final today = DateTime.now();
+        return (a, b) {
+          if(a is LatentLogRating && b is LatentLogRating) {
+
+            return b.calculateAgedRating(asOfDate: today).compareTo(a.calculateAgedRating(asOfDate: today));
+          }
+          else {
+            return b.rating.compareTo(a.rating);
+          }
+        };
       case RatingSortMode.error:
           return (a, b) {
             if(a is EloShooterRating && b is EloShooterRating) {
@@ -77,6 +92,11 @@ extension SortFunctions on RatingSortMode {
                 aError = a.standardError;
                 bError = b.standardError;
               }
+              return aError.compareTo(bError);
+            }
+            else if(a is LatentLogRating && b is LatentLogRating) {
+              double aError = a.variance;
+              double bError = b.variance;
               return aError.compareTo(bError);
             }
             else throw ArgumentError();

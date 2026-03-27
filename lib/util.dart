@@ -742,9 +742,17 @@ extension SecondTimestampUtils on int {
   }
 
   /// Check if this int is the same day as [date], according to the rules of [toDateTime].
-  bool isSameDay(DateTime date) {
+  bool isSameDay(DateTime? date) {
+    if(date == null) return false;
     final thisDate = this.toDateTime();
     return thisDate.year == date.year && thisDate.month == date.month && thisDate.day == date.day;
+  }
+}
+
+extension DateTimeSameDay on DateTime {
+  bool isSameDay(DateTime? date) {
+    if(date == null) return false;
+    return this.year == date.year && this.month == date.month && this.day == date.day;
   }
 }
 

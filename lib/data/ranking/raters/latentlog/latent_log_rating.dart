@@ -60,14 +60,43 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   LatentLogSettings settings;
 
+  double get trend => momentum;
   double get scaledRating => displayRating;
+  double get scaledAgedRating => displayAgedRating;
   String get formattedRating => displayRating.round().toString();
+  String get formattedAgedRating => displayAgedRating.round().toString();
 
   String formatNumericRating(double rating) {
     return (rating * settings.scaleFactor + settings.scaleOffset).round().toString();
   }
 
+  DateTime? _cachedAgedRatingDate;
+  double? _cachedAgedRating;
+  double calculateAgedRating({DateTime? asOfDate}) {
+    asOfDate ??= DateTime.now();
+    if(_cachedAgedRating != null && _cachedAgedRatingDate != null && _cachedAgedRatingDate!.isSameDay(asOfDate)) {
+      return _cachedAgedRating!;
+    }
+
+    _cachedAgedRatingDate = asOfDate;
+    if(lastCommitTimestamp == 0 || asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
+      _cachedAgedRating = rating;
+      return rating;
+    }
+    final daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
+    final yearsSinceLastCommit = daysSinceLastCommit / 365.0;
+    final effectiveYearsSinceLastCommit = max(0, yearsSinceLastCommit - settings.meanReversionGraceYears);
+
+    _cachedAgedRating = rating * exp(-settings.meanReversionDecayRate * effectiveYearsSinceLastCommit);
+    return _cachedAgedRating!;
+  }
+
+  double get ratingToday {
+    return calculateAgedRating(asOfDate: DateTime.now());
+  }
+
   double get displayRating => rating * settings.scaleFactor + settings.scaleOffset;
+  double get displayAgedRating => ratingToday * settings.scaleFactor + settings.scaleOffset;
   double get displayVariance => variance * settings.scaleFactor * settings.scaleFactor;
   double get displayCurrentVariance => varianceToday * settings.scaleFactor * settings.scaleFactor;
   double get displayDispersion => dispersion * settings.scaleFactor * settings.scaleFactor;

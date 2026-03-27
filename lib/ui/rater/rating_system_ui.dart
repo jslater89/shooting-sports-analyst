@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
@@ -26,7 +27,7 @@ import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 // code. Every rating system has an extension on it that fits the buildRatingKey/buildRatingRow interface,
 // but I don't think I have a way to fully augment the class to implement an interface yet.
 class RatingSystemUiBuilder {
-  static Row buildRatingKey(RatingSystem algorithm, BuildContext context, {DateTime? trendDate}) {
+  static Row buildRatingKey(RatingSystem algorithm, BuildContext context, {DateTime? trendDate, RatingSortMode? sortMode}) {
     if(algorithm is MultiplayerPercentEloRater) {
       return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
@@ -43,12 +44,12 @@ class RatingSystemUiBuilder {
       return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     else if(algorithm is LatentLogRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
+      return algorithm.buildRatingKey(context, trendDate: trendDate, sortMode: sortMode);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
   }
 
-  static ScoreRow buildRatingRow(RatingSystem algorithm, {required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate, RatingScaler? scaler}) {
+  static ScoreRow buildRatingRow(RatingSystem algorithm, {required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate, RatingScaler? scaler, RatingSortMode? sortMode}) {
     if(algorithm is MultiplayerPercentEloRater) {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
@@ -65,7 +66,7 @@ class RatingSystemUiBuilder {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
     else if(algorithm is LatentLogRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
+      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler, sortMode: sortMode);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
   }

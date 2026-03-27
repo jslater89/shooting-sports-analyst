@@ -6,6 +6,7 @@
 
 import "package:flutter/material.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_change.dart";
+import "package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart";
 import "package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart";
@@ -28,7 +29,7 @@ extension LatentLogRatingsUi on LatentLogRater {
   static const _matchesFlex = 2;
   static const _stagesFlex = 2;
 
-  Row buildRatingKey(BuildContext context, {DateTime? trendDate}) {
+  Row buildRatingKey(BuildContext context, {DateTime? trendDate, RatingSortMode? sortMode}) {
     return Row(
       children: [
         Expanded(flex: _paddingFlex, child: Text("")),
@@ -72,6 +73,7 @@ extension LatentLogRatingsUi on LatentLogRater {
     required ShooterRating<RatingEvent> rating,
     DateTime? trendDate,
     RatingScaler? scaler,
+    RatingSortMode? sortMode,
   }) {
     rating as LatentLogRating;
     final displayDelta = rating.lastMatchChange * settings.scaleFactor;
@@ -86,7 +88,7 @@ extension LatentLogRatingsUi on LatentLogRater {
             Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
             Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
-            Expanded(flex: _ratingFlex, child: Text(rating.displayRating.round().toString(), textAlign: TextAlign.end)),
+            Expanded(flex: _ratingFlex, child: Text(sortMode == RatingSortMode.agedRating ? rating.formattedAgedRating : rating.formattedRating, textAlign: TextAlign.end)),
             Expanded(flex: _lastChangeFlex, child: Text(displayDelta.round().toString(), textAlign: TextAlign.end)),
             Expanded(
               flex: _varianceFlex,

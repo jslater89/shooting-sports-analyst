@@ -96,9 +96,12 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _startingVarianceInternal = TextEditingController();
   final TextEditingController _startingDispersionInternal = TextEditingController();
   final TextEditingController _maximumVarianceInternal = TextEditingController();
-  final TextEditingController _matchDifficultyInternal = TextEditingController();
   final TextEditingController _predictionSportInternal = TextEditingController();
   final TextEditingController _predictionBehavioralKappaController =
+      TextEditingController();
+  final TextEditingController _meanReversionGraceYearsController =
+      TextEditingController();
+  final TextEditingController _meanReversionDecayRateController =
       TextEditingController();
   final TextEditingController _intraclassCorrelationController = TextEditingController();
   final TextEditingController _dispersionAdaptController = TextEditingController();
@@ -173,13 +176,16 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     attachNumericListener(_maximumVarianceInternal, () {
       _validateText();
     });
-    attachNumericListener(_matchDifficultyInternal, () {
-      _validateText();
-    });
     attachNumericListener(_predictionSportInternal, () {
       _validateText();
     });
     attachNumericListener(_predictionBehavioralKappaController, () {
+      _validateText();
+    });
+    attachNumericListener(_meanReversionGraceYearsController, () {
+      _validateText();
+    });
+    attachNumericListener(_meanReversionDecayRateController, () {
       _validateText();
     });
     attachNumericListener(_intraclassCorrelationController, () {
@@ -253,9 +259,10 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _startingVarianceInternal.dispose();
     _startingDispersionInternal.dispose();
     _maximumVarianceInternal.dispose();
-    _matchDifficultyInternal.dispose();
     _predictionSportInternal.dispose();
     _predictionBehavioralKappaController.dispose();
+    _meanReversionGraceYearsController.dispose();
+    _meanReversionDecayRateController.dispose();
     _intraclassCorrelationController.dispose();
     _dispersionAdaptController.dispose();
     _momentumAdaptController.dispose();
@@ -280,10 +287,13 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _startingVarianceInternal.text = settings.startingVariance.toStringAsFixed(4);
     _startingDispersionInternal.text = settings.startingDispersion.toStringAsFixed(6);
     _maximumVarianceInternal.text = settings.maximumVariance.toStringAsFixed(4);
-    _matchDifficultyInternal.text = settings.matchDifficultyVariance.toStringAsFixed(4);
     _predictionSportInternal.text = settings.predictionSportVariance.toStringAsFixed(5);
     _predictionBehavioralKappaController.text =
         settings.predictionBehavioralDispersionKappa.toStringAsFixed(3);
+    _meanReversionGraceYearsController.text =
+        settings.meanReversionGraceYears.toStringAsFixed(3);
+    _meanReversionDecayRateController.text =
+        settings.meanReversionDecayRate.toStringAsFixed(4);
     _dispersionAdaptController.text = settings.dispersionAdaptationRate.toStringAsFixed(4);
     _momentumAdaptController.text = settings.momentumAdaptationRate.toStringAsFixed(4);
     _surpriseAdaptController.text = settings.surpriseAdaptationRate.toStringAsFixed(4);
@@ -446,18 +456,6 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final matchDiff = _parseVariance(controller: _matchDifficultyInternal);
-    if (matchDiff == null) {
-      widget.controller.lastError =
-          "Match difficulty variance formatted incorrectly";
-      return;
-    }
-    if (matchDiff <= 0) {
-      widget.controller.lastError =
-          "Match difficulty variance must be positive";
-      return;
-    }
-
     final baselineRobustnessZ = double.tryParse(
       _baselineRobustnessZController.text,
     );
@@ -576,6 +574,34 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
+    final meanReversionGraceYears = double.tryParse(
+      _meanReversionGraceYearsController.text,
+    );
+    if (meanReversionGraceYears == null) {
+      widget.controller.lastError =
+          "Mean reversion grace years formatted incorrectly";
+      return;
+    }
+    if (meanReversionGraceYears < 0) {
+      widget.controller.lastError =
+          "Mean reversion grace years must be nonnegative";
+      return;
+    }
+
+    final meanReversionDecayRate = double.tryParse(
+      _meanReversionDecayRateController.text,
+    );
+    if (meanReversionDecayRate == null) {
+      widget.controller.lastError =
+          "Mean reversion decay rate formatted incorrectly";
+      return;
+    }
+    if (meanReversionDecayRate < 0) {
+      widget.controller.lastError =
+          "Mean reversion decay rate must be nonnegative";
+      return;
+    }
+
     setState(() {
       settings.scaleOffset = scaleOffset;
       settings.scaleFactor = scaleFactor;
@@ -589,7 +615,6 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.momentumAdaptationRate = momentumAdapt;
       settings.surpriseAdaptationRate = surp;
       settings.pairwiseBlendWeight = pairwise;
-      settings.matchDifficultyVariance = matchDiff;
       settings.baselineRobustnessZ = baselineRobustnessZ;
       settings.tailNoiseStartPercent = tailNoiseStartPercent;
       settings.tailNoiseVariance = tailNoiseVariance;
@@ -599,6 +624,8 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.weakFieldWeakFractionThreshold = weakFieldWeakFractionThreshold;
       settings.predictionSportVariance = predSport;
       settings.predictionBehavioralDispersionKappa = predKappa;
+      settings.meanReversionGraceYears = meanReversionGraceYears;
+      settings.meanReversionDecayRate = meanReversionDecayRate;
     });
 
     widget.controller.lastError = null;
@@ -805,24 +832,6 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               trailingSpacerWidth: trailingSpacerWidth,
             ),
             const _LatentLogSectionHeading("Small / Degenerate Field Parameters"),
-            _LatentLogVarianceRow(
-              label: "Tiny-field prior τ²",
-              tooltip:
-                  "Damp updates in tiny fields of highly uncertain competitors.",
-              internalController: _matchDifficultyInternal,
-              scaledValue:
-                // prior precision => (1 / tau^2)
-                // "average new competitor" => sportVariance + startingDispersion + startingVariance
-                // average competitor observation precision = 1 / (sportVariance + startingDispersion + startingVariance)
-                // nEff = (1 / tau^2) / (1 / (sportVariance + startingDispersion + startingVariance))
-                (1 / settings.matchDifficultyVariance) / (1 / (settings.sportVariance + settings.startingDispersion + settings.startingVariance)),
-              scaledValuePrecision: 2,
-              fieldWidth: fieldWidth,
-              columnGap: columnGap,
-              labelStyle: Theme.of(context).textTheme.bodyLarge,
-              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
-              displayValueTooltip: "Number of virtual competitors pulling field toward average difficulty"
-            ),
             _LatentLogLabeledNumericRow(
               label: "Baseline robustness z",
               tooltip:
@@ -913,6 +922,35 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               controller: _predictionBehavioralKappaController,
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            const _LatentLogSectionHeading("Mean Reversion"),
+            _LatentLogVarianceRow(
+              label: "Grace period t_grace",
+              tooltip:
+                  "Years of inactivity before chronological mean-reversion decay begins. 0 disables the grace period; larger values tolerate longer breaks without rust.",
+              internalController: _meanReversionGraceYearsController,
+              scaledValue: settings.meanReversionGraceYears * 12.0,
+              scaledValuePrecision: 1,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Grace period in months",
+              displayValueLabel: " mo",
+            ),
+            _LatentLogVarianceRow(
+              label: "Rust decay λ_rust",
+              tooltip:
+                  "Annual exponential decay coefficient for inactive competitors after grace time. Larger values revert ratings toward the baseline faster.",
+              internalController: _meanReversionDecayRateController,
+              scaledValue: settings.meanReversionDecayRate * 100.0,
+              scaledValuePrecision: 2,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Approximate annual decay rate after grace period",
+              displayValueLabel: " %/yr",
             ),
             SwitchListTile(
               title: const Text("Rate by stage"),

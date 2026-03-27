@@ -9,10 +9,13 @@ import 'package:color_models/color_models.dart';
 import 'package:data/data.dart' show ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 // import 'package:community_charts_common/community_charts_common.dart' as common;
+
+final _log = SSALogger("StackedDistributionChart");
 
 /// A bucket of histogram data, containing a list of [HistogramData] values that share
 /// the same bucket start and bucket end.
@@ -276,7 +279,15 @@ class StackedDistributionChart extends StatelessWidget {
       }));
       List<_PdfStep> cdfData = [];
       data!.sort();
+      int sampleRate = 1;
+      if(data!.length > 500) {
+        sampleRate = (data!.length / 500).ceil();
+        _log.i("Sampling ${data!.length} data points to 500 for CDF");
+      }
       for(var (index, value) in data!.indexed) {
+        if(index % sampleRate != 0) {
+          continue;
+        }
         // empirical CDF is the proportion of values less than or equal to the current value
         cdfData.add(_PdfStep(value: value - scaleOffset, probability: index / data!.length));
       }

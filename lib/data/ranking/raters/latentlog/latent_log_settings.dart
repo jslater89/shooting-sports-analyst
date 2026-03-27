@@ -28,6 +28,8 @@ class LatentLogSettings extends RaterSettings {
 
   static const defaultPredictionSportVariance = 0.0;
   static const defaultPredictionBehavioralDispersionKappa = 0.75;
+  static const defaultMeanReversionGraceYears = 1.0;
+  static const defaultMeanReversionDecayRate = 0.03;
 
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
@@ -43,7 +45,6 @@ class LatentLogSettings extends RaterSettings {
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
   static const _momentumAdaptationRateKey = "latentLogMomentumAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
-  static const _matchDifficultyVarianceKey = "latentLogMatchDifficultyVariance";
   static const _baselineRobustnessZKey = "latentLogBaselineRobustnessZ";
   static const _tailNoiseStartPercentKey = "latentLogTailNoiseStartPercent";
   static const _tailNoiseVarianceKey = "latentLogTailNoiseVariance";
@@ -57,6 +58,8 @@ class LatentLogSettings extends RaterSettings {
       "latentLogPredictionSportVariance";
   static const _predictionBehavioralDispersionKappaKey =
       "latentLogPredictionBehavioralVolatilityKappa";
+  static const _meanReversionGraceYearsKey = "latentLogMeanReversionGraceYears";
+  static const _meanReversionDecayRateKey = "latentLogMeanReversionDecayRate";
 
   /// Whether to calculate ratings by stage (true) or by match (false).
   bool byStage;
@@ -284,31 +287,6 @@ class LatentLogSettings extends RaterSettings {
   /// -> 0.67: only very bottom-heavy fields trigger.
   double weakFieldWeakFractionThreshold = defaultWeakFieldWeakFractionThreshold;
 
-  /// The prior variance on match difficulty, i.e. τ² from the paper.
-  ///
-  /// Interpretation: how much match difficulty varies from one event to the
-  /// next. Places a Bayesian prior B ~ N(0, τ²) on the match baseline,
-  /// shrinking the baseline estimate toward zero (average difficulty) when
-  /// the field is too small to reliably estimate it.
-  ///
-  /// The prior precision 1/τ² acts as a "virtual field weight." In a
-  /// 2-person match, this dominates the single opponent's contribution,
-  /// heavily damping the baseline. In a 100-person match, the field's
-  /// total precision weight overwhelms the prior and it has negligible
-  /// effect.
-  ///
-  /// In practice, this is best treated as a weak regularization knob rather
-  /// than a literal claim about real-world match difficulty. Stronger values
-  /// can flatten the entire rating scale by shrinking every baseline.
-  ///
-  /// Tuning: variance units, positive. Smaller values imply stronger
-  /// shrinkage; larger values imply weaker shrinkage.
-  /// -> 0.03: strong prior, roughly equivalent to one competitor of weight ~33.
-  /// -> 0.10: moderate backstop for tiny fields.
-  /// -> 0.25: very weak backstop.
-  /// -> 0.10: weak default backstop.
-  double matchDifficultyVariance = defaultMatchDifficultyVariance;
-
   /// The idiosyncratic per-competitor sport noise used for prediction bands,
   /// in variance units.
   ///
@@ -343,6 +321,29 @@ class LatentLogSettings extends RaterSettings {
   double predictionBehavioralDispersionKappa =
       defaultPredictionBehavioralDispersionKappa;
 
+  /// Mean-reversion grace period, in years, before rating decay begins.
+  ///
+  /// Interpretation: elapsed inactivity shorter than this value contributes no
+  /// rust decay. Intended to avoid penalizing normal off-season breaks.
+  ///
+  /// Tuning: years, nonnegative.
+  /// -> 0.0: decay applies immediately.
+  /// -> 0.5: approximately one half-year grace period.
+  /// -> 1.0: approximately one full-year grace period.
+  double meanReversionGraceYears = defaultMeanReversionGraceYears;
+
+  /// Mean-reversion decay coefficient λ_rust, in inverse years.
+  ///
+  /// Interpretation: after grace time is exhausted, rating distance from the
+  /// baseline decays as exp(-λ_rust * Δt_eff). Larger values imply faster
+  /// reversion toward baseline during inactivity.
+  ///
+  /// Tuning: 1/years, nonnegative.
+  /// -> 0.0: disable rust decay.
+  /// -> 0.03: approximately 3% decay per year of post-grace inactivity.
+  /// -> 0.10: aggressive long-gap decay.
+  double meanReversionDecayRate = defaultMeanReversionDecayRate;
+
   LatentLogSettings({
     this.byStage = false,
     this.scaleOffset = defaultScaleOffset,
@@ -364,10 +365,11 @@ class LatentLogSettings extends RaterSettings {
     this.weakFieldMaxSize = defaultWeakFieldMaxSize,
     this.weakFieldWeakFinishThreshold = defaultWeakFieldWeakFinishThreshold,
     this.weakFieldWeakFractionThreshold = defaultWeakFieldWeakFractionThreshold,
-    this.matchDifficultyVariance = defaultMatchDifficultyVariance,
     this.predictionSportVariance = defaultPredictionSportVariance,
     this.predictionBehavioralDispersionKappa =
         defaultPredictionBehavioralDispersionKappa,
+    this.meanReversionGraceYears = defaultMeanReversionGraceYears,
+    this.meanReversionDecayRate = defaultMeanReversionDecayRate,
   });
 
   @override
@@ -392,10 +394,11 @@ class LatentLogSettings extends RaterSettings {
     json[_weakFieldMaxSizeKey] = weakFieldMaxSize;
     json[_weakFieldWeakFinishThresholdKey] = weakFieldWeakFinishThreshold;
     json[_weakFieldWeakFractionThresholdKey] = weakFieldWeakFractionThreshold;
-    json[_matchDifficultyVarianceKey] = matchDifficultyVariance;
     json[_predictionSportVarianceKey] = predictionSportVariance;
     json[_predictionBehavioralDispersionKappaKey] =
         predictionBehavioralDispersionKappa;
+    json[_meanReversionGraceYearsKey] = meanReversionGraceYears;
+    json[_meanReversionDecayRateKey] = meanReversionDecayRate;
   }
 
   @override
@@ -451,15 +454,18 @@ class LatentLogSettings extends RaterSettings {
         (json[_weakFieldWeakFractionThresholdKey] ??
                 defaultWeakFieldWeakFractionThreshold)
             as double;
-    matchDifficultyVariance =
-        (json[_matchDifficultyVarianceKey] ?? defaultMatchDifficultyVariance)
-            as double;
     predictionSportVariance =
         (json[_predictionSportVarianceKey] ?? defaultPredictionSportVariance)
             as double;
     predictionBehavioralDispersionKappa =
         (json[_predictionBehavioralDispersionKappaKey] ??
                 defaultPredictionBehavioralDispersionKappa)
+            as double;
+    meanReversionGraceYears =
+        (json[_meanReversionGraceYearsKey] ?? defaultMeanReversionGraceYears)
+            as double;
+    meanReversionDecayRate =
+        (json[_meanReversionDecayRateKey] ?? defaultMeanReversionDecayRate)
             as double;
   }
 }

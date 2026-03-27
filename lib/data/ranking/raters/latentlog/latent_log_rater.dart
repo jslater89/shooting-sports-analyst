@@ -6,6 +6,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -55,6 +56,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     json[DbRatingProject.algorithmKey] = DbRatingProject.latentLogValue;
     settings.encodeToJson(json);
   }
+
+  @override
+  List<RatingSortMode> get supportedSorts => [
+    RatingSortMode.rating,
+    RatingSortMode.agedRating,
+    RatingSortMode.classification,
+    RatingSortMode.trend,
+    RatingSortMode.error,
+    RatingSortMode.stages,
+    RatingSortMode.firstName,
+    RatingSortMode.lastName,
+  ];
 
   static LatentLogRater fromJson(Map<String, dynamic> json) {
     var settings = LatentLogSettings();
@@ -201,6 +214,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     List<ShooterRating> validShooters = [];
     for (var shooter in shooters) {
       shooter as LatentLogRating;
+      final agedRating = shooter.calculateAgedRating(asOfDate: match.date);
       var score = scores[shooter];
       if (score == null || score.ratio == 0.0) {
         continue;
@@ -223,11 +237,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
               shooter.dispersion +
               tailNoise);
 
-      competitorWeights[shooter] = weight;      baselineVarianceSum += weight * shooterVariance;
+      competitorWeights[shooter] = weight;
       baselineVarianceSum += weight * shooterVariance;
       totalWeight += weight;
 
-      final residual = shooter.rating - scoreEvidence;
+      final residual = agedRating - scoreEvidence;
       competitorBaselineResiduals[shooter] = residual;
       baselineResidual += weight * residual;
     }
@@ -238,8 +252,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       // Recalculate with robust weights
       baselineVarianceSum = 0.0;
 
-      final rawBaseline =
-          baselineResidual / (totalWeight + _matchDifficultyPriorPrecision);
+      final rawBaseline = baselineResidual / totalWeight;
       double robustResidualSum = 0.0;
       double robustWeightSum = 0.0;
       for (var shooter in validShooters) {
@@ -347,6 +360,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     required Map<ShooterRating, double> competitorWeights,
   }) {
     shooter as LatentLogRating;
+    final agedRating = shooter.calculateAgedRating(asOfDate: matchDate);
     final shooterScore = scores[shooter];
     final shooterScoreEvidence = competitorScoreEvidence[shooter];
     final shooterTailNoise = competitorTailNoise[shooter];
@@ -371,12 +385,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final fieldAverageUncertaintyTaper = (opponentCount - 1) / opponentCount;
     final fieldAverageUncertainty = looVariance / looWeight * fieldAverageUncertaintyTaper;
 
-    final baselinePrecision = looWeight + _matchDifficultyPriorPrecision;
     final looBaseline =
-        (baselineResidualSum -
-            shooterWeight * (shooter.rating - shooterScoreEvidence)) /
-        baselinePrecision;
-    final baselineVariance = 1.0 / baselinePrecision + settings.intraclassCorrelation * fieldAverageUncertainty;
+        (baselineResidualSum - shooterWeight * (agedRating - shooterScoreEvidence)) /
+        looWeight;
+    final baselineVariance = 1.0 / looWeight + settings.intraclassCorrelation * fieldAverageUncertainty;
 
     // if(fieldAverageUncertainty > baselineVariance) {
     //   _log.w("Match ${match.name} with $opponentCount opponents has "
@@ -401,12 +413,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final opponentScoreEvidence = competitorScoreEvidence[opponent];
         final opponentTailNoise = competitorTailNoise[opponent];
         final opponentWeight = competitorWeights[opponent];
+        final opponentAgedRating = opponent.calculateAgedRating(asOfDate: matchDate);
         final opponentAgedVariance = opponent.calculateCurrentVariance(asOfDate: matchDate);
         if (opponentScoreEvidence == null || opponentTailNoise == null || opponentWeight == null) {
           _log.e("Missing parameter for pairwise blending: $shooter vs $opponent");
           continue;
         }
-        final opponentBaselineResidual = opponent.rating - opponentScoreEvidence;
+        final opponentBaselineResidual = opponentAgedRating - opponentScoreEvidence;
         final baselineContribution = opponentWeight * opponentBaselineResidual;
         final weightContribution = opponentWeight;
 
@@ -441,7 +454,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         shooterScoreEvidence +
         (1 - pairwiseBlendWeight) * looBaseline +
         pairwiseBlendWeight * localBaseline;
-    var innovation = observedPerformance - shooter.rating;
+    var innovation = observedPerformance - agedRating;
 
     var pairwiseBlendWeightSquared = pairwiseBlendWeight * pairwiseBlendWeight;
 
@@ -473,7 +486,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final dampedInnovation = innovation * weight;
 
     final kalmanGain = shooterVariance / totalNoise;
-    final newRating = shooter.rating + kalmanGain * dampedInnovation;
+    final newRating = agedRating + kalmanGain * dampedInnovation;
 
     // Momentum is a signed EMA over innovation.
     final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
@@ -544,6 +557,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     return RatingChange(
       change: {
+        // The committed rating is not aged, so we want to calculate the
+        // change against that baseline.
         RatingSystem.ratingChangeKey: newRating - shooter.rating,
         // Committed variance before this match (not time-aged). Matches
         // varianceChange so oldVariance + varianceChange is the new committed
@@ -835,18 +850,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return threshold / absZ;
   }
 
-  double get _matchDifficultyPriorPrecision {
-    if (settings.matchDifficultyVariance <= 0) {
-      return 0.0;
-    }
-    return 1.0 / settings.matchDifficultyVariance;
-  }
-
   List<ShooterRating> _selectOpponents(
     LatentLogRating shooter,
     Map<ShooterRating, RelativeScore> scores,
     double shooterRatio,
   ) {
+    // I can tolerate unaged ratings here because it mostly means people who have decayed ratings
+    // get a harder set of opponents.
     var opponentsByFinish = scores.keys.toList();
     var opponentsByRating = opponentsByFinish
         .sorted((a, b) => b.rating.compareTo(a.rating))
@@ -943,16 +953,21 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
   @override
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
-    if(matchDate != null && _predictionsUseAgedRatings && _predictionsAgeCapDays > 0) {
-      if(matchDate.difference(DateTime.now()).inDays > _predictionsAgeCapDays) {
-        matchDate = DateTime.now().add(Duration(days: _predictionsAgeCapDays));
-        _log.i("Capping time-to-match to $_predictionsAgeCapDays days, new date $matchDate");
+    final actualDate = _predictionsUseAgedRatings ? matchDate : null;
+    var actualVarianceDate = actualDate;
+    if(actualDate != null && _predictionsUseAgedRatings && _predictionsAgeCapDays > 0) {
+      if(actualDate.difference(DateTime.now()).inDays > _predictionsAgeCapDays) {
+        actualVarianceDate = DateTime.now().add(Duration(days: _predictionsAgeCapDays));
+        _log.i("Capping time-to-match for variance to $_predictionsAgeCapDays days, new date $matchDate");
       }
     }
 
     List<AlgorithmPrediction> predictions = [];
 
-    List<LatentLogRating> sortedRatings = ratings.cast<LatentLogRating>().where((r) => r.length > 0).sorted((a, b) => b.rating.compareTo(a.rating));
+    List<LatentLogRating> sortedRatings = ratings
+      .cast<LatentLogRating>()
+      .where((r) => r.length > 0)
+      .sorted((a, b) => b.calculateAgedRating(asOfDate: matchDate).compareTo(a.calculateAgedRating(asOfDate: matchDate)));
 
     if(sortedRatings.isEmpty) {
       return [];
@@ -976,8 +991,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     }
 
     List<_PresumedWinnerPrediction> presumedWinners = _predictionsUseMonteCarlo ?
-      _presumedWinnersMonteCarlo(sortedRatings, matchDate: _predictionsUseAgedRatings ? matchDate : null) :
-      _presumedWinnersClosedForm(sortedRatings, matchDate: _predictionsUseAgedRatings ? matchDate : null);
+      _presumedWinnersMonteCarlo(sortedRatings, matchDate: actualDate, varianceDate: actualVarianceDate) :
+      _presumedWinnersClosedForm(sortedRatings, matchDate: actualDate, varianceDate: actualVarianceDate);
 
     for(var rating in sortedRatings) {
       /// The probability-weighted ratios are the expected final scores in ratio
@@ -1009,10 +1024,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// The win probability of the focal competitor as the presumed winner.
       double ownPresumedWinProbability = 0.0;
 
-      final ratingVariance =
-        matchDate != null && _predictionsUseAgedRatings ?
-          rating.calculateCurrentVariance(asOfDate: matchDate) : //rating.variance :
-          rating.variance;
+      final agedRating = rating.calculateAgedRating(asOfDate: actualDate);
+
+      final ratingVariance = rating.calculateCurrentVariance(asOfDate: actualVarianceDate);
 
       // Account for the tendency for extreme values to dominate in close fields.
       // i.e., if you have 10 evenly-matched competitors favored, the winner is the
@@ -1042,10 +1056,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         }
 
 
-        final winnerVariance =
-          matchDate != null && _predictionsUseAgedRatings ?
-            presumedWinner.shooter.calculateCurrentVariance(asOfDate: matchDate) :
-            presumedWinner.shooter.variance;
+        final winnerVariance = presumedWinner.shooter.calculateCurrentVariance(asOfDate: actualVarianceDate);
+        final winnerAgedRating = presumedWinner.shooter.calculateAgedRating(asOfDate: actualDate);
 
         final winnerCertainty = 1.0 - (winnerVariance / settings.maximumVariance).clamp(0.0, 1.0);
 
@@ -1054,9 +1066,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           kappa * winnerCertainty * presumedWinner.shooter.dispersion +
           settings.predictionSportVariance
         );
-        final effectiveWinnerRating = presumedWinner.shooter.rating + winnerDrawStdDev * eMax;
+        final effectiveWinnerRating = winnerAgedRating + winnerDrawStdDev * eMax;
 
-        final logDifference = rating.rating - effectiveWinnerRating;
+        final logDifference = agedRating - effectiveWinnerRating;
         probabilityWeightedLogDifference += logDifference * winProbability;
         probabilityWeightedLogDifferences.add((pW: winProbability, muIW: logDifference));
 
@@ -1154,7 +1166,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return predictions;
   }
 
-  List<_PresumedWinnerPrediction> _presumedWinnersClosedForm(List<LatentLogRating> sortedRatings, {DateTime? matchDate}) {
+  List<_PresumedWinnerPrediction> _presumedWinnersClosedForm(
+    List<LatentLogRating> sortedRatings,
+    {
+      DateTime? matchDate,
+      DateTime? varianceDate,
+    }
+  ) {
     List<_PresumedWinnerPrediction> predictions = [];
     // Take the top 10% or top 3 if there are fewer than 30 ratings.
     int topN = (sortedRatings.length * 0.25).ceil();
@@ -1171,22 +1189,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // For each top rating, calculate the expected percentage.
     for (var rating in topRatings) {
-      final ratingVariance =
-        matchDate != null && _predictionsUseAgedRatings ?
-          rating.calculateCurrentVariance(asOfDate: matchDate) : //rating.variance :
-          rating.variance;
+      final agedRating = rating.calculateAgedRating(asOfDate: matchDate);
+      final ratingVariance = rating.calculateCurrentVariance(asOfDate: varianceDate);
       List<double> pairwiseProbabilities = [];
       for (var opponent in sortedRatings) {
         if (opponent == rating) {
           continue;
         }
 
-        final opponentVariance =
-          matchDate != null && _predictionsUseAgedRatings ?
-            opponent.calculateCurrentVariance(asOfDate: matchDate) : //opponent.variance :
-            opponent.variance;
+        final opponentAgedRating = opponent.calculateAgedRating(asOfDate: matchDate);
+        final opponentVariance = opponent.calculateCurrentVariance(asOfDate: varianceDate);
 
-        double numerator = rating.rating - opponent.rating;
+        double numerator = agedRating - opponentAgedRating;
         // all properties are in variance units
 
         double denominator = sqrt(
@@ -1205,7 +1219,15 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return _PresumedWinnerPrediction.normalize(predictions);
   }
 
-  List<_PresumedWinnerPrediction> _presumedWinnersMonteCarlo(List<LatentLogRating> sortedRatings, {DateTime? matchDate, Random? random}) {
+  List<_PresumedWinnerPrediction> _presumedWinnersMonteCarlo(
+    List<LatentLogRating> sortedRatings,
+    {
+      DateTime? matchDate,
+      DateTime? varianceDate,
+      Random? random,
+    }
+  ) {
+    varianceDate ??= matchDate;
     random ??= Random();
     const trials = _predictionsMonteCarloTrials;
     List<_PresumedWinnerPrediction> predictions = [];
@@ -1227,13 +1249,14 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       double bestRating = double.negativeInfinity;
       late LatentLogRating bestCompetitor;
       for(var (index, rating) in sortedRatings.indexed) {
-        final currentVariance = matchDate != null && _predictionsUseAgedRatings ?
-          rating.calculateCurrentVariance(asOfDate: matchDate) : //rating.variance :
+        final agedRating = rating.calculateAgedRating(asOfDate: matchDate);
+        final currentVariance = varianceDate != null && _predictionsUseAgedRatings ?
+          rating.calculateCurrentVariance(asOfDate: varianceDate) : //rating.variance :
           rating.variance;
         if(index > depth) {
           break;
         }
-        var draw = random.nextGaussianWithParams(mu: rating.rating, sigma: sqrt(currentVariance + settings.predictionSportVariance));
+        var draw = random.nextGaussianWithParams(mu: agedRating, sigma: sqrt(currentVariance + settings.predictionSportVariance));
         if(draw > bestRating) {
           bestRating = draw;
           bestCompetitor = rating;

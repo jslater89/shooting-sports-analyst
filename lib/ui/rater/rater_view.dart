@@ -193,7 +193,7 @@ class _RaterViewState extends State<RaterView> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
-            child: RatingSystemUiBuilder.buildRatingKey(settings.algorithm, context, trendDate: widget.changeSince)
+            child: RatingSystemUiBuilder.buildRatingKey(settings.algorithm, context, trendDate: widget.changeSince, sortMode: widget.sortMode)
           )
       ),
     )];
@@ -317,6 +317,7 @@ class _RaterViewState extends State<RaterView> {
                   rating: rating,
                   trendDate: widget.changeSince,
                   scaler: scaler,
+                  sortMode: widget.sortMode,
                 )
               );
             },
