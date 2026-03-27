@@ -201,12 +201,16 @@ class HitfactoRsResultRow {
       rawPoints: (j["raw_points"] as num?)?.toInt() ?? 0,
       timeSeconds: (j["time_seconds"] as num?)?.toDouble() ?? 0.0,
       hitFactor: (j["hit_factor"] as num?)?.toDouble() ?? 0.0,
-      alphas: (j["alphas"] as num?)?.toInt() ?? 0,
+      alphas: ((j["alphas"] as num?)?.toInt() ?? 0) +
+        ((j["popper_hits"] as num?)?.toInt() ?? 0),
       bravos: (j["bravos"] as num?)?.toInt() ?? 0,
       charlies: (j["charlies"] as num?)?.toInt() ?? 0,
       deltas: (j["deltas"] as num?)?.toInt() ?? 0,
-      misses: (j["misses"] as num?)?.toInt() ?? 0,
-      noShoots: (j["no_shoots"] as num?)?.toInt() ?? 0,
+      misses:
+        ((j["misses"] as num?)?.toInt() ?? 0) +
+        ((j["popper_misses"] as num?)?.toInt() ?? 0),
+      noShoots: (j["no_shoots"] as num?)?.toInt() ?? 0 +
+        ((j["popper_no_shoots"] as num?)?.toInt() ?? 0),
       procedurals: (j["procedurals"] as num?)?.toInt() ?? 0,
       dnf: j["dnf"] as bool? ?? false,
       stageDq: j["stage_dq"] as bool? ?? false,
