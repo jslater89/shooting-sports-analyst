@@ -3,8 +3,8 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 class LatentLogSettings extends RaterSettings {
   // Default scale generates roughly Elo-style numbers between 0 and 2000,
   // per Shooting Sports Analyst tradition.
-  static const defaultScaleOffset = 1425.0;
-  static const defaultScaleFactor = 1500.0;
+  static const defaultScaleOffset = 1330.0;
+  static const defaultScaleFactor = 1400.0;
 
   static const defaultSportVariance = 0.0012;
   static const defaultSkillDriftRate = 0.0005;
@@ -17,7 +17,6 @@ class LatentLogSettings extends RaterSettings {
   static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
 
-  static const defaultMatchDifficultyVariance = 0.03125;
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.60;
   static const defaultTailNoiseVariance = 0.04;
