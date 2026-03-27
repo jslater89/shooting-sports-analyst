@@ -241,16 +241,28 @@
 	\end{equation}
 	
 	\textbf{Step 8: Update Momentum and Committed Variance (Surprise Adaptation)}\\
-	To avoid the monotonic collapse of $V_i$ common in basic Kalman filters, the model monitors for structural breaks in skill. First, update the competitor's innovation momentum:
+	To avoid the monotonic collapse of $V_i$ common in basic Kalman filters, the model monitors for structural breaks in skill. To prevent new or highly uncertain competitors from accumulating false momentum during their initial convergence, we apply the certainty factor $c_i$ to the adaptation rate. Update the competitor's innovation momentum:
 	\begin{equation}
-		m_i \leftarrow (1 - \lambda) m_i + \lambda e_i
+		\lambda_i^{\mathrm{eff}} = \lambda \cdot \max(0.25, c_i)
+	\end{equation}
+	\begin{equation}
+		m_i \leftarrow (1 - \lambda_i^{\mathrm{eff}}) m_i + \lambda_i^{\mathrm{eff}} e_i
 	\end{equation}
 	
-	We then evaluate the system for a variance surprise using a dual-threshold checking both catastrophic single-event shock and persistent directional momentum. The rating variance adapts according to:
+	We then evaluate the system for necessary variance injection using two distinct pathways: a threshold-based single-event shock, and a continuous trend penalty. 
 	\begin{equation}
-		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(0,\; e_i^2 - T_i,\; \frac{m_i^2}{\lambda} - T_i \right)\right)
+		\text{Shock}_i = \max\!\left(0,\; e_i^2 - T_i\right)
 	\end{equation}
-	When the squared error $e_i^2$ or the scaled momentum exceeds the model's expected uncertainty $T_i$, extra epistemic variance is injected. By tracking momentum, the system recognizes that a string of moderate, unidirectional errors (which individually fail to breach $T_i$) is statistically impossible under a collapsed $V_i$, shattering the variance floor and restoring high Kalman gains to track rapid skill breakouts.
+	\begin{equation}
+		\text{Trend}_i = \frac{m_i^2}{\lambda_i^{\mathrm{eff}}}
+	\end{equation}
+	
+	The rating variance adapts using the stronger of the two signals:
+	\begin{equation}
+		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(\text{Shock}_i,\; \text{Trend}_i\right)\right)
+	\end{equation}
+	
+	This bifurcated logic is critical. Single-event errors must exceed the model's expected noise floor ($T_i$) to trigger a reaction, protecting the filter from zero-mean aleatoric scatter. However, because the EMA inherently filters out zero-mean noise, a non-zero momentum strictly indicates that the model's latent rating is systematically lagging the competitor's true skill. By subjecting the momentum penalty to no deadband, the system continuously injects variance during slow, persistent skill improvements, ensuring the Kalman gain remains elevated until the rating fully tracks the new baseline.
 	
 	\textbf{Step 9: Update Performance Dispersion}\\
 	Behavioral dispersion tracks the zero-mean scatter of a competitor's performance. Define floor and ceiling bounds:
