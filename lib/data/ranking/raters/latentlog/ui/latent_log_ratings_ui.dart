@@ -133,7 +133,7 @@ extension LatentLogRatingsUi on LatentLogRater {
     return ScoreRow(
       color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
       child: rowContents,
-      textColor: sortMode != RatingSortMode.agedRating && seenYearsAgo > 1 ? ThemeColors.fadedTextColor(context) : null,
+      textColor: seenYearsAgo > 1 ? ThemeColors.fadedTextColor(context) : null,
     );
   }
 }
