@@ -285,9 +285,13 @@ Future<void> _dumpDeltas(Console console, List<MenuArgumentValue> arguments) asy
   final db = AnalystDatabase();
 
   final gm = PredictionGameManager(predictionGame: game);
-  final matchPreps = await gm.getMatchPreps(futureOnly: true, hasPredictionsOnly: true);
+  final matchPreps = await gm.getMatchPreps(futureOnly: false, hasPredictionsOnly: true);
+  // Get the match preps that started at 00:00 Thursday if we're checking on
+  // Sunday.
+  final targetDate = DateTime.now().subtract(const Duration(days: 5));
+  final matchPrepsOfInterest = matchPreps.where((matchPrep) => matchPrep.matchDate.isAfter(targetDate)).toList();
 
-  for(var matchPrep in matchPreps) {
+  for(var matchPrep in matchPrepsOfInterest) {
     console.print("Match Prep: ${matchPrep.futureMatch.value!.eventName} ${matchPrep.matchDate}");
 
     final deltas = await _database.getBayesianDeltasForMatch(gameId, matchPrep);
