@@ -210,8 +210,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     Map<ShooterRating, double> competitorBaselineResiduals = {};
     double baselineResidual = 0.0;
     double weightedHistorySum = 0.0;
-    double baselineVarianceSum = 0.0;
     double totalWeight = 0.0;
+    double weightedSquareRootVarianceSum = 0.0;
+    double squaredWeightedVarianceSum = 0.0;
     Map<ShooterRating, double> competitorScoreEvidence = {};
     Map<ShooterRating, double> competitorTailNoise = {};
     Map<ShooterRating, double> competitorVariances = {};
@@ -244,7 +245,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
               tailNoise);
 
       competitorWeights[shooter] = weight;
-      baselineVarianceSum += weight * shooterVariance;
+      weightedSquareRootVarianceSum += weight * sqrt(shooterVariance);
+      squaredWeightedVarianceSum += weight * weight * shooterVariance;
       totalWeight += weight;
       weightedHistorySum += weight * shooter.length;
 
@@ -257,7 +259,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // the baseline weights to downweight extreme outliers.
     if (totalWeight > 0 && settings.baselineRobustnessZ > 0) {
       // Recalculate with robust weights
-      baselineVarianceSum = 0.0;
+      weightedSquareRootVarianceSum = 0.0;
+      squaredWeightedVarianceSum = 0.0;
 
       final rawBaseline = baselineResidual / totalWeight;
       double robustResidualSum = 0.0;
@@ -278,7 +281,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         );
         final effectiveWeight = baseWeight * robustWeight;
 
-        baselineVarianceSum += effectiveWeight * competitorVariances[shooter]!;
+        weightedSquareRootVarianceSum += effectiveWeight * sqrt(competitorVariances[shooter]!);
+        squaredWeightedVarianceSum += effectiveWeight * effectiveWeight * competitorVariances[shooter]!;
 
         competitorWeights[shooter] = effectiveWeight;
         robustResidualSum += effectiveWeight * residual;
@@ -315,7 +319,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         shooterVariance: competitorVariances[shooter]!,
         matchDate: match.date,
         baselineResidualSum: baselineResidual,
-        baselineVarianceSum: baselineVarianceSum,
+        weightedSquareRootVarianceSum: weightedSquareRootVarianceSum,
+        squaredWeightedVarianceSum: squaredWeightedVarianceSum,
         totalBaselineWeight: totalWeight,
         weakFieldVariance: weakFieldVariance,
         fieldMaturity: fieldMaturity,
@@ -351,8 +356,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     /// The sum of the baseline residuals.
     required double baselineResidualSum,
 
-    /// The weighted sum of the baseline variances.
-    required double baselineVarianceSum,
+    /// The weighted sum of the square roots of the variances.
+    required double weightedSquareRootVarianceSum,
+
+    /// The sum of the variances weighted by the squares of their weights.
+    required double squaredWeightedVarianceSum,
 
     /// The total weight of the baseline.
     required double totalBaselineWeight,
@@ -401,16 +409,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     if (looWeight <= 0) {
       return null;
     }
-    final looVariance = baselineVarianceSum - (shooterVariance * shooterWeight);
 
-    final opponentCount = validScoresCount - 1;
-    final fieldAverageUncertaintyTaper = (opponentCount - 1) / opponentCount;
-    final fieldAverageUncertainty = looVariance / looWeight * fieldAverageUncertaintyTaper;
+    final looSquareRootVarianceSum = weightedSquareRootVarianceSum - (shooterWeight * sqrt(shooterVariance));
+    final looSquaredWeightedVarianceSum = squaredWeightedVarianceSum - (shooterWeight * shooterWeight) * shooterVariance;
+    final term1 = 1.0 / looWeight;
+    final term2 =
+      (settings.intraclassCorrelation / (looWeight * looWeight))
+      * ((looSquareRootVarianceSum * looSquareRootVarianceSum) - looSquaredWeightedVarianceSum);
 
     final looBaseline =
         (baselineResidualSum - shooterWeight * (agedRating - shooterScoreEvidence)) /
         looWeight;
-    final baselineVariance = 1.0 / looWeight + settings.intraclassCorrelation * fieldAverageUncertainty;
+    final looBaselineVariance = term1 + term2;
 
     // if(fieldAverageUncertainty > baselineVariance) {
     //   _log.w("Match ${match.name} with $opponentCount opponents has "
@@ -493,7 +503,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final cleanObsNoise =
       settings.sportVariance
       + dispersionCertainty * shooter.dispersion
-      + (1 - pairwiseBlendWeightSquared) * baselineVariance
+      + (1 - pairwiseBlendWeightSquared) * looBaselineVariance
       + pairwiseBlendWeightSquared * localBaselineVariance;
 
     final totalObsNoise =
@@ -723,7 +733,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         ),
         RatingEventInfoElement.double(
           name: "globalBaselineNoise",
-          doubleValue: baselineVariance / settings.sportVariance,
+          doubleValue: looBaselineVariance / settings.sportVariance,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
