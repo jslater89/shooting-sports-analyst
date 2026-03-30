@@ -431,7 +431,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     double localBaseline = 0.0;
     double localBaselineWeight = 0.0;
     double localBaselineVariance = 0.0;
-    double localBaselineVarianceSum = 0.0;
+    double localWeightedSquareRootVarianceSum = 0.0;
+    double localSquaredWeightedVarianceSum = 0.0;
     int pairwiseOpponentCount = 0;
 
     // Pairwise blending, conditioned on at least [weak field max size] opponents.
@@ -457,15 +458,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
         localBaseline += baselineContribution;
         localBaselineWeight += weightContribution;
-        localBaselineVarianceSum += weightContribution * opponentAgedVariance;
+        localWeightedSquareRootVarianceSum += weightContribution * sqrt(opponentAgedVariance);
+        localSquaredWeightedVarianceSum += weightContribution * weightContribution * opponentAgedVariance;
       }
 
       if (localBaselineWeight > 0) {
-        final localBaselineUncertainty = localBaselineVarianceSum / localBaselineWeight;
+        final term1 = 1.0 / localBaselineWeight;
+        final term2 = (settings.intraclassCorrelation / (localBaselineWeight * localBaselineWeight))
+          * ((localWeightedSquareRootVarianceSum * localWeightedSquareRootVarianceSum) - localSquaredWeightedVarianceSum);
 
-        final localTaper = (pairwiseOpponentCount - 1) / pairwiseOpponentCount;
         localBaseline /= localBaselineWeight;
-        localBaselineVariance = 1.0 / localBaselineWeight + settings.intraclassCorrelation * localTaper * localBaselineUncertainty;
+        localBaselineVariance = term1 + term2;
       }
     }
 

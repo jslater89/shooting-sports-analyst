@@ -4,6 +4,7 @@
 \usepackage{geometry}
 \usepackage{hyperref}
 \usepackage{parskip}
+\usepackage{booktabs}
 
 \geometry{a4paper, margin=1in}
 
@@ -65,7 +66,7 @@
 		R_i - R_j = E[\ln(S_i) - \ln(S_j)] = E\!\left[\ln\!\left(\frac{S_i}{S_j}\right)\right]
 	\end{equation}
 
-	Equivalently, the expected ratio of two competitors' performances is:
+	Equivalently, the expected ratio of two competitors' performances (ignoring the log-normal variance shift for conceptual simplicity) is:
 	\begin{equation}
 		E\!\left[\frac{S_i}{S_j}\right] \approx \exp(R_i - R_j)
 	\end{equation}
@@ -83,71 +84,76 @@
 		\item \textbf{$\sigma_i^2$ (Performance Dispersion):} The aleatoric uncertainty in a rating: ``how much does a competitor's performance naturally vary from event to event?'' Tracks whether a competitor is consistent (i.e., sees generally small rating updates) or prone to large swings (sees large ones).
 		\item \textbf{$m_i$ (Innovation Momentum):} An exponential moving average of recent prediction errors. Used to distinguish directional skill trends (breakouts or collapses) from zero-mean aleatoric scatter.
 	\end{itemize}
-
-	\subsection{System Parameters}
-	The parameters to the Latent Log-Ratio system fall into five categories: scaling, to convert the internal log units to user-friendly display numbers; core parameters, which drive the main algorithm; parameters that improve performance on small or degenerate fields; parameters that improve observed performance when converting from ratings to predicted ratios; and chronological mean-reversion parameters for inactivity handling.
-
-	\subsubsection*{Scaling (Display $s$, $b$)}
-	\begin{itemize}
-		\item \textbf{$s$, $b$ (Display Scale):} User-facing ratings use an affine map $R^{\mathrm{disp}} = s\cdot R + b$. Variance and dispersion in display space scale as $s^2$ times latent variance; display standard deviations scale as $|s|$ times latent standard deviation.
-	\end{itemize}
-
-	\subsubsection*{Core Parameters -- General}
-	\begin{itemize}
-		\item \textbf{$\sigma_{\mathrm{sport}}^2$ (Sport Variance):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
-		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
-		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates, surprise adaptation, and after drift aging.
-		\item \textbf{$\sigma_{\mathrm{drift}}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{\mathrm{drift}}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
-		\item \textbf{$\beta$ (Dispersion Adaptation Rate):} Base rate for the performance dispersion EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
-		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
-		\item \textbf{$\lambda$ (Momentum Adaptation Rate):} The base rate for the innovation momentum tracker.
-		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
-	\end{itemize}
 	
-	\subsubsection*{Core Parameters -- Off-Diagonal Covariance Approximation}
-	\begin{itemize}
-		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} The fraction of epistemic variance assumed to be shared demographically by unrated or high-variance competitors at the same match. Prevents certainty collapse (the ``Day 1'' rating explosion) in fields with little history by explicitly bounding the baseline variance to a cohort asymptote. $\rho$ serves to prevent the baseline from incorrectly anchoring to a highly uncertain field, allowing the baseline to `float' rather than acting as a rigid mathematical datum. Fundamentally, it prevents the filter from falsely trusting the field's average.
-		\item \textbf{$k_{\mathrm{max}}$ (Graph Maturity Threshold):} The number of historical events at which a competitor is assumed to be fully integrated into the global network.
-		\item \textbf{$\psi^2$ (Novelty Variance):} The maximum noise penalty applied to topologically isolated, immature fields. Along with $k_{\mathrm{max}}$, it limits the impact of extreme performance margins shot in low-history networks: ``The margins between these competitors are directionally meaningful, but their absolute magnitudes are untrustworthy as a measure of global top-end skill.'' Fundamentally, $k_{\mathrm{max}}$ and $\psi^2$ prevent the filter from falsely trusting the field's structural variance.
-	\end{itemize}
+	\subsection{Model Parameters}
+	Tables~\ref{tab:params-variance} and \ref{tab:params-dimensionless} provide a concise glossary of the main parameters used in the Latent Log-Ratio model. Full descriptions, recommended ranges, and the detailed tuning procedure appear in Appendix~\ref{app:parameters}.
 	
-	\subsubsection*{Small and Degenerate Fields}
-	\begin{itemize}
-		\item \textbf{$c$ (Baseline Robustness Threshold):} A Huber-style threshold, measured in residual standard deviations, used to downweight extreme field anchors when estimating match baseline.
-		\item \textbf{$s_0$ (Tail Noise Start Percentage):} The finish percentage below which very weak results begin receiving additional observation noise. Above $s_0$, the ordinary variance model is used.
-		\item \textbf{$\xi^2$ (Tail Noise Variance):} The maximum additional observation variance applied to the deepest tail. Larger values make the model more skeptical of very weak finishes without changing the log-ratio mean link.
-		\item \textbf{$\omega^2$ (Weak-Field Variance):} The maximum additional match-context observation variance applied when a field is both small and bottom-heavy.
-		\item \textbf{$n_{\mathrm{max}}$ (Weak-Field Max Size):} The field size at or above which weak-field damping decays to zero.
-		\item \textbf{$s_w$ (Weak Finish Threshold):} The finish threshold below which a non-winning score counts as ``weak'' for weak-field detection.
-		\item \textbf{$q_0$ (Weak Fraction Threshold):} The minimum fraction of weak non-winners required before the weak-field term activates.
-	\end{itemize}
-
-	\subsubsection*{Prediction Parameters}
-	\begin{itemize}
-		\item \textbf{$\sigma_{\mathrm{pred}}^2$ (Prediction Sport Variance):} Idiosyncratic sport noise used only in the prediction pipeline (win-probability denominators and predictive variance).
-		\item \textbf{$\kappa$ (Prediction Behavioral Scale):} Dimensionless coefficient in $[0,1]$ that scales how much per-competitor behavioral variance $\sigma_i^2$ enters \emph{posterior predictive} variance for finish-ratio bands.
-	\end{itemize}
-
-	\subsubsection*{Mean Reversion Parameters}
-	\begin{itemize}
-		\item \textbf{$t_{\mathrm{grace}}$ (Rust Grace Period):} Inactivity duration, measured in years, before chronological mean-reversion begins. For elapsed time $\Delta t$ since last match, decay uses $\Delta t_{\mathrm{eff}} = \max(0, \Delta t - t_{\mathrm{grace}})$.
-		\item \textbf{$\lambda_{\mathrm{rust}}$ (Rust Decay Rate):} Exponential decay coefficient, measured in inverse years, controlling how quickly inactive competitors regress toward baseline after grace time. Applied through $\exp(-\lambda_{\mathrm{rust}} \cdot \Delta t_{\mathrm{eff}})$ as described in subsection E.
-	\end{itemize}
+	All parameters in Table~\ref{tab:params-variance} are expressed in variance units and are typically scaled relative to the sport variance \(\sigma_{\mathrm{sport}}^2\), which serves as the fundamental anchor (1.0 SV) of the model. Table~\ref{tab:params-dimensionless} contains the remaining dimensionless rates, weights, and thresholds.
+	
+	\begin{table}[htbp]
+		\centering
+		\caption{Parameters expressed in variance units.}
+		\label{tab:params-variance}
+		\begin{tabular}{llp{7cm}}
+			\toprule
+			\textbf{Parameter} & \textbf{Symbol} & \textbf{Role} \\
+			\midrule
+			Sport variance & \(\sigma_{\mathrm{sport}}^2\) & Irreducible noise of a single match observation (fundamental anchor, defined as 1.0 SV) \\
+			Starting variance & \(V_{\mathrm{start}}\) & Prior epistemic uncertainty assigned to new competitors \\
+			Maximum variance & \(V_{\max}\) & Upper bound on epistemic uncertainty after updates and drift \\
+			Skill drift rate & \(\sigma_{\mathrm{drift}}^2\) & Rate at which epistemic uncertainty grows during periods of inactivity \\
+			Novelty variance & \(\psi^2\) & Penalty applied to topologically isolated or immature fields \\
+			Tail noise variance & \(\xi^2\) & Additional observation variance for deep-tail finishes \\
+			Weak-field variance & \(\omega^2\) & Additional variance penalty for small, bottom-heavy matches \\
+			Prediction sport variance & \(\sigma_{\mathrm{pred}}^2\) & Sport noise used only in the prediction pipeline \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\begin{table}[htbp]
+		\centering
+		\caption{Dimensionless parameters, rates, and thresholds.}
+		\label{tab:params-dimensionless}
+		\begin{tabular}{llp{7cm}}
+			\toprule
+			\textbf{Parameter} & \textbf{Symbol} & \textbf{Role} \\
+			\midrule
+			Dispersion adaptation rate & \(\beta\) & Base rate for the performance dispersion exponential moving average \\
+			Surprise adaptation rate & \(\gamma\) & Aggressiveness of epistemic variance inflation in response to shocks and trends \\
+			Momentum adaptation rate & \(\lambda\) & Base rate for the innovation momentum exponential moving average \\
+			Pairwise blend weight & \(\alpha\) & Weight given to local pairwise opponent comparisons versus global baseline \\
+			Cohort intraclass correlation & \(\rho\) & Assumed fraction of prior uncertainty shared among unrated competitors \\
+			Baseline robustness threshold & \(c\) & Huber-style threshold (in residual standard deviations) for robust baseline estimation \\
+			Tail noise start percentage & \(s_0\) & Finish percentage below which additional tail noise is applied \\
+			Graph maturity threshold & \(k_{\mathrm{max}}\) & Number of events required for full topological integration into the global graph \\
+			Prediction behavioral scale & \(\kappa\) & Fraction of per-competitor dispersion projected into predictive uncertainty \\
+			Rust decay rate & \(\lambda_{\mathrm{rust}}\) & Strength of chronological mean reversion for inactive competitors \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
 
 	\subsection{The Core Match Processing and Update Loop}
 	This section describes the idealized core filter using only the primary parameters. It assumes normally distributed log-ratios, strict ratio scales, and statistically well-behaved fields. The computational complexity is $\mathcal{O}(N \cdot k)$ where $k$ is the number of pairwise opponents evaluated per competitor.
 	
-	
 	\subsubsection*{Algorithm Overview}
-	The Latent Log-Ratio update cycle processes each match through a sequence of distinct mathematical phases, designed to strictly separate structural match topology from individual physical performance:
+	The Latent Log-Ratio update processes each match through a sequence of mathematical phases that separate the structural topology of the match from individual performance observations. The procedure consists of the following steps:
+	
 	\begin{enumerate}
-		\item \textbf{Translation:} Percentage-based match finishes are converted into scale-invariant log-ratios.
-		\item \textbf{Anchoring (The Baseline):} The algorithm estimates the true latent difficulty of the match by precision-weighting the field's expected ratings against their actual scores. Off-diagonal cohort covariance is explicitly calculated to prevent the anchor from freezing in fields of unknown competitors.
-		\item \textbf{Uncertainty and Topology:} The total variance of each observation is established by summing physical sport noise, individual behavioral dispersion, and the estimation variance of the baseline. Crucially, a topological novelty penalty is applied to isolated, low-history sub-graphs to prevent unanchored networks from experiencing violent mathematical drift.
-		\item \textbf{Robust Mean Update:} The competitor's latent rating is updated via a Kalman filter. This update is strictly wrapped in a heavy-tailed Student-$t$ distribution to protect the global datum from single-event physical anomalies like equipment failures.
-		\item \textbf{State-Space Adaptation:} The residual error is cleanly bifurcated to independently update the competitor's epistemic uncertainty (rating variance) and aleatoric volatility (performance dispersion). These secondary updates bypass the Student-$t$ downweighting—allowing the model to recognize anomalies as legitimate shocks to certainty—but strictly filter out topological noise, preventing unanchored fields from permanently inflating a competitor's behavioral profile.
+		\item \textbf{Translation:} Match percentages \(S_i\) are transformed to log-space via \(L_i = \ln(S_i)\), yielding scale-invariant log-ratios.
+		
+		\item \textbf{Anchoring (Baseline Estimation):} A precision-weighted baseline \(B_{-i}\) is computed for each competitor by comparing expected ratings \(R_i\) to observed log-scores \(L_i\). Off-diagonal cohort covariance, controlled by the intraclass correlation parameter \(\rho\), is incorporated to produce a floating anchor in low-history fields rather than a rigid datum.
+		
+		\item \textbf{Observation Variance Construction:} The total observation variance \(R_{\mathrm{obs},i}\) is formed as the sum of sport noise \(\sigma_{\mathrm{sport}}^2\), certainty-scaled individual dispersion \(\tilde{\sigma}_i^2\), baseline estimation variance \(\mathrm{Var}(B_{\mathrm{obs}})\), and a topological novelty penalty \(\sigma_{\mathrm{novel}}^2\) derived from field maturity \(\bar{\mu}\). An observation quality factor \(Q_i\) isolates physical components from structural noise.
+		
+		\item \textbf{Robust Mean Update:} The latent rating \(R_i\) is updated using a Kalman filter with gain \(K_i = V_i^{\mathrm{age}} / (V_i^{\mathrm{age}} + R_{\mathrm{obs},i})\). A Student-$t$ robust weighting \(w_t(z_i)\) is applied exclusively to the mean update to limit the influence of extreme single-event anomalies.
+		
+		\item \textbf{State-Space Adaptation:} 
+		The innovation \(e_i = O_i - R_i\) is split into a clean component \(e_i^{\mathrm{clean}}\) and a structural component \(e_i^{\mathrm{struct}}\). 
+		These drive separate updates: the epistemic uncertainty \(V_i\) is first scaled by the Kalman posterior factor \((1 - K_i)\) and then augmented by an additive surprise term \(\gamma \cdot \max(\text{Shock}_i, \text{Trend}_i)\), 
+		while the aleatoric dispersion \(\sigma_i^2\) and momentum \(m_i\) receive exponential-moving-average updates. 
+		The observation quality factor \(Q_i\) filters topological and structural noise so that only physically meaningful residuals influence the long-term state variables.
 	\end{enumerate}
-
+	
 	\subsubsection*{Step 1: Calculate Log-Scores}
 	Convert match percentages to log space:
 	\begin{equation}
@@ -207,7 +213,7 @@
 		B_{\mathrm{local}} = \frac{\sum_{j \in \mathcal{S}_i} W_j a_j}{\sum_{j \in \mathcal{S}_i} W_j}
 	\end{equation}
 	\begin{equation}
-		\mathrm{Var}(B_{\mathrm{local}}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j} + \rho \left(\frac{|\mathcal{S}_i|-1}{|\mathcal{S}_i|}\right) \frac{\sum_{j \in \mathcal{S}_i} W_j V_j^{\mathrm{age}}}{\sum_{j \in \mathcal{S}_i} W_j}
+		\mathrm{Var}(B_{\mathrm{local}}) = \frac{1}{\sum_{j \in \mathcal{S}_i} W_j} + \frac{\rho}{\left(\sum_{j \in \mathcal{S}_i} W_j\right)^2} \left[ \left( \sum_{j \in \mathcal{S}_i} W_j \sqrt{V_j^{\mathrm{age}}} \right)^2 - \sum_{j \in \mathcal{S}_i} W_j^2 V_j^{\mathrm{age}} \right]
 	\end{equation}
 
 	\subsubsection*{Step 5: Calculate Observed Performance ($O_i$)}
@@ -227,17 +233,12 @@
 	\end{equation}
 	For an established veteran, $c_i \approx 1.0$ and their full behavioral dispersion is respected. For a new or highly uncertain competitor, $c_i$ approaches $0$, ensuring the filter remains fluid.
 	
-	Second, because the observed baseline $B_{\mathrm{obs}}$ is a convex blend of two estimates, we must explicitly propagate its structural estimation variance. Note that $B_{-i}$ and $B_{\mathrm{local}}$ are not independent. However, because the local opponent set $\mathcal{S}_i$ is a strict subset of the precision-weighted global field, a known property of subset means dictates that their covariance is exactly the variance of the global mean. Crucially, this identity remains mathematically exact even under the uniform off-diagonal covariance introduced by the latent cohort bias $\rho$:
-	\begin{equation}
-		\mathrm{Cov}(B_{-i},B_{\mathrm{local}}) = \mathrm{Var}(B_{-i})
-	\end{equation}
-	Calculating the exact variance of $B_{\mathrm{obs}} = (1 - \alpha_i) B_{-i} + \alpha_i B_{\mathrm{local}}$ using standard rules allows the cross-terms to collapse elegantly:
-	\begin{align}
-		\mathrm{Var}(B_{\mathrm{obs}}) &= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Cov}(B_{-i}, B_{\mathrm{local}}) \nonumber\\
-		&= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Var}(B_{-i}) \nonumber\\
-		&= \left[ (1 - \alpha_i)^2 + 2\alpha_i(1 - \alpha_i) \right] \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) \nonumber\\
-		&= (1 - \alpha_i^2) \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}})
-	\end{align}
+	Second, because the observed baseline $B_{\mathrm{obs}}$ is a convex blend of two estimates, we must explicitly propagate its structural estimation variance. Although $B_{-i}$ and $B_{\mathrm{local}}$ are not independent, the subset structure implies that their covariance is exactly $\mathrm{Var}(B_{-i})$ under independent priors ($\rho = 0$). With a nonzero intraclass correlation $\rho$, this equality becomes an approximation, as the precision-weighted average of the square roots of the opponent variances ($\sqrt{V_i}$) in the local subset $\mathcal{S}_i$ will generally differ slightly from that of the full field. Nevertheless, the variance of the blended baseline simplifies elegantly to:
+	
+\begin{align}
+	\mathrm{Var}(B_{\mathrm{obs}}) &= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Var}(B_{-i}) \nonumber\\
+	&= (1 - \alpha_i^2) \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}})
+\end{align}
 	
 	We define the sum of fundamental sport noise, effective dispersion, and this structural estimation variance as the \textit{clean} observation variance:
 	\begin{equation}
@@ -553,8 +554,60 @@
 	\subsection{Multiplayer Elo}
 
 	\subsection{TrueSkill and OpenSkill}
-
+	
 	\appendix
+	\section{Parameter List}
+	\label{app:parameters}
+	
+		The parameters to the Latent Log-Ratio system fall into five categories: scaling, to convert the internal log units to user-friendly display numbers; core parameters, which drive the main algorithm; parameters that improve performance on small or degenerate fields; parameters that improve observed performance when converting from ratings to predicted ratios; and chronological mean-reversion parameters for inactivity handling.
+	
+	\subsubsection*{Scaling (Display $s$, $b$)}
+	\begin{itemize}
+		\item \textbf{$s$, $b$ (Display Scale):} User-facing ratings use an affine map $R^{\mathrm{disp}} = s\cdot R + b$. Variance and dispersion in display space scale as $s^2$ times latent variance; display standard deviations scale as $|s|$ times latent standard deviation.
+	\end{itemize}
+	
+	\subsubsection*{Core Parameters -- General}
+	\begin{itemize}
+		\item \textbf{$\sigma_{\mathrm{sport}}^2$ (Sport Variance):} A tuned constant representing the inherent noise of a single match observation in the sport. This is the irreducible variance that even a perfectly consistent competitor experiences due to environmental factors, range conditions, and the stochastic nature of shooting. Tuned once per sport; does not vary per competitor.
+		\item \textbf{$V_{\mathrm{start}}$ (Starting Variance):} The variance assigned to competitors with no rating history, i.e. prior width for new shooters.
+		\item \textbf{$V_{\max}$ (Maximum Variance):} Upper bound on committed rating variance after Kalman updates, surprise adaptation, and after drift aging.
+		\item \textbf{$\sigma_{\mathrm{drift}}^2$ (Skill Drift Rate):} The rate at which rating uncertainty grows during periods of inactivity. Represents the possibility that a competitor's true skill changes when they are not being observed. Applied as $V_i \leftarrow V_i + \sigma_{\mathrm{drift}}^2 \times \Delta t$ between matches, where $\Delta t$ is measured in rating periods.
+		\item \textbf{$\beta$ (Dispersion Adaptation Rate):} Base rate for the performance dispersion EMA, multiplied by a certainty factor derived from $V_i^{\mathrm{age}}/V_{\max}$ (bounded below by $0.25\,\beta$).
+		\item \textbf{$\gamma$ (Surprise Adaptation Rate):} Controls how aggressively the variance $V_i$ responds to unexpectedly surprising results. Recommended range: 0.05--0.1.
+		\item \textbf{$\lambda$ (Momentum Adaptation Rate):} The base rate for the innovation momentum tracker.
+		\item \textbf{$\alpha$ (Pairwise Blend Weight):} Controls how much structural information from pairwise opponent comparisons is blended into the baseline-derived observed performance. When $\alpha = 0$, the model reduces to the pure baseline model.
+	\end{itemize}
+	
+	\subsubsection*{Core Parameters -- Off-Diagonal Covariance Approximation}
+	\begin{itemize}
+		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} The fraction of epistemic variance assumed to be shared demographically by unrated or high-variance competitors at the same match. Prevents certainty collapse (the ``Day 1'' rating explosion) in fields with little history by explicitly bounding the baseline variance to a cohort asymptote. $\rho$ serves to prevent the baseline from incorrectly anchoring to a highly uncertain field, allowing the baseline to `float' rather than acting as a rigid mathematical datum. Fundamentally, it prevents the filter from falsely trusting the field's average.
+		\item \textbf{$k_{\mathrm{max}}$ (Graph Maturity Threshold):} The number of historical events at which a competitor is assumed to be fully integrated into the global network.
+		\item \textbf{$\psi^2$ (Novelty Variance):} The maximum noise penalty applied to topologically isolated, immature fields. Along with $k_{\mathrm{max}}$, it limits the impact of extreme performance margins shot in low-history networks: ``The margins between these competitors are directionally meaningful, but their absolute magnitudes are untrustworthy as a measure of global top-end skill.'' Fundamentally, $k_{\mathrm{max}}$ and $\psi^2$ prevent the filter from falsely trusting the field's structural variance.
+	\end{itemize}
+	
+	\subsubsection*{Small and Degenerate Fields}
+	\begin{itemize}
+		\item \textbf{$c$ (Baseline Robustness Threshold):} A Huber-style threshold, measured in residual standard deviations, used to downweight extreme field anchors when estimating match baseline.
+		\item \textbf{$s_0$ (Tail Noise Start Percentage):} The finish percentage below which very weak results begin receiving additional observation noise. Above $s_0$, the ordinary variance model is used.
+		\item \textbf{$\xi^2$ (Tail Noise Variance):} The maximum additional observation variance applied to the deepest tail. Larger values make the model more skeptical of very weak finishes without changing the log-ratio mean link.
+		\item \textbf{$\omega^2$ (Weak-Field Variance):} The maximum additional match-context observation variance applied when a field is both small and bottom-heavy.
+		\item \textbf{$n_{\mathrm{max}}$ (Weak-Field Max Size):} The field size at or above which weak-field damping decays to zero.
+		\item \textbf{$s_w$ (Weak Finish Threshold):} The finish threshold below which a non-winning score counts as ``weak'' for weak-field detection.
+		\item \textbf{$q_0$ (Weak Fraction Threshold):} The minimum fraction of weak non-winners required before the weak-field term activates.
+	\end{itemize}
+	
+	\subsubsection*{Prediction Parameters}
+	\begin{itemize}
+		\item \textbf{$\sigma_{\mathrm{pred}}^2$ (Prediction Sport Variance):} Idiosyncratic sport noise used only in the prediction pipeline (win-probability denominators and predictive variance).
+		\item \textbf{$\kappa$ (Prediction Behavioral Scale):} Dimensionless coefficient in $[0,1]$ that scales how much per-competitor behavioral variance $\sigma_i^2$ enters \emph{posterior predictive} variance for finish-ratio bands.
+	\end{itemize}
+	
+	\subsubsection*{Mean Reversion Parameters}
+	\begin{itemize}
+		\item \textbf{$t_{\mathrm{grace}}$ (Rust Grace Period):} Inactivity duration, measured in years, before chronological mean-reversion begins. For elapsed time $\Delta t$ since last match, decay uses $\Delta t_{\mathrm{eff}} = \max(0, \Delta t - t_{\mathrm{grace}})$.
+		\item \textbf{$\lambda_{\mathrm{rust}}$ (Rust Decay Rate):} Exponential decay coefficient, measured in inverse years, controlling how quickly inactive competitors regress toward baseline after grace time. Applied through $\exp(-\lambda_{\mathrm{rust}} \cdot \Delta t_{\mathrm{eff}})$ as described in subsection E.
+	\end{itemize}
+
 	\section{Practical Initialization and Tuning Guide}
 	\label{app:tuning}
 
