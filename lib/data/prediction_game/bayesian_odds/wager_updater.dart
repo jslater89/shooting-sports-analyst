@@ -77,6 +77,8 @@ class BayesianWagerUpdater {
   ///
   /// [bestPossibleOdds] and [worstPossibleOdds] are the best and worst possible odds for the wager,
   /// respectively. If not present, the default values of 1.0001 and 10000.0 will be used.
+  ///
+  /// [houseEdge] is a house edge to apply to the wager. If not present, the default value of 0.05 will be used.
   Future<double> updateWagerWithBayesianOddsShift({
     required PredictionGameManager gm,
     required PredictionGamePlayer bettor,
@@ -89,6 +91,7 @@ class BayesianWagerUpdater {
     MonteCarloSimulationResult? spreadUnderdogMonteCarlo,
     double? bestPossibleOdds,
     double? worstPossibleOdds,
+    double? houseEdge,
     IMonteCarloCache? cache,
   }) async {
     final start = DateTime.now();
@@ -204,11 +207,13 @@ class BayesianWagerUpdater {
         maxProbability,
         bestPossibleOdds: bestPossibleOdds,
         worstPossibleOdds: worstPossibleOdds,
+        houseEdge: houseEdge,
       );
       final bestProbability = PredictionProbability.fromRawProbability(
         minProbability,
         bestPossibleOdds: bestPossibleOdds,
         worstPossibleOdds: worstPossibleOdds,
+        houseEdge: houseEdge,
       );
 
       actualWorstOdds = max(worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault, worstProbability.decimalOdds);
@@ -229,6 +234,7 @@ class BayesianWagerUpdater {
         underdogDelta: null,
         bestPossibleOdds: actualBestOdds,
         worstPossibleOdds: actualWorstOdds,
+        houseEdge: houseEdge,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
       _log.i("${wager.prediction.descriptiveString} - $oldMoneyline -> ${wager.probability.moneylineOdds}");
@@ -245,6 +251,7 @@ class BayesianWagerUpdater {
         underdogDelta: null,
         bestPossibleOdds: actualBestOdds,
         worstPossibleOdds: actualWorstOdds,
+        houseEdge: houseEdge,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 
@@ -262,6 +269,7 @@ class BayesianWagerUpdater {
         underdogDelta: underdogDelta,
         bestPossibleOdds: actualBestOdds,
         worstPossibleOdds: actualWorstOdds,
+        houseEdge: houseEdge,
         random: Random(matchPrep.futureMatch.value!.matchId.stableHash),
       );
 

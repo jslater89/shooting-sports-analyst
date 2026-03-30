@@ -102,6 +102,7 @@ class Wager implements IWager {
     double? underdogDelta,
     double? bestPossibleOdds,
     double? worstPossibleOdds,
+    double? houseEdge,
     Random? random,
     int trials = 10000,
   }) {
@@ -114,6 +115,7 @@ class Wager implements IWager {
         bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
         worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
         random: random,
+        houseEdge: houseEdge ?? PredictionProbability.standardHouseEdge,
         trials: trials,
       );
     }
@@ -126,6 +128,7 @@ class Wager implements IWager {
         bestPossibleOdds: bestPossibleOdds ?? PredictionProbability.bestPossibleOddsDefault,
         worstPossibleOdds: worstPossibleOdds ?? PredictionProbability.worstPossibleOddsDefault,
         random: random,
+        houseEdge: houseEdge ?? PredictionProbability.standardHouseEdge,
         trials: trials,
       );
     }
@@ -140,6 +143,7 @@ class Wager implements IWager {
         favoriteRatioDelta: targetDelta,
         underdogRatioDelta: underdogDelta ?? 0.0,
         random: random,
+        houseEdge: houseEdge ?? PredictionProbability.standardHouseEdge,
         trials: trials,
       );
     }
@@ -164,9 +168,12 @@ class Parlay implements IWager {
   PredictionProbability calculateProbabilityWith({
     double? bestPossibleOdds,
     double? worstPossibleOdds,
+    double? houseEdgePerLeg,
+    double? parlayEdge,
   }) => PredictionProbability.fromParlayLegs(
     legs,
-    houseEdgePerLeg: PredictionProbability.standardHouseEdge,
+    houseEdgePerLeg: houseEdgePerLeg ?? PredictionProbability.standardHouseEdge,
+    houseEdge: parlayEdge ?? PredictionProbability.parlayHouseEdge,
     bestPossibleOdds: bestPossibleOdds,
     worstPossibleOdds: worstPossibleOdds,
   );

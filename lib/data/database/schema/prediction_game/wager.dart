@@ -205,13 +205,21 @@ class DbWager {
   factory DbWager.fromParlay(Parlay parlay, {
     double? bestPossibleOdds,
     double? worstPossibleOdds,
+    double? houseEdgePerLeg,
+    double? parlayEdge,
   }) {
     var ratingGroup = parlay.legs.first.prediction.shooter.wrappedRating.group.value;
     var dbWager = DbWager(
       legs: parlay.legs.map((leg) => DbPrediction.fromWager(leg)).toList(),
       amount: parlay.amount,
     );
-    dbWager.parlayProbability = DbProbability.fromParlay(parlay, bestPossibleOdds: bestPossibleOdds, worstPossibleOdds: worstPossibleOdds);
+    dbWager.parlayProbability = DbProbability.fromParlay(
+      parlay,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
+      parlayEdge: parlayEdge,
+      houseEdgePerLeg: houseEdgePerLeg,
+    );
     dbWager.ratingGroup.value = ratingGroup;
     return dbWager;
   }
@@ -646,6 +654,7 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
 class DbProbability {
   double probability;
   double houseEdge;
+  double? houseEdgePerLeg;
   double worstPossibleOdds;
   double bestPossibleOdds;
   List<DbDoubleKeyValue> info = [];
@@ -653,6 +662,7 @@ class DbProbability {
   DbProbability({
     this.probability = 0.0,
     this.houseEdge = 0.0,
+    this.houseEdgePerLeg,
     this.worstPossibleOdds = PredictionProbability.worstPossibleOddsDefault,
     this.bestPossibleOdds = PredictionProbability.bestPossibleOddsDefault,
   });
@@ -661,6 +671,7 @@ class DbProbability {
     return DbProbability(
       probability: wager.probability.probability,
       houseEdge: wager.probability.houseEdge,
+      houseEdgePerLeg: null,
       worstPossibleOdds: wager.probability.worstPossibleOdds,
       bestPossibleOdds: wager.probability.bestPossibleOdds,
     );
@@ -669,12 +680,21 @@ class DbProbability {
   factory DbProbability.fromParlay(Parlay parlay, {
     double? bestPossibleOdds,
     double? worstPossibleOdds,
+    double? parlayEdge,
+    double? houseEdgePerLeg,
   }) {
+    final probability = parlay.calculateProbabilityWith(
+      houseEdgePerLeg: houseEdgePerLeg,
+      parlayEdge: parlayEdge,
+      bestPossibleOdds: bestPossibleOdds,
+      worstPossibleOdds: worstPossibleOdds,
+    );
     return DbProbability(
-      probability: parlay.probability.probability,
-      houseEdge: parlay.probability.houseEdge,
-      worstPossibleOdds: worstPossibleOdds ?? parlay.probability.worstPossibleOdds,
-      bestPossibleOdds: bestPossibleOdds ?? parlay.probability.bestPossibleOdds,
+      probability: probability.probability,
+      houseEdge: probability.houseEdge,
+      houseEdgePerLeg: houseEdgePerLeg,
+      worstPossibleOdds: probability.worstPossibleOdds,
+      bestPossibleOdds: probability.bestPossibleOdds,
     );
   }
 
