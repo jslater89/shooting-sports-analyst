@@ -202,12 +202,14 @@
 	High-variance and high-dispersion competitors naturally receive less influence.
 
 	\subsubsection*{Step 3: Establish the Core Match Baseline ($B_{-i}$)}
-	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores:
+	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores. Recalling that $L_i = \ln(P_i) - \ln(P_{\mathrm{max}})$, we can expand this to:
 	\begin{align}
 		a_i &= R_i - L_i \nonumber \\
-		a_i &= (R_i - \ln(P_i)) + \ln(P_{\mathrm{max}})
+		&= R_i - (\ln(P_i) - \ln(P_{\mathrm{max}})) \nonumber \\
+		&= (R_i - \ln(P_i)) + \ln(P_{\mathrm{max}})
 	\end{align}
-	Because the expected value of a competitor's performance error $(R_i - \ln(P_i))$ is zero, $a_i$ acts as a noisy observation of the winner's latent absolute performance.
+
+	Because the expected value of a competitor's absolute performance error $(R_i - \ln(P_i))$ is zero, $a_i$ acts as a noisy observation of the winner's latent absolute performance. The field's residuals collectively answer the question: ``Based on the known skill of the competitors, what latent rating was required to shoot exactly 100\% today?''
 
 	To prevent extreme outliers (e.g., a competitor suffering a catastrophic equipment failure) from dragging the global mathematical anchor, we apply a Huber-style robust weighting. First, compute a raw, prior-regularized baseline using the core weights:
 	\begin{equation}
@@ -222,7 +224,6 @@
 	\begin{equation}
 		B_{-i} = \frac{\sum_{j \neq i} \tilde{W}_j a_j}{\sum_{j \neq i} \tilde{W}_j}
 	\end{equation}
-	The baseline acts as the global mathematical anchor, answering: ``Based on the known skill of the field and the percentages shot, what was the absolute latent skill of the 100\% mark?''
 
 	To formalize the missing off-diagonal covariance in an $\mathcal{O}(N)$ framework, we introduce $\rho$, the intraclass correlation of priors. Assuming a uniform prior correlation $\rho$ among the cohort's epistemic uncertainties, the exact analytical variance of the precision-weighted baseline expands to include the sum of all pairwise covariances. By factoring the cross-terms, this reduces algebraically to an $\mathcal{O}(N)$ difference of sums using the robust weights:
 	\begin{equation}
@@ -250,11 +251,18 @@
 	\end{equation}
 
 	\subsubsection*{Step 5: Calculate Observed Performance ($O_i$)}
-	Blend the baseline-derived performance with the pairwise residual correction:
+	Let the aggregate observed baseline be $B_{\mathrm{obs}} = (1 - \alpha_i) \cdot B_{-i} + \alpha_i \cdot B_{\mathrm{local}}$. The competitor's absolute observed performance is simply their log-score shifted by this baseline:
 	\begin{equation}
-		O_i = L_i + (1 - \alpha_i) \cdot B_{-i} + \alpha_i \cdot B_{\mathrm{local}}
+		O_i = L_i + B_{\mathrm{obs}}
 	\end{equation}
-	When $\alpha = 0$, this reduces to the pure baseline model. The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
+	To understand why this recovers the absolute performance, consider the pure baseline case\footnote{\(\blocal\) is simply an alternative estimate of the exact same underlying quantity (the winner's latent performance \(\pmax\)). It is omitted here strictly for notational simplicity; its inclusion does not alter the fundamental cancellation.} ($\alpha = 0$, so $B_{\mathrm{obs}} = \bloo$). Because the baseline is the field's estimate of the winner's performance ($\ln(P_{\mathrm{max}})$), substituting $L_i$  reveals:
+	\begin{align*}
+		O_i &\approx (\ln(P_i) - \ln(P_{\mathrm{max}})) + \ln(P_{\mathrm{max}}) \\
+		&= \ln(P_i)
+	\end{align*}
+	By adding the baseline to the log-score, the nuisance anchor perfectly cancels out. This translates the competitor's relative match percentage back into an absolute global rating scale.
+
+	The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
 
 	Empirical testing on well-mixed, large-field matches demonstrates that $B_{\mathrm{local}}$ frequently converges with $B_{-i}$, allowing $\alpha$ to be tuned to 0 for a strictly $\mathcal{O}(N)$ global-only update. However, retaining the pairwise blend enables the model to gracefully handle stratified fields. In practical shooting, competitors often shoot in scheduled squads across multiple days, exposing them to varying environmental conditions (e.g., a ``super squad'' of elite competitors shooting in heavy rain, while the rest of the field shoots a different schedule in ideal weather). By blending in $B_{\mathrm{local}}$, the model leans on local peer comparisons---competitors facing the exact same physical and environmental topology---preventing the global baseline from washing out localized structural truths.
 
@@ -269,7 +277,7 @@
 	Second, because the observed baseline $B_{\mathrm{obs}}$ is a convex blend of two estimates, we must explicitly propagate its structural estimation variance. Although $B_{-i}$ and $B_{\mathrm{local}}$ are not independent, the subset structure implies that their covariance is exactly $\mathrm{Var}(B_{-i})$ under independent priors ($\rho = 0$). With a nonzero intraclass correlation $\rho$, this equality becomes an approximation, as the precision-weighted average of the square roots of the opponent variances ($\sqrt{V_i}$) in the local subset $\mathcal{S}_i$ will generally differ slightly from that of the full field. Nevertheless, the variance of the blended baseline simplifies elegantly to:
 
 	\begin{align}
-		\mathrm{Var}(|bobs) &= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Var}(B_{-i}) \nonumber\\
+		\mathrm{Var}(\bobs) &= (1 - \alpha_i)^2 \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}}) + 2\alpha_i(1 - \alpha_i)\mathrm{Var}(B_{-i}) \nonumber\\
 		&= (1 - \alpha_i^2) \mathrm{Var}(B_{-i}) + \alpha_i^2 \mathrm{Var}(B_{\mathrm{local}})
 	\end{align}
 
