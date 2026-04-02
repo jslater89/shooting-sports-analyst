@@ -83,6 +83,10 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   double? oneSigmaRatio;
   double? shiftRatio;
 
+  bool isLogNormal = false;
+  double? logMean;
+  double? logSigma;
+
   @ignore
   bool get hasRatioPredictions => meanRatio != null && oneSigmaRatio != null;
 
@@ -113,6 +117,9 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     required this.meanRatio,
     required this.oneSigmaRatio,
     required this.shiftRatio,
+    required this.isLogNormal,
+    required this.logMean,
+    required this.logSigma,
   });
 
   DbAlgorithmPrediction.fromHydrated(DbRatingProject project, PredictionSet predictionSet, AlgorithmPrediction prediction) :
@@ -128,7 +135,10 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     medianPlace = prediction.medianPlace,
     meanRatio = prediction.meanRatio,
     oneSigmaRatio = prediction.oneSigmaRatio,
-    shiftRatio = prediction.shiftRatio {
+    shiftRatio = prediction.shiftRatio,
+    isLogNormal = prediction.isLogNormal,
+    logMean = prediction.logMean,
+    logSigma = prediction.logSigma {
       this.rating.value = prediction.shooter.wrappedRating;
       this.project.value = project;
       this.group.value = prediction.shooter.group;
@@ -162,6 +172,9 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       meanRatio: meanRatio,
       oneSigmaRatio: oneSigmaRatio,
       shiftRatio: shiftRatio,
+      isLogNormal: isLogNormal,
+      logMean: logMean,
+      logSigma: logSigma,
     );
     prediction.lowPlace = lowPlace;
     prediction.highPlace = highPlace;

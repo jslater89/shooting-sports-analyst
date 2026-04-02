@@ -2,6 +2,9 @@
 alwaysApply: true
 ---
 
+# Dart Format
+DO NOT RUN `dart format` unless requested.
+
 # Responses
 The chat window does not render MathJAX/MathML. Please write out math in code blocks.
 

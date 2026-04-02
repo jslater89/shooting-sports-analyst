@@ -5,11 +5,11 @@
    xml:space="preserve"
    id="svg23753"
    sodipodi:docname="icon-text-overlay-embedded-bw.svg"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    width="768"
    height="768"
    style="fill-rule:evenodd;stroke-linecap:round;stroke-linejoin:round"
-   inkscape:export-filename="/home/jay/ssa-blacktext.png"
+   inkscape:export-filename="../../../../ssa-text-overlay-bw.png"
    inkscape:export-xdpi="300.05853"
    inkscape:export-ydpi="300.05853"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -30,18 +30,20 @@
    guidetolerance="10"
    inkscape:pageopacity="0"
    inkscape:pageshadow="2"
-   inkscape:window-width="1920"
-   inkscape:window-height="1168"
+   inkscape:window-width="2560"
+   inkscape:window-height="1523"
    id="namedview23755"
    showgrid="false"
    inkscape:zoom="0.69791513"
-   inkscape:cx="268.65731"
-   inkscape:cy="553.79226"
+   inkscape:cx="270.80657"
+   inkscape:cy="553.07584"
    inkscape:window-x="0"
    inkscape:window-y="0"
    inkscape:window-maximized="1"
    inkscape:current-layer="svg23753"
-   inkscape:pagecheckerboard="0" />
+   inkscape:pagecheckerboard="0"
+   inkscape:showpageshadow="2"
+   inkscape:deskcolor="#d1d1d1" />
 <defs
    id="defs16139">
 <clipPath
@@ -68,9 +70,9 @@
    style="color-interpolation-filters:sRGB;"
    inkscape:label="Greyscale"
    id="filter1382"
-   x="0"
+   x="-0.016353006"
    y="-0.0025582704"
-   width="1"
+   width="1.016353"
    height="1.0025583"><feColorMatrix
      values="0.2 0.2 0.2 0.3 0 0.2 0.2 0.2 0.3 0 0.2 0.2 0.2 0.3 0 0 0 0 1 0 "
      id="feColorMatrix1380" /></filter></defs>

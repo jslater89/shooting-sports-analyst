@@ -17,6 +17,8 @@ See if rating percentage correlates with match finish percentage?
 2. As above, but with probabilities.
  */
 
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
@@ -58,6 +60,18 @@ class AlgorithmPrediction {
 
   bool get hasRatioPredictions => meanRatio != null && oneSigmaRatio != null;
 
+  /// Whether the performance is log-normally distributed, with the raw log-space
+  /// mean and standard deviation stored in [logMean] and [logSigma].
+  ///
+  /// This also means that mean, oneSigma, and twoSigma are log units: the
+  final bool isLogNormal;
+
+  /// The raw log-space mean of the performance. Null if [isLogNormal] is false.
+  double? logMean;
+
+  /// The raw log-space standard deviation of the performance. Null if [isLogNormal] is false.
+  double? logSigma;
+
   AlgorithmPrediction({
     required this.shooter,
     required this.mean,
@@ -71,9 +85,15 @@ class AlgorithmPrediction {
     int? lowPlace,
     int? highPlace,
     int? medianPlace,
+    this.isLogNormal = false,
+    this.logMean,
+    this.logSigma,
   }) :
+      // In log-normal mode, oneSigma is the geometric standard deviation,
+      // so 2 sigma is the geometric standard deviation squared rather than
+      // twice the arithmetic standard deviation.
       this.oneSigma = sigma,
-      this.twoSigma = sigma * 2 {
+      this.twoSigma = isLogNormal ? sigma * sigma : sigma * 2 {
         if(lowPlace != null) {
           this.lowPlace = lowPlace;
         }
@@ -101,22 +121,72 @@ class AlgorithmPrediction {
 
   double get center => mean;
   double get shiftedCenter => mean + shift;
-  double get upperBox => mean + oneSigma + shift;
-  double get lowerBox => mean - oneSigma + shift;
-  double get upperWhisker => mean + twoSigma + shift;
-  double get lowerWhisker => mean - twoSigma + shift;
+  double get upperBox {
+    if(isLogNormal) {
+      return (mean * oneSigma) + shift;
+    }
+    else {
+     return mean + oneSigma + shift;
+    }
+  }
+  double get lowerBox {
+    if(isLogNormal) {
+      return (mean / oneSigma) + shift;
+    }
+    else {
+      return mean - oneSigma + shift;
+    }
+  }
+  double get upperWhisker {
+    if(isLogNormal) {
+      return (mean * twoSigma) + shift;
+    }
+    else {
+      return mean + twoSigma + shift;
+    }
+  }
+  double get lowerWhisker {
+    if(isLogNormal) {
+      return (mean / twoSigma) + shift;
+    }
+    else {
+      return mean - twoSigma + shift;
+    }
+  }
 
   /// The lower bound of the 1-sigma confidence interval.
-  double get lowPrediction => mean - oneSigma + shift;
+  double get lowPrediction {
+    if (isLogNormal) {
+      return (mean / oneSigma) + shift;
+    }
+    return mean - oneSigma + shift;
+  }
 
   /// The lower bound of the 0.5-sigma confidence interval.
-  double get halfLowPrediction => mean - oneSigma / 2 + shift / 2;
+  double get halfLowPrediction {
+    if (isLogNormal) {
+      // A half-sigma step downward is division by the square root of the GSD
+      return (mean / sqrt(oneSigma)) + (shift / 2);
+    }
+    return mean - oneSigma / 2 + shift / 2;
+  }
 
   /// The upper bound of the 0.5-sigma confidence interval.
-  double get halfHighPrediction => mean + (oneSigma + shift) / 2;
+  double get halfHighPrediction {
+    if (isLogNormal) {
+      // A half-sigma step upward is multiplication by the square root of the GSD
+      return (mean * sqrt(oneSigma)) + (shift / 2);
+    }
+    return mean + (oneSigma + shift) / 2;
+  }
 
   /// The upper bound of the 1-sigma confidence interval.
-  double get highPrediction => mean + (oneSigma + shift);
+  double get highPrediction {
+    if (isLogNormal) {
+      return (mean * oneSigma) + shift;
+    }
+    return mean + (oneSigma + shift);
+  }
 
   double get upperBoxWhiskerMidpoint => (upperBox + upperWhisker) / 2;
   double get lowerBoxWhiskerMidpoint => (lowerBox + lowerWhisker) / 2;

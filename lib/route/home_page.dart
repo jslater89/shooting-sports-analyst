@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/route/prediction_game_list_page.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_file_import_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_or_future_match_source_chooser_dialog.dart';
 
 var _log = SSALogger("HomePage");
@@ -269,15 +270,7 @@ class _HomePageState extends State<HomePage> {
     var children = <Widget>[
       GestureDetector(
         onTap: () async {
-          // TODO: import from file picker now that we're desktop only
-          _uploadResultsFile((contents) async {
-            if(contents != null) {
-              await Navigator.of(context).pushNamed('/local', arguments: contents);
-            }
-            else {
-              _log.d("Null file contents");
-            }
-          });
+          await MatchFileImportDialog.show(context);
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -354,9 +347,5 @@ class _HomePageState extends State<HomePage> {
     }
 
     return children;
-  }
-
-  Future<void> _uploadResultsFile(Function(String?) onFileContents) async {
-    HtmlOr.pickAndReadFile(context, onFileContents);
   }
 }

@@ -33,7 +33,6 @@ import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
@@ -171,11 +170,6 @@ void main() async {
       handlerFunc: (context, params) {
         // _log.d("/ route params: $params");
         return HomePage();
-      }
-    ));
-    globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
-      handlerFunc: (context, params) {
-        return UploadedResultPage();
       }
     ));
     globals.router.define('/rater', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(

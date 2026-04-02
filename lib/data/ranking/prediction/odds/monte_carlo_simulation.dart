@@ -43,6 +43,8 @@ MonteCarloSimulationResult runOddsSimulation({
 
   List<double> percentages = [];
   List<int> places = [];
+  bool logNormalMode = shooterPrediction.isLogNormal;
+
   for(var i = 0; i < trials; i++) {
     // A multiplier for expected score to account for a disaster (DQ, gun breaking, squib stage, etc.).
     // Random number between 0 and 0.5, used to multiply the output expected score.
@@ -61,11 +63,18 @@ MonteCarloSimulationResult runOddsSimulation({
     // Generate a random expected score for this shooter using a normal distribution
 
     // Adjust mean by up to 10% based on trend.
-    var placeSigmaMultiplier = shooterPrediction.algorithm.predictionSettings.placeSigmaMultiplier;
-    var finalSigma = shooterPrediction.oneSigma * placeSigmaMultiplier;
-    var actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
-    var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
-    var shooterExpectedScore = actualMean + finalSigma * z * disasterMagnitude;
+    double shooterExpectedScore;
+    final placeSigmaMultiplier = shooterPrediction.algorithm.predictionSettings.placeSigmaMultiplier;
+    if(logNormalMode) {
+      final finalLogSigma = shooterPrediction.logSigma! * placeSigmaMultiplier;
+      final finalLogMean = shooterPrediction.logMean! + finalLogSigma * shooterPrediction.ciOffset;
+      shooterExpectedScore = _logNormalDraw(random: actualRandom, logMean: finalLogMean, logSigma: finalLogSigma) * disasterMagnitude;
+    }
+    else {
+      final finalSigma = shooterPrediction.oneSigma * placeSigmaMultiplier;
+      final actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
+      shooterExpectedScore = _normalDraw(random: actualRandom, mean: actualMean, sigma: finalSigma) * disasterMagnitude;
+    }
 
     // Generate random expected scores for all other shooters
     var otherExpectedScores = <double>[];
@@ -89,10 +98,17 @@ MonteCarloSimulationResult runOddsSimulation({
         }
       }
 
-      final otherFinalSigma = otherPred.oneSigma * placeSigmaMultiplier;
-      var otherMean = otherPred.mean + otherFinalSigma * otherPred.ciOffset;
-      var z = _nextDistributedValue(actualRandom, otherPred.ciOffset);
-      var otherExpectedScore = otherMean + otherFinalSigma * z * otherDisasterMagnitude;
+      double otherExpectedScore;
+      if(logNormalMode) {
+        final otherFinalLogSigma = otherPred.logSigma! * placeSigmaMultiplier;
+        final otherFinalLogMean = otherPred.logMean! + otherFinalLogSigma * otherPred.ciOffset;
+        otherExpectedScore = _logNormalDraw(random: actualRandom, logMean: otherFinalLogMean, logSigma: otherFinalLogSigma) * otherDisasterMagnitude;
+      }
+      else {
+        final otherFinalSigma = otherPred.oneSigma * placeSigmaMultiplier;
+        final otherMean = otherPred.mean + otherFinalSigma * otherPred.ciOffset;
+        otherExpectedScore = _normalDraw(random: actualRandom, mean: otherMean, sigma: otherFinalSigma) * otherDisasterMagnitude;
+      }
 
       otherExpectedScores.add(otherExpectedScore);
       if(otherExpectedScore > bestExpectedScore) {
@@ -111,7 +127,8 @@ MonteCarloSimulationResult runOddsSimulation({
     // Keep the un-normalized shooter score for later use.
     final rawShooterScore = shooterExpectedScore;
 
-    // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
+    // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0;
+    // multiple people may have expected scores above 1.0 based on their rating ranges.
     if(shooterPrediction.algorithm.predictionsOutputRatios) {
       shooterExpectedScore = shooterExpectedScore / bestExpectedScore;
       minimumRatingScore = minimumRatingScore / bestExpectedScore;
@@ -142,8 +159,7 @@ MonteCarloSimulationResult runOddsSimulation({
   return MonteCarloSimulationResult(percentages: percentages, places: places);
 }
 
-double _nextDistributedValue(Random random, double ciOffset) {
-  // var sample = random.nextShiftedNormal(ciOffset: ciOffset);
+double _nextDistributedValue(Random random) {
   var sample = random.nextGaussian();
   return sample;
 }
@@ -154,7 +170,6 @@ double _nextDistributedValue(Random random, double ciOffset) {
 /// distribution logic as the Monte Carlo simulations and logs a histogram
 /// showing the distribution of values.
 void logDistributionHistogram({
-  required double ciOffset,
   int sampleCount = 10000,
   int bins = 20,
   String label = "Distribution",
@@ -165,7 +180,7 @@ void logDistributionHistogram({
 
   // Generate samples using the same logic as the Monte Carlo simulations
   for (int i = 0; i < sampleCount; i++) {
-    final z = _nextDistributedValue(actualRandom, ciOffset);
+    final z = _nextDistributedValue(actualRandom);
     samples.add(z);
   }
 
@@ -180,7 +195,7 @@ void logDistributionHistogram({
   final mean = samples.average;
   final stdDev = samples.stdDev();
 
-  print("\n=== $label Histogram (ciOffset: $ciOffset) ===");
+  print("\n=== $label Histogram ===");
   print("Samples: $sampleCount, Mean: ${mean.toStringAsFixed(3)}, StdDev: ${stdDev.toStringAsFixed(3)}");
   print("Range: [${min.toStringAsFixed(3)}, ${max.toStringAsFixed(3)}]");
 
@@ -219,11 +234,29 @@ void logDistributionHistogram({
   print("");
 }
 
+double _normalDraw({
+  required Random random,
+  required double mean,
+  required double sigma,
+}) {
+  return _nextDistributedValue(random) * sigma + mean;
+}
+
+double _logNormalDraw({
+  required Random random,
+  required double logMean,
+  required double logSigma,
+}) {
+  var logDraw = _normalDraw(random: random, mean: logMean, sigma: logSigma);
+  return exp(logDraw);
+}
+
 /// Log a histogram of actual trial data from Monte Carlo simulations.
 ///
 /// This can be called during Monte Carlo simulations to visualize
 /// the distribution of the actual trial values being generated.
-void logTrialHistogram({
+// ignore: unused_element
+void _logTrialHistogram({
   required List<double> trialData,
   required double ciOffset,
   String label = "Trial Data",

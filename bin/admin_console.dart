@@ -504,6 +504,7 @@ Future<void> _calculateRatingProject(Console console, List<MenuArgumentValue> ar
   int lastProgress = -1;
   int lastMaxProgress = -1;
   int tickAccumulator = 0;
+  String? lastGroupName;
   var loader = RatingProjectLoader(project, RatingProjectLoaderHost(
     progressCallback: ({
       required int progress,
@@ -541,9 +542,10 @@ Future<void> _calculateRatingProject(Console console, List<MenuArgumentValue> ar
       lastMaxProgress = total;
 
       tickAccumulator++;
-      if(tickAccumulator % 10 == 0) {
+      if(tickAccumulator % 10 == 0 || lastGroupName != groupName) {
         console.print("State: ${state.label} ${progress} of ${total} $subtotalString ${groupName ?? ""} ${eventName ?? ""} ");
       }
+      lastGroupName = groupName;
     },
     deduplicationCallback: (group, deduplicationResult) async {
       console.print("Detected deduplication, ignoring");

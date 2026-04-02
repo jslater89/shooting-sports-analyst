@@ -1901,6 +1901,11 @@ class RatingProjectLoader {
       );
 
       for(var rating in scoreMap.keys) {
+        if(update[rating] == null) {
+          // This can happen if the rating system declines to
+          // calculate a rating change for this shooter.
+          continue;
+        }
         var stageScore = scoreMap[rating];
         var matchScore = matchScoreMap[rating];
 
@@ -1914,7 +1919,7 @@ class RatingProjectLoader {
           continue;
         }
 
-        if (!changes[rating.wrappedRating]!.containsKey(stageScore)) {
+        if(!changes[rating.wrappedRating]!.containsKey(stageScore)) {
           changes[rating.wrappedRating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
           changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
         }

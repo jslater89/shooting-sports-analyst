@@ -449,7 +449,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final opponentAgedRating = opponent.calculateAgedRating(asOfDate: matchDate);
         final opponentAgedVariance = opponent.calculateCurrentVariance(asOfDate: matchDate);
         if (opponentScoreEvidence == null || opponentTailNoise == null || opponentWeight == null) {
-          _log.e("Missing parameter for pairwise blending: $shooter vs $opponent");
+          //_log.e("Missing parameter for pairwise blending: $shooter vs $opponent");
           continue;
         }
         final opponentBaselineResidual = opponentAgedRating - opponentScoreEvidence;
@@ -1058,7 +1058,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// The probability-weighted log difference between the competitor and the
       /// presumed winners, i.e. the component of the between-component variance
       /// multiplied by p_i.
-      double probabilityWeightedLogDifference = 0.0;
+      double probabilityWeightedGrandMean = 0.0;
 
       /// The win probability and log difference between the competitor and each
       /// presumed winner, i.e. the components of [probabilityWeightedLogDifference],
@@ -1122,7 +1122,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final effectiveWinnerRating = winnerAgedRating + winnerDrawStdDev * eMax;
 
         final logDifference = agedRating - effectiveWinnerRating;
-        probabilityWeightedLogDifference += logDifference * winProbability;
+        probabilityWeightedGrandMean += logDifference * winProbability;
         probabilityWeightedLogDifferences.add((pW: winProbability, muIW: logDifference));
 
         final pairwiseVariance = winnerVariance + ratingVariance + 2 * settings.predictionSportVariance;
@@ -1139,9 +1139,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
             winnerCertainty * presumedWinner.shooter.dispersion * winProbability;
       }
 
-      double betweenComponentVariance = ownPresumedWinProbability * probabilityWeightedLogDifference * probabilityWeightedLogDifference;
+      double betweenComponentVariance = ownPresumedWinProbability * probabilityWeightedGrandMean * probabilityWeightedGrandMean;
       for(var (pW: double winProbability, muIW: double logDifference) in probabilityWeightedLogDifferences) {
-        betweenComponentVariance += winProbability * pow(logDifference - probabilityWeightedLogDifference, 2);
+        betweenComponentVariance += winProbability * pow(logDifference - probabilityWeightedGrandMean, 2);
       }
 
       final notWinnerProbability = 1.0 - ownPresumedWinProbability;
@@ -1156,12 +1156,22 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         + probabilityWeightedWinnerDispersion * kappa;
 
       final geometricSD = exp(sqrt(withinComponentVariance + betweenComponentVariance));
-      final oneSigmaUpper = probabilityWeightedRatio * geometricSD;
-      final oneSigma = oneSigmaUpper - probabilityWeightedRatio;
+      final lowerCi = probabilityWeightedRatio / geometricSD;
+      final upperCi = probabilityWeightedRatio * geometricSD;
+
+      final rawLogSigma = sqrt(
+        ratingVariance
+        + kappa * rating.dispersion
+        + settings.predictionSportVariance
+      );
+
+      final varianceCorrection = exp(-0.5 * (withinComponentVariance + betweenComponentVariance));
+      final medianRatio = probabilityWeightedRatio * varianceCorrection;
+      final oneSigmaRatio = ((upperCi - probabilityWeightedRatio) + (probabilityWeightedRatio - lowerCi)) / 2;
 
       if(probabilityWeightedRatio > 0.8) {
         _log.v("Rating: $rating");
-        _log.v("Expectation/1σ:\t\t${probabilityWeightedRatio.toStringAsFixed(8)} / ${oneSigma.toStringAsFixed(8)}");
+        _log.v("Expectation/1σ CI:\t\t${probabilityWeightedRatio.toStringAsFixed(8)} / (${lowerCi.toStringAsFixed(8)} - ${upperCi.toStringAsFixed(8)})");
         if(ownPresumedWinProbability > 0.0) {
           _log.v("Own presumed p_w:\t\t${ownPresumedWinProbability.toStringAsFixed(8)}");
         }
@@ -1179,41 +1189,45 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       // We'll fill in places in a second pass
       predictions.add(AlgorithmPrediction(
         shooter: rating,
-        mean: probabilityWeightedRatio,
-        sigma: oneSigma,
+        mean: medianRatio,
+        sigma: geometricSD,
         settings: settings,
         algorithm: this,
         meanRatio: probabilityWeightedRatio,
-        oneSigmaRatio: oneSigma,
+        oneSigmaRatio: oneSigmaRatio,
         shiftRatio: 0.0,
+        isLogNormal: true,
+        logMean: agedRating,
+        logSigma: rawLogSigma,
       ));
     }
 
     var sortedPredictions = predictions.sorted((a, b) => b.mean.compareTo(a.mean));
+
     for(var (centerPlace, prediction) in sortedPredictions.indexed) {
+      int belowCompetitorsLow = 0;
+      int belowCompetitorsHigh = 0;
       prediction.medianPlace = centerPlace + 1;
-      bool hasBestPlace = false;
-      bool hasWorstPlace = false;
-      for(var (i, other) in sortedPredictions.indexed) {
+      for(var other in sortedPredictions) {
         if(prediction == other) {
           continue;
         }
 
-        if(other.mean > prediction.highPrediction) {
-          prediction.highPlace = i + 1;
-          hasBestPlace = true;
+        // Place is the number of competitors who beat us + 1.
+        // Our low prediction the number of competitors whose high
+        // prediction beats our mean.
+        // Our high prediction is the number of competitors whose low
+        // prediction beats our mean.
+        if(other.highPrediction > prediction.mean) {
+          belowCompetitorsLow++;
         }
-        if(other.mean > prediction.lowPrediction) {
-          prediction.lowPlace = i + 1;
-          hasWorstPlace = true;
+        if(other.lowPrediction > prediction.mean) {
+          belowCompetitorsHigh++;
         }
       }
-      if(!hasBestPlace) {
-        prediction.highPlace = centerPlace + 1;
-      }
-      if(!hasWorstPlace) {
-        prediction.lowPlace = centerPlace + 1;
-      }
+
+      prediction.lowPlace = belowCompetitorsLow + 1;
+      prediction.highPlace = belowCompetitorsHigh + 1;
     }
 
     return predictions;
