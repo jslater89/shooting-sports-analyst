@@ -236,6 +236,14 @@ class PredictionProbability {
       // space (i.e. 'is this 1st place finish a blowout or a narrow win?')
       final sortedPlaces = simulationResult.places.sorted((a, b) => a.compareTo(b));
 
+      int countFirst = 0;
+      for(final p in sortedPlaces) {
+        if (p <= 1.0) countFirst++;
+        else break;
+      }
+      final double w = countFirst / trials;
+      final double zBoundary = countFirst > 0 ? Normal.quantile(w) : 0.0;
+
       // Continuous place evaluation: fractional contribution at boundaries so probability
       // is smooth in delta (same logic as Bayesian odds place evaluation).
       double sum = 0.0;
@@ -244,9 +252,15 @@ class PredictionProbability {
         var latentPlace = originalPlace;
 
         if(originalPlace <= 1.0) {
-          final percentile = (i + 0.5) / actualTrials;
+          final percentile = (i + 0.5) / trials;
           final zScore = Normal.quantile(percentile);
-          final impliedPlace = meanPlace + (zScore * stdDevPlace);
+
+          // How far past the boundary is this specific Z-score?
+          final zDiff = zScore - zBoundary; // (This will be negative)
+
+          // Anchor exactly at 1.0, projecting backward into the latent space
+          final impliedPlace = 1.0 + (zDiff * stdDevPlace);
+
           latentPlace = min(1.0, impliedPlace);
         }
 
@@ -354,9 +368,19 @@ class PredictionProbability {
     }
 
     List<double> sortedPercentages = simulationResult.percentages;
+    double zBoundary = 0.0;
     if(ratioDelta != null && ratioDelta != 0) {
       sortedPercentages = sortedPercentages.sorted((a, b) => a.compareTo(b));
+
+      int countMax = 0;
+      for (var i = trials - 1; i >= 0; i--) {
+        if (sortedPercentages[i] >= 1.0) countMax++;
+        else break;
+      }
+      final double w = countMax / trials;
+      zBoundary = countMax > 0 ? Normal.quantile(w) : 0.0;
     }
+
     final meanPercentage = sortedPercentages.average;
     final stdDevPercentage = sortedPercentages.stdDev();
     final actualTrials = sortedPercentages.length;
@@ -366,10 +390,16 @@ class PredictionProbability {
       var latentPercentage = originalPercentage;
 
       if(ratioDelta != null && ratioDelta != 0.0 && originalPercentage >= 1.0) {
-        final percentile = (i + 0.5) / actualTrials;
+        // Upper tail
+        final percentile = (i + 0.5) / trials;
         final zScore = Normal.quantile(percentile);
-        final impliedPercentage = meanPercentage + (zScore * stdDevPercentage);
-        latentPercentage = impliedPercentage;
+
+        // zDiff will be positive (e.g. 2.5 - 1.28 = +1.22)
+        final zDiff = zScore - zBoundary;
+
+        // Anchor exactly at 1.0, stretch rightward
+        final impliedPercentage = 1.0 + (zDiff * stdDevPercentage);
+        latentPercentage = max(1.0, impliedPercentage);
       }
 
       latentPercentage += ratioDelta ?? 0.0;
@@ -480,16 +510,68 @@ class PredictionProbability {
     }
 
     final actualTrials = favoriteSimulationResult.percentages.length;
+
+    // --- 1. PRE-COMPUTE LATENT VALUES USING SORTED COPIES ---
+
+    final favoriteStdDev = favoriteSimulationResult.percentages.stdDev();
+    final underdogStdDev = underdogSimulationResult.percentages.stdDev();
+
+    // Favorite
+    final sortedFav = favoriteSimulationResult.percentages.sorted((a, b) => a.compareTo(b));
+    int favMaxCount = 0;
+    for (var i = actualTrials - 1; i >= 0 && sortedFav[i] >= 1.0; i--) favMaxCount++;
+    final double favWMax = max(0.5 / actualTrials, (actualTrials - favMaxCount) / actualTrials);
+    final double favZBoundary = favMaxCount > 0 ? Normal.quantile(favWMax) : 0.0;
+
+    final favLatentQueue = <double>[];
+    for(var i = 0; i < actualTrials; i++) {
+      if(sortedFav[i] >= 1.0) {
+        final percentile = (i + 0.5) / actualTrials;
+        final zScore = Normal.quantile(percentile);
+        final impliedPct = 1.0 + ((zScore - favZBoundary) * favoriteStdDev);
+        favLatentQueue.add(max(1.0, impliedPct));
+      }
+    }
+    int favLatentIdx = 0;
+
+    // Underdog
+    final sortedUnd = underdogSimulationResult.percentages.sorted((a, b) => a.compareTo(b));
+    int undMaxCount = 0;
+    for (var i = actualTrials - 1; i >= 0 && sortedUnd[i] >= 1.0; i--) undMaxCount++;
+    final double undWMax = max(0.5 / actualTrials, (actualTrials - undMaxCount) / actualTrials);
+    final double undZBoundary = undMaxCount > 0 ? Normal.quantile(undWMax) : 0.0;
+
+    final undLatentQueue = <double>[];
+    for(var i = 0; i < actualTrials; i++) {
+      if(sortedUnd[i] >= 1.0) {
+        final percentile = (i + 0.5) / actualTrials;
+        final zScore = Normal.quantile(percentile);
+        final impliedPct = 1.0 + ((zScore - undZBoundary) * underdogStdDev);
+        undLatentQueue.add(max(1.0, impliedPct));
+      }
+    }
+    int undLatentIdx = 0;
+
     var predictedGaps = <double>[];
     for(int i = 0; i < actualTrials; i++) {
+      // Favorite
       double favoritePercentage = favoriteSimulationResult.percentages[i];
+      if (favoritePercentage >= 1.0) {
+        favoritePercentage = favLatentQueue[favLatentIdx++];
+      }
       if(favoriteRatioDelta != null && favoriteRatioDelta != 0) {
         favoritePercentage += favoriteRatioDelta;
       }
+
+      // Underdog
       double underdogPercentage = underdogSimulationResult.percentages[i];
+      if (underdogPercentage >= 1.0) {
+        underdogPercentage = undLatentQueue[undLatentIdx++];
+      }
       if(underdogRatioDelta != null && underdogRatioDelta != 0) {
         underdogPercentage += underdogRatioDelta;
       }
+
       var gap = favoritePercentage - underdogPercentage;
       predictedGaps.add(gap);
       if(percentageSpreadPrediction.favoriteCovers) {
