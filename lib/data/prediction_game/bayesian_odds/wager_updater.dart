@@ -42,7 +42,7 @@ const _excludeWagers = true;
 /// Whether to use the cache for Bayesian delta calculations.
 ///
 /// Should always be true for release builds.
-const _useCache = false;
+const _useCache = true;
 
 class BayesianWagerUpdater {
   final db = AnalystDatabase();
