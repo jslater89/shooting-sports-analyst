@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
@@ -89,9 +91,10 @@ class BayesianOddsWager {
     double delta = 0.0,
     required DbPredictionType type,
     required MonteCarloSimulationResult subjectMonteCarlo,
+    bool monteCarloIsSorted = false,
   }) {
     if(type == DbPredictionType.place) {
-      return evaluatePlaceAgainstSimulation(delta: delta, monteCarlo: subjectMonteCarlo);
+      return evaluatePlaceAgainstSimulation(delta: delta, monteCarlo: subjectMonteCarlo, monteCarloIsSorted: monteCarloIsSorted);
     }
     else if(type == DbPredictionType.percentage) {
       return evaluatePercentAgainstSimulation(delta: delta, monteCarlo: subjectMonteCarlo);
@@ -122,19 +125,40 @@ class BayesianOddsWager {
   double evaluatePlaceAgainstSimulation({
     double delta = 0.0,
     required MonteCarloSimulationResult monteCarlo,
+    bool monteCarloIsSorted = false,
   }) {
     if (prediction.type != DbPredictionType.place) {
       throw ArgumentError("Wager is not a place wager.");
     }
 
+    final List<int> sortedPlaces;
+    if(monteCarloIsSorted) {
+      sortedPlaces = monteCarlo.places;
+    }
+    else {
+      sortedPlaces = monteCarlo.places.sorted((a, b) => a.compareTo(b));
+    }
+
     final bestPlace = prediction.bestPlace!;
     final worstPlace = prediction.worstPlace!;
+    // final meanPlace = sortedPlaces.average;
+    // final stdDevPlace = sortedPlaces.stdDev();
 
     double sum = 0.0;
     final trials = monteCarlo.percentages.length;
 
     for(var i = 0; i < trials; i++) {
-      final s = placeShifted(monteCarlo.places[i], delta);
+      final originalPlace = sortedPlaces[i];
+      var latentPlace = originalPlace.toDouble();
+
+      // if(originalPlace <= 1.0) {
+      //   final percentile = (i + 0.5) / trials;
+      //   final zScore = Normal.quantile(percentile);
+      //   final impliedPlace = meanPlace + (zScore * stdDevPlace);
+      //   latentPlace = min(1.0, impliedPlace);
+      // }
+
+      final s = placeShifted(latentPlace, delta);
       sum += placeRangeContribution(s, bestPlace, worstPlace);
     }
 
@@ -150,6 +174,7 @@ class BayesianOddsWager {
   double evaluatePercentAgainstSimulation({
     double delta = 0.0,
     required MonteCarloSimulationResult monteCarlo,
+    bool monteCarloIsSorted = false,
   }) {
     if (prediction.type != DbPredictionType.percentage) {
       throw ArgumentError("Wager is not a percentage wager.");
@@ -158,26 +183,42 @@ class BayesianOddsWager {
     final percentage = prediction.percentage!;
     final abovePercentage = prediction.abovePercentage;
 
+    final List<double> sortedPercentages;
+    if(monteCarloIsSorted) {
+      sortedPercentages = monteCarlo.percentages;
+    }
+    else {
+      sortedPercentages = monteCarlo.percentages.sorted((a, b) => a.compareTo(b));
+    }
+
     int hits = 0;
     int trials = monteCarlo.percentages.length;
+    // final meanPercentage = sortedPercentages.average;
+    // final stdDevPercentage = sortedPercentages.stdDev();
 
     for(int i = 0; i < trials; i++) {
-      var sampleOutput = monteCarlo.percentages[i] + delta;
+      final originalPercentage = sortedPercentages[i];
+      var latentPercentage = originalPercentage + delta;
 
-      if(sampleOutput < 0.0) {
-        sampleOutput = 0.0;
+      if(latentPercentage >= 1.0) {
+        latentPercentage = 1.0;
+        // final percentile = (i + 0.5) / trials;
+        // final zScore = Normal.quantile(percentile);
+        // final impliedPercentage = meanPercentage + (zScore * stdDevPercentage);
+        // latentPercentage = impliedPercentage;
       }
-      else if(sampleOutput > 1.0) {
-        sampleOutput = 1.0;
+
+      if(latentPercentage < 0.0) {
+        latentPercentage = 0.0;
       }
 
       if(abovePercentage) {
-        if(sampleOutput >= percentage) {
+        if(latentPercentage >= percentage) {
           hits++;
         }
       }
       else {
-        if(sampleOutput <= percentage) {
+        if(latentPercentage <= percentage) {
           hits++;
         }
       }

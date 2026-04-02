@@ -41,6 +41,11 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
 }) async {
   StringBuffer logBuffer = StringBuffer();
 
+  final sortedMonteCarlo = MonteCarloSimulationResult(
+    percentages: subjectMonteCarlo.percentages.sorted((a, b) => a.compareTo(b)),
+    places: subjectMonteCarlo.places.sorted((a, b) => a.compareTo(b)),
+  );
+
   if(wagers.isEmpty) {
     return BayesianOddsResult(
       delta: 0.0,
@@ -285,6 +290,7 @@ Future<BayesianOddsResult> calculateBayesianOddsUpdate({
     wagers: wagers,
     type: type,
     subjectMonteCarlo: subjectMonteCarlo,
+    sortedMonteCarlo: sortedMonteCarlo,
     weight: weight,
     pShifted: pShifted,
     pPosterior: pPosterior,
@@ -384,6 +390,7 @@ double _totalObjective({
   required List<BayesianOddsWager> wagers,
   required DbPredictionType type,
   required MonteCarloSimulationResult subjectMonteCarlo,
+  required MonteCarloSimulationResult sortedMonteCarlo,
   required Map<BayesianOddsWager, double> weight,
   required Map<BayesianOddsWager, double> pShifted,
   required Map<BayesianOddsWager, double> pPosterior,
@@ -406,8 +413,8 @@ double _totalObjective({
     double objectiveC = 0.0;
     double objectiveD = 0.0;
     for(var wager in wagers) {
-       final pShiftedC = wager.evaluateAgainstSimulation(type: type, delta: c, subjectMonteCarlo: subjectMonteCarlo);
-       final pShiftedD = wager.evaluateAgainstSimulation(type: type, delta: d, subjectMonteCarlo: subjectMonteCarlo);
+       final pShiftedC = wager.evaluateAgainstSimulation(type: type, delta: c, subjectMonteCarlo: sortedMonteCarlo);
+       final pShiftedD = wager.evaluateAgainstSimulation(type: type, delta: d, subjectMonteCarlo: sortedMonteCarlo);
 
        objectiveC += _objective(pShifted: pShiftedC, pPosterior: pPosterior[wager]!, weight: weight[wager]!);
        objectiveD += _objective(pShifted: pShiftedD, pPosterior: pPosterior[wager]!, weight: weight[wager]!);

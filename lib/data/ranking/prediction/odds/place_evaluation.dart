@@ -5,7 +5,7 @@
  */
 
 /// Continuous shifted place: [place] - [delta], clamped so 1st band is [0.5, 1.5].
-double placeShifted(int place, double delta) {
+double placeShifted(num place, double delta) {
   final s = place - delta;
   return s < 0.5 ? 0.5 : s;
 }

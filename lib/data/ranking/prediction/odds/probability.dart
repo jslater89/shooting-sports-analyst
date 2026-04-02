@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -223,18 +224,38 @@ class PredictionProbability {
       );
     }
 
+
     final actualTrials = simulationResult.places.length;
     double probability;
+    final meanPlace = simulationResult.places.average;
+    final stdDevPlace = simulationResult.places.stdDev();
 
     if(placeDelta != null) {
+      // Copy and sort places from best to worst when evaluating deltas, since
+      // we use percentile-based estimation of where a finish is in latent
+      // space (i.e. 'is this 1st place finish a blowout or a narrow win?')
+      final sortedPlaces = simulationResult.places.sorted((a, b) => a.compareTo(b));
+
       // Continuous place evaluation: fractional contribution at boundaries so probability
       // is smooth in delta (same logic as Bayesian odds place evaluation).
       double sum = 0.0;
-      for(var place in simulationResult.places) {
-        final s = placeShifted(place, placeDelta);
+      for(var (i, place) in sortedPlaces.indexed) {
+        final originalPlace = place.toDouble();
+        var latentPlace = originalPlace;
+
+        if(originalPlace <= 1.0) {
+          final percentile = (i + 0.5) / actualTrials;
+          final zScore = Normal.quantile(percentile);
+          final impliedPlace = meanPlace + (zScore * stdDevPlace);
+          latentPlace = min(1.0, impliedPlace);
+        }
+
+        final s = placeShifted(latentPlace, placeDelta);
         sum += placeRangeContribution(s, placePrediction.bestPlace, placePrediction.worstPlace);
       }
+
       final raw = sum / actualTrials;
+
       if(actualTrials <= 1) {
         probability = raw.clamp(0.0, 1.0);
       }
@@ -260,8 +281,8 @@ class PredictionProbability {
     info[PlacePrediction.minPlaceInfo] = simulationResult.places.min.toDouble();
     info[PlacePrediction.maxPlaceInfo] = simulationResult.places.max.toDouble();
     info[PlacePrediction.medianPlaceInfo] = simulationResult.places.median.toDouble();
-    info[PlacePrediction.meanPlaceInfo] = simulationResult.places.average;
-    info[PlacePrediction.stdDevPlaceInfo] = simulationResult.places.stdDev();
+    info[PlacePrediction.meanPlaceInfo] = meanPlace;
+    info[PlacePrediction.stdDevPlaceInfo] = stdDevPlace;
 
     return PredictionProbability(
       probability,
@@ -332,24 +353,42 @@ class PredictionProbability {
       );
     }
 
-    for(var percentage in simulationResult.percentages) {
-      double actualPercentage = percentage;
-      if(ratioDelta != null && ratioDelta != 0) {
-        actualPercentage += ratioDelta;
+    List<double> sortedPercentages = simulationResult.percentages;
+    if(ratioDelta != null && ratioDelta != 0) {
+      sortedPercentages = sortedPercentages.sorted((a, b) => a.compareTo(b));
+    }
+    final meanPercentage = sortedPercentages.average;
+    final stdDevPercentage = sortedPercentages.stdDev();
+    final actualTrials = sortedPercentages.length;
+
+    for(var (i, percentage) in sortedPercentages.indexed) {
+      final originalPercentage = percentage;
+      var latentPercentage = originalPercentage;
+
+      if(ratioDelta != null && ratioDelta != 0.0 && originalPercentage >= 1.0) {
+        final percentile = (i + 0.5) / actualTrials;
+        final zScore = Normal.quantile(percentile);
+        final impliedPercentage = meanPercentage + (zScore * stdDevPercentage);
+        latentPercentage = impliedPercentage;
       }
+
+      latentPercentage += ratioDelta ?? 0.0;
+
+      if(latentPercentage < 0.0) {
+        latentPercentage = 0.0;
+      }
+
       if(percentagePrediction.above) {
-        if(actualPercentage >= percentagePrediction.ratio) {
+        if(latentPercentage >= percentagePrediction.ratio) {
           successes++;
         }
       }
       else {
-        if(actualPercentage <= percentagePrediction.ratio) {
+        if(latentPercentage <= percentagePrediction.ratio) {
           successes++;
         }
       }
     }
-
-    final actualTrials = simulationResult.percentages.length;
 
     var minProbability = 1 / actualTrials;
     var maxProbability = (actualTrials - 1) / actualTrials;
@@ -359,8 +398,8 @@ class PredictionProbability {
     info[PercentagePrediction.minPercentageInfo] = simulationResult.percentages.min.toDouble();
     info[PercentagePrediction.maxPercentageInfo] = simulationResult.percentages.max.toDouble();
     info[PercentagePrediction.medianPercentageInfo] = simulationResult.percentages.median;
-    info[PercentagePrediction.meanPercentageInfo] = simulationResult.percentages.average;
-    info[PercentagePrediction.stdDevPercentageInfo] = simulationResult.percentages.stdDev();
+    info[PercentagePrediction.meanPercentageInfo] = meanPercentage;
+    info[PercentagePrediction.stdDevPercentageInfo] = stdDevPercentage;
 
     return PredictionProbability(
       probability,
