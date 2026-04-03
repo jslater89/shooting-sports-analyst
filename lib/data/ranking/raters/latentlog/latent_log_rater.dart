@@ -1170,20 +1170,22 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final oneSigmaRatio = ((upperCi - probabilityWeightedRatio) + (probabilityWeightedRatio - lowerCi)) / 2;
 
       if(probabilityWeightedRatio > 0.8) {
-        _log.v("Rating: $rating");
-        _log.v("Expectation/1σ CI:\t\t${probabilityWeightedRatio.toStringAsFixed(8)} / (${lowerCi.toStringAsFixed(8)} - ${upperCi.toStringAsFixed(8)})");
+        final logLine = StringBuffer();
+        logLine.writeln("Rating: $rating");
+        logLine.writeln("Expectation/1σ CI:\t\t${probabilityWeightedRatio.toStringAsFixed(8)} / (${lowerCi.toStringAsFixed(8)} - ${upperCi.toStringAsFixed(8)})");
         if(ownPresumedWinProbability > 0.0) {
-          _log.v("Own presumed p_w:\t\t${ownPresumedWinProbability.toStringAsFixed(8)}");
+          logLine.writeln("Own presumed p_w:\t\t${ownPresumedWinProbability.toStringAsFixed(8)}");
         }
-        _log.v("Predictive variance:\t\t${withinComponentVariance.toStringAsFixed(8)}");
-        _log.v("Rating variance:\t\t${ratingVariance.toStringAsFixed(8)}");
-        _log.v("Variance age component:\t${(ratingVariance - rating.variance).toStringAsFixed(8)}");
-        _log.v("Prediction sport variance:\t${(2 * settings.predictionSportVariance).toStringAsFixed(8)}");
-        _log.v("Weighted winner variance::\t${probabilityWeightedWinnerVariance.toStringAsFixed(8)}");
-        _log.v("Weighted rating dispersion:\t${(rating.dispersion * kappa).toStringAsFixed(8)}");
-        _log.v("Weighted winner dispersion:\t${(probabilityWeightedWinnerDispersion * kappa).toStringAsFixed(8)}");
-        _log.v("Kappa: \t\t\t${kappa.toStringAsFixed(2)}");
-        _log.v("");
+        logLine.writeln("Predictive variance:\t\t${withinComponentVariance.toStringAsFixed(8)}");
+        logLine.writeln("Rating variance:\t\t${ratingVariance.toStringAsFixed(8)}");
+        logLine.writeln("Variance age component:\t\t${(ratingVariance - rating.variance).toStringAsFixed(8)}");
+        logLine.writeln("Prediction sport variance:\t${(2 * settings.predictionSportVariance).toStringAsFixed(8)}");
+        logLine.writeln("Weighted winner variance::\t${probabilityWeightedWinnerVariance.toStringAsFixed(8)}");
+        logLine.writeln("Weighted rating dispersion:\t${(rating.dispersion * kappa).toStringAsFixed(8)}");
+        logLine.writeln("Weighted winner dispersion:\t${(probabilityWeightedWinnerDispersion * kappa).toStringAsFixed(8)}");
+        logLine.writeln("Kappa: \t\t\t\t${kappa.toStringAsFixed(2)}");
+        logLine.writeln("");
+        _log.v(logLine.toString());
       }
 
       // We'll fill in places in a second pass
