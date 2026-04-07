@@ -131,6 +131,10 @@ class RiffImporter implements AbstractRiffImporter {
         shooterDivisionName: shooterDivisionName,
         shooterMemberNumbers: shooterMemberNumbers,
         squad: squad,
+        hadMemberNumber: shooterMemberNumbers.isNotEmpty,
+        addedManually: false,
+        resolvedAutomatically: false,
+        resolvedFromManualMapping: false,
       );
 
       return Result.ok(registration);

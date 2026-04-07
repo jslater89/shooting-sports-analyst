@@ -162,6 +162,10 @@ class CSVRegistrationSource implements FutureMatchSource {
         shooterClassificationName: classification,
         shooterMemberNumbers: processedMemberNumber != null ? [processedMemberNumber] : [],
         squad: squad,
+        hadMemberNumber: processedMemberNumber != null,
+        addedManually: false,
+        resolvedAutomatically: false,
+        resolvedFromManualMapping: false,
       );
       registrations.add(registration);
     }

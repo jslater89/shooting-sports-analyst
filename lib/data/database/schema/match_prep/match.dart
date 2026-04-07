@@ -186,6 +186,7 @@ class FutureMatch {
         var registrationClassification = sport.classifications.lookupByName(registration.shooterClassificationName);
         if(rating.lastClassification?.name == registrationClassification?.name) {
           registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
+          registration.resolvedAutomatically = true;
           updateRequired.add(registration);
         }
       }
@@ -215,6 +216,8 @@ class FutureMatch {
 
       if(registration != null) {
         registration.shooterMemberNumbers = mapping.detectedMemberNumbers.toList();
+        registration.resolvedFromManualMapping = !mapping.automatic;
+        registration.resolvedAutomatically = mapping.automatic;
         registrationsToUpdate.add(registration);
       }
     }

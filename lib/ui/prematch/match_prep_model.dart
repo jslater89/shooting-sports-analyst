@@ -128,6 +128,7 @@ class MatchPrepPageModel extends ChangeNotifier {
       shooterDivisionName: registration.shooterDivisionName ?? "",
       detectedMemberNumbers: rating.knownMemberNumbers.toList(),
       squad: registration.squad,
+      automatic: false,
     );
 
     // verify that the mapping is not a duplicate

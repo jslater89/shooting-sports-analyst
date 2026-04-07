@@ -80,6 +80,10 @@ class RegistrationContainer {
         shooterClassificationName: entry.key.classification.name,
         shooterMemberNumbers: [entry.value.memberNumber],
         squad: entry.key.squad,
+        hadMemberNumber: entry.value.knownMemberNumbers.isNotEmpty,
+        addedManually: false,
+        resolvedAutomatically: false,
+        resolvedFromManualMapping: false,
       ));
     }
     for(var entry in unmatchedShooters) {
@@ -90,6 +94,10 @@ class RegistrationContainer {
         shooterDivisionName: entry.division.name,
         shooterClassificationName: entry.classification.name,
         squad: entry.squad,
+        hadMemberNumber: false,
+        addedManually: false,
+        resolvedAutomatically: false,
+        resolvedFromManualMapping: false,
       ));
     }
     return exported;

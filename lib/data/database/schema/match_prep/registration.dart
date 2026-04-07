@@ -49,6 +49,22 @@ class MatchRegistration {
     return int.tryParse(stringNumber ?? "");
   }
 
+  // The following flags track the underlying source of the registration's member number information.
+
+  /// Whether the registration had a member number in the original source data.
+  bool hadMemberNumber;
+
+  /// Whether the complete registration was added manually by the user.
+  bool addedManually;
+
+  /// Whether the registration's member number was resolved from other biographical
+  /// information automatically.
+  bool resolvedAutomatically;
+
+  /// Whether the registration's member number was resolved from a manual registration
+  /// mapping.
+  bool resolvedFromManualMapping;
+
   MatchRegistration({
     required this.matchId,
     required this.entryId,
@@ -57,6 +73,10 @@ class MatchRegistration {
     this.shooterDivisionName,
     this.shooterMemberNumbers = const [],
     this.squad,
+    this.hadMemberNumber = false,
+    this.addedManually = false,
+    this.resolvedAutomatically = false,
+    this.resolvedFromManualMapping = false,
   });
 
   operator ==(Object other) {
