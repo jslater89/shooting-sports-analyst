@@ -46,6 +46,13 @@ extension PredictionGameExtension on AnalystDatabase {
     return isar.predictionGames.where().anyId().sortByCreatedDesc().findAllSync();
   }
 
+  Future<List<PredictionGame>> getPredictionGamesForMatchPrep(MatchPrep matchPrep) async {
+    // Find all prediction games that reference the given match prep.
+    return isar.predictionGames.where().filter()
+      .matchPreps((q) => q.idEqualTo(matchPrep.id))
+      .findAll();
+  }
+
   Future<PredictionGame> savePredictionGame(PredictionGame predictionGame, {bool saveLinks = false}) async {
     await isar.writeTxn(() async {
       await isar.predictionGames.put(predictionGame);

@@ -8,11 +8,13 @@ import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 extension MatchPrepDatabase on AnalystDatabase {
   /// Get all match preps.
@@ -161,6 +163,23 @@ extension MatchPrepDatabase on AnalystDatabase {
       isar.predictionSets.putSync(predictionSet);
     });
     notifyEntityChangeSync(EntityType.matchPrep, predictionSet.matchPrepId);
+  }
+
+  Future<Result<void, ResultErr>> deleteMatchPrep(MatchPrep matchPrep, {bool force = false}) async {
+    if(!force) {
+      // Don't delete match preps whose predictions are being used in prediction games.
+      var predictionGames = await getPredictionGamesForMatchPrep(matchPrep);
+      if(predictionGames.isNotEmpty) {
+        return Result.err(StringError("Match prep used in prediction games"));
+      }
+    }
+
+    await isar.writeTxn(() async {
+      await matchPrep.predictionSets.filter().deleteAll();
+      await isar.matchPreps.delete(matchPrep.id);
+    });
+    await notifyEntityChange(EntityType.matchPrep, matchPrep.id);
+    return Result.ok(null);
   }
 
   Future<void> deletePredictionSet(PredictionSet predictionSet) async {
