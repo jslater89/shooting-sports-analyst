@@ -779,6 +779,7 @@ class DbRawScore {
   List<DbScoringEventCount> scoringEvents;
   List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
+  List<DbStringSplits> splitTimes;
   DateTime? modified;
 
   DbRawScore({
@@ -788,6 +789,7 @@ class DbRawScore {
     this.scoringEvents = const [],
     this.penaltyEvents = const [],
     this.stringTimes = const [],
+    this.splitTimes = const [],
     this.modified,
   });
 
@@ -796,6 +798,7 @@ class DbRawScore {
     scoringType = score.scoring.dbString,
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
+    splitTimes = score.splitTimes.map((e) => DbStringSplits(splits: e.toList())).toList(),
     scoringEvents = score.targetEvents.keys.map((event) {
       if(event.nondefaultPoints || event.nondefaultTime) {
         return DbScoringEventCount.fromNondefault(event, count: score.targetEvents[event]!);
@@ -815,6 +818,7 @@ class DbRawScore {
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
       stringTimes: []..addAll(stringTimes),
+      splitTimes: splitTimes.map((e) => e.toList()).toList(),
       scoringOverrides: stage.scoringOverrides,
       targetEvents: Map.fromEntries(scoringEvents.map((event) {
         var targetEvent = pf.targetEvents.lookupByName(event.name);
@@ -861,6 +865,19 @@ class DbRawScore {
   @override
   String toString() {
     return "$stageId - $rawTime";
+  }
+}
+
+@embedded
+class DbStringSplits {
+  List<double> splits;
+
+  DbStringSplits({
+    this.splits = const [],
+  });
+
+  List<double> toList() {
+    return [...splits];
   }
 }
 

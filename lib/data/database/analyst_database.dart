@@ -577,6 +577,10 @@ class AnalystDatabase {
     if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
       throw ArgumentError("Match must have at least one source ID and a source code to be saved in the database");
     }
+
+    // TODO: update behavior
+    // Multiple sources might have nonoverlapping biographical and/or scoring data.
+    // Merging them might be nice.
     var dbMatch = DbShootingMatch.from(match);
     try {
       var oldMatch = await getMatchByAnySourceId(dbMatch.sourceIds);

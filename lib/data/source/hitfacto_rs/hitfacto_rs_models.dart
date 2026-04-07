@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
+
 /// One row from [GET /v1/matches](https://hitfacto.rs/openapi.json).
 class HitfactoRsMatchListRow {
   final String matchUuid;
@@ -152,6 +154,8 @@ class HitfactoRsResultRow {
   final String stageName;
   final int rawPoints;
   final double timeSeconds;
+  final List<double> stringTimes;
+  final List<List<double>> splitTimes;
   final double hitFactor;
   final int alphas;
   final int bravos;
@@ -175,6 +179,8 @@ class HitfactoRsResultRow {
     required this.stageName,
     required this.rawPoints,
     required this.timeSeconds,
+    required this.stringTimes,
+    required this.splitTimes,
     required this.hitFactor,
     required this.alphas,
     required this.bravos,
@@ -188,6 +194,20 @@ class HitfactoRsResultRow {
   });
 
   factory HitfactoRsResultRow.fromJson(Map<String, dynamic> j) {
+    final encodedJsonSplits = j["shot_splits"] as String?;
+    final stringSplits = <List<double>>[];
+    if(encodedJsonSplits != null) {
+      final decodedSplits = jsonDecode(encodedJsonSplits);
+      if(decodedSplits is List<dynamic>) {
+        for(final d in decodedSplits) {
+          if(d is Map<String, dynamic>) {
+            var times = (d["times"] as List<dynamic>?)?.map((e) => (e as num?)?.toDouble() ?? 0.0).toList() ?? [];
+            stringSplits.add(times);
+          }
+        }
+      }
+    }
+
     return HitfactoRsResultRow(
       identityId: (j["identity_id"] as num?)?.toInt() ?? 0,
       firstName: j["first_name"] as String? ?? "",
@@ -200,6 +220,8 @@ class HitfactoRsResultRow {
       stageName: j["stage_name"] as String? ?? "",
       rawPoints: (j["raw_points"] as num?)?.toInt() ?? 0,
       timeSeconds: (j["time_seconds"] as num?)?.toDouble() ?? 0.0,
+      stringTimes: (j["string_times"] as List<dynamic>?)?.map((e) => (e as num?)?.toDouble() ?? 0.0).toList() ?? [],
+      splitTimes: stringSplits,
       hitFactor: (j["hit_factor"] as num?)?.toDouble() ?? 0.0,
       alphas: ((j["alphas"] as num?)?.toInt() ?? 0) +
         ((j["popper_hits"] as num?)?.toInt() ?? 0),

@@ -215,6 +215,8 @@ class HitfactoRsMatchConverter {
       return RawScore(
         scoring: stage.scoring,
         rawTime: row.timeSeconds,
+        stringTimes: row.stringTimes,
+        splitTimes: row.splitTimes,
         targetEvents: {},
         penaltyEvents: {},
         dq: row.stageDq,
@@ -254,7 +256,8 @@ class HitfactoRsMatchConverter {
       rawTime: row.timeSeconds,
       targetEvents: targetEvents,
       penaltyEvents: penaltyEvents,
-      stringTimes: [],
+      stringTimes: row.stringTimes,
+      splitTimes: row.splitTimes,
       dq: row.stageDq,
     );
   }

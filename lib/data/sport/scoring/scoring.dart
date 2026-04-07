@@ -218,6 +218,12 @@ class RawScore {
   /// Used for display purposes only, at present time.
   List<double> stringTimes;
 
+  /// A list of split times for this score, in the form of a list of [double]s
+  /// per string.
+  List<List<double>> splitTimes;
+
+  List<double> get firstStringSplits => splitTimes.firstOrNull ?? [];
+
   /// The time this score was last modified.
   DateTime? modified;
 
@@ -342,6 +348,7 @@ class RawScore {
     required this.targetEvents,
     this.penaltyEvents = const {},
     this.stringTimes = const [],
+    this.splitTimes = const [],
     this.scoringOverrides = const {},
     this.modified,
     this.dq = false,
@@ -400,6 +407,8 @@ class RawScore {
       rawTime: rawTime,
       targetEvents: {...targetEvents},
       penaltyEvents: {...penaltyEvents},
+      // deep copy the nested split times array
+      splitTimes: splitTimes.map((e) => e.toList()).toList(),
       modified: modified,
       scoringOverrides: {...scoringOverrides},
     );
