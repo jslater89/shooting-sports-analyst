@@ -154,7 +154,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       var differenceFromOne = ratingMultiplier - 1.0;
       differenceFromOne /= 3;
       final softMultiplier = 1.0 + differenceFromOne;
-      initialRating = log(softMultiplier);
+      initialRating += log(softMultiplier);
       // initialRating = log(ratingMultiplier);
     }
 

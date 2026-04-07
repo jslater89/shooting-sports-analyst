@@ -21,6 +21,7 @@ sealed class MatchSourceError implements ResultErr {
   static NoCredentials get noCredentials => const NoCredentials();
   static DatabaseError get databaseError => const DatabaseError();
   static NotModified get notModified => const NotModified();
+  static ParseError get parseError => const ParseError("bad format");
 }
 
 class DatabaseError extends MatchSourceError {
@@ -94,4 +95,23 @@ class NotModified extends MatchSourceError {
   String get message => "Not modified";
   StackTrace? get stackTrace => null;
   const NotModified();
+}
+
+class UnknownSport extends MatchSourceError {
+  String get message => "Unknown sport";
+  StackTrace? get stackTrace => null;
+  const UnknownSport();
+}
+
+class UnknownMatchId extends MatchSourceError {
+  String get message => "Unknown match ID";
+  StackTrace? get stackTrace => null;
+  const UnknownMatchId();
+}
+
+class ParseError extends MatchSourceError {
+  String get message => "Error parsing match data: $underlying";
+  final String underlying;
+  StackTrace? get stackTrace => null;
+  const ParseError(this.underlying);
 }

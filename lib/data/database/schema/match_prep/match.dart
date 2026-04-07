@@ -216,8 +216,8 @@ class FutureMatch {
 
       if(registration != null) {
         registration.shooterMemberNumbers = mapping.detectedMemberNumbers.toList();
-        registration.resolvedFromManualMapping = !mapping.automatic;
-        registration.resolvedAutomatically = mapping.automatic;
+        registration.resolvedFromManualMapping = !mapping.createdAutomatically;
+        registration.resolvedAutomatically = mapping.createdAutomatically;
         registrationsToUpdate.add(registration);
       }
     }

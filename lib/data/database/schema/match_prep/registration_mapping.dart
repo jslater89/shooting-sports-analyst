@@ -37,6 +37,12 @@ class MatchRegistrationMapping {
   String shooterClassificationName;
   String shooterDivisionName;
 
+  /// Whether the mapping was detected automatically by the system.
+  ///
+  /// If true, an automatic process detected this mapping. If false,
+  /// it was manually added by the user.
+  bool createdAutomatically;
+
   List<String> detectedMemberNumbers;
 
   String? squad;
@@ -58,6 +64,7 @@ class MatchRegistrationMapping {
     required this.shooterDivisionName,
     required this.detectedMemberNumbers,
     this.squad,
+    required this.createdAutomatically,
   });
 
   @override

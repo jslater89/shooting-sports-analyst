@@ -9,13 +9,16 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:html/parser.dart';
+import 'package:html/parser.dart' hide ParseError;
 import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/match_info_zip.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
@@ -238,6 +241,55 @@ class AutoImporter {
     }
   }
 
+  static Future<Result<(FutureMatch, List<MatchRegistration>), MatchSourceError>> getFutureMatchFromHtml(String registrationHtml) async {
+    var document = HtmlParser(registrationHtml).parse();
+
+    var sportName = "unknown";
+    var metaSportName = document.querySelector("meta[name='sport-name']");
+    if(metaSportName != null) {
+      sportName = metaSportName.attributes["content"]!;
+      _log.d("Sport name: $sportName");
+    }
+    if(sportName == "unknown") {
+      _log.e("Sport name is unknown, cannot import registrations");
+      return Result.err(MatchSourceError.unsupportedMatchType);
+    }
+
+    var metaMatchId = document.querySelector("meta[name='match-id']");
+    if(metaMatchId == null) {
+      _log.e("Match ID is unknown, cannot import registrations");
+      return Result.err(ParseError("Missing match ID"));
+    }
+    var matchId = metaMatchId.attributes["content"]!;
+    _log.d("Match ID: $matchId");
+
+    var sport = SportRegistry().lookup(sportName, caseSensitive: false);
+    if(sport == null) {
+      _log.e("Sport not found: $sportName");
+      return Result.err(MatchSourceError.unsupportedMatchType);
+    }
+
+    // Pass to parser to get old-style registrations
+    // This will cache the HTML, which is sufficient for
+    var registrationResult = await getRegistrationsFromHtml(
+      registrationHtml: registrationHtml,
+      sport: sport,
+      matchId: matchId,
+      divisions: sport.divisions.values.toList(),
+      knownShooters: [],
+    );
+    if(registrationResult.isErr()) {
+      _log.e("Error getting registrations from HTML: ${registrationResult.unwrapErr().message}");
+      return Result.err(MatchSourceError.parseError);
+    }
+    var registrations = registrationResult.unwrap();
+
+    var exportedRegistrations = registrations.exportMatchRegistrations();
+    var futureMatch = registrations.exportFutureMatch();
+
+    return Result.ok((futureMatch, exportedRegistrations));
+  }
+
   Future<void> _importRegistrations(String path) async {
     var file = File(path);
     var bytes = file.readAsBytesSync();
@@ -257,53 +309,12 @@ class AutoImporter {
     var archiveBytes = archiveFile.readBytes();
     var registrationHtml = utf8.decode(archiveBytes ?? []);
 
-    var document = HtmlParser(registrationHtml).parse();
-
-    var sportName = "unknown";
-    var metaSportName = document.querySelector("meta[name='sport-name']");
-    if(metaSportName != null) {
-      sportName = metaSportName.attributes["content"]!;
-      _log.d("Sport name: $sportName");
-    }
-    if(sportName == "unknown") {
-      _log.e("Sport name is unknown, cannot import registrations");
-      _log.w("Zip file: $path");
+    var result = await getFutureMatchFromHtml(registrationHtml);
+    if(result.isErr()) {
+      _log.e("Error getting future match from zip at $path: ${result.unwrapErr().message}");
       return;
     }
-
-    var metaMatchId = document.querySelector("meta[name='match-id']");
-    if(metaMatchId == null) {
-      _log.e("Match ID is unknown, cannot import registrations");
-      _log.w("Zip file: $path");
-      return;
-    }
-    var matchId = metaMatchId.attributes["content"]!;
-    _log.d("Match ID: $matchId");
-
-    var sport = SportRegistry().lookup(sportName, caseSensitive: false);
-    if(sport == null) {
-      _log.e("Sport not found: $sportName");
-      _log.w("Zip file: $path");
-      return;
-    }
-
-    // Pass to parser to get old-style registrations
-    // This will cache the HTML, which is sufficient for
-    var registrationResult = await getRegistrationsFromHtml(
-      registrationHtml: registrationHtml,
-      sport: sport,
-      matchId: matchId,
-      divisions: sport.divisions.values.toList(),
-      knownShooters: [],
-    );
-    if(registrationResult.isErr()) {
-      _log.e("Error getting registrations from HTML: ${registrationResult.unwrapErr().message}");
-      return;
-    }
-    var registrations = registrationResult.unwrap();
-
-    var exportedRegistrations = registrations.exportMatchRegistrations();
-    var futureMatch = registrations.exportFutureMatch();
+    var (futureMatch, exportedRegistrations) = result.unwrap();
 
     // This source can't guarantee stable entry IDs, so overwrite all old registrations.
     // TODO: with match prep, we want to be able to merge

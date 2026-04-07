@@ -39,8 +39,9 @@ extension FutureMatchDatabase on AnalystDatabase {
 
   /// Save a future match to the database.
   ///
-  /// If [newRegistrations] is provided, the existing registrations on the
-  /// FutureMatch will be deleted and replaced with the contents of [newRegistrations].
+  /// If [newRegistrations] or FutureMatch.newRegistrations is provided, the existing registrations on the
+  /// FutureMatch will be deleted and replaced with the contents of the new registrations. If both are
+  /// provided, [newRegistrations] will take precedence.
   Future<VoidResult> saveFutureMatch(FutureMatch match, {
     List<MatchPrepLinkTypes> updateLinks = MatchPrepLinkTypes.values,
     List<MatchRegistration>? newRegistrations,
