@@ -93,7 +93,7 @@ lib/closed_sources/psv2/
 # FVM Version Cache
 .fvm/
 
-# LaTeX build files
+# LaTeX build files and other paper items
 *.aux
 *.log
 *.out
@@ -108,3 +108,4 @@ research/**/*.pdf
 *.bib
 *.bbl
 *.blg
+research/latent-log-ratio/*.png

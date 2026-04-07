@@ -44,6 +44,8 @@
 \newcommand{\ephys}{e_i^{\mathrm{phys}}}
 \newcommand{\erobust}{e_i^{\mathrm{robust}}}
 
+\DeclareMathOperator*{\median}{Median}
+
 
 \begin{document}
 
@@ -99,9 +101,9 @@
 		R_i - R_j = E[\ln(S_i) - \ln(S_j)] = E\!\left[\ln\!\left(\frac{S_i}{S_j}\right)\right]
 	\end{equation}
 
-	Equivalently, the expected ratio of two competitors' performances (ignoring the log-normal variance shift for conceptual simplicity) is:
+	Equivalently, the median ratio of two competitors' performances is:
 	\begin{equation}
-		E\!\left[\frac{S_i}{S_j}\right] \approx \exp(R_i - R_j)
+		\median\!\left(\frac{S_i}{S_j}\right) = \exp(R_i - R_j)
 	\end{equation}
 
 	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
@@ -110,7 +112,7 @@
 	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space, augmented with a per-competitor dispersion estimate.
 
 	\subsection{State Representation}
-	Each competitor $i$ is defined by three variables:
+	Each competitor $i$ is defined by four variables:
 	\begin{itemize}
 		\item \textbf{$R_i$ (Rating):} The expected mean of their natural log performance. An average baseline competitor can be anchored at 0.
 		\item \textbf{$V_i$ (Variance):} The epistemic uncertainty in a rating: ``how big is the distribution of the possible underlying skill variable around the rating?'' High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.

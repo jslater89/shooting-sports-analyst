@@ -1,0 +1,4 @@
+# Optional: Q–Q plot for latent_log_empirical.dart output
+#   pip install -r research/latent-log-ratio/requirements-plot.txt
+matplotlib>=3.7
+numpy>=1.24
