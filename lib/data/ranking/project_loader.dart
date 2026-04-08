@@ -1599,9 +1599,7 @@ class RatingProjectLoader {
 
       var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
       var activeEntryIds = filteredShooters.map((s) => s.entryId).toSet();
-      if(match.name.contains("2022 GFDS Maryland")) {
-        print("break");
-      }
+
       List<RelativeMatchScore> passiveScores = [];
       for(var shooter in allShooters) {
         if(activeEntryIds.contains(shooter.entryId)) {
