@@ -348,6 +348,32 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return changes;
   }
 
+  @override
+  RatingChange noOpChangeFor({
+    required LatentLogRating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        RatingSystem.ratingChangeKey: 0.0,
+        LatentLogRater.oldVarianceKey: shooter.variance,
+        LatentLogRater.oldDispersionKey: shooter.dispersion,
+        LatentLogRater.varianceChangeKey: 0.0,
+        LatentLogRater.dispersionChangeKey: 0.0,
+        LatentLogRater.momentumChangeKey: 0.0,
+        LatentLogRater.stagesKey: 0.0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
   RatingChange? _calculateRatingChangeForShooter({
     /// The match being processed.
     required ShootingMatch match,

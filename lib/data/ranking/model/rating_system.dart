@@ -79,6 +79,15 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     double eventWeightMultiplier = 1.0
   });
 
+  /// Build a no-op rating change for a competitor who should receive an event
+  /// without affecting rating math (e.g. by-match DQ/partial DNF handling).
+  RatingChange noOpChangeFor({
+    required T shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  });
+
   // ****** Self-describing data classes ******
 
   /// Return a deep copy of the provided shooter rating.
@@ -279,6 +288,11 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
         throw ArgumentError();
     }
   }
+}
+
+enum NonRatingResultReason {
+  dq,
+  dnf,
 }
 
 class PredictionOutcome {

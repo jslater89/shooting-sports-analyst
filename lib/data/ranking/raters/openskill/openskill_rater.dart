@@ -178,6 +178,27 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
   }
 
   @override
+  RatingChange noOpChangeFor({
+    required OpenskillRating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        OpenskillRater.muKey: 0.0,
+        OpenskillRater.sigmaKey: 0.0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
+  @override
   int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
     return (settings.beta).round();
   }

@@ -162,6 +162,26 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   }
 
   @override
+  RatingChange noOpChangeFor({
+    required PointsRating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        RatingSystem.ratingChangeKey: 0.0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
+  @override
   PointsRating wrapDbRating(DbShooterRating rating) {
     return PointsRating.wrapDbRating(rating);
   }

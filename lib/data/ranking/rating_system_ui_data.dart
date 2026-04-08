@@ -13,6 +13,7 @@ class RatingRowData {
   final bool fadeText;
   final AbstractAlignment alignment;
   final int flex;
+  final Importance importance;
 
   RatingRowData({
     required this.data,
@@ -20,11 +21,23 @@ class RatingRowData {
     this.fadeText = false,
     this.alignment = AbstractAlignment.start,
     this.flex = 1,
+    this.importance = Importance.medium,
   });
 }
 
+/// The alignment of the data in the rating key or row.
 enum AbstractAlignment {
   start,
   center,
   end,
+}
+
+/// The importance of the data in the rating key or row.
+///
+/// UI implementations can use this to determine how data should
+/// be displayed in compact contexts.
+enum Importance {
+  low,
+  medium,
+  high,
 }

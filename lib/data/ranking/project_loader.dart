@@ -1591,7 +1591,51 @@ class RatingProjectLoader {
       }
     }
     else { // by match
+      var allShooters = _getShooters(group, match, verify: false);
+      var allScores = match.getScores(shooters: allShooters, scoreDQ: settings.byStage);
+      Map<int, RelativeMatchScore> allScoresByEntryId = {
+        for(var score in allScores.values) score.shooter.entryId: score,
+      };
+
       var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
+      var activeEntryIds = filteredShooters.map((s) => s.entryId).toSet();
+      if(match.name.contains("2022 GFDS Maryland")) {
+        print("break");
+      }
+      List<RelativeMatchScore> passiveScores = [];
+      for(var shooter in allShooters) {
+        if(activeEntryIds.contains(shooter.entryId)) {
+          continue;
+        }
+
+        var matchScore = allScoresByEntryId[shooter.entryId];
+        if(matchScore == null) {
+          continue;
+        }
+
+        if(_eligibleByMatchPassiveEntry(matchScore)) {
+          passiveScores.add(matchScore);
+        }
+      }
+
+      // wrappedRatings is built from the active/verified competitor list above; make
+      // sure passive competitors are also wrapped so we can create no-op events.
+      for(var score in passiveScores) {
+        var memberNumber = score.shooter.memberNumber;
+        if(wrappedRatings[memberNumber] != null) {
+          continue;
+        }
+
+        var rating = db.maybeKnownShooterSync(
+          project: project,
+          group: group,
+          memberNumber: memberNumber,
+          useCache: true,
+        );
+        if(rating != null) {
+          wrappedRatings[memberNumber] = ratingSystem.wrapDbRating(rating);
+        }
+      }
 
       if(filteredShooters.length < shooters.length * 0.5) {
         var dnfs = shooters.length - filteredShooters.length;
@@ -1661,6 +1705,34 @@ class RatingProjectLoader {
                 weightMod: 1.0
             );
           }
+        }
+      }
+
+      for(var score in passiveScores) {
+        String num = score.shooter.memberNumber;
+        var rating = wrappedRatings[num];
+        if(rating == null) {
+          continue;
+        }
+
+        changes[rating.wrappedRating] ??= {};
+        if(!changes[rating.wrappedRating]!.containsKey(score)) {
+          var reason = score.shooter.dq ? NonRatingResultReason.dq : NonRatingResultReason.dnf;
+          var noOp = ratingSystem.noOpChangeFor(
+            shooter: rating,
+            score: score,
+            matchScore: score,
+            reason: reason,
+          );
+          changes[rating.wrappedRating]![score] = ratingSystem.newEvent(
+            rating: rating,
+            match: match,
+            score: score,
+            matchScore: score,
+            infoLines: noOp.infoLines,
+            infoData: noOp.infoData,
+          );
+          changes[rating.wrappedRating]![score]!.apply(noOp);
         }
       }
 
@@ -1849,6 +1921,35 @@ class RatingProjectLoader {
     }
 
     return false;
+  }
+
+  bool _eligibleByMatchPassiveEntry(RelativeMatchScore score) {
+    return _didNotCompleteMatch(score) && _completedAtLeastOneCountedStage(score);
+  }
+
+  bool _didNotCompleteMatch(RelativeMatchScore score) {
+    if(score.shooter.dq) {
+      return true;
+    }
+    return _dnf(score);
+  }
+
+  bool _completedAtLeastOneCountedStage(RelativeMatchScore score) {
+    for(var stageScore in score.stageScores.values) {
+      if(!stageScore.stage.scoring.countsInRatings) {
+        continue;
+      }
+      if(!_stageScoreLooksEmpty(stageScore)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _stageScoreLooksEmpty(RelativeStageScore stageScore) {
+    return stageScore.score.rawTime <= 0.01 &&
+        stageScore.score.targetEventCount == 0 &&
+        stageScore.score.penaltyEventCount == 0;
   }
 
   Future<void> _processWholeEvent({

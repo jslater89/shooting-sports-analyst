@@ -324,6 +324,31 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   }
 
   @override
+  RatingChange noOpChangeFor({
+    required Glicko2Rating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        RatingSystem.ratingChangeKey: 0.0,
+        Glicko2Rater.oldRDKey: shooter.committedInternalRD,
+        Glicko2Rater.rdChangeKey: 0.0,
+        Glicko2Rater.oldVolatilityKey: shooter.volatility,
+        Glicko2Rater.volatilityChangeKey: 0.0,
+        Glicko2Rater.stagesKey: 0.0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
+  @override
   bool get supportsPrediction => settings.scoreFunction.reversible;
 
   @override

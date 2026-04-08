@@ -395,6 +395,30 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     )};
   }
 
+  @override
+  RatingChange noOpChangeFor({
+    required EloShooterRating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        RatingSystem.ratingChangeKey: 0,
+        errorKey: 0,
+        baseKKey: 0,
+        effectiveKKey: 0,
+        backRatingErrorKey: 0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
   // TODO: investigate softmax for scaling expected scores
   _ScoreParameters _calculateScoreParams({
     ShootingMatch? match,

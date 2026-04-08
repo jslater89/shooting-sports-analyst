@@ -170,6 +170,29 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
   }
 
   @override
+  RatingChange noOpChangeFor({
+    required MarbleRating shooter,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    required NonRatingResultReason reason,
+  }) {
+    return RatingChange(
+      change: {
+        MarbleRater.marblesStakedKey: 0.0,
+        MarbleRater.marblesWonKey: 0.0,
+        MarbleRater.matchStakeKey: 0.0,
+        MarbleRater.totalCompetitorsKey: 0.0,
+      },
+      infoLines: [
+        "No rating change ({{resultReason}})",
+      ],
+      infoData: [
+        RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
+      ],
+    );
+  }
+
+  @override
   MarbleRating wrapDbRating(DbShooterRating rating) {
     return MarbleRating.wrapDbRating(rating);
   }
