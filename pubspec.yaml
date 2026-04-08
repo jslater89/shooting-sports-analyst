@@ -85,6 +85,7 @@ dependencies:
   device_info_plus: ^12.2.0
   watcher: ^1.1.4
   csv: ^7.2.0
+  dascade: ^1.0.2
 
 dev_dependencies:
   flutter_test:

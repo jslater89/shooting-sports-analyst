@@ -43,6 +43,16 @@ class NetworkErrorWithResponse extends MatchSourceError {
   NetworkErrorWithResponse(this.response);
 }
 
+/// Low-level failure (e.g. [SocketException], DNS) where there is no HTTP response.
+class NetworkErrorDetail extends MatchSourceError {
+  @override
+  String get message => detail;
+  final String detail;
+  StackTrace? get stackTrace => null;
+
+  const NetworkErrorDetail(this.detail);
+}
+
 class UnsupportedMatchType extends MatchSourceError {
   String get message => "Source does not support match type";
   final String? reason;

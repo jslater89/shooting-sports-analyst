@@ -84,6 +84,7 @@ dist/**
 
 # Things shared with me under NDA that I can't put on Git
 private/
+**mirror.toml
 
 # Closed sources for git status cleanliness
 # When adding a new closed-source thing, commit the stub, then
