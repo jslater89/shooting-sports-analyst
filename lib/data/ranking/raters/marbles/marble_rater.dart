@@ -4,13 +4,16 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-
+import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
@@ -185,5 +188,74 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
     else {
       return 30;
     }
+  }
+
+  static const _paddingFlex = 6;
+  static const _placeFlex = 2;
+  static const _memberNumFlex = 3;
+  static const _classFlex = 1;
+  static const _nameFlex = 6;
+  static const _marblesFlex = 2;
+  static const _lastChangeFlex = 2;
+  static const _trendFlex = 2;
+  static const _matchesFlex = 2;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    final baseTrendTooltip = byStage ?
+      "Change over the last 30 stages" :
+      "Change over the last 3 matches";
+    final trendHeaderTooltip = trendDate != null ?
+      "Change in rating since ${DateFormat.yMd().format(trendDate)}" :
+      baseTrendTooltip;
+    return [
+      RatingRowData(data: "", flex: _paddingFlex),
+      RatingRowData(data: "", flex: _placeFlex),
+      RatingRowData(data: "Member #", flex: _memberNumFlex),
+      RatingRowData(data: "Class", flex: _classFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Marbles", alignment: AbstractAlignment.end, flex: _marblesFlex),
+      RatingRowData(data: "Last ±", alignment: AbstractAlignment.end, flex: _lastChangeFlex),
+      RatingRowData(data: "Trend", tooltip: trendHeaderTooltip, alignment: AbstractAlignment.end, flex: _trendFlex),
+      RatingRowData(data: "Matches", alignment: AbstractAlignment.end, flex: _matchesFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  }) {
+    rating as MarbleRating;
+    final lastChange = rating.lastMatchChange;
+    int trend;
+    if(trendDate != null) {
+      final forDate = rating.ratingForDate(trendDate);
+      trend = (rating.rating - forDate).round();
+    }
+    else {
+      if(byStage) {
+        trend = rating.trend.round();
+      }
+      else {
+        trend = rating.trend3.round();
+      }
+    }
+    return [
+      RatingRowData(data: "", flex: _paddingFlex),
+      RatingRowData(data: "$place", flex: _placeFlex),
+      RatingRowData(data: rating.memberNumber, flex: _memberNumFlex),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "none", flex: _classFlex),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
+      RatingRowData(data: rating.marbles.toString(), alignment: AbstractAlignment.end, flex: _marblesFlex),
+      RatingRowData(data: lastChange.round().toString(), alignment: AbstractAlignment.end, flex: _lastChangeFlex),
+      RatingRowData(data: trend.toString(), alignment: AbstractAlignment.end, flex: _trendFlex),
+      RatingRowData(data: rating.length.toString(), alignment: AbstractAlignment.end, flex: _matchesFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
   }
 }

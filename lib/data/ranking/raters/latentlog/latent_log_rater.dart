@@ -15,6 +15,8 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
@@ -1348,6 +1350,126 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     }
 
     return _PresumedWinnerPrediction.normalize(predictions);
+  }
+
+  static const _paddingFlex = 2;
+  static const _placeFlex = 2;
+  static const _memberNumFlex = 3;
+  static const _classFlex = 1;
+  static const _nameFlex = 6;
+  static const _ratingFlex = 2;
+  static const _lastChangeFlex = 2;
+  static const _varianceFlex = 2;
+  static const _dispersionFlex = 2;
+  static const _momentumFlex = 2;
+  static const _matchesFlex = 2;
+  static const _stagesFlex = 2;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    return [
+      RatingRowData(data: "", flex: _paddingFlex),
+      RatingRowData(data: "", flex: _placeFlex),
+      RatingRowData(data: "Member #", flex: _memberNumFlex),
+      RatingRowData(data: "Class", flex: _classFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Rating", alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(data: "Last ±", alignment: AbstractAlignment.end, flex: _lastChangeFlex),
+      RatingRowData(
+        data: "Uncertainty",
+        tooltip: "Approximate standard deviation of the rating..",
+        alignment: AbstractAlignment.end,
+        flex: _varianceFlex,
+      ),
+      RatingRowData(
+        data: "Dispersion",
+        tooltip: "How much a competitor's rating tends to move from event to event.",
+        alignment: AbstractAlignment.end,
+        flex: _dispersionFlex,
+      ),
+      RatingRowData(
+        data: "Momentum",
+        tooltip: "The directional tendency of the rating change over time.",
+        alignment: AbstractAlignment.end,
+        flex: _momentumFlex,
+      ),
+      RatingRowData(data: "Matches", alignment: AbstractAlignment.end, flex: _matchesFlex),
+      RatingRowData(data: "Stages", alignment: AbstractAlignment.end, flex: _stagesFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  }) {
+    rating as LatentLogRating;
+    final displayDelta = rating.lastMatchChange * settings.scaleFactor;
+    final seenYearsAgo = DateTime.now().difference(rating.lastSeen).inDays / 365;
+    final fadeRow = seenYearsAgo > 1;
+    final ratingTooltip = seenYearsAgo > 1 ?
+      "Last active ${seenYearsAgo.toStringAsFixed(1)} years ago." :
+      null;
+    final ratingDisplay = sortMode == RatingSortMode.agedRating ?
+      rating.formattedAgedRating :
+      rating.formattedRating;
+
+    return [
+      RatingRowData(data: "", flex: _paddingFlex, fadeText: fadeRow),
+      RatingRowData(data: "$place", flex: _placeFlex, fadeText: fadeRow),
+      RatingRowData(data: rating.memberNumber, flex: _memberNumFlex, fadeText: fadeRow),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "none", flex: _classFlex, fadeText: fadeRow),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex, fadeText: fadeRow),
+      RatingRowData(
+        data: ratingDisplay,
+        tooltip: ratingTooltip,
+        alignment: AbstractAlignment.end,
+        flex: _ratingFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: displayDelta.toStringAsFixed(1),
+        alignment: AbstractAlignment.end,
+        flex: _lastChangeFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: rating.displayStandardDeviation.toStringAsFixed(1),
+        tooltip: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(1)}",
+        alignment: AbstractAlignment.end,
+        flex: _varianceFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: rating.displayDispersionStandardDeviation.toStringAsFixed(1),
+        alignment: AbstractAlignment.end,
+        flex: _dispersionFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: rating.displayMomentum.toStringAsFixed(1),
+        alignment: AbstractAlignment.end,
+        flex: _momentumFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: rating.lengthInMatches.toString(),
+        alignment: AbstractAlignment.end,
+        flex: _matchesFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(
+        data: rating.lengthInStages.toString(),
+        alignment: AbstractAlignment.end,
+        flex: _stagesFlex,
+        fadeText: fadeRow,
+      ),
+      RatingRowData(data: "", flex: _paddingFlex, fadeText: fadeRow),
+    ];
   }
 
 }

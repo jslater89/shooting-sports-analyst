@@ -8,66 +8,73 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_ratings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko2_ratings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/ui/latent_log_ratings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_ratings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/openskill/ui/openskill_ratings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_ratings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
+import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
-// This file is kind of ugly, but it's a necessary evil to keep UI imports out of the core rating engine
-// code. Every rating system has an extension on it that fits the buildRatingKey/buildRatingRow interface,
-// but I don't think I have a way to fully augment the class to implement an interface yet.
+/// Builds the rating key and row from a given rating system, building widgets
+/// from the UI-agnostic [RatingRowData] objects.
 class RatingSystemUiBuilder {
   static Row buildRatingKey(RatingSystem algorithm, BuildContext context, {DateTime? trendDate, RatingSortMode? sortMode}) {
-    if(algorithm is MultiplayerPercentEloRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
-    }
-    else if(algorithm is MarbleRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
-    }
-    else if(algorithm is OpenskillRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
-    }
-    else if(algorithm is PointsRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
-    }
-    else if(algorithm is Glicko2Rater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate);
-    }
-    else if(algorithm is LatentLogRater) {
-      return algorithm.buildRatingKey(context, trendDate: trendDate, sortMode: sortMode);
-    }
-    throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
+    var data = algorithm.buildRatingKeyData(trendDate: trendDate, sortMode: sortMode);
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: data.map((e) => Expanded(
+        flex: e.flex,
+        child: MaybeTooltip(
+          message: e.tooltip,
+          child: Text(
+            e.data,
+            textAlign: e.alignment.toTextAlign(),
+            style: _fadeTextStyle(context, e.fadeText),
+          ),
+        ),
+      )).toList()
+    );
   }
 
   static ScoreRow buildRatingRow(RatingSystem algorithm, {required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate, RatingScaler? scaler, RatingSortMode? sortMode}) {
-    if(algorithm is MultiplayerPercentEloRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
+    var data = algorithm.buildRatingRowData(rating: rating, place: place, trendDate: trendDate, scaler: scaler, sortMode: sortMode);
+    return ScoreRow(
+      color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
+      child: Padding(
+        padding: const EdgeInsets.all(2.0),
+        child: Row(
+          children: data.map((e) => Expanded(
+            flex: e.flex,
+            child: MaybeTooltip(
+              message: e.tooltip,
+              child: Text(
+              e.data,
+              textAlign: e.alignment.toTextAlign(),
+              style: _fadeTextStyle(context, e.fadeText),
+            ),
+            ),
+          )).toList()
+        ),
+      )
+    );
+  }
+
+  static TextStyle? _fadeTextStyle(BuildContext context, bool fadeText) {
+    if(!fadeText) {
+      return null;
     }
-    else if(algorithm is MarbleRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
+    return TextStyle(color: ThemeColors.fadedTextColor(context));
+  }
+}
+
+extension TextAlignExtension on AbstractAlignment {
+  TextAlign toTextAlign() {
+    switch(this) {
+      case AbstractAlignment.start:
+        return TextAlign.start;
+      case AbstractAlignment.center:
+        return TextAlign.center;
+      case AbstractAlignment.end:
+        return TextAlign.end;
     }
-    else if(algorithm is OpenskillRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
-    }
-    else if(algorithm is PointsRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
-    }
-    else if(algorithm is Glicko2Rater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
-    }
-    else if(algorithm is LatentLogRater) {
-      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler, sortMode: sortMode);
-    }
-    throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
   }
 }

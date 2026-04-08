@@ -10,8 +10,11 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/plackett_luce.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
@@ -182,6 +185,55 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
   @override
   OpenskillRating wrapDbRating(DbShooterRating rating) {
     return OpenskillRating.wrapDbRating(rating);
+  }
+
+  static const _paddingFlex = 6;
+  static const _placeFlex = 2;
+  static const _memberNumFlex = 3;
+  static const _classFlex = 1;
+  static const _nameFlex = 6;
+  static const _ordinalFlex = 2;
+  static const _muFlex = 2;
+  static const _sigmaFlex = 2;
+  static const _eventsFlex = 2;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    return [
+      RatingRowData(data: "", flex: _paddingFlex - _placeFlex),
+      RatingRowData(data: "", flex: _placeFlex),
+      RatingRowData(data: "Member #", flex: _memberNumFlex),
+      RatingRowData(data: "Class", flex: _classFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Rating", alignment: AbstractAlignment.end, flex: _ordinalFlex),
+      RatingRowData(data: "Mu", alignment: AbstractAlignment.end, flex: _muFlex),
+      RatingRowData(data: "Sigma", alignment: AbstractAlignment.end, flex: _sigmaFlex),
+      RatingRowData(data: byStage ? "Stages" : "Matches", alignment: AbstractAlignment.end, flex: _eventsFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  }) {
+    rating as OpenskillRating;
+    return [
+      RatingRowData(data: "", flex: _paddingFlex - _placeFlex),
+      RatingRowData(data: "$place", flex: _placeFlex),
+      RatingRowData(data: rating.memberNumber, flex: _memberNumFlex),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "none", flex: _classFlex),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
+      RatingRowData(data: rating.ordinal.toStringAsFixed(1), alignment: AbstractAlignment.end, flex: _ordinalFlex),
+      RatingRowData(data: rating.mu.toStringAsFixed(1), alignment: AbstractAlignment.end, flex: _muFlex),
+      RatingRowData(data: rating.sigma.toStringAsFixed(2), alignment: AbstractAlignment.end, flex: _sigmaFlex),
+      RatingRowData(data: "${rating.length}", alignment: AbstractAlignment.end, flex: _eventsFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
   }
 }
 

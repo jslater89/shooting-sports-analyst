@@ -18,6 +18,8 @@ import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -114,6 +116,26 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   S get settings;
 
   // ****** Self-describing UI ******
+
+  /// Return a list of [RatingRowData] objects that correspond to the columns
+  /// in the rating key.
+  List<RatingRowData> buildRatingKeyData({
+    DateTime? trendDate,
+    RatingSortMode? sortMode,
+  });
+
+  /// Return a list of [RatingRowData] objects that correspond to the columns
+  /// in the rating row.
+  ///
+  /// [rating] is the shooter rating to build the row data for, and will always
+  /// be of type [T].
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  });
 
   List<RatingSortMode> get supportedSorts => RatingSortMode.values;
   int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode, {DateTime? changeSince}) {

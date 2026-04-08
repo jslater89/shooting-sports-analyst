@@ -11,6 +11,8 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/decaying_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/f1_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/inverse_place.dart';
@@ -162,6 +164,61 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   @override
   PointsRating wrapDbRating(DbShooterRating rating) {
     return PointsRating.wrapDbRating(rating);
+  }
+
+  static const _leadPaddingFlex = 4;
+  static const _placeFlex = 1;
+  static const _memNumFlex = 2;
+  static const _ratingTableClassFlex = 1;
+  static const _nameFlex = 3;
+  static const _ratingFlex = 2;
+  static const _ratingTableStagesFlex = 2;
+  static const _ppmFlex = 2;
+  static const _trailPaddingFlex = 4;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    return [
+      RatingRowData(data: "", flex: _leadPaddingFlex + _placeFlex),
+      RatingRowData(data: "Member #", flex: _memNumFlex),
+      RatingRowData(data: "Class", flex: _ratingTableClassFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Points", alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(
+        data: "Matches/${settings.matchesToCount}",
+        tooltip: "At most ${settings.matchesToCount} matches will count for points.",
+        alignment: AbstractAlignment.end,
+        flex: _ratingTableStagesFlex,
+      ),
+      RatingRowData(data: "Points/Match", alignment: AbstractAlignment.end, flex: _ppmFlex),
+      RatingRowData(data: "", flex: _trailPaddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  }) {
+    rating as PointsRating;
+    final ratingText = settings.mode == PointsMode.inversePlace || settings.mode == PointsMode.f1 ?
+      rating.rating.round().toString() :
+      rating.rating.toStringAsFixed(1);
+    final ppmText = (rating.rating / rating.length.clamp(1, settings.matchesToCount)).toStringAsFixed(1);
+    return [
+      RatingRowData(data: "", flex: _leadPaddingFlex),
+      RatingRowData(data: "$place", flex: _placeFlex),
+      RatingRowData(data: rating.memberNumber, flex: _memNumFlex),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "(none)", flex: _ratingTableClassFlex),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
+      RatingRowData(data: ratingText, alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(data: "${rating.length}", alignment: AbstractAlignment.end, flex: _ratingTableStagesFlex),
+      RatingRowData(data: ppmText, alignment: AbstractAlignment.end, flex: _ppmFlex),
+      RatingRowData(data: "", flex: _trailPaddingFlex),
+    ];
   }
 }
 

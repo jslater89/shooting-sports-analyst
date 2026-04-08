@@ -10,7 +10,10 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
@@ -1173,6 +1176,82 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       upperValue: upRdExpectedPercentage,
       lowerValue: downRdExpectedPercentage,
     );
+  }
+
+  static const _paddingFlex = 4;
+  static const _placeFlex = 2;
+  static const _memberNumFlex = 3;
+  static const _classFlex = 1;
+  static const _nameFlex = 6;
+  static const _ratingFlex = 2;
+  static const _lastChangeFlex = 2;
+  static const _rdFlex = 2;
+  static const _volatilityFlex = 2;
+  static const _matchesFlex = 2;
+  static const _stagesFlex = 2;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    return [
+      RatingRowData(data: "", flex: _paddingFlex),
+      RatingRowData(data: "", flex: _placeFlex),
+      RatingRowData(data: "Member #", flex: _memberNumFlex),
+      RatingRowData(data: "Class", flex: _classFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Rating", alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(data: "Last ±", alignment: AbstractAlignment.end, flex: _lastChangeFlex),
+      RatingRowData(
+        data: "RD",
+        tooltip: "The current rating deviation, a measure of the system's confidence in the shooter's rating.",
+        alignment: AbstractAlignment.end,
+        flex: _rdFlex,
+      ),
+      RatingRowData(
+        data: "Volatility",
+        tooltip:
+            "The current volatility, a measure of the shooter's rating stability.\n\n"
+            "The volatility is a normalized version of the amount that will be added to\n"
+            "the competitor's RD per rating period (${settings.pseudoRatingPeriodLength} days).",
+        alignment: AbstractAlignment.end,
+        flex: _volatilityFlex,
+      ),
+      RatingRowData(data: "Matches", alignment: AbstractAlignment.end, flex: _matchesFlex),
+      RatingRowData(data: "Stages", alignment: AbstractAlignment.end, flex: _stagesFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({
+    required ShooterRating rating,
+    required int place,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+    RatingSortMode? sortMode,
+  }) {
+    rating as Glicko2Rating;
+    return [
+      RatingRowData(data: "", flex: _paddingFlex),
+      RatingRowData(data: "$place", flex: _placeFlex),
+      RatingRowData(data: rating.memberNumber, flex: _memberNumFlex),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "none", flex: _classFlex),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
+      RatingRowData(data: rating.rating.round().toString(), alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(data: rating.lastMatchChange.round().toString(), alignment: AbstractAlignment.end, flex: _lastChangeFlex),
+      RatingRowData(
+        data: settings.scaleToDisplay(rating.currentInternalRD).round().toString(),
+        alignment: AbstractAlignment.end,
+        flex: _rdFlex,
+      ),
+      RatingRowData(
+        data: settings.volatilityToDisplay(rating.volatility).toStringAsFixed(3),
+        alignment: AbstractAlignment.end,
+        flex: _volatilityFlex,
+      ),
+      RatingRowData(data: rating.lengthInMatches.toString(), alignment: AbstractAlignment.end, flex: _matchesFlex),
+      RatingRowData(data: rating.lengthInStages.toString(), alignment: AbstractAlignment.end, flex: _stagesFlex),
+      RatingRowData(data: "", flex: _paddingFlex),
+    ];
   }
 }
 

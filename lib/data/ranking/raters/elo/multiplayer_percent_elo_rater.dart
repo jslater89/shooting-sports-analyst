@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
@@ -15,6 +16,8 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -596,6 +599,107 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     return EloShooterRating.wrapDbRating(rating);
   }
   static const monteCarloTrials = 1000;
+
+  static const _leadPaddingFlex = 2;
+  static const _placeFlex = 1;
+  static const _memNumFlex = 2;
+  static const _classFlex = 1;
+  static const _nameFlex = 5;
+  static const _ratingFlex = 2;
+  static const _matchChangeFlex = 2;
+  // ignore: unused_field
+  static const _uncertaintyFlex = 2;
+  static const _errorFlex = 2;
+  static const _connectednessFlex = 2;
+  static const _trendFlex = 2;
+  static const _directionFlex = 2;
+  static const _stagesFlex = 2;
+  static const _trailPaddingFlex = 2;
+
+  @override
+  List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
+    return [
+      RatingRowData(data: "", flex: _leadPaddingFlex + _placeFlex),
+      RatingRowData(data: "Member #", flex: _memNumFlex),
+      RatingRowData(data: "Class", flex: _classFlex),
+      RatingRowData(data: "Name", flex: _nameFlex),
+      RatingRowData(data: "Rating", alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(
+        data: "Error",
+        tooltip: "The error calculated by the rating system.",
+        alignment: AbstractAlignment.end,
+        flex: _errorFlex,
+      ),
+      RatingRowData(
+        data: "Last ±",
+        tooltip: "The change in the shooter's rating at the last match.",
+        alignment: AbstractAlignment.end,
+        flex: _matchChangeFlex,
+      ),
+      RatingRowData(
+        data: "Trend",
+        tooltip: trendDate != null ? "The change in the shooter's rating since ${DateFormat.yMd().format(trendDate)}." : "The change in the shooter's rating over the last 30 rating events.",
+        alignment: AbstractAlignment.end,
+        flex: _trendFlex,
+      ),
+      RatingRowData(
+        data: "Direction",
+        tooltip: "The shooter's rating trajectory: 100 if all of the last 30 rating events were positive, -100 if all were negative.",
+        alignment: AbstractAlignment.end,
+        flex: _directionFlex,
+      ),
+      RatingRowData(
+        data: "Conn.",
+        tooltip: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
+        alignment: AbstractAlignment.end,
+        flex: _connectednessFlex,
+      ),
+      RatingRowData(data: byStage ? "Stages" : "Matches", alignment: AbstractAlignment.end, flex: _stagesFlex),
+      RatingRowData(data: "", flex: _trailPaddingFlex),
+    ];
+  }
+
+  @override
+  List<RatingRowData> buildRatingRowData({required ShooterRating rating, required int place, DateTime? trendDate, RatingScaler? scaler, RatingSortMode? sortMode}) {
+    rating as EloShooterRating;
+
+    var trend = rating.trend.round();
+    if(trendDate != null) {
+      var forDate = rating.ratingForDate(trendDate);
+      trend = (rating.rating - forDate).round();
+      // _log.vv("rating: ${rating.rating}, date: $trendDate, forDate: $forDate, trend: $trend");
+    }
+    var positivity = (rating.direction * 100).round();
+    var error = rating.standardError; //rating.decayingAverageRatingChangeError;
+    if(MultiplayerPercentEloRater.doBackRating) {
+      error = rating.backRatingError;
+    }
+    var lastMatchChange = rating.lastMatchChange;
+
+    var ratingNumber = rating.rating.round();
+    if(scaler != null) {
+      ratingNumber = scaler.scaleRating(rating.rating, group: rating.group).round();
+      error = scaler.scaleNumber(error, originalRating: rating.rating, group: rating.group);
+      lastMatchChange = scaler.scaleNumber(lastMatchChange, originalRating: rating.rating);
+      trend = scaler.scaleNumber(rating.trend, originalRating: rating.rating).round();
+    }
+
+    return [
+      RatingRowData(data: "", flex: _leadPaddingFlex),
+      RatingRowData(data: "$place", flex: _placeFlex),
+      RatingRowData(data: rating.memberNumber, flex: _memNumFlex),
+      RatingRowData(data: rating.lastClassification?.shortDisplayName ?? "?", flex: _classFlex),
+      RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
+      RatingRowData(data: "$ratingNumber", alignment: AbstractAlignment.end, flex: _ratingFlex),
+      RatingRowData(data: "${error.toStringAsFixed(1)}", alignment: AbstractAlignment.end, flex: _errorFlex),
+      RatingRowData(data: "${lastMatchChange.round()}", alignment: AbstractAlignment.end, flex: _matchChangeFlex),
+      RatingRowData(data: "$trend", alignment: AbstractAlignment.end, flex: _trendFlex),
+      RatingRowData(data: "$positivity", alignment: AbstractAlignment.end, flex: _directionFlex),
+      RatingRowData(data: "${(rating.connectivity).toStringAsFixed(1)}", alignment: AbstractAlignment.end, flex: _connectednessFlex),
+      RatingRowData(data: "${rating.length}", alignment: AbstractAlignment.end, flex: _stagesFlex),
+      RatingRowData(data: "", flex: _trailPaddingFlex),
+    ];
+  }
 
   List<RatingSortMode> get supportedSorts => [
     RatingSortMode.rating,
