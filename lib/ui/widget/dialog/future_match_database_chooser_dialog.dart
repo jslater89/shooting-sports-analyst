@@ -12,7 +12,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/match/future_match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
-import 'package:shooting_sports_analyst/data/source/prematch/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/prematch/future_match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';

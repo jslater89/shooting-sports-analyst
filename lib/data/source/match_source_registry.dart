@@ -10,9 +10,6 @@ import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_sour
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 
 class MatchSourceRegistry {
   static MatchSourceRegistry? _instance;
