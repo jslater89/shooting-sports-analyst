@@ -35,7 +35,7 @@
 \newcommand{\lambdar}{\lambda_{\mathrm{rust}}}
 \newcommand{\tgrace}{t_{\mathrm{grace}}}
 
-\newcommand{\pmax}{P_{\mathrm{max}}}
+\newcommand{\xwin}{X_w}
 \newcommand{\tmin}{T_{\mathrm{min}}}
 
 \newcommand{\bobs}{B_{\mathrm{obs}}}
@@ -65,56 +65,70 @@
 	In practical shooting, true skill is fundamentally multiplicative, whether measured by hit factor  in USPSA, or total time in time-plus sports like IDPA and ICORE. If Competitor A takes 10 seconds to shoot a stage and Competitor B takes 20 seconds, Competitor A is twice as fast. On a longer stage, the times might be 20 seconds and 40 seconds; the absolute margin changes, but the $2\times$ ratio remains constant.
 
 	\subsection{The ``Winner's Curse'' in Percentage Scoring}
-	Matches are scored as percentages of the top competitor's performance. Using these raw percentages injects the winner's variance into the entire field, a phenomenon we term the ``winner's curse'' (distinct from the overbidding phenomenon in auction theory).
+	Matches are scored as percentages of the top competitor's performance. Using these raw percentages injects the winner's match-day variance into the entire field, a phenomenon we term the ``winner's curse'' (distinct from the overbidding phenomenon in auction theory).
 	\begin{itemize}
-		\item \textbf{Hit Factor} (USPSA, where $P_i$ is a competitor's finish percentage in $(0.0 - 1.0)$): $S_i = \frac{P_i}{1.0}$
-		\item \textbf{Time-Plus} (IDPA/ICORE): $S_i = \frac{\tmin}{T_i}$
+		\item \textbf{Hit Factor} (USPSA): Each competitor's stage score is their points divided by their time (the ``hit factor''). The stage percentage is this hit factor divided by the winner's hit factor. On each stage, competitors receive a fraction of the total points available from that stage determined by their finish ratio in \([0, 1]\). A match score is the sum of all stage scores.
+		\item \textbf{Time-Plus} (IDPA/ICORE): Each competitor's stage score is their raw time plus penalties. The implied percentage is the winner's time divided by the competitor's time.
 	\end{itemize}
-	If the match winner performs exceptionally well, every other competitor's percentage drops, mathematically suggesting the field performed poorly when they did not.
+	If the match winner has an exceptionally good day, every other competitor's percentage drops, mathematically suggesting the field performed poorly when they did not.
 
 	\subsection{The Logarithmic Bridge}
-	Let $P_i$ denote a competitor's absolute performance on any positive ratio scale where larger is better, and let $\pmax$ denote the winning performance in the match. The match percentage is then
+	Let $P_i$ denote competitor $i$'s \textit{latent} (true) performance parameter on any positive ratio scale where larger is better. On match day, each competitor produces a realized performance $X_i$---a noisy draw reflecting their current skill. The scoreboard reports only the ratio of realized performances:
 	\begin{equation}
-		S_i = \frac{P_i}{\pmax}
+		S_i = \frac{X_i}{\xwin}
 	\end{equation}
+	where $\xwin = \max_j X_j$ is the realized performance of whoever won the match. Critically, neither $P_i$ nor $X_i$ is directly observed; only the ratio $S_i$ is published.
+
 	For any two competitors $A$ and $B$, the difference of their log-percentages is
 	\begin{equation}
-		\ln(S_A) - \ln(S_B) = \ln\left(\frac{P_A}{P_{\mathrm{max}}}\right) - \ln\left(\frac{P_B}{\pmax}\right)
+		\ln(S_A) - \ln(S_B) = \ln\!\left(\frac{X_A}{\xwin}\right) - \ln\!\left(\frac{X_B}{\xwin}\right)
 	\end{equation}
 	Using $\ln(x/y) = \ln(x) - \ln(y)$, this becomes
 	\begin{equation}
-		\ln(S_A) - \ln(S_B) = (\ln(P_A) - \ln(P_{\mathrm{max}})) - (\ln(P_B) - \ln(\pmax))
+		\ln(S_A) - \ln(S_B) = (\ln(X_A) - \ln(\xwin)) - (\ln(X_B) - \ln(\xwin))
 	\end{equation}
 	and the common anchor cancels exactly:
 	\begin{equation}
-		\ln(S_A) - \ln(S_B) = \ln(P_A) - \ln(P_B) = \ln\left(\frac{P_A}{P_B}\right)
+		\ln(S_A) - \ln(S_B) = \ln(X_A) - \ln(X_B) = \ln\!\left(\frac{X_A}{X_B}\right)
 	\end{equation}
-	This is the central trick of the model: once the winner anchor cancels, the observed log-ratio of absolute performances can be treated as a direct estimate of latent rating difference,
+	This is the central trick of the model: the realized winning performance $\xwin$ appears only as a nuisance normalization constant in the published percentages; it does not survive pairwise comparison in log space, an idea derived from compositional data analysis\cite{aitchison1982compositional}\footnote{Although this model leverages log-ratio transformations that are fundamental to compositional data analysis, match percentages do not themselves constitute compositional data by the strict definition, as they violate the unit-sum constraint. The data do, however, have scale invariance: the absolute magnitudes are irrelevant or (in our case) misleading, and all the usable information is contained strictly in the \emph{ratios} between the components.}. The resulting quantity is the pure ratio of the competitors' realized performances, independent of who won the match or by how much.
+
+	Because each realized performance is a noisy draw from around the competitor's latent skill, the log-ratio decomposes as:
 	\begin{equation}
-		\ln\left(\frac{P_A}{P_B}\right) \approx R_A - R_B
+		\ln\!\left(\frac{X_A}{X_B}\right) = \ln\!\left(\frac{P_A}{P_B}\right) + (\varepsilon_A - \varepsilon_B)
 	\end{equation}
-	Thus, the winner's score appears only as a nuisance normalization constant in the published percentages; it does not survive pairwise comparison in log space, an idea derived from compositional data analysis\cite{aitchison1982compositional}\footnote{Although this model leverages log-ratio transformations that are fundamental to compositional data analysis, match percentages do not themselves constitute compositional data by the strict definition, as they violate the unit-sum constraint. The data do, however, have scale invariance: the absolute magnitudes are irrelevant or (in our case) misleading, and all the usable information is contained strictly in the \emph{ratios} between the components.}. The resulting quantity is the pure ratio of the competitors' absolute performances, independent of who won the match or by how much. In time-plus sports, this same derivation applies by choosing $P_i$ to be any proportional speed variable such as $\tmin/T_i$, which yields $\ln(S_A) - \ln(S_B) = \ln(T_B/T_A)$.
+	where $\varepsilon_i$ represents competitor $i$'s match-day noise. In expectation, the noise cancels and the observed log-ratio is a direct estimate of the latent skill gap:
+	\begin{equation}
+		E\!\left[\ln\!\left(\frac{X_A}{X_B}\right)\right] = \ln\!\left(\frac{P_A}{P_B}\right) \approx R_A - R_B
+	\end{equation}
+	In time-plus sports, this same derivation applies by defining $X_i$ as any proportional speed variable such as $\tmin/T_i$, which yields $\ln(S_A) - \ln(S_B) = \ln(T_B/T_A)$.
 
 	\subsection{Ratings as Expected Log-Ratios}
-	This cancellation property leads directly to the model's core identity. Since ratings $R_i$ represent expected log-performance, the difference between any two ratings is the expected log-ratio of their performances:
+	This cancellation property leads directly to the model's core identity. Since ratings $R_i$ track each competitor's current latent log-performance $\ln(P_i)$, the difference between any two ratings is the expected log-ratio of their realized performances:
 	\begin{equation}
-		R_i - R_j = E[\ln(S_i) - \ln(S_j)] = E\!\left[\ln\!\left(\frac{S_i}{S_j}\right)\right]
+		R_i - R_j = E[\ln(S_i) - \ln(S_j)] = E\!\left[\ln\!\left(\frac{X_i}{X_j}\right)\right] = \ln\!\left(\frac{P_i}{P_j}\right)
 	\end{equation}
 
-	Equivalently, the median ratio of two competitors' performances is:
+	Equivalently, the median ratio of two competitors' realized performances is:
 	\begin{equation}
-		\median\!\left(\frac{S_i}{S_j}\right) = \exp(R_i - R_j)
+		\median\!\left(\frac{X_i}{X_j}\right) = \exp(R_i - R_j)
 	\end{equation}
 
-	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor is expected to perform at twice the level of the other. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
+	The rating difference \textit{is} the expected performance difference: a rating gap of $\ln(2) \approx 0.69$ means one competitor's latent skill is twice the level of the other. Deep-tail pathologies are handled by inflating observation noise for very weak finishes, not by deforming the log-ratio mean link, so the prediction mapping remains globally reversible through the exponential function.
 
 	\section{System Architecture and Algorithm}
-	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space, augmented with a per-competitor dispersion estimate.
+
+	\subsection{Generative Model}
+	The system models each competitor's latent (hidden) skill as a Gaussian distribution in log-performance space. Each competitor $i$ possesses a latent performance parameter $P_i$, representing their true current skill. On match day, the competitor produces a realized performance $X_i$ whose logarithm is a noisy draw centered on their latent skill:
+	\begin{equation}
+		\ln(X_i) = \ln(P_i) + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\, \sigma_{\mathrm{sport}}^2 + \sigma_i^2)
+	\end{equation}
+	The noise term $\varepsilon_i$ combines the irreducible environmental noise of the sport ($\sigma_{\mathrm{sport}}^2$) with competitor $i$'s individual performance dispersion ($\sigma_i^2$). The scoreboard reports only the normalized ratio $S_i = X_i / \xwin$, where $\xwin = \max_j X_j$ is the realized winning performance. The system's rating $R_i$ is a Bayesian estimate of $\ln(P_i)$---the competitor's current latent log-performance---maintained as a Gaussian posterior with mean $R_i$ and variance $V_i$ that evolves with each observation.
 
 	\subsection{State Representation}
 	Each competitor $i$ is defined by four variables:
 	\begin{itemize}
-		\item \textbf{$R_i$ (Rating):} The expected mean of their natural log performance. An average baseline competitor can be anchored at 0.
+		\item \textbf{$R_i$ (Rating):} The system's current estimate of $\ln(P_i)$, the competitor's latent log-performance. An average baseline competitor can be anchored at $R_i = 0$.
 		\item \textbf{$V_i$ (Variance):} The epistemic uncertainty in a rating: ``how big is the distribution of the possible underlying skill variable around the rating?'' High for new competitors, decreasing as they record more scores, but capable of increasing in response to surprising results.
 		\item \textbf{$\sigmai$ (Performance Dispersion):} The aleatoric uncertainty in a rating: ``how much does a competitor's performance naturally vary from event to event?'' Tracks whether a competitor is consistent (i.e., sees generally small rating updates) or prone to large swings (sees large ones).
 		\item \textbf{$m_i$ (Innovation Momentum):} An exponential moving average of recent prediction errors. Used to distinguish directional skill trends (breakouts or collapses) from zero-mean aleatoric scatter.
@@ -204,14 +218,14 @@
 	High-variance and high-dispersion competitors naturally receive less influence.
 
 	\subsubsection*{Step 3: Establish the Core Match Baseline ($B_{-i}$)}
-	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores. Recalling that $L_i = \ln(P_i) - \ln(P_{\mathrm{max}})$, we can expand this to:
+	Calculate per-competitor baseline residuals by comparing their expected ratings against their log-scores. Recalling that $L_i = \ln(X_i) - \ln(\xwin)$, we can expand this to:
 	\begin{align}
 		a_i &= R_i - L_i \nonumber \\
-		&= R_i - (\ln(P_i) - \ln(P_{\mathrm{max}})) \nonumber \\
-		&= (R_i - \ln(P_i)) + \ln(P_{\mathrm{max}})
+		&= R_i - (\ln(X_i) - \ln(\xwin)) \nonumber \\
+		&= (R_i - \ln(X_i)) + \ln(\xwin)
 	\end{align}
 
-	Because the expected value of a competitor's absolute performance error $(R_i - \ln(P_i))$ is zero, $a_i$ acts as a noisy observation of the winner's latent absolute performance. The field's residuals collectively answer the question: ``Based on the known skill of the competitors, what latent rating was required to shoot exactly 100\% today?''
+	Because $R_i$ tracks $\ln(P_i)$ and $\ln(X_i) = \ln(P_i) + \varepsilon_i$ where $\varepsilon_i$ is zero-mean match-day noise, the term $(R_i - \ln(X_i))$ has expected value zero. Consequently, $a_i$ is a noisy observation of $\ln(\xwin)$---the winner's realized absolute performance on the day. The field's residuals collectively answer the question: ``Based on the known skill of the competitors, what realized performance corresponded to 100\% today?''
 
 	To prevent extreme outliers (e.g., a competitor suffering a catastrophic equipment failure) from dragging the global mathematical anchor, we apply a Huber-style robust weighting. First, compute a raw, prior-regularized baseline using the core weights:
 	\begin{equation}
@@ -238,7 +252,7 @@
 	\begin{equation}
 		\delta_{ij} = (L_i - L_j) - (R_i - R_j)
 	\end{equation}
-	Crucially, because $L_i - L_j = \ln(P_i/P_{max}) - \ln(P_j/P_{max}) = \ln(P_i/P_j)$, the $P_{max}$ anchor cancels out entirely. This pairwise comparison isolates the pure relative performance margin and is structurally immune to the winner's curse.
+	Crucially, because $L_i - L_j = \ln(X_i/\xwin) - \ln(X_j/\xwin) = \ln(X_i/X_j)$, the $\xwin$ anchor cancels out entirely. This pairwise comparison isolates the pure ratio of realized performances and is structurally immune to the winner's curse.
 
 	Through algebraic rearrangement, we can express this residual using the terms from Step 3:
 	\begin{equation}
@@ -257,14 +271,14 @@
 	\begin{equation}
 		O_i = L_i + B_{\mathrm{obs}}
 	\end{equation}
-	To understand why this recovers the absolute performance, consider the pure baseline case\footnote{\(\blocal\) is simply an alternative estimate of the exact same underlying quantity (the winner's latent performance \(\pmax\)). It is omitted here strictly for notational simplicity; its inclusion does not alter the fundamental cancellation.} ($\alpha = 0$, so $B_{\mathrm{obs}} = \bloo$). Because the baseline is the field's estimate of the winner's performance ($\ln(P_{\mathrm{max}})$), substituting $L_i$  reveals:
+	To understand why this recovers the realized performance, consider the pure baseline case\footnote{\(\blocal\) is simply an alternative estimate of the exact same underlying quantity (the winner's realized performance $\xwin$). It is omitted here strictly for notational simplicity; its inclusion does not alter the fundamental cancellation.} ($\alpha = 0$, so $B_{\mathrm{obs}} = \bloo$). Because the baseline is the field's estimate of $\ln(\xwin)$, substituting $L_i$ reveals:
 	\begin{align*}
-		O_i &\approx (\ln(P_i) - \ln(P_{\mathrm{max}})) + \ln(P_{\mathrm{max}}) \\
-		&= \ln(P_i)
+		O_i &\approx (\ln(X_i) - \ln(\xwin)) + \ln(\xwin) \\
+		&= \ln(X_i)
 	\end{align*}
-	By adding the baseline to the log-score, the nuisance anchor perfectly cancels out. This translates the competitor's relative match percentage back into an absolute global rating scale.
+	By adding the baseline to the log-score, the nuisance anchor perfectly cancels out. The observed performance $O_i$ therefore recovers $\ln(X_i)$---the competitor's realized match-day log-performance on the absolute global rating scale.
 
-	The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
+	The nominal blend weight $\alpha$ may be multiplied by a taper in $\alpha_i$ that ramps from 0 to 1 as the number of available pairwise opponents increases, so sparse opponent sets rely cleanly on the global baseline; see Section \ref{sec:weakfield} for the one used in the reference implementation.
 
 	Empirical testing on well-mixed, large-field matches demonstrates that $B_{\mathrm{local}}$ frequently converges with $B_{-i}$, allowing $\alpha$ to be tuned to 0 for a strictly $\mathcal{O}(N)$ global-only update. However, retaining the pairwise blend enables the model to gracefully handle stratified fields. In practical shooting, competitors often shoot in scheduled squads across multiple days, exposing them to varying environmental conditions (e.g., a ``super squad'' of elite competitors shooting in heavy rain, while the rest of the field shoots a different schedule in ideal weather). By blending in $B_{\mathrm{local}}$, the model leans on local peer comparisons---competitors facing the exact same physical and environmental topology---preventing the global baseline from washing out localized structural truths.
 
@@ -304,13 +318,17 @@
 	\end{equation}
 	When $\bar{\mu} = 0$ (a field of entirely new competitors), the penalty reaches $\psi^2$, safely throttling the update velocity for the entire cohort. As the competitors log their first few matches, $\bar{\mu}$ grows logarithmically, driving a rapid initial decay in the novelty penalty until it reaches exactly zero for mature fields.
 
-	Because $\sigma_{\mathrm{novel}}^2$ represents topological isolation rather than physical variance, we define an Observation Quality scalar $Q_i \in (0,1]$. This scalar tracks the fraction of total observation noise that arises from genuine physical components, ensuring that state variables tracking true competitor volatility remain perfectly shielded from artificial inflation:
+	Because $\sigma_{\mathrm{novel}}^2$ represents topological isolation rather than physical variance, we define an Observation Quality scalar $Q_i \in (0,1]$ as a heuristic denoising factor:
 	\begin{equation}
 		R_{\mathrm{obs},i} = R_{\mathrm{clean},i} + \sigma_{\mathrm{novel}}^2
 	\end{equation}
 	\begin{equation}
 		Q_i = \frac{R_{\mathrm{clean},i}}{R_{\mathrm{obs},i}}
 	\end{equation}
+
+	For the Kalman mean update (Step 7), observation quality is handled automatically: when structural noise inflates $R_{\mathrm{obs},i}$, the Kalman gain $K_i = V_i^{\mathrm{age}} / (V_i^{\mathrm{age}} + R_{\mathrm{obs},i})$ shrinks, and the rating barely moves. However, the momentum and dispersion trackers \mbox{(Steps 8--9)} are plain exponential moving averages with no built-in gain denominator---they process whatever innovation is fed to them at their configured adaptation rate. Without correction, a degenerate field inflated by novelty variance would pump structurally meaningless signal into these trackers at full strength.
+
+	$Q_i$ fills this gap by playing the role of an observation-quality gate for the non-Kalman-filtered state variables. It is more selective than the Kalman gain: the gain discounts based on \emph{all} observation noise (physical and structural alike), while $Q_i$ strips only the structural component, deliberately leaving physical noise intact. This selectivity is essential because the adaptation trackers measure different things about a competitor's behavior: genuine physical outliers \emph{should} reach the shock detector and shatter epistemic confidence, but artificial noise from unanchored fields should not inflate momentum or dispersion.
 
 	\subsubsection*{Step 7: Filter Innovation and Mean Update}
 	The raw innovation measures how surprising the competitor's observed performance was relative to their current expected rating:
@@ -344,17 +362,17 @@
 	\end{align}
 	The \textit{physical innovation} $\ephys$ strips out structural and topological noise but retains heavy-tailed physical outliers. The \textit{robust innovation} $\erobust$ additionally applies the Student-$t$ damping to ignore single-event anomalies.
 
-	Update the competitor's innovation momentum using the structural innovation, ensuring it only builds upon believable, sustained trends. To prevent new competitors from accumulating false momentum during initial convergence, we apply the certainty factor $c_i$ to the adaptation rate:
+	Update the competitor's innovation momentum using the robust innovation, ensuring it only builds upon believable, sustained trends. To prevent new competitors from accumulating false momentum during initial convergence, we apply the certainty factor $c_i$ to the adaptation rate:
 	\begin{equation}
 		\lambda_i^{\mathrm{eff}} = \lambda \cdot \max(0.25, c_i)
 	\end{equation}
 	\begin{equation}
-		m_i \leftarrow (1 - \lambda_i^{\mathrm{eff}}) m_i + \lambda_i^{\mathrm{eff}} e_i^{\mathrm{struct}}
+		m_i \leftarrow (1 - \lambda_i^{\mathrm{eff}}) m_i + \lambda_i^{\mathrm{eff}} \erobust
 	\end{equation}
 
-	We then evaluate the system for necessary variance injection using two distinct pathways: a threshold-based single-event shock, and a continuous trend penalty. The Variance Surprise evaluation utilizes the clean innovation. This guarantees that massive outliers caused by degenerate or unanchored fields are safely ignored, but massive outliers caused by genuine physical deviations legitimately shatter the filter's epistemic confidence:
+	We then evaluate the system for necessary variance injection using two distinct pathways: a threshold-based single-event shock, and a continuous trend penalty. The Variance Surprise evaluation utilizes the physical innovation. This guarantees that massive outliers caused by degenerate or unanchored fields are safely ignored, but massive outliers caused by genuine physical deviations legitimately shatter the filter's epistemic confidence:
 	\begin{equation}
-		\text{Shock}_i = \max\!\left(0,\; (e_i^{\mathrm{clean}})^2 - T_i\right)
+		\text{Shock}_i = \max\!\left(0,\; (\ephys)^2 - T_i\right)
 	\end{equation}
 	\begin{equation}
 		\text{Trend}_i = \frac{m_i^2}{\lambda_i^{\mathrm{eff}}}
@@ -372,11 +390,11 @@
 	\begin{equation}
 		\sigma_{i,\mathrm{lo}}^2 = 0.001\, V_{\mathrm{start}}, \qquad \sigma_{i,\mathrm{hi}}^2 = V_{\max}
 	\end{equation}
-	To isolate true erratic execution from underlying skill trends, we calculate the trend-adjusted squared residual by subtracting the momentum $m_i$ from the clean innovation $e_i^{\mathrm{clean}}$:
+	To isolate true erratic execution from underlying skill trends, we calculate the trend-adjusted squared residual by subtracting the momentum $m_i$ from the physical innovation $\ephys$:
 	\begin{equation}
-		E_i = \max\!\left(0,\; (e_i^{\mathrm{clean}} - m_i)^2 - V_i^{\mathrm{age}} - \sigma_{\mathrm{sport}}^2\right)
+		E_i = \max\!\left(0,\; (\ephys - m_i)^2 - V_i^{\mathrm{age}} - \sigma_{\mathrm{sport}}^2\right)
 	\end{equation}
-	By utilizing the clean innovation, we ensure that artificial match anomalies (such as an unanchored topological island) do not permanently inflate a competitor's aleatoric profile, while real-world volatility does. Furthermore, subtracting $m_i$ prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
+	This estimator is approximate: the $Q_i$ scaling attenuates the innovation magnitude rather than exactly removing structural variance components from the squared residual, and the subtracted terms $V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2$ omit the baseline estimation variance $\mathrm{Var}(\bobs)$. In practice, both omissions are conservative---in mature fields, $Q_i \approx 1$ and $\mathrm{Var}(\bobs)$ is negligible; in degenerate fields, $Q_i$ suppresses the entire driving term. By utilizing the physical innovation, artificial match anomalies (such as an unanchored topological island) do not permanently inflate a competitor's aleatoric profile, while real-world volatility does. Furthermore, subtracting $m_i$ prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
 
 	We form an instantaneous target representing the realized behavioral variance for the current observation:
 	\begin{equation}

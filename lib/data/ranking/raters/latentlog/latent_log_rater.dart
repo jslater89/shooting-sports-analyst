@@ -566,16 +566,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // Momentum is a signed EMA over innovation.
     // We operate on 'clean' innovation, i.e. only that portion of innovation that
     // is not explained by degenerate fields, tail noise, etc.
-    final structuralInnovation = dampedInnovation * obsQuality;
+    final robustInnovation = dampedInnovation * obsQuality;
     final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
     final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
-        effectiveMomentumAdaptationRate * structuralInnovation;
+        effectiveMomentumAdaptationRate * robustInnovation;
 
     // Use the stronger of surprise or momentum to add to variance.
-    // For surprise, we explicitly don't want the full structural innovation, but we do want the clean innovation.
+    // For surprise, we explicitly don't want the full robust innovation, but we do want the physical innovation.
     // We want to catch big outliers, but we don't want to catch big outliers caused by degenerate fields.
-    final cleanInnovation = innovation * obsQuality;
-    final surpriseCorrection = (cleanInnovation * cleanInnovation) - totalNoise;
+    final physicalInnovation = innovation * obsQuality;
+    final surpriseCorrection = (physicalInnovation * physicalInnovation) - totalNoise;
     final momentumCorrection = (newMomentum * newMomentum) / settings.momentumAdaptationRate;
     final strongerCorrection = max(surpriseCorrection, momentumCorrection);
 
@@ -604,7 +604,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // 1. variance.
     // 2. inherent sport noise.
     // and 3. an ongoing trend as tracked by momentum.
-    final denoisedInnovationVariance = max(0, pow(structuralInnovation - newMomentum, 2) - shooterVariance - settings.sportVariance);
+    final denoisedInnovationVariance = max(0, pow(physicalInnovation - newMomentum, 2) - shooterVariance - settings.sportVariance);
     final clampedInstantaneousVariance = denoisedInnovationVariance.clamp(minimumDispersion, maxInstantaneousVariance);
 
     final effectiveDispersionAdaptationRate = settings.dispersionAdaptationRate * max(0.25, dispersionCertainty);
