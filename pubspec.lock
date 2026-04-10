@@ -363,14 +363,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
-  dascade:
-    dependency: "direct main"
-    description:
-      name: dascade
-      sha256: "7323484740210c0a52028a24cfd08424be636a1a02866092c630b5dc779900ac"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
   data:
     dependency: "direct main"
     description:
