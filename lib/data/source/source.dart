@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/source/hitfacto_rs/hitfacto_rs_sour
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
