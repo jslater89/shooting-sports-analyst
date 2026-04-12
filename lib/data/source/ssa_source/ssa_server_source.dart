@@ -57,14 +57,12 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
     var config = configProvider.currentConfig;
     var debugMode = FlutterOrNative.debugModeProvider.kDebugMode;
     var serverBaseUrl = config.ssaServerBaseUrl;
-    var serverX25519PubBase64 = config.ssaServerX25519PubBase64;
     var serverEd25519PubBase64 = config.ssaServerEd25519PubBase64;
 
     baseUrl = serverBaseUrl;
     initializeAuthClient(
       serverBaseUrl: serverBaseUrl,
       allowDebugCertificates: debugMode,
-      serverX25519PubBase64: serverX25519PubBase64,
       serverEd25519PubBase64: serverEd25519PubBase64,
     );
 
@@ -82,7 +80,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
 
   bool get canUpload {
     var sessionResult = ssaAuthClient.getCurrentSession();
-    if(sessionResult.isErr()) {
+    if (sessionResult.isErr()) {
       return false;
     }
     var session = sessionResult.unwrap();
@@ -91,13 +89,13 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
 
   Future<bool> authenticatedCanUpload() async {
     var sessionResult = await ssaAuthClient.getSession();
-    if(sessionResult.isErr()) {
-      if(sessionResult.unwrapErr() != AuthError.unauthenticated) {
+    if (sessionResult.isErr()) {
+      if (sessionResult.unwrapErr() != AuthError.unauthenticated) {
         return false;
       }
       await ssaAuthClient.authenticate();
       sessionResult = await ssaAuthClient.getSession();
-      if(sessionResult.isErr()) {
+      if (sessionResult.isErr()) {
         return false;
       }
     }

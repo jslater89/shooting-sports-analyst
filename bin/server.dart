@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/dart_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server_v2.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/cache/constants.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -53,6 +54,8 @@ Future<void> startServerStandalone() async {
   _log.i("Server initialization completed.");
 
   final authServer = SSAAuthServer();
+  final authServerV2 = SSAAuthServerV2();
   await authServer.setupKeys();
-  await shelfRun(() => initApiServer(authServer));
+  await authServerV2.setupKeys();
+  await shelfRun(() => initApiServer(authServer, authServerV2));
 }

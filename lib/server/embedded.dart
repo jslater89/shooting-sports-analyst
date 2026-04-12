@@ -7,6 +7,7 @@
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/dart_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server_v2.dart';
 import 'package:shooting_sports_analyst/data/cache/match/isolate_match_cache.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -54,15 +55,17 @@ void startServerEmbedded(EmbeddedServerStartData startData) async {
   _log.i("Server initialization completed.");
 
   final authServer = SSAAuthServer();
+  final authServerV2 = SSAAuthServerV2();
   await authServer.setupKeys();
-  await shelfRun(() => initApiServer(authServer),
+  await authServerV2.setupKeys();
+  await shelfRun(() => initApiServer(authServer, authServerV2),
     defaultBindAddress: startData.bindAddress ?? "0.0.0.0",
     defaultBindPort: startData.bindPort ?? 8081,
     defaultEnableHotReload: startData.devMode,
   );
 }
 
-Handler initApiServer(SSAAuthServer authServer) {
+Handler initApiServer(SSAAuthServer authServer, SSAAuthServerV2 authServerV2) {
   final app = Router().plus;
   app.use(createLoggerMiddleware());
   app.get("/", (request) => "Shooting Sports Analyst API ${VersionInfo.version}");
@@ -73,10 +76,18 @@ Handler initApiServer(SSAAuthServer authServer) {
   var authService = AuthService.withServer(authServer, [createLoggerMiddleware()]);
   app.mount("/auth", authService.router);
 
-  var matchService = MatchService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
+  var authServiceV2 = AuthServiceV2.withServer(authServerV2, [createLoggerMiddleware()]);
+  app.mount("/auth/v2", authServiceV2.router);
+
+  final authMw = createDispatchingSSAAuthMiddleware(
+    authServerV1: authServer,
+    authServerV2: authServerV2,
+  );
+
+  var matchService = MatchService([createLoggerMiddleware(), authMw]);
   app.mount("/match", matchService.router);
 
-  var registrationService = RegistrationService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
+  var registrationService = RegistrationService([createLoggerMiddleware(), authMw]);
   app.mount("/registration", registrationService.router);
 
   return app.call;

@@ -4,32 +4,32 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:http/http.dart' as http;
-import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/auth_client.dart';
-import 'package:shooting_sports_analyst/logger.dart';
+import "package:http/http.dart" as http;
+import "package:shooting_sports_analyst/closed_sources/ssa_auth_client/auth_client_v2.dart";
+import "package:shooting_sports_analyst/logger.dart";
 
 var _log = SSALogger("SSAAuth");
 
 bool ssaAuthInitialized = false;
-SSAPublicAuthClient? _client;
+SSAPublicAuthClientV2? _client;
 
-SSAPublicAuthClient get ssaAuthClient => _client != null ? _client! : throw StateError("SSA auth client not initialized");
+SSAPublicAuthClientV2 get ssaAuthClient =>
+    _client != null ? _client! : throw StateError("SSA auth client not initialized");
 
 void initializeAuthClient({
   required String serverBaseUrl,
   required bool allowDebugCertificates,
-  required String serverX25519PubBase64,
   required String serverEd25519PubBase64,
 }) {
-  if(ssaAuthInitialized) {
+  if (ssaAuthInitialized) {
     return;
   }
-  _client = SSAPublicAuthClient(
+  _client = SSAPublicAuthClientV2(
     baseUrl: serverBaseUrl,
     allowDebugCertificates: allowDebugCertificates,
-    serverX25519PubBase64: serverX25519PubBase64,
     serverEd25519PubBase64: serverEd25519PubBase64,
   );
+  ssaAuthInitialized = true;
 }
 
 Future<http.Response> makeAuthenticatedRequest(
@@ -61,16 +61,17 @@ Future<http.Response> makeAuthenticatedRequest(
   http.Response response;
   if (method == "GET") {
     response = await http.get(uri, headers: allHeaders);
-  } else if (method == "POST") {
+  }
+  else if (method == "POST") {
     response = await http.post(uri, headers: allHeaders, body: bodyBytesList);
-  } else {
+  }
+  else {
     throw Exception("Unsupported HTTP method: $method");
   }
 
-  // If auth failed, try refreshing session once
   if (response.statusCode == 401) {
     _log.w("Refreshing ostensibly valid session");
-      var refreshResult = await ssaAuthClient.refreshSession(session);
+    var refreshResult = await ssaAuthClient.refreshSession(session);
     if (refreshResult.isOk()) {
       session = refreshResult.unwrap();
       authHeaders = await ssaAuthClient.getHeaders(
@@ -85,7 +86,8 @@ Future<http.Response> makeAuthenticatedRequest(
       };
       if (method == "GET") {
         response = await http.get(uri, headers: allHeaders);
-      } else if (method == "POST") {
+      }
+      else if (method == "POST") {
         response = await http.post(uri, headers: allHeaders, body: bodyBytesList);
       }
     }
@@ -102,4 +104,3 @@ bool get isCurrentlyAuthenticated {
 Future<void> refreshAuth() async {
   await ssaAuthClient.getSession();
 }
-
