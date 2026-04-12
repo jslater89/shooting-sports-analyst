@@ -151,6 +151,11 @@ class SerializedConfig {
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? ssaServerAuthPrivateKeyPath;
 
+  /// When set, the open [ssa_auth_client_stub] uses [POST /auth/v2/exchange] with `apiKey`
+  /// against [ssa_auth_server_stub] (not wire compatible with full auth).
+  @JsonKey(defaultValue: null, includeIfNull: false)
+  String? ssaServerStubApiKey;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) =>
       _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
@@ -172,6 +177,7 @@ class SerializedConfig {
     required this.hitfactoRsApiKey,
     required this.ssaServerAuthIdentityName,
     required this.ssaServerAuthPrivateKeyPath,
+    required this.ssaServerStubApiKey,
   });
 
   @override
@@ -208,6 +214,9 @@ class SerializedConfig {
     builder.writeln(
       "\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath",
     );
+    builder.writeln(
+      "\tssaServerStubApiKey = ${ssaServerStubApiKey == null || ssaServerStubApiKey!.isEmpty ? "(empty)" : "(set)"}",
+    );
     return builder.toString();
   }
 
@@ -231,6 +240,7 @@ class SerializedConfig {
       hitfactoRsApiKey: hitfactoRsApiKey,
       ssaServerAuthIdentityName: ssaServerAuthIdentityName,
       ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
+      ssaServerStubApiKey: ssaServerStubApiKey,
     );
   }
 }

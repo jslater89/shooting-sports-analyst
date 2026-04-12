@@ -10,3 +10,4 @@ rm ssa_auth_client
 ln -s ssa_auth_client_stub ssa_auth_client
 
 rm ssa_auth_server
+ln -s ssa_auth_server_stub ssa_auth_server

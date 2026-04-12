@@ -4,18 +4,101 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import "dart:convert";
+import "dart:typed_data";
+
+import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/auth/auth_provider.dart";
+import "package:shooting_sports_analyst/flutter_native_providers.dart";
+import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/util.dart";
 
+final _log = SSALogger("SSAPublicAuthClientV2");
+
+bool _stubApiKeyConfigured() {
+  try {
+    final v = FlutterOrNative.configProvider.currentConfig.ssaServerStubApiKey?.trim();
+    return v != null && v.isNotEmpty;
+  }
+  catch (_) {
+    return false;
+  }
+}
+
+String? _stubApiKeyValue() {
+  try {
+    final v = FlutterOrNative.configProvider.currentConfig.ssaServerStubApiKey?.trim();
+    return v != null && v.isNotEmpty ? v : null;
+  }
+  catch (_) {
+    return null;
+  }
+}
+
+void _ignoreOpenClientCompatArgs({
+  required bool allowDebugCertificates,
+  String? serverEd25519PubBase64,
+}) {
+  if (allowDebugCertificates || serverEd25519PubBase64 != null) {
+    // Kept for constructor parity with the closed client; stub auth ignores certificates.
+  }
+}
+
+/// Open stub: [authenticate] posts `{"apiKey"}` to `/auth/v2/exchange`; [getHeaders] sends Bearer only.
 class SSAPublicAuthClientV2 extends TokenAuthProvider<SSASessionV2> {
+  SSASessionV2? session;
+
+  final String baseUrl;
+
   SSAPublicAuthClientV2({
-    required String baseUrl,
+    required this.baseUrl,
     bool allowDebugCertificates = false,
     String? serverEd25519PubBase64,
-  }) {}
+  }) {
+    _ignoreOpenClientCompatArgs(
+      allowDebugCertificates: allowDebugCertificates,
+      serverEd25519PubBase64: serverEd25519PubBase64,
+    );
+    if (!_stubApiKeyConfigured()) {
+      throw Exception(
+        "Open SSA auth stub: set ssaServerStubApiKey in config.toml (dev-only; matches ssa_auth_server_stub)",
+      );
+    }
+    _log.i("Stub SSA auth client: API key exchange, Bearer-only protected requests");
+  }
 
-  Future<AuthResult<SSASessionV2>> authenticate() {
-    return Future.value(Result.err(AuthError.unauthenticated));
+  Future<AuthResult<SSASessionV2>> authenticate() async {
+    final stubKey = _stubApiKeyValue();
+    if (stubKey == null) {
+      return Result.err(AuthError.unauthenticated);
+    }
+    final resp = await http.post(
+      Uri.parse("$baseUrl/auth/v2/exchange"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"apiKey": stubKey}),
+    );
+    if (resp.statusCode != 200) {
+      _log.w("Stub v2 exchange failed ${resp.statusCode}: ${resp.body}");
+      return Result.err(AuthError.serverInvalid);
+    }
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    final sessionId = data["sessionId"] as String?;
+    final exp = data["exp"] as int?;
+    if (sessionId == null || exp == null) {
+      _log.w("Stub v2 exchange response missing sessionId or exp");
+      return Result.err(AuthError.serverInvalid);
+    }
+    final rolesRaw = data["roles"] as List<dynamic>?;
+    final roles = rolesRaw == null ? <String>[] : rolesRaw.map((e) => e as String).toList();
+    final identityName = data["identityName"] as String?;
+    session = SSASessionV2(
+      sessionId: sessionId.trim(),
+      expUnix: exp,
+      sessionKey: Uint8List.fromList([1]),
+      roles: roles,
+      identityName: identityName,
+    );
+    return Result.ok(session!);
   }
 
   @override
@@ -25,29 +108,91 @@ class SSAPublicAuthClientV2 extends TokenAuthProvider<SSASessionV2> {
     required String path,
     required List<int> bodyBytes,
   }) {
-    return Future.value({});
+    return Future.value({
+      "authorization": "Bearer ${session.sessionId}",
+    });
   }
 
   @override
   Result<SSASessionV2, AuthError> getCurrentSession() {
+    final s = session;
+    if (s != null && s.isValid()) {
+      return Result.ok(s);
+    }
     return Result.err(AuthError.unauthenticated);
   }
 
   @override
   Future<AuthResult<SSASessionV2>> getSession() {
-    return Future.value(Result.err(AuthError.unauthenticated));
+    final s = session;
+    if (s != null && s.isValid()) {
+      if (s.getExpiration() != null && s.getExpiration()!.isBefore(DateTime.now().add(const Duration(minutes: 3)))) {
+        _log.i("Session expiring soon, reauthenticating");
+        return authenticate();
+      }
+      return Future.value(Result.ok(s));
+    }
+    _log.i("Reauthenticating invalid/expired session");
+    return authenticate();
   }
 
   @override
-  Future<bool> isAuthenticated() {
-    return Future.value(false);
+  Future<bool> isAuthenticated() async {
+    return session != null && session!.isValid();
   }
 
   @override
   Future<AuthResult<SSASessionV2>> refreshSession(SSASessionV2 currentSession) {
-    return Future.value(Result.err(AuthError.unauthenticated));
+    return authenticate();
   }
 }
 
 class SSASessionV2 implements Session {
+  final String sessionId;
+  final Uint8List sessionKey;
+  final int expUnix;
+  final List<String> roles;
+  final String? identityName;
+  int counter = 0;
+
+  SSASessionV2({
+    required this.sessionId,
+    required this.expUnix,
+    required this.sessionKey,
+    required this.roles,
+    this.identityName,
+  });
+
+  List<String> getRoles() {
+    return [...roles];
+  }
+
+  bool hasRole(String role) {
+    return roles.contains(role);
+  }
+
+  bool hasAnyRole(List<String> checkRoles) {
+    return roles.intersects(checkRoles);
+  }
+
+  DateTime? getExpiration() {
+    return DateTime.fromMillisecondsSinceEpoch(expUnix * 1000);
+  }
+
+  bool isValid() {
+    if (sessionId.isEmpty || sessionKey.isEmpty) {
+      _log.w("Presumptively invalid v2 session");
+      return false;
+    }
+    final exp = getExpiration();
+    if (exp == null) {
+      return false;
+    }
+    return exp.isAfter(DateTime.now());
+  }
+
+  @override
+  String toString() {
+    return "SSASessionV2(sessionId: $sessionId, sessionKey: (${sessionKey.length} bytes), counter: $counter, expiration: ${getExpiration()})";
+  }
 }
