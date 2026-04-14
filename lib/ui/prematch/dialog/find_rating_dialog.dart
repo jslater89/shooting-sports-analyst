@@ -11,15 +11,27 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/string_similarity.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 
 class FindRatingDialog extends StatefulWidget {
-  FindRatingDialog({super.key, required this.project, required this.group, required this.ratingsInUse, this.initialSearch, this.registration});
+  FindRatingDialog({
+    super.key,
+    required this.project,
+    required this.group,
+    required this.ratingsInUse,
+    this.initialSearch,
+    this.initialEndsWith = true,
+    this.registration,
+    this.sortMode = FindRatingSortMode.similarity,
+  });
   final Set<ShooterRating> ratingsInUse;
   final DbRatingProject project;
   final RatingGroup group;
   final String? initialSearch;
+  final bool initialEndsWith;
   final MatchRegistration? registration;
+  final FindRatingSortMode sortMode;
 
   @override
   State<FindRatingDialog> createState() => _FindRatingDialogState();
@@ -30,6 +42,7 @@ class FindRatingDialog extends StatefulWidget {
     required Set<ShooterRating> ratingsInUse,
     bool getRootTheme = false,
     String? initialSearch,
+    bool initialEndsWith = true,
     MatchRegistration? registration,
   }) async {
     BuildContext? rootContext;
@@ -41,6 +54,7 @@ class FindRatingDialog extends StatefulWidget {
       group: group,
       ratingsInUse: ratingsInUse,
       initialSearch: initialSearch,
+      initialEndsWith: initialEndsWith,
       registration: registration,
     );
     if(rootContext != null) {
@@ -65,11 +79,12 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
   List<ShooterRating> results = [];
   bool searching = false;
 
-  bool suffixSearch = true;
+  late bool suffixSearch;
 
   @override
   void initState() {
     super.initState();
+    suffixSearch = widget.initialEndsWith;
     if(widget.initialSearch != null) {
       searchController.text = widget.initialSearch!;
       _search(widget.initialSearch!);
@@ -88,7 +103,15 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
       searchMode: suffixSearch ? FindShooterSearchMode.endsWith : FindShooterSearchMode.contains,
     );
     results = dbResults.map((e) => widget.project.wrapDbRatingSync(e)).toList();
-    results.sort((a, b) => b.rating.compareTo(a.rating));
+    var referenceName = value.toLowerCase();
+    if(widget.registration != null && widget.registration!.shooterName != null) {
+      referenceName = widget.registration!.shooterName!;
+    }
+    results.sort((a, b) {
+      var aSimilarity = calculateSimilarity(referenceName, a.name);
+      var bSimilarity = calculateSimilarity(referenceName, b.name);
+      return bSimilarity.compareTo(aSimilarity);
+    });
     setStateIfMounted(() {
       searching = false;
     });
@@ -104,6 +127,9 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
       if(widget.registration?.shooterClassificationName != null) {
         registrationInfo += " - ${widget.registration?.shooterClassificationName}";
       }
+      if(widget.registration?.shooterMemberNumbers.isNotEmpty ?? false) {
+        registrationInfo += "\nMember numbers: ${widget.registration?.shooterMemberNumbers.join(", ")}";
+      }
     }
     return AlertDialog(
       title: Text("Find rating"),
@@ -115,7 +141,8 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
           children: [
             if(registrationInfo != null) Text(registrationInfo),
             Text("Enter a name or part of a name to find a rating. Up to 50 results are shown. For very common "
-            "names, you may need to use a more specific query."),
+            "names, you may need to use a more specific query. Ratings are sorted by "
+            "${widget.sortMode == FindRatingSortMode.similarity ? "similarity to the registration name" : "rating"}."),
             Row(
               children: [
                 Expanded(
@@ -172,5 +199,19 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
         TextButton(onPressed: () => Navigator.of(context).pop(null), child: Text("CANCEL")),
       ],
     );
+  }
+}
+
+enum FindRatingSortMode {
+  similarity,
+  rating;
+
+  String get uiLabel {
+    switch(this) {
+      case FindRatingSortMode.similarity:
+        return "Similarity";
+      case FindRatingSortMode.rating:
+        return "Rating";
+    }
   }
 }

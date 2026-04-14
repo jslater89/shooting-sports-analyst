@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/name_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
@@ -138,11 +139,11 @@ class _RatingLinksKey extends StatelessWidget {
                   var outerModel = context.read<MatchPrepPageModel>();
                   var match = outerModel.futureMatch;
                   var project = outerModel.ratingProject;
-                  var (matched, unmatched) = await match.matchRegistrationsToRatingsFromDatabase(outerModel.sport, project, group);
+                  var (matched, unmatched) = await match.matchRegistrationsToRatingsFromDatabase(outerModel.sport, project, group, searchForUnmatchedRatings: true);
                   _log.i("Matched ${matched.length} registrations out of ${unmatched.length} unmatched registrations for group ${group.name}");
 
                   // reload registrations in the model, since we need to update the UI
-                  outerModel.loadMatchingRegistrations(notify: true);
+                  outerModel.loadMatchingRegistrations(notify: true, unmatchedResults: unmatched);
                 },
               ),
             )
@@ -187,6 +188,16 @@ class _RatingLinksEntry extends StatelessWidget {
     String ratingString = "(n/a)";
     if(rating != null) {
       ratingString = "${rating.name} - ${rating.lastClassification?.shortDisplayName ?? "(unclassified)"} - (${rating.formattedRating})";
+    }
+    else {
+      final count = model.unmatchedRegistrationCandidateCounts[entry] ?? 0;
+      final hasCommonNickname = entry.shooterName?.hasCommonNickname ?? false;
+      if(count > 0) {
+        ratingString = "($count candidates)";
+      }
+      else if(hasCommonNickname) {
+        ratingString = "(possible nickname)";
+      }
     }
 
     Widget ratingText = Text(ratingString);
@@ -239,7 +250,9 @@ class _RatingLinksActions extends StatelessWidget {
   Widget build(BuildContext context) {
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var ratingsInUse = model.ratingsInUse;
-    var lastName = registration.shooterName?.split(" ").lastOrNull;
+
+    final result = registration.shooterName?.extractSurname();
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -254,7 +267,8 @@ class _RatingLinksActions extends StatelessWidget {
               group: group,
               ratingsInUse: ratingsInUse,
               getRootTheme: true,
-              initialSearch: lastName,
+              initialSearch: result?.surname,
+              initialEndsWith: result?.isFinal ?? true,
             );
 
             if(rating != null) {

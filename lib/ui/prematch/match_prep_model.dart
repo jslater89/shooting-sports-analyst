@@ -39,6 +39,7 @@ class MatchPrepPageModel extends ChangeNotifier {
 
   List<String> knownSquads = [];
   Map<MatchRegistration, ShooterRating> matchedRegistrations = {};
+  Map<MatchRegistration, int> unmatchedRegistrationCandidateCounts = {};
   Set<ShooterRating> ratingsInUse = {};
 
   MatchPrepPageModel({required this.prep});
@@ -250,8 +251,19 @@ class MatchPrepPageModel extends ChangeNotifier {
   // at once with a single notifyListeners at the end
 
   /// Load known registrations for this match into [matchedRegistrations].
-  void loadMatchingRegistrations({bool notify = true}) async {
+  void loadMatchingRegistrations({
+    bool notify = true,
+    List<UnmatchedRegistration> unmatchedResults = const [],
+  }) async {
     var registrations = futureMatch.getRegistrationsFor(sport);
+
+    Map<String, UnmatchedRegistration> unmatchedMap = {};
+    for(var unmatched in unmatchedResults) {
+      if(unmatched.matchingRatings.isNotEmpty) {
+        unmatchedMap[unmatched.registration.entryId] = unmatched;
+      }
+    }
+
     int matched = 0;
     for(var registration in registrations) {
       if(registration.shooterMemberNumbers.isNotEmpty) {
@@ -275,6 +287,10 @@ class MatchPrepPageModel extends ChangeNotifier {
           ratingsInUse.add(matchedRegistrations[registration]!);
           matched++;
         }
+      }
+      else {
+        final count = unmatchedMap[registration.entryId]?.matchingRatings.length ?? 0;
+        unmatchedRegistrationCandidateCounts[registration] = count;
       }
     }
     if(notify) {

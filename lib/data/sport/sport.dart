@@ -105,7 +105,9 @@ class Sport {
   /// The deduplication logic used for this sport. Leave null if deduplication
   /// is unnecessary.
   final ShooterDeduplicator? shooterDeduplicator;
-  ///
+  /// The minimum length of a member number for a competitor to be considered valid.
+  final int minimumMemberNumberLength;
+
   final RatingStrengthProvider? ratingStrengthProvider;
   final PubstompProvider? pubstompProvider;
   final RatingGroupsProvider? builtinRatingGroupsProvider;
@@ -139,6 +141,7 @@ class Sport {
     /// constructor body to retrieve display settings, if present.
     SportDisplaySettings Function(Sport)? displaySettingsBuilder,
     this.shooterDeduplicator,
+    this.minimumMemberNumberLength = 2,
     this.initialEloRatings = const {},
     this.initialOpenskillRatings = const {},
     this.initialGenericRatingMultipliers = const {},

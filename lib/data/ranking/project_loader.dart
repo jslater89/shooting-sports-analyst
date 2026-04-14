@@ -1122,7 +1122,7 @@ class RatingProjectLoader {
       // Something like "B9" is on the outside edge of plausible member numbers,
       // but there are a lot of competitors in USPSA sets with numbers like "A",
       // or "0", which we want to leave out to avoid cluttering blacklists.
-      bool validCompetitor = processed.length > 1 && !s.reentry;
+      bool validCompetitor = processed.length >= sport.minimumMemberNumberLength && !s.reentry;
       if(validCompetitor) {
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;

@@ -563,9 +563,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  Future<DataSourceResult<List<DbShooterRating>>> findShooterRatings(RatingGroup group, String name, {int limit = 10}) async {
+  Future<DataSourceResult<List<DbShooterRating>>> findShooterRatings(RatingGroup group, String name, {FindShooterSearchMode searchMode = FindShooterSearchMode.contains, int limit = 10}) async {
     try {
-      return DataSourceResult.ok(await AnalystDatabase().findShooterRatings(project: this, group: group, name: name, limit: limit));
+      return DataSourceResult.ok(await AnalystDatabase().findShooterRatings(project: this, group: group, name: name, searchMode: searchMode, limit: limit));
     }
     catch(e) {
       _log.e("Error finding shooter ratings: $e");
@@ -574,9 +574,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  List<DbShooterRating> findShooterRatingsSync(RatingGroup group, String name, {int limit = 10}) {
+  List<DbShooterRating> findShooterRatingsSync(RatingGroup group, String name, {FindShooterSearchMode searchMode = FindShooterSearchMode.contains, int limit = 10}) {
     try {
-      return AnalystDatabase().findShooterRatingsSync(project: this, group: group, name: name, limit: limit);
+      return AnalystDatabase().findShooterRatingsSync(project: this, group: group, name: name, searchMode: searchMode, limit: limit);
     }
     catch(e) {
       _log.e("Error finding shooter ratings: $e");

@@ -9,10 +9,12 @@ import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/name_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -167,35 +169,83 @@ class FutureMatch {
   ///
   /// Returns a tuple of the number of registrations matched and the number of unmatched registrations
   /// at the start of the process.
-  Future<(List<MatchRegistration> matched, List<MatchRegistration> unmatched)> matchRegistrationsToRatingsFromDatabase(Sport sport, DbRatingProject project, RatingGroup group) async {
+  ///
+  /// If [searchForUnmatchedRatings] is true, registrations without an exact match will extract the surname
+  /// and search for ratings that end with (or contain, in the case of non-final surnames) that surname.
+  Future<(List<MatchRegistration> matched, List<UnmatchedRegistration> unmatched)> matchRegistrationsToRatingsFromDatabase(
+    Sport sport,
+    DbRatingProject project,
+    RatingGroup group,
+    {
+      bool searchForUnmatchedRatings = false,
+    }
+  ) async {
 
-    List<MatchRegistration> unmatched = getUnmatchedRegistrationsFor(sport, group);
+    List<MatchRegistration> unmatchedRegistrations = getUnmatchedRegistrationsFor(sport, group);
+
+    /// A map of unmatched registration searches to the search results, to avoid duplicate searches.
+    Map<_UnmatchedRegistrationSearch, List<DbShooterRating>> unmatchedRatings = {};
+
+    List<UnmatchedRegistration> unmatchedResults = [];
 
     List<MatchRegistration> updateRequired = [];
-    for(var registration in unmatched) {
+    for(var registration in unmatchedRegistrations) {
       if(registration.shooterName == null) {
         continue;
       }
       var processedName = ShooterDeduplicator.processNameString(registration.shooterName!);
-      var ratings = await project.getRatingsByDeduplicatorName(group, processedName);
-      if(ratings.isErr()) {
-        _log.w("Error getting ratings for deduplicator name $processedName", error: ratings.unwrapErr());
+      var ratingsRes = await project.getRatingsByDeduplicatorName(group, processedName);
+      if(ratingsRes.isErr()) {
+        _log.w("Error getting ratings for deduplicator name $processedName", error: ratingsRes.unwrapErr());
         continue;
       }
-      for(var rating in ratings.unwrap()) {
+
+      // If we have exactly one matching rating, we can resolve the registration automatically.
+      // Otherwise, add it to the unmatched results list for user action.
+      List<DbShooterRating> exactMatchingRatings = [];
+      List<DbShooterRating> matchingRatingsByName = [];
+      final ratings = ratingsRes.unwrap();
+      for(var rating in ratings) {
+        matchingRatingsByName.add(rating);
         var registrationClassification = sport.classifications.lookupByName(registration.shooterClassificationName);
         if(rating.lastClassification?.name == registrationClassification?.name) {
-          registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
-          registration.resolvedAutomatically = true;
-          updateRequired.add(registration);
+          exactMatchingRatings.add(rating);
         }
+      }
+
+      if(exactMatchingRatings.length == 1) {
+        registration.shooterMemberNumbers = exactMatchingRatings[0].knownMemberNumbers.toList();
+        registration.resolvedAutomatically = true;
+        updateRequired.add(registration);
+      }
+      else {
+        if(exactMatchingRatings.isEmpty && searchForUnmatchedRatings) {
+          var surname = registration.shooterName?.extractSurname();
+          if(surname != null) {
+            var search = _UnmatchedRegistrationSearch(surname: surname.surname, isFinal: surname.isFinal);
+            var cachedResult = unmatchedRatings[search];
+
+            if(cachedResult != null) {
+              matchingRatingsByName.addAll(cachedResult);
+            }
+            else {
+              var ratings = await project.findShooterRatings(group, search.surname, searchMode: search.isFinal ? FindShooterSearchMode.endsWith : FindShooterSearchMode.contains, limit: 50);
+              if(ratings.isOk()) {
+                final foundRatings = ratings.unwrap();
+                unmatchedRatings[search] = foundRatings;
+                matchingRatingsByName.addAll(foundRatings);
+              }
+            }
+          }
+        }
+        unmatchedResults.add(UnmatchedRegistration(registration: registration, matchingRatings: matchingRatingsByName));
       }
     }
 
     if(updateRequired.isNotEmpty) {
       await AnalystDatabase().saveMatchRegistrations(updateRequired);
     }
-    return (updateRequired, unmatched);
+    return (updateRequired, unmatchedResults);
   }
 
   /// Update the saved registrations for this match from its saved mappings.
@@ -264,5 +314,41 @@ class FutureMatch {
   @override
   String toString() {
     return "$eventName ($matchId) (${programmerYmdFormat.format(date)})";
+  }
+}
+
+class UnmatchedRegistration {
+  final MatchRegistration registration;
+  final List<DbShooterRating> matchingRatings;
+
+  UnmatchedRegistration({
+    required this.registration,
+    required this.matchingRatings,
+  });
+}
+
+class _UnmatchedRegistrationSearch {
+  String surname;
+  bool isFinal;
+
+  _UnmatchedRegistrationSearch({
+    required this.surname,
+    required this.isFinal,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if(other is _UnmatchedRegistrationSearch) {
+      return surname == other.surname && isFinal == other.isFinal;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => surname.hashCode ^ isFinal.hashCode;
+
+  @override
+  String toString() {
+    return "UnmatchedRegistrationSearch(surname: $surname, isFinal: $isFinal)";
   }
 }

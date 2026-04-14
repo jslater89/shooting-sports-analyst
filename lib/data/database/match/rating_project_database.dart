@@ -349,7 +349,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     FindShooterSearchMode searchMode = FindShooterSearchMode.contains,
     int limit = 10,
   }) {
-    if(name.length < 3) {
+    if(name.length < 2) {
       return Future.value([]);
     }
     var processedName = ShooterDeduplicator.processNameString(name);
@@ -380,17 +380,31 @@ extension RatingProjectDatabase on AnalystDatabase {
     required DbRatingProject project,
     required RatingGroup group,
     required String name,
+    FindShooterSearchMode searchMode = FindShooterSearchMode.contains,
     int limit = 10,
   }) {
-    if(name.length < 3) {
+    if(name.length < 2) {
       return [];
     }
     var processedName = ShooterDeduplicator.processNameString(name);
-    return project.ratings.filter()
-      .group((q) => q.uuidEqualTo(group.uuid))
-      .deduplicatorNameContains(processedName)
-      .limit(limit)
-      .findAllSync();
+    var query = project.ratings.filter()
+      .group((q) => q.uuidEqualTo(group.uuid));
+
+    switch(searchMode) {
+      case FindShooterSearchMode.contains:
+        query = query.deduplicatorNameContains(processedName);
+        break;
+      case FindShooterSearchMode.startsWith:
+        query = query.deduplicatorNameStartsWith(processedName);
+        break;
+      case FindShooterSearchMode.endsWith:
+        query = query.deduplicatorNameEndsWith(processedName);
+        break;
+      case FindShooterSearchMode.exact:
+        query = query.deduplicatorNameEqualTo(processedName);
+        break;
+    }
+    return query.limit(limit).findAllSync();
   }
 
   /// Create a new DbShooterRating from a rating engine-specific [ShooterRating].

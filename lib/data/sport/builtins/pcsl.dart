@@ -155,4 +155,5 @@ final pcslSport = Sport(
   },
   builtinRatingGroupsProvider: DivisionRatingGroupProvider(pcslSportName, pcslDivisions),
   shooterDeduplicator: TypoDeduplicator(sportName: pcslSportName),
+  minimumMemberNumberLength: 1,
 );
