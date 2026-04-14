@@ -751,7 +751,7 @@ extension ScoreListUtilities on Iterable<RawScore> {
 
 extension MatchScoresToCSV on List<RelativeMatchScore> {
   String toCSV({MatchStage? stage}) {
-    String csv = "Member#,Name,MatchPoints,Percentage\n";
+    String csv = "Member#,Name,Division,Classification,MatchPoints,Percentage\n";
     var sorted = this.sorted((a, b) {
       if(stage != null) {
         if(a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
@@ -776,6 +776,8 @@ extension MatchScoresToCSV on List<RelativeMatchScore> {
       var scoreOfInterest = stage == null ? score : score.stageScores[stage];
       csv += "${score.shooter.memberNumber},";
       csv += "${score.shooter.getName(suffixes: false)},";
+      csv += "${score.shooter.division?.shortDisplayName ?? "(n/a)"},";
+      csv += "${score.shooter.classification?.shortDisplayName ?? "(n/a)"},";
       csv += "${stage == null ? score.total.points.toStringAsFixed(2) : scoreOfInterest?.points.toStringAsFixed(2) ?? 0},";
       csv += "${scoreOfInterest?.ratio.asPercentage() ?? 0}\n";
     }
