@@ -105,59 +105,6 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
                     onPressed: () => WagerDialog.show(context, predictions: model.predictions, matchId: widget.matchId),
                   )
                 ),
-                Tooltip(
-                  message: "Export predictions as CSV",
-                  child: IconButton(
-                    icon: Icon(Icons.save_alt),
-                    onPressed: () async {
-                      String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
-
-                      if(model.predictions.isNotEmpty) {
-                        var rater = model.predictions.first.algorithm;
-                        var settings = model.predictions.first.settings;
-
-                        double percentFloor = RatingSystem.defaultRatioFloor;
-                        double percentMult = RatingSystem.defaultRatioMult;
-                        if(rater.supportsRatioFloor) {
-                          var sortedByRating = model.predictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
-                          var bestRating = sortedByRating.first.shooter.rating;
-                          var worstRating = sortedByRating.last.shooter.rating;
-                          var ratingDelta = bestRating - worstRating;
-                          percentFloor = 1.0 - rater.estimateRatioFloor(ratingDelta, settings: settings);
-                          percentMult = 1.0 - percentFloor;
-                        }
-
-                        for(var pred in model.predictions) {
-                          double midLow = (percentFloor + pred.lowerBox / model.highPrediction * percentMult) * 100;
-                          double midHigh = (percentFloor + pred.upperBox / model.highPrediction * percentMult) * 100;
-                          double mean = (percentFloor + pred.center / model.highPrediction * percentMult) * 100;
-                          double low = (percentFloor + pred.lowerWhisker / model.highPrediction * percentMult) * 100;
-                          double high = (percentFloor + pred.upperWhisker / model.highPrediction * percentMult) * 100;
-                          int lowPlace = pred.lowPlace;
-                          int midPlace = pred.medianPlace;
-                          int highPlace = pred.highPlace;
-                          var outcome = model.outcomes[pred];
-
-                          String line = "";
-                          line += "${pred.shooter.getName(suffixes: false)},";
-                          line += "${pred.shooter.originalMemberNumber},";
-                          line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
-                          line += "$pred.shooter.formattedRating,";
-                          line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
-
-                          if(outcome != null) {
-                            line += ",${outcome.percent * 100},${outcome.place}";
-                          }
-
-                          // _log.vv(line);
-                          contents += "$line\n";
-                        }
-                      }
-
-                      HtmlOr.saveFile("predictions.csv", contents);
-                    },
-                  ),
-                ),
               ],
             ),
             body: PredictionListView(),
@@ -317,7 +264,13 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
 
 class PredictionViewModel extends ChangeNotifier {
 
-  PredictionViewModel({List<AlgorithmPrediction>? initialPredictions, required this.matchId, this.showSearch = true, this.showWager = false}) {
+  PredictionViewModel({
+    List<AlgorithmPrediction>? initialPredictions,
+    required this.matchId,
+    this.showSearch = true,
+    this.showWager = false,
+    this.showExport = true,
+  }) {
     if(initialPredictions != null) {
       setPredictions(initialPredictions, notify: false);
     }
@@ -331,6 +284,7 @@ class PredictionViewModel extends ChangeNotifier {
 
   bool showSearch;
   bool showWager;
+  bool showExport;
 
   void setShowSearch(bool show) {
     showSearch = show;
@@ -339,6 +293,11 @@ class PredictionViewModel extends ChangeNotifier {
 
   void setShowWager(bool show) {
     showWager = show;
+    notifyListeners();
+  }
+
+  void setShowExport(bool show) {
+    showExport = show;
     notifyListeners();
   }
 
@@ -392,6 +351,39 @@ class PredictionViewModel extends ChangeNotifier {
     this.outcomes = outcomes;
     if(notify) notifyListeners();
   }
+
+  String exportPredictionsCsv() {
+    String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
+    if(predictions.isNotEmpty) {
+      for(var pred in predictions) {
+        double midLow = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
+        double midHigh = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
+        double mean = (percentFloor + pred.center / highPrediction * percentMult) * 100;
+        double low = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
+        double high = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
+        int lowPlace = pred.lowPlace;
+        int midPlace = pred.medianPlace;
+        int highPlace = pred.highPlace;
+        var outcome = outcomes[pred];
+
+        String line = "";
+        line += "${pred.shooter.getName(suffixes: false)},";
+        line += "${pred.shooter.originalMemberNumber},";
+        line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
+        line += "$pred.shooter.formattedRating,";
+        line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+
+        if(outcome != null) {
+          line += ",${outcome.percent * 100},${outcome.place}";
+        }
+
+        // _log.vv(line);
+        contents += "$line\n";
+      }
+    }
+
+    return contents;
+  }
 }
 
 class PredictionListHeader extends StatelessWidget {
@@ -431,6 +423,22 @@ class PredictionListHeader extends StatelessWidget {
                 ),
               ),
             ),
+            if(model.showExport) SizedBox(
+              width: 100 * uiScaleFactor,
+              child: TextButton(
+                onPressed: () {
+                  final csv = model.exportPredictionsCsv();
+                  HtmlOr.saveFile("predictions.csv", csv);
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.download),
+                    Text("EXPORT"),
+                  ],
+                ),
+              ),
+            )
           ],
         ),
         SizedBox(height: 15 * uiScaleFactor),

@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
@@ -89,26 +91,32 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
   late TextEditingController nameController;
   late _MatchPrepPredictionsModel model;
 
+  Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
+
   @override
   void initState() {
     super.initState();
     nameController = TextEditingController();
     model = context.read<_MatchPrepPredictionsModel>();
-    model.addListener(updatePredictionSetName);
+    model.addListener(updatePredictionSet);
   }
 
   @override
   void dispose() {
-    model.removeListener(updatePredictionSetName);
+    model.removeListener(updatePredictionSet);
     super.dispose();
   }
 
-  void updatePredictionSetName() {
+  void updatePredictionSet() {
     if(model.selectedPredictionSet == null) {
       nameController.clear();
     }
     else if(nameController.text != model.selectedPredictionSet?.name) {
       nameController.text = model.selectedPredictionSet?.name ?? "";
+
+      for(var group in model.matchPrepModel.ratingProject.groups) {
+        predictions[group] = model.getPredictionsForGroup(group);
+      }
     }
   }
 
@@ -125,7 +133,7 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
             spacing: 8 * uiScaleFactor,
             children: [
               DropdownMenu<PredictionSet>(
-                width: 400.0 * uiScaleFactor,
+                width: 250.0 * uiScaleFactor,
                 label: Text("Prediction set"),
                 initialSelection: model.selectedPredictionSet,
                 controller: nameController,
@@ -136,8 +144,13 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
                 },
                 dropdownMenuEntries: model.predictionSets.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
               ),
-              IconButton(
-                icon: Icon(Icons.add),
+              TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.add),
+                    Text("CREATE"),
+                  ],
+                ),
                 onPressed: () async {
                   final defaultName = programmerYmdHmFormat.format(DateTime.now());
                   final nameController = TextEditingController(text: defaultName);
@@ -165,13 +178,29 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
                   }
                 },
               ),
-              if(model.selectedPredictionSet != null) IconButton(
-                icon: Icon(Icons.delete),
+              if(model.selectedPredictionSet != null) TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.delete),
+                    Text("DELETE"),
+                  ],
+                ),
                 onPressed: () async {
                   var confirm = await ConfirmDialog.show(context, content: Text("Delete prediction set?"));
                   if(confirm ?? false) {
                     model.deletePredictionSet(model.selectedPredictionSet!);
                   }
+                },
+              ),
+              TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.download),
+                    Text("EXPORT"),
+                  ],
+                ),
+                onPressed: () async {
+                  model.exportPredictionsCsv();
                 },
               ),
             ],
@@ -221,12 +250,7 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
     final outerModel = Provider.of<_MatchPrepPredictionsModel>(context, listen: false);
     lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
     lastRatingGroupUuid = widget.group.uuid;
-    var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
-    model = PredictionViewModel(
-      matchId: outerModel.matchPrepModel.futureMatch.matchId,
-      initialPredictions: groupPredictions,
-      showWager: true,
-    );
+    model = outerModel.tabModels[widget.group]!;
     _updateOutcomes(outerModel);
     lastHadOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
   }
@@ -297,6 +321,8 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
 class _MatchPrepPredictionsModel extends ChangeNotifier {
   final MatchPrepPageModel matchPrepModel;
 
+  Map<RatingGroup, PredictionViewModel> tabModels = {};
+
   _MatchPrepPredictionsModel({required this.matchPrepModel});
 
   List<PredictionSet> get predictionSets => matchPrepModel.prep.sortedPredictionSets;
@@ -315,12 +341,14 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
 
   Future<void> reloadPredictionSets() async {
     await matchPrepModel.prep.predictionSets.load();
+    _initTabModels();
     notifyListeners();
   }
 
   void setSelectedPredictionSet(PredictionSet value) {
     selectedPredictionSet = value;
     _algorithmPredictionCache.clear();
+    _initTabModels();
     notifyListeners();
   }
 
@@ -335,6 +363,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       selectedPredictionSet = null;
       _algorithmPredictionCache.clear();
     }
+    _initTabModels();
     notifyListeners();
   }
 
@@ -343,5 +372,37 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       predictionSets.sort((a, b) => b.created.compareTo(a.created));
       selectedPredictionSet = predictionSets.first;
     }
+
+    _initTabModels();
+  }
+
+  void _initTabModels() {
+    for(var group in matchPrepModel.ratingProject.groups) {
+      var groupPredictions = getPredictionsForGroup(group);
+      tabModels[group] = PredictionViewModel(
+        matchId: matchPrepModel.futureMatch.matchId,
+        initialPredictions: groupPredictions,
+        showWager: true,
+        showExport: false,
+      );
+    }
+  }
+
+  void exportPredictionsCsv() {
+    // A map of rating group name to csv file contents.
+    Map<String, String> csvFiles = {};
+
+    for(var group in tabModels.keys) {
+      var csv = tabModels[group]!.exportPredictionsCsv();
+      csvFiles[group.name] = csv;
+    }
+
+    // Create a zip file with the csv file contents.
+    final archive = Archive();
+    for(var entry in csvFiles.entries) {
+      archive.add(ArchiveFile.string(entry.key + ".csv", entry.value));
+    }
+    var zip = ZipEncoder().encode(archive, autoClose: true);
+    HtmlOr.saveBuffer("predictions.zip", zip);
   }
 }
