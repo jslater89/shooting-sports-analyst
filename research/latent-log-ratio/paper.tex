@@ -539,9 +539,16 @@
 	\begin{equation}
 		N_{\mathrm{eff}} = \left(\sum_w p_w^2\right)^{-1}
 	\end{equation}
-	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. The presumed winner's rating is then shifted upward by this extreme-value expectation scaled by their total pool dispersion:
+	
+	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. However, a naive application assumes that the $N_{\mathrm{eff}}$ variables are strictly independent. The epistemic variance $V_w^{\mathrm{age}}$ inherently contains shared structural uncertainty---the off-diagonal covariance formalized in the core loop by the intraclass correlation $\rho$. 
+	
+	If a cohort of competitors shares a latent evaluation error (e.g., an unanchored local sub-graph), their true global skills may be uniformly higher or lower than expected, but they will vary \textit{together}. Mathematically, if $Y_i = Z + W_i$, where $Z$ is a shared random intercept (cohort covariance) and $W_i$ is independent variance, the maximum operator distributes additively over the shared constant: $\max_i(Z + W_i) = Z + \max_i(W_i)$. Because the shared error $Z$ is zero-mean, it vanishes in expectation: $E[\max(Y)] = E[\max(W)]$. 
+	
+	A shared cohort shift translates the entire field but cannot stretch the gap between the mean and the maximum order statistic. Consequently, passing the total epistemic variance into the extreme-value approximation structurally overestimates the winner's predicted margin of victory, artifactually depressing the predicted finish percentages of the rest of the field.
+	
+	To preserve Extreme Value Theory assumptions, we must strictly isolate the independent fraction of the variance. We partition the epistemic uncertainty using $(1 - \rho)$, and rely on the purely idiosyncratic prediction sport noise $\sigma_{\mathrm{pred}}^2$ to represent match-day variance. The presumed winner's rating is shifted upward by this corrected extreme-value expectation:
 	\begin{equation}
-		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}} + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
+		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}}(1 - \rho) + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
 	\end{equation}
 	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), $\Delta_w$ gracefully vanishes to zero, preserving unbiased predictions.
 
@@ -641,7 +648,7 @@
 
 	\subsubsection*{Core Parameters -- Off-Diagonal Covariance Approximation}
 	\begin{itemize}
-		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} The fraction of epistemic variance assumed to be shared demographically by unrated or high-variance competitors at the same match. Prevents certainty collapse (the ``Day 1'' rating explosion) in fields with little history by explicitly bounding the baseline variance to a cohort asymptote. $\rho$ serves to prevent the baseline from incorrectly anchoring to a highly uncertain field, allowing the baseline to `float' rather than acting as a rigid mathematical datum. Fundamentally, it prevents the filter from falsely trusting the field's average.
+		\item \textbf{$\rho$ (Cohort Intraclass Correlation):} A global correlation coefficient representing the fraction of epistemic uncertainty assumed to be shared structurally among competitors (e.g., a local club whose ratings are accurate relative to each other, but floating relative to the global mean). Because this covariance mathematically scales with the absolute epistemic variance of the field, it exerts massive influence on new cohorts but gracefully vanishes for established veterans. In practice, $\rho$ prevents certainty collapse (the ``Day 1'' rating explosion) by explicitly bounding the baseline variance to a cohort asymptote, preventing the filter from falsely trusting an uncertain field's average as a rigid mathematical datum.
 		\item \textbf{$k_{\mathrm{max}}$ (Graph Maturity Threshold):} The number of historical events at which a competitor is assumed to be fully integrated into the global network.
 		\item \textbf{$\psi^2$ (Novelty Variance):} The maximum noise penalty applied to topologically isolated, immature fields. Along with $k_{\mathrm{max}}$, it limits the impact of extreme performance margins shot in low-history networks: ``The margins between these competitors are directionally meaningful, but their absolute magnitudes are untrustworthy as a measure of global top-end skill.'' Fundamentally, $k_{\mathrm{max}}$ and $\psi^2$ prevent the filter from falsely trusting the field's structural variance.
 	\end{itemize}

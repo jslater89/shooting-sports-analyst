@@ -1150,7 +1150,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final winnerCertainty = 1.0 - (winnerVariance / settings.maximumVariance).clamp(0.0, 1.0);
 
         final winnerDrawStdDev = sqrt(
-          winnerVariance +
+          (1 - settings.intraclassCorrelation) * winnerVariance +
           kappa * winnerCertainty * presumedWinner.shooter.dispersion +
           settings.predictionSportVariance
         );
