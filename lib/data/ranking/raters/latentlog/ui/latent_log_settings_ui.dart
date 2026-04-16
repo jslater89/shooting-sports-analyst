@@ -91,6 +91,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
 
   final TextEditingController _scaleOffsetController = TextEditingController();
   final TextEditingController _scaleFactorController = TextEditingController();
+  final TextEditingController _startingController = TextEditingController();
   final TextEditingController _sportVarianceInternal =TextEditingController();
   final TextEditingController _skillDriftInternal = TextEditingController();
   final TextEditingController _startingVarianceInternal = TextEditingController();
@@ -163,6 +164,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         return;
       }
       _onScaleFactorTextChanged();
+    });
+    attachNumericListener(_startingController, () {
+      _validateText();
     });
     attachNumericListener(_sportVarianceInternal, () {
       _validateText();
@@ -267,6 +271,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   void dispose() {
     _scaleOffsetController.dispose();
     _scaleFactorController.dispose();
+    _startingController.dispose();
     _sportVarianceInternal.dispose();
     _skillDriftInternal.dispose();
     _startingVarianceInternal.dispose();
@@ -296,6 +301,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   void _fillTextFieldsFromSettings({bool shouldSetScaleFactor = true}) {
     _scaleOffsetController.text = settings.scaleOffset.toStringAsFixed(1);
     if(shouldSetScaleFactor) _scaleFactorController.text = settings.scaleFactor.toStringAsFixed(1);
+    _startingController.text = settings.startingRating.toStringAsFixed(4);
 
     _sportVarianceInternal.text = settings.sportVariance.toStringAsFixed(4);
     _skillDriftInternal.text = settings.skillDriftRate.toStringAsFixed(6);
@@ -355,6 +361,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     }
     if (scaleFactor <= 0) {
       widget.controller.lastError = "Scale factor must be positive";
+      return;
+    }
+    final startingRating = double.tryParse(_startingController.text);
+    if (startingRating == null) {
+      widget.controller.lastError = "Starting rating formatted incorrectly";
       return;
     }
 
@@ -647,6 +658,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     setState(() {
       settings.scaleOffset = scaleOffset;
       settings.scaleFactor = scaleFactor;
+      settings.startingRating = startingRating;
       settings.sportVariance = sportV;
       settings.skillDriftRate = drift;
       settings.startingVariance = startVar;
@@ -755,6 +767,21 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               labelStyle: Theme.of(context).textTheme.bodyLarge,
               displayTextStyle: Theme.of(context).textTheme.bodyLarge,
               displayValueTooltip: "Approximate maximum display rating"
+            ),
+            _LatentLogVarianceRow(
+              label: "Starting/central rating",
+              tooltip:
+                  "Global central rating for new competitors and long-term mean reversion.",
+              internalController: _startingController,
+              scaledValue:
+                  settings.startingRating * settings.scaleFactor +
+                  settings.scaleOffset,
+              scaledValuePrecision: 1,
+              fieldWidth: fieldWidth,
+              columnGap: columnGap,
+              labelStyle: Theme.of(context).textTheme.bodyLarge,
+              displayTextStyle: Theme.of(context).textTheme.bodyLarge,
+              displayValueTooltip: "Starting/central rating in display points",
             ),
             const _LatentLogSectionHeading("Core Parameters"),
             _LatentLogVarianceRow(

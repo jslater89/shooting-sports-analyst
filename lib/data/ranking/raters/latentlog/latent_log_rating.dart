@@ -97,7 +97,11 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     final yearsSinceLastCommit = daysSinceLastCommit / 365.0;
     final effectiveYearsSinceLastCommit = max(0, yearsSinceLastCommit - settings.meanReversionGraceYears);
 
-    _cachedAgedRating = rating * exp(-settings.meanReversionDecayRate * effectiveYearsSinceLastCommit);
+    final deviationFromCenter = rating - settings.startingRating;
+    _cachedAgedRating =
+        settings.startingRating +
+        deviationFromCenter *
+            exp(-settings.meanReversionDecayRate * effectiveYearsSinceLastCommit);
     return _cachedAgedRating!;
   }
 

@@ -146,17 +146,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     required Sport sport,
     required DateTime date,
   }) {
-    double initialRating = 0;
+    double initialRating = settings.startingRating;
 
     var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
     if(ratingMultiplier != 1.0) {
-      // LLR ratings are literally just log performance multipliers/ratios, so we can use the
-      // multiplier almost directly.
-      // Soften it significantly compared to the actual multiplier to better fit observed behavior
-      var differenceFromOne = ratingMultiplier - 1.0;
-      differenceFromOne /= 3;
-      final softMultiplier = 1.0 + differenceFromOne;
-      initialRating += log(softMultiplier);
+      // LLR ratings are log performance multipliers.
+      // We soften the prior by moving it only 1/3rd of the way from the global
+      // mean to the classification mean in pure log-space.
+
+    double logAdvantage = log(ratingMultiplier);
+      double softLogAdvantage = logAdvantage / 3.0; // Shrinkage applied here
+
+      initialRating += softLogAdvantage;
       // initialRating = log(ratingMultiplier);
     }
 

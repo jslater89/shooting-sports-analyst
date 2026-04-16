@@ -11,6 +11,7 @@ class LatentLogSettings extends RaterSettings {
   // per Shooting Sports Analyst tradition.
   static const defaultScaleOffset = 1330.0;
   static const defaultScaleFactor = 1400.0;
+  static const defaultStartingRating = 0.0;
 
   static const defaultSportVariance = 0.0012;
   static const defaultSkillDriftRate = 0.0005;
@@ -41,6 +42,7 @@ class LatentLogSettings extends RaterSettings {
   static const _byStageKey = "latentLogByStage";
   static const _scaleOffsetKey = "latentLogScaleOffset";
   static const _scaleFactorKey = "latentLogScaleFactor";
+  static const _startingRatingKey = "latentLogStartingRating";
   static const _intraclassCorrelationKey = "latentLogIntraclassCorrelation";
   static const _sportVarianceKey = "latentLogSportVolatility";
   static const _skillDriftRateKey = "latentLogSkillDriftRate";
@@ -78,6 +80,9 @@ class LatentLogSettings extends RaterSettings {
 
   /// The scale factor for latent log ratio display units.
   double scaleFactor;
+
+  /// The global starting rating center in internal latent-log units.
+  double startingRating;
 
   // Tuning parameters below are all given in variance units, but are
   // easier to reason about in standard deviation terms. The derivations
@@ -376,6 +381,7 @@ class LatentLogSettings extends RaterSettings {
     this.byStage = false,
     this.scaleOffset = defaultScaleOffset,
     this.scaleFactor = defaultScaleFactor,
+    this.startingRating = defaultStartingRating,
     this.sportVariance = defaultSportVariance,
     this.skillDriftRate = defaultSkillDriftRate,
     this.startingVariance = defaultStartingVariance,
@@ -407,6 +413,7 @@ class LatentLogSettings extends RaterSettings {
     json[_byStageKey] = byStage;
     json[_scaleOffsetKey] = scaleOffset;
     json[_scaleFactorKey] = scaleFactor;
+    json[_startingRatingKey] = startingRating;
     json[_sportVarianceKey] = sportVariance;
     json[_skillDriftRateKey] = skillDriftRate;
     json[_startingVarianceKey] = startingVariance;
@@ -438,6 +445,8 @@ class LatentLogSettings extends RaterSettings {
     byStage = (json[_byStageKey] ?? false) as bool;
     scaleOffset = (json[_scaleOffsetKey] ?? defaultScaleOffset) as double;
     scaleFactor = (json[_scaleFactorKey] ?? defaultScaleFactor) as double;
+    startingRating =
+        (json[_startingRatingKey] ?? json["latentLogStarting"] ?? defaultStartingRating) as double;
     sportVariance =
         (json[_sportVarianceKey] ?? defaultSportVariance) as double;
     skillDriftRate =
