@@ -1054,7 +1054,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     List<LatentLogRating> sortedRatings = ratings
       .cast<LatentLogRating>()
-      .where((r) => r.length > 0)
+      .where((r) => r.length > 0 && r.stageCount! > 0)
       .sorted((a, b) => b.calculateAgedRating(asOfDate: matchDate).compareTo(a.calculateAgedRating(asOfDate: matchDate)));
 
     if(sortedRatings.isEmpty) {
