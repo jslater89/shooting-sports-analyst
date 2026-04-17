@@ -94,12 +94,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
   @override
   String formatNumericRating(double rating) {
-    return (rating * settings.scaleFactor + settings.scaleOffset).round().toString();
+    return settings.formatNumericRating(rating);
   }
 
   @override
   String formatNumericRatingChange(double ratingChange) {
-    return (ratingChange * settings.scaleFactor).round().toString();
+    return settings.formatNumericRating(ratingChange);
   }
 
   @override
@@ -1435,7 +1435,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     RatingSortMode? sortMode,
   }) {
     rating as LatentLogRating;
-    final displayDelta = rating.lastMatchChange * settings.scaleFactor;
+    final changeDecimals = settings.decimalCount() + 1;
+    final displayDelta = settings.formatNumericRatingChange(rating.lastMatchChange);
     final seenYearsAgo = DateTime.now().difference(rating.lastSeen).inDays / 365;
     final fadeRow = seenYearsAgo > 1;
     final ratingTooltip = seenYearsAgo > 1 ?
@@ -1459,26 +1460,26 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         fadeText: fadeRow,
       ),
       RatingRowData(
-        data: displayDelta.toStringAsFixed(1),
+        data: displayDelta,
         alignment: AbstractAlignment.end,
         flex: _lastChangeFlex,
         fadeText: fadeRow,
       ),
       RatingRowData(
-        data: rating.displayStandardDeviation.toStringAsFixed(1),
-        tooltip: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(1)}",
+        data: rating.displayStandardDeviation.toStringAsFixed(changeDecimals),
+        tooltip: "Current: ${rating.displayCurrentStandardDeviation.toStringAsFixed(changeDecimals)}",
         alignment: AbstractAlignment.end,
         flex: _varianceFlex,
         fadeText: fadeRow,
       ),
       RatingRowData(
-        data: rating.displayDispersionStandardDeviation.toStringAsFixed(1),
+        data: rating.displayDispersionStandardDeviation.toStringAsFixed(changeDecimals),
         alignment: AbstractAlignment.end,
         flex: _dispersionFlex,
         fadeText: fadeRow,
       ),
       RatingRowData(
-        data: rating.displayMomentum.toStringAsFixed(1),
+        data: rating.displayMomentum.toStringAsFixed(changeDecimals),
         alignment: AbstractAlignment.end,
         flex: _momentumFlex,
         fadeText: fadeRow,

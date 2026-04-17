@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 
 class LatentLogSettings extends RaterSettings {
@@ -376,6 +378,32 @@ class LatentLogSettings extends RaterSettings {
   /// -> 0.03: approximately 3% decay per year of post-grace inactivity.
   /// -> 0.10: aggressive long-gap decay.
   double meanReversionDecayRate = defaultMeanReversionDecayRate;
+
+  int decimalCount() {
+    final controllingParameter = max(scaleFactor, scaleOffset);
+    if(controllingParameter >= 1000) {
+        return 0;
+    }
+    else if(controllingParameter >= 100) {
+        return 1;
+    }
+    else if(controllingParameter >= 10) {
+        return 2;
+    }
+    else {
+        return 3;
+    }
+  }
+
+  String formatNumericRating(double rating) {
+    final decimals = decimalCount();
+    return (rating * scaleFactor + scaleOffset).toStringAsFixed(decimals);
+  }
+
+  String formatNumericRatingChange(double ratingChange) {
+    final decimals = decimalCount() + 1;
+    return (ratingChange * scaleFactor).toStringAsFixed(decimals);
+  }
 
   LatentLogSettings({
     this.byStage = false,
