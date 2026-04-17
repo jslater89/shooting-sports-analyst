@@ -49,6 +49,51 @@ enum _Mode {
   };
 }
 
+/// Quintile bucket computed from `place / fieldSize` within the scored field.
+/// Applied to two different place axes:
+///
+/// - Actual finish place: diagnoses whether predictive bias concentrates in
+///   a particular region of the realized field.
+/// - Predicted finish place (driven by rating): diagnoses whether bias
+///   concentrates in a particular region of the rating-ordered field. This
+///   is closer to the "noise-heavy lower ratings" question and avoids the
+///   conditional-on-outcome bias you get when bucketing by actual finish.
+enum _Quintile {
+  top20,
+  q2,
+  q3,
+  q4,
+  bottom20;
+
+  String get label => switch (this) {
+    _Quintile.top20 => "top 20%",
+    _Quintile.q2 => "20-40%",
+    _Quintile.q3 => "40-60%",
+    _Quintile.q4 => "60-80%",
+    _Quintile.bottom20 => "bottom 20%",
+  };
+
+  static _Quintile fromPlace(int place, int fieldSize) {
+    if (fieldSize <= 0) {
+      return _Quintile.top20;
+    }
+    final p = place / fieldSize;
+    if (p <= 0.20) {
+      return _Quintile.top20;
+    }
+    if (p <= 0.40) {
+      return _Quintile.q2;
+    }
+    if (p <= 0.60) {
+      return _Quintile.q3;
+    }
+    if (p <= 0.80) {
+      return _Quintile.q4;
+    }
+    return _Quintile.bottom20;
+  }
+}
+
 /// One observation pulled from a single (mode, project, group, match, shooter).
 class _Sample {
   final _Mode mode;
@@ -65,6 +110,10 @@ class _Sample {
   /// The shooter's actual finish place (1 for the winner of the scored
   /// subset).
   final int actualPlace;
+
+  /// Total number of scored competitors in the reference field for this
+  /// sample. Used to compute finish percentiles for bucketing.
+  final int fieldSize;
 
   /// Predicted center on the natural scale.
   /// - Normal raters: arithmetic mean ratio (`prediction.meanRatio`).
@@ -91,6 +140,7 @@ class _Sample {
     required this.matchDate,
     required this.actualRatio,
     required this.actualPlace,
+    required this.fieldSize,
     required this.mean,
     required this.oneSigma,
     required this.predictedPlace,
@@ -176,6 +226,14 @@ class BacktestRatersCommand extends DbOneoffCommand {
     _BacktestMatch(sourceIds: ["1530fa4f-c371-433f-ae8a-c58f13f722a3"]), // Area 8
     _BacktestMatch(sourceIds: ["27529bb0-411b-4aac-911c-704ef41791b7"]), // Area 2
     _BacktestMatch(exactName: "The 2025 SIG Sauer Factory Gun Nationals presented by Vortex Optics"),
+    _BacktestMatch(exactName: "2025 Go Fast Don't Suck Maryland State USPSA Championship"),
+    _BacktestMatch(exactName: "2025 GLOCK Area 6 Championship"),
+    _BacktestMatch(exactName: "2025 Gatorz Missouri Fall Classic"),
+    _BacktestMatch(exactName: "The 2025 CZ Free State Championship Presented by Vortex"),
+    _BacktestMatch(exactName: "2025 Cheely Custom Gunworks Michigan Sectional Presented By S3 Range Carts"),
+    _BacktestMatch(exactName: "2025 USPSA Arkansas Section Championship"),
+    _BacktestMatch(exactName: "2025 Vortex Optics Illinois Sectional"),
+    _BacktestMatch(exactName: "2025 GP Arms USPSA TN Section Championship"),
   ];
 
   @override
@@ -194,6 +252,15 @@ class BacktestRatersCommand extends DbOneoffCommand {
     final Map<(_Mode, String), _Stats> perGroup = {};
     // Ordered key for printing.
     final List<(_Mode, String)> perGroupOrder = [];
+    // (mode, algorithm, actual finish quintile) -> stats. Answers "is the
+    // bias concentrated in a particular region of the realized field?"
+    final Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile = {};
+    // (mode, algorithm, predicted finish quintile) -> stats. Answers "is the
+    // bias concentrated in a particular region of the rating-ordered field?"
+    // Predicted place is driven primarily by rating, so this is effectively
+    // a rating-percentile bucketing that avoids the conditional-on-outcome
+    // bias you get from bucketing by actual finish.
+    final Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile = {};
 
     for (final entry in _projectsToTest.entries) {
       final projectName = entry.key;
@@ -276,6 +343,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
             ratingByEntryId: ratingByEntryId,
             perGroup: perGroup,
             overall: overall,
+            overallByFinishQuintile: overallByFinishQuintile,
+            overallByRatingQuintile: overallByRatingQuintile,
           );
 
           // Mode: only competitors with a prior rating. Re-score so ratios
@@ -297,6 +366,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
                 ratingByEntryId: ratingByEntryId,
                 perGroup: perGroup,
                 overall: overall,
+                overallByFinishQuintile: overallByFinishQuintile,
+                overallByRatingQuintile: overallByRatingQuintile,
               );
             }
           }
@@ -304,7 +375,14 @@ class BacktestRatersCommand extends DbOneoffCommand {
       }
     }
 
-    _printResults(console, perGroupOrder, perGroup, overall);
+    _printResults(
+      console,
+      perGroupOrder,
+      perGroup,
+      overall,
+      overallByFinishQuintile,
+      overallByRatingQuintile,
+    );
   }
 
   /// Run the prediction + accumulation pipeline for one (mode, group, match)
@@ -320,6 +398,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
     required Map<int, ShooterRating> ratingByEntryId,
     required Map<(_Mode, String), _Stats> perGroup,
     required Map<(_Mode, String), _Stats> overall,
+    required Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile,
+    required Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile,
   }) {
     final groupKey = "$algorithmLabel | $projectName | ${group.name}";
     final groupStats = perGroup.putIfAbsent((mode, groupKey), () {
@@ -352,6 +432,10 @@ class BacktestRatersCommand extends DbOneoffCommand {
     final predictions = project.settings.algorithm
         .predict(ratings, matchDate: match.date);
 
+    // Field size for bucketing is the number of scored competitors in this
+    // pipeline run (full field for mode=all, rated subset for mode=ratedOnly).
+    final fieldSize = scores.length;
+
     for (final prediction in predictions) {
       final actual = actualByRating[prediction.shooter];
       if (actual == null) {
@@ -365,6 +449,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
         match: match,
         actualRatio: actual.ratio,
         actualPlace: actual.place,
+        fieldSize: fieldSize,
         prediction: prediction,
       );
       if (sample == null) {
@@ -372,6 +457,24 @@ class BacktestRatersCommand extends DbOneoffCommand {
       }
       _accumulate(sample, groupStats);
       _accumulate(sample, overallStats);
+      final finishBucket = _Quintile.fromPlace(
+        sample.actualPlace,
+        sample.fieldSize,
+      );
+      final finishBucketStats = overallByFinishQuintile.putIfAbsent(
+        (mode, algorithmLabel, finishBucket),
+        () => _Stats(),
+      );
+      _accumulate(sample, finishBucketStats);
+      final ratingBucket = _Quintile.fromPlace(
+        sample.predictedPlace,
+        sample.fieldSize,
+      );
+      final ratingBucketStats = overallByRatingQuintile.putIfAbsent(
+        (mode, algorithmLabel, ratingBucket),
+        () => _Stats(),
+      );
+      _accumulate(sample, ratingBucketStats);
     }
   }
 
@@ -424,6 +527,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
     required ShootingMatch match,
     required double actualRatio,
     required int actualPlace,
+    required int fieldSize,
     required AlgorithmPrediction prediction,
   }) {
     double mean;
@@ -458,6 +562,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
       matchDate: match.date,
       actualRatio: actualRatio,
       actualPlace: actualPlace,
+      fieldSize: fieldSize,
       mean: mean,
       oneSigma: oneSigma,
       predictedPlace: prediction.medianPlace,
@@ -555,6 +660,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
     List<(_Mode, String)> perGroupOrder,
     Map<(_Mode, String), _Stats> perGroup,
     Map<(_Mode, String), _Stats> overall,
+    Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile,
+    Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile,
   ) {
     for (final mode in _Mode.values) {
       console.print("");
@@ -607,7 +714,76 @@ class BacktestRatersCommand extends DbOneoffCommand {
       }
     }
 
+    // Bucketed by actual finish percentile: shows where error/bias lands in
+    // the realized field. Note that bucketing by an outcome variable (finish
+    // ratio) induces a conditional-on-outcome bias slope even for a perfectly
+    // calibrated predictor, so this view should be read alongside the
+    // rating-bucketed view below.
+    _printBucketedSection(
+      console: console,
+      overallByBucket: overallByFinishQuintile,
+      sectionTitle: "bucketed by actual finish",
+      algoOrder: algoOrder,
+    );
+
+    // Bucketed by predicted finish percentile (driven by rating): shows
+    // where error/bias lands in the rating-ordered field. Bucketing by an
+    // input rather than an outcome removes the conditional-on-outcome bias,
+    // so large remaining slope here is more likely to be true miscalibration
+    // (e.g. noise-heavy lower ratings).
+    _printBucketedSection(
+      console: console,
+      overallByBucket: overallByRatingQuintile,
+      sectionTitle: "bucketed by predicted rank (rating)",
+      algoOrder: algoOrder,
+    );
+
     _log.i("Backtest complete");
+  }
+
+  /// Shared printer for the two bucketed sections (by actual finish and by
+  /// predicted rank). Prints one block per [_Mode].
+  void _printBucketedSection({
+    required Console console,
+    required Map<(_Mode, String, _Quintile), _Stats> overallByBucket,
+    required String sectionTitle,
+    required List<String> algoOrder,
+  }) {
+    for (final mode in _Mode.values) {
+      console.print("");
+      console.print(
+        "=== Per algorithm, $sectionTitle — mode=${mode.label} ===",
+      );
+      for (final algo in algoOrder) {
+        final anyPresent = _Quintile.values.any(
+          (b) => (overallByBucket[(mode, algo, b)]?.n ?? 0) > 0,
+        );
+        if (!anyPresent) {
+          console.print("$algo: no samples");
+          continue;
+        }
+        console.print("$algo:");
+        for (final bucket in _Quintile.values) {
+          final s = overallByBucket[(mode, algo, bucket)];
+          if (s == null || s.n == 0) {
+            console.print("  ${bucket.label.padRight(11)}  n=0");
+            continue;
+          }
+          console.print(
+            "  ${bucket.label.padRight(11)}  "
+            "n=${s.n.toString().padLeft(5)}  "
+            "MPE=${_fmtSignedPct(s.mpe).padLeft(8)}  "
+            "MPE(arith)=${_fmtSignedPct(s.mpeArith).padLeft(8)}  "
+            "MAPE=${(s.mape * 100).toStringAsFixed(2).padLeft(6)}%  "
+            "MAE=${s.mae.toStringAsFixed(4)}  "
+            "CRPS=${s.crps.toStringAsFixed(4)}  "
+            "RankMAE=${s.rankMae.toStringAsFixed(2).padLeft(5)}  "
+            "1σ=${(s.coverage1 * 100).toStringAsFixed(1).padLeft(5)}%  "
+            "2σ=${(s.coverage2 * 100).toStringAsFixed(1).padLeft(5)}%",
+          );
+        }
+      }
+    }
   }
 
   /// Formats a signed fractional error (e.g. 0.0123) as a percentage with

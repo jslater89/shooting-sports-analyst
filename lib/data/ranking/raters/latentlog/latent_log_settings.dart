@@ -25,7 +25,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultPairwiseBlendWeight = 0.10;
 
   static const defaultBaselineRobustnessZ = 2.5;
-  static const defaultTailNoiseStartPercent = 0.60;
+  static const defaultTailNoiseStartPercent = 0.40;
   static const defaultTailNoiseVariance = 0.04;
   static const defaultWeakFieldVariance = 0.25;
   static const defaultWeakFieldMaxSize = 10.0;
