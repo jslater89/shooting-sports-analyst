@@ -1065,11 +1065,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       return [
         AlgorithmPrediction(
           shooter: sortedRatings[0],
-          mean: 1.0,
+          displayCenter: 1.0,
           sigma: 0.0,
           settings: settings,
           algorithm: this,
-          meanRatio: 1.0,
+          expectedRatio: 1.0,
           oneSigmaRatio: 0.0,
           lowPlace: 1,
           highPlace: 1,
@@ -1226,11 +1226,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       // We'll fill in places in a second pass
       predictions.add(AlgorithmPrediction(
         shooter: rating,
-        mean: medianRatio,
+        displayCenter: medianRatio,
         sigma: geometricSD,
         settings: settings,
         algorithm: this,
-        meanRatio: probabilityWeightedRatio,
+        expectedRatio: probabilityWeightedRatio,
         oneSigmaRatio: oneSigmaRatio,
         shiftRatio: 0.0,
         isLogNormal: true,
@@ -1239,7 +1239,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       ));
     }
 
-    var sortedPredictions = predictions.sorted((a, b) => b.mean.compareTo(a.mean));
+    var sortedPredictions = predictions.sorted((a, b) => b.displayCenter.compareTo(a.displayCenter));
 
     for(var (centerPlace, prediction) in sortedPredictions.indexed) {
       int belowCompetitorsLow = 0;
@@ -1255,10 +1255,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         // prediction beats our mean.
         // Our high prediction is the number of competitors whose low
         // prediction beats our mean.
-        if(other.highPrediction > prediction.mean) {
+        if(other.highPrediction > prediction.displayCenter) {
           belowCompetitorsLow++;
         }
-        if(other.lowPrediction > prediction.mean) {
+        if(other.lowPrediction > prediction.displayCenter) {
           belowCompetitorsHigh++;
         }
       }

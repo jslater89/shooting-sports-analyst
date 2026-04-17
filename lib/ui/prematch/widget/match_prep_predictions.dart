@@ -275,7 +275,7 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
           var score = scores.entries
             .firstWhereOrNull((element) => element.key.equalsShooter(prediction.shooter))?.value;
           if(score != null) {
-            outcomes[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score.ratio, place: score.place);
+            outcomes[prediction] = SimpleMatchResult(raterScore: prediction.displayCenter, percent: score.ratio, place: score.place);
           }
         }
         lastHadOutcomes = true;

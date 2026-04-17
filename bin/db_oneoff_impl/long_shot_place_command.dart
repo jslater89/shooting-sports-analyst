@@ -73,7 +73,7 @@ class LongShotPlaceCommand extends DbOneoffCommand {
     }
 
     // Order by predicted strength (mean descending) so place 1 = favorite, place N = Nth favorite.
-    var byMean = predictions.sorted((a, b) => b.mean.compareTo(a.mean));
+    var byMean = predictions.sorted((a, b) => b.displayCenter.compareTo(a.displayCenter));
     var random = Random(seed);
 
     console.print("Top $topN Carry Optics (L2s Main Glicko) by rating; win odds by predicted place.");

@@ -158,7 +158,7 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
         var score = scores[shooter];
         var prediction = model.predictions.firstWhereOrNull((element) => rating.allPossibleMemberNumbers.contains(element.shooter.memberNumber));
         if(prediction != null) {
-          actualResults[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score?.ratio ?? 0, place: score?.place ?? 0);
+          actualResults[prediction] = SimpleMatchResult(raterScore: prediction.displayCenter, percent: score?.ratio ?? 0, place: score?.place ?? 0);
         }
         if(score != null) {
           matchScores[shooterRating] = score;
@@ -205,7 +205,7 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
     for(var pred in outcome.actualResults.keys) {
       double percentOutcome = outcome.actualResults[pred]!.percent;
       int placeOutcome = outcome.actualResults[pred]!.place;
-      double percentError = (pred.meanRatio! - percentOutcome);
+      double percentError = (pred.expectedRatio! - percentOutcome);
       if(percentError >= -pred.oneSigmaRatio! && percentError <= pred.oneSigmaRatio!) {
         correct68 += 1;
       }
@@ -213,10 +213,10 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
       if(percentError >= -twoSigmaRatio && percentError <= twoSigmaRatio) {
         correct95 += 1;
       }
-      if(percentOutcome > pred.meanRatio!) {
+      if(percentOutcome > pred.expectedRatio!) {
         aboveMean += 1;
       }
-      if(percentOutcome < pred.meanRatio!) {
+      if(percentOutcome < pred.expectedRatio!) {
         belowMean += 1;
       }
       percentErrors.add(percentError);
@@ -320,7 +320,7 @@ class PredictionViewModel extends ChangeNotifier {
 
   void setPredictions(List<AlgorithmPrediction> predictions, {bool notify = true}) {
     this.predictions = [...predictions];
-    this.predictions.sort((a, b) => b.mean.compareTo(a.mean));
+    this.predictions.sort((a, b) => b.displayCenter.compareTo(a.displayCenter));
     searchedPredictions = this.predictions;
     minValue = 10000;
     maxValue = -10000;
@@ -370,7 +370,7 @@ class PredictionViewModel extends ChangeNotifier {
         line += "${pred.shooter.getName(suffixes: false)},";
         line += "${pred.shooter.originalMemberNumber},";
         line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
-        line += "$pred.shooter.formattedRating,";
+        line += "${pred.shooter.formattedRating},";
         line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
         if(outcome != null) {
@@ -529,7 +529,7 @@ class PredictionListRow extends StatelessWidget {
 
     double boxLowPercent = (model.percentFloor + prediction.lowerBox / model.highPrediction * model.percentMult) * 100;
     double boxHighPercent = (model.percentFloor + prediction.upperBox / model.highPrediction * model.percentMult) * 100;
-    double meanPercent = (model.percentFloor + prediction.mean / model.highPrediction * model.percentMult) * 100;
+    double meanPercent = (model.percentFloor + prediction.displayCenter / model.highPrediction * model.percentMult) * 100;
     double whiskerLowPercent = (model.percentFloor + prediction.lowerWhisker / model.highPrediction * model.percentMult) * 100;
     double whiskerHighPercent = (model.percentFloor + prediction.upperWhisker / model.highPrediction * model.percentMult) * 100;
     double winPercent = 100;

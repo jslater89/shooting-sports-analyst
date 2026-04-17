@@ -31,8 +31,8 @@ class AlgorithmPrediction {
 
   final ShooterRating shooter;
 
-  /// An average performance value.
-  final double mean;
+  /// The center point of the performance in display terms.
+  final double displayCenter;
 
   /// The standard deviation of the performance.
   final double oneSigma;
@@ -50,7 +50,7 @@ class AlgorithmPrediction {
 
   /// The mean performance in ratio terms (i.e., 1.0 for the winner, [0.0, 1.0) for other competitors
   /// relative to the winner). Null if this algorithm cannot generate ratio predictions.
-  double? meanRatio;
+  double? expectedRatio;
 
   /// The standard deviation of the performance in ratio terms. Null if this algorithm cannot generate ratio predictions.
   double? oneSigmaRatio;
@@ -58,7 +58,7 @@ class AlgorithmPrediction {
   /// A shift to apply to the performance in ratio terms, corresponding to the ciOffset.
   double? shiftRatio;
 
-  bool get hasRatioPredictions => meanRatio != null && oneSigmaRatio != null;
+  bool get hasRatioPredictions => expectedRatio != null && oneSigmaRatio != null;
 
   /// Whether the performance is log-normally distributed, with the raw log-space
   /// mean and standard deviation stored in [logMean] and [logSigma].
@@ -74,12 +74,12 @@ class AlgorithmPrediction {
 
   AlgorithmPrediction({
     required this.shooter,
-    required this.mean,
+    required this.displayCenter,
     required double sigma,
     this.ciOffset = 0.0,
     required this.settings,
     required this.algorithm,
-    required this.meanRatio,
+    required this.expectedRatio,
     required this.oneSigmaRatio,
     this.shiftRatio,
     int? lowPlace,
@@ -107,97 +107,97 @@ class AlgorithmPrediction {
 
   /// A value suitble for ordinal sorting, based off of the 95%/-2 sigma
   /// expected value.
-  double get ordinal => mean - twoSigma + shift;
+  double get ordinal => displayCenter - twoSigma + shift;
 
   /// The shift in mean due to the ciOffset.
   double get shift => (oneSigma / 2) * (ciOffset);
 
   @override
   String toString() {
-    return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
+    return "${shooter.getName(suffixes: false)}: ${displayCenter.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
 
   double ciOffsetMultiplier({double strength = 0.05}) => 1 + (ciOffset * strength);
 
-  double get center => mean;
-  double get shiftedCenter => mean + shift;
+  double get center => displayCenter;
+  double get shiftedCenter => displayCenter + shift;
   double get upperBox {
     if(isLogNormal) {
-      return (mean * oneSigma) + shift;
+      return (displayCenter * oneSigma) + shift;
     }
     else {
-     return mean + oneSigma + shift;
+     return displayCenter + oneSigma + shift;
     }
   }
   double get lowerBox {
     if(isLogNormal) {
-      return (mean / oneSigma) + shift;
+      return (displayCenter / oneSigma) + shift;
     }
     else {
-      return mean - oneSigma + shift;
+      return displayCenter - oneSigma + shift;
     }
   }
   double get upperWhisker {
     if(isLogNormal) {
-      return (mean * twoSigma) + shift;
+      return (displayCenter * twoSigma) + shift;
     }
     else {
-      return mean + twoSigma + shift;
+      return displayCenter + twoSigma + shift;
     }
   }
   double get lowerWhisker {
     if(isLogNormal) {
-      return (mean / twoSigma) + shift;
+      return (displayCenter / twoSigma) + shift;
     }
     else {
-      return mean - twoSigma + shift;
+      return displayCenter - twoSigma + shift;
     }
   }
 
   /// The lower bound of the 1-sigma confidence interval.
   double get lowPrediction {
     if (isLogNormal) {
-      return (mean / oneSigma) + shift;
+      return (displayCenter / oneSigma) + shift;
     }
-    return mean - oneSigma + shift;
+    return displayCenter - oneSigma + shift;
   }
 
   /// The lower bound of the 0.5-sigma confidence interval.
   double get halfLowPrediction {
     if (isLogNormal) {
       // A half-sigma step downward is division by the square root of the GSD
-      return (mean / sqrt(oneSigma)) + (shift / 2);
+      return (displayCenter / sqrt(oneSigma)) + (shift / 2);
     }
-    return mean - oneSigma / 2 + shift / 2;
+    return displayCenter - oneSigma / 2 + shift / 2;
   }
 
   /// The upper bound of the 0.5-sigma confidence interval.
   double get halfHighPrediction {
     if (isLogNormal) {
       // A half-sigma step upward is multiplication by the square root of the GSD
-      return (mean * sqrt(oneSigma)) + (shift / 2);
+      return (displayCenter * sqrt(oneSigma)) + (shift / 2);
     }
-    return mean + (oneSigma + shift) / 2;
+    return displayCenter + (oneSigma + shift) / 2;
   }
 
   /// The upper bound of the 1-sigma confidence interval.
   double get highPrediction {
     if (isLogNormal) {
-      return (mean * oneSigma) + shift;
+      return (displayCenter * oneSigma) + shift;
     }
-    return mean + (oneSigma + shift);
+    return displayCenter + (oneSigma + shift);
   }
 
   double get upperBoxWhiskerMidpoint => (upperBox + upperWhisker) / 2;
   double get lowerBoxWhiskerMidpoint => (lowerBox + lowerWhisker) / 2;
 
-  double? get ratioCenter => meanRatio;
+  double? get ratioCenter => expectedRatio;
   double? get shiftedRatioCenter {
-    if(meanRatio != null && shiftRatio != null) {
-      return meanRatio! + shiftRatio!;
+    if(expectedRatio != null && shiftRatio != null) {
+      return expectedRatio! + shiftRatio!;
     }
-    else if(meanRatio != null) {
-      return meanRatio!;
+    else if(expectedRatio != null) {
+      return expectedRatio!;
     }
     else {
       return null;

@@ -539,13 +539,13 @@
 	\begin{equation}
 		N_{\mathrm{eff}} = \left(\sum_w p_w^2\right)^{-1}
 	\end{equation}
-	
-	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. However, a naive application assumes that the $N_{\mathrm{eff}}$ variables are strictly independent. The epistemic variance $V_w^{\mathrm{age}}$ inherently contains shared structural uncertainty---the off-diagonal covariance formalized in the core loop by the intraclass correlation $\rho$. 
-	
-	If a cohort of competitors shares a latent evaluation error (e.g., an unanchored local sub-graph), their true global skills may be uniformly higher or lower than expected, but they will vary \textit{together}. Mathematically, if $Y_i = Z + W_i$, where $Z$ is a shared random intercept (cohort covariance) and $W_i$ is independent variance, the maximum operator distributes additively over the shared constant: $\max_i(Z + W_i) = Z + \max_i(W_i)$. Because the shared error $Z$ is zero-mean, it vanishes in expectation: $E[\max(Y)] = E[\max(W)]$. 
-	
+
+	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. However, a naive application assumes that the $N_{\mathrm{eff}}$ variables are strictly independent. The epistemic variance $V_w^{\mathrm{age}}$ inherently contains shared structural uncertainty---the off-diagonal covariance formalized in the core loop by the intraclass correlation $\rho$.
+
+	If a cohort of competitors shares a latent evaluation error (e.g., an unanchored local sub-graph), their true global skills may be uniformly higher or lower than expected, but they will vary \textit{together}. Mathematically, if $Y_i = Z + W_i$, where $Z$ is a shared random intercept (cohort covariance) and $W_i$ is independent variance, the maximum operator distributes additively over the shared constant: $\max_i(Z + W_i) = Z + \max_i(W_i)$. Because the shared error $Z$ is zero-mean, it vanishes in expectation: $E[\max(Y)] = E[\max(W)]$.
+
 	A shared cohort shift translates the entire field but cannot stretch the gap between the mean and the maximum order statistic. Consequently, passing the total epistemic variance into the extreme-value approximation structurally overestimates the winner's predicted margin of victory, artifactually depressing the predicted finish percentages of the rest of the field.
-	
+
 	To preserve Extreme Value Theory assumptions, we must strictly isolate the independent fraction of the variance. We partition the epistemic uncertainty using $(1 - \rho)$, and rely on the purely idiosyncratic prediction sport noise $\sigma_{\mathrm{pred}}^2$ to represent match-day variance. The presumed winner's rating is shifted upward by this corrected extreme-value expectation:
 	\begin{equation}
 		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}}(1 - \rho) + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
@@ -589,15 +589,27 @@
 		\varsigma_{i,\mathrm{total}}^2 = \varsigma_{i,\mathrm{within}}^2 + \varsigma_{i,\mathrm{between}}^2
 	\end{equation}
 
-	Because the rating system operates natively in log space, confidence intervals in ratio space are fundamentally multiplicative. We define the geometric standard deviation as:
+	\subsubsection*{Moment-Matched Log-Normal Approximation}
+	The predictive distribution is formally a mixture of right-truncated log-normals (one component per candidate winner $w \neq i$), plus a degenerate component at $1.0$ for the branch in which competitor $i$ is the winner. This mixture has no closed-form median or quantiles and therefore does not directly yield a multiplicative $\pm 1\sigma$ interval of known probability coverage.
+
+	To produce a principled closed-form band, we approximate the mixture by the single log-normal $\mathrm{LN}(\mu_i^\star,\ \varsigma_{i,\mathrm{total}}^2)$ whose moments match the mixture exactly in two respects: its arithmetic mean on the ratio scale equals $\hat{S}_i$, and its variance on the log scale equals $\varsigma_{i,\mathrm{total}}^2$. Both quantities are derived above by the laws of total expectation and total variance, so no further assumptions about the mixture structure are needed. Solving the log-normal expectation identity $\hat{S}_i = \exp(\mu_i^\star + \varsigma_{i,\mathrm{total}}^2/2)$ for $\exp(\mu_i^\star)$ yields the median of the approximating distribution in ratio space:
+	\begin{equation}
+		\tilde{m}_i = \hat{S}_i \cdot \exp\!\left(-\frac{\varsigma_{i,\mathrm{total}}^2}{2}\right)
+	\end{equation}
+	The approximation is exact when the mixture collapses to a single component (e.g., when one $p_w \to 1$ and $\varsigma_{i,\mathrm{between}}^2 \to 0$) and remains tight when one favorite dominates the winner distribution. It is least faithful for wide-open fields with several equally likely winners, where the true mixture is visibly multimodal and no single log-normal can capture that shape; in such cases the approximation should be understood as an interpretable summary rather than a literal distributional claim.
+
+	\subsubsection*{Confidence Intervals}
+	Because the rating system operates natively in log space, confidence intervals in ratio space are fundamentally multiplicative. We define the geometric standard deviation of the approximating log-normal as:
 	\begin{equation}
 		\mathrm{GSD}_i = \exp\!\left(\sqrt{\varsigma_{i,\mathrm{total}}^2}\right)
 	\end{equation}
-	The $\pm 1\sigma$ predictive bounds are applied multiplicatively to the truncated expected mean:
+	The $\pm 1\sigma$ predictive bounds are applied multiplicatively around the approximation median $\tilde{m}_i$:
 	\begin{equation}
-		S_{i,\mathrm{lower}} = \frac{\hat{S}_i}{\mathrm{GSD}_i}, \qquad S_{i,\mathrm{upper}} = \hat{S}_i \times \mathrm{GSD}_i
+		S_{i,\mathrm{lower}} = \frac{\tilde{m}_i}{\mathrm{GSD}_i}, \qquad S_{i,\mathrm{upper}} = \tilde{m}_i \times \mathrm{GSD}_i
 	\end{equation}
-	Notably, while the expected mean $\hat{S}_i$ is strictly bounded to $1.0$, the upper confidence interval $S_{i,\mathrm{upper}}$ is permitted to exceed $1.0$. This is physically meaningful: an upper bound of $1.02$ indicates that a competitor's $+1\sigma$ performance would theoretically exceed the presumed winner's expected performance by 2\%, visually indicating to users that the competitor has a realistic probability of winning the match.
+	Centering the band on $\tilde{m}_i$ rather than $\hat{S}_i$ is the standard treatment for log-normal intervals: a log-normal's $\pm 1\sigma$ probability mass is symmetric in log space around its \emph{median}, not its arithmetic mean, which sits above the median by a factor of $\exp(\varsigma_{i,\mathrm{total}}^2/2)$. Under the moment-matched approximation, the band $[\tilde{m}_i/\mathrm{GSD}_i,\ \tilde{m}_i \cdot \mathrm{GSD}_i]$ therefore carries the usual $68.27\%$ coverage interpretation; for the true mixture, the coverage is close to this value and deviates only as the mixture departs from a single log-normal.
+
+	Notably, while both $\hat{S}_i$ and $\tilde{m}_i$ are strictly bounded to $1.0$, the upper confidence interval $S_{i,\mathrm{upper}}$ is permitted to exceed $1.0$. This is physically meaningful: an upper bound of $1.02$ indicates that a competitor's $+1\sigma$ performance would theoretically exceed the presumed winner's expected performance by 2\%, visually indicating to users that the competitor has a realistic probability of winning the match.
 
 	\section{Comparison with Earlier Work}
 	In the course of producing analysis on the shooting sports over several years, the author has read about and experimented with a number of rating algorithms.

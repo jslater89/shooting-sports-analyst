@@ -403,17 +403,21 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     ahead of and behind the player. (This bubbles information from step 2 back down through the list.)
     */
 
+    ratings = ratings
+      .where((r) => r.length > 0 && (r.stageCount ?? 0) > 0)
+      .toList();
+
     if(ratings.isEmpty) {
       return [];
     }
     else if(ratings.length == 1) {
       var prediction = AlgorithmPrediction(
         shooter: ratings[0],
-        mean: 1.0,
+        displayCenter: 1.0,
         sigma: 0.0,
         settings: settings,
         algorithm: this,
-        meanRatio: 1.0,
+        expectedRatio: 1.0,
         oneSigmaRatio: 0.0,
       );
       prediction.lowPlace = 1;
@@ -576,14 +580,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
       return AlgorithmPrediction(
         shooter: entry.key,
-        mean: entry.value.centralValue,
+        displayCenter: entry.value.centralValue,
         sigma: sigma,
         settings: settings,
         algorithm: this,
         lowPlace: expectedLowPlaces[entry.key]!,
         highPlace: expectedHighPlaces[entry.key]!,
         medianPlace: expectedPlaces[entry.key]!,
-        meanRatio: entry.value.centralValue,
+        expectedRatio: entry.value.centralValue,
         oneSigmaRatio: sigma,
       );
     }).toList();

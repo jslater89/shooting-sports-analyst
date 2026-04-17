@@ -69,7 +69,15 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   @Ignore()
   RaterSettings get settings => algorithm.settings;
 
+  /// The central performance in display terms. This may not
+  /// strictly be a mean; for log-normal rating engines it
+  /// might be the median around which the geometric standard
+  /// deviation is defined.
   double mean;
+
+  /// The central performance in display terms.
+  @ignore double get displayCenter => mean;
+  set displayCenter(double value) => mean = value;
 
   double oneSigma;
   double twoSigma;
@@ -79,7 +87,12 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   int highPlace;
   int medianPlace;
 
+  /// The expected ratio of the performance to the winner.
   double? meanRatio;
+
+  @ignore double? get expectedRatio => meanRatio;
+  set expectedRatio(double? value) => meanRatio = value;
+
   double? oneSigmaRatio;
   double? shiftRatio;
 
@@ -126,14 +139,14 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     projectId = project.id,
     predictionSetId = predictionSet.id,
     groupUuid = prediction.shooter.group.uuid,
-    mean = prediction.mean,
+    mean = prediction.displayCenter,
     oneSigma = prediction.oneSigma,
     twoSigma = prediction.twoSigma,
     ciOffset = prediction.ciOffset,
     lowPlace = prediction.lowPlace,
     highPlace = prediction.highPlace,
     medianPlace = prediction.medianPlace,
-    meanRatio = prediction.meanRatio,
+    meanRatio = prediction.expectedRatio,
     oneSigmaRatio = prediction.oneSigmaRatio,
     shiftRatio = prediction.shiftRatio,
     isLogNormal = prediction.isLogNormal,
@@ -164,12 +177,12 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     }
     var prediction = AlgorithmPrediction(
       shooter: preloadedRating,
-      mean: mean,
+      displayCenter: mean,
       sigma: oneSigma,
       ciOffset: ciOffset,
       settings: preloadedSettings ?? settings,
       algorithm: preloadedAlgorithm,
-      meanRatio: meanRatio,
+      expectedRatio: meanRatio,
       oneSigmaRatio: oneSigmaRatio,
       shiftRatio: shiftRatio,
       isLogNormal: isLogNormal,

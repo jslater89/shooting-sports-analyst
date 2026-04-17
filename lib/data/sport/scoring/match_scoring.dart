@@ -343,7 +343,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
                     else {
                       var floor = RatingSystem.defaultRatioFloor;
                       var mult = RatingSystem.defaultRatioMult;
-                      predictionComponent = floor + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * mult);
+                      predictionComponent = floor + ((prediction.displayCenter + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * mult);
                     }
                     // Use more average stage percentage the more scores we have, up to 75%.
                     var averageMultiplier = (stagesCompleted / stages.length).clamp(0.0, 0.75);

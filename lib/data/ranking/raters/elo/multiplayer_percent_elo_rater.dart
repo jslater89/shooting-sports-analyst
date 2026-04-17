@@ -876,10 +876,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         settings: settings,
         algorithm: this,
         shooter: rating,
-        mean: averagePerformance,
+        displayCenter: averagePerformance,
         ciOffset: trendShift,
         sigma: performanceDeviation,
-        meanRatio: meanRatio,
+        expectedRatio: meanRatio,
         oneSigmaRatio: oneSigmaRatio,
         shiftRatio: trendShift,
       ));
@@ -903,7 +903,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       prediction.lowPlace = bottomPlace;
       prediction.medianPlace = medianPlace;
 
-      prediction.meanRatio = ratioFloor + (prediction.mean / highPrediction * ratioMultiplier);
+      prediction.expectedRatio = ratioFloor + (prediction.displayCenter / highPrediction * ratioMultiplier);
       prediction.oneSigmaRatio = prediction.oneSigma / highPrediction * ratioMultiplier;
       prediction.shiftRatio = prediction.shift / highPrediction * ratioMultiplier;
     }
@@ -962,14 +962,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var params = _calculateScoreParams(aRating: shooter, aScore: score, aMatchScore: matchScore, scores: scores, matchScores: matchScores);
       var eloScore = _calculateActualScore(score: score, matchScore: matchScore, params: params, isDnf: matchScore.isDnf);
 
-      errors.add(eloScore.score - prediction.mean);
-      errorSum += pow(eloScore.score - prediction.mean, 2);
+      errors.add(eloScore.score - prediction.displayCenter);
+      errorSum += pow(eloScore.score - prediction.displayCenter, 2);
       actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.ratio, place: matchScore.place);
 
-      if(eloScore.score >= prediction.mean - prediction.twoSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.twoSigma + prediction.shift) {
+      if(eloScore.score >= prediction.displayCenter - prediction.twoSigma + prediction.shift && eloScore.score <= prediction.displayCenter + prediction.twoSigma + prediction.shift) {
         correct95 += 1;
       }
-      if(eloScore.score >= prediction.mean - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.oneSigma + prediction.shift) {
+      if(eloScore.score >= prediction.displayCenter - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.displayCenter + prediction.oneSigma + prediction.shift) {
         correct68 += 1;
       }
       if(matchScore.place <= prediction.lowPlace && matchScore.place >= prediction.highPlace) {
@@ -979,7 +979,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(chatty) {
       _log.d("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
-      _log.d("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
+      _log.d("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.displayCenter).average}");
       _log.d("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length).asPercentage(decimals: 1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
       _log.d("Place correct: $correctPlace/${actualOutcomes.length} (${(correctPlace / actualOutcomes.length).asPercentage(decimals: 1)}%)");
     }

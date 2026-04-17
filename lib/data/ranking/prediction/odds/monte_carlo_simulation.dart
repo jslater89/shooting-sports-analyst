@@ -77,7 +77,7 @@ MonteCarloSimulationResult runOddsSimulation({
     }
     else {
       final finalSigma = shooterPrediction.oneSigma * placeSigmaMultiplier;
-      final actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
+      final actualMean = shooterPrediction.displayCenter + finalSigma * shooterPrediction.ciOffset;
       shooterExpectedScore = _normalDraw(random: actualRandom, mean: actualMean, sigma: finalSigma) * disasterMagnitude;
     }
 
@@ -111,7 +111,7 @@ MonteCarloSimulationResult runOddsSimulation({
       }
       else {
         final otherFinalSigma = otherPred.oneSigma * placeSigmaMultiplier;
-        final otherMean = otherPred.mean + otherFinalSigma * otherPred.ciOffset;
+        final otherMean = otherPred.displayCenter + otherFinalSigma * otherPred.ciOffset;
         otherExpectedScore = _normalDraw(random: actualRandom, mean: otherMean, sigma: otherFinalSigma) * otherDisasterMagnitude;
       }
 
