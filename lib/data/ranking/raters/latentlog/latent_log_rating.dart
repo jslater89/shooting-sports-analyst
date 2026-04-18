@@ -77,7 +77,7 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   }
 
   String formatNumericRatingChange(double ratingChange) {
-    return settings.formatNumericRating(ratingChange);
+    return settings.formatNumericRatingChange(ratingChange);
   }
 
   DateTime? _cachedAgedRatingDate;

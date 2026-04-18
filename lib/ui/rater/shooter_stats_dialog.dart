@@ -117,7 +117,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildEventLines() {
-    final scaleFactor = widget.rating is LatentLogRating ? (widget.rating as LatentLogRating).settings.scaleFactor : 1.0;
+    final rating = widget.rating;
     _eventLines = displayedStats.events
       .map((e) => Tooltip(
       waitDuration: Duration(milliseconds: 500),
@@ -145,7 +145,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                       flex: 2,
                       child: Align(
                           alignment: Alignment.centerRight,
-                          child: Text("${(e.ratingChange * scaleFactor).toStringAsFixed(2)}",
+                          child: Text("${rating.formatNumericRatingChange(e.ratingChange)}",
                               style:
                               Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
                     )
@@ -766,11 +766,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     final rating = widget.rating;
     double currentRating = rating.rating;
-    if(rating is LatentLogRating) {
-      average = average.scale(scaleOffset: rating.settings.scaleOffset, scaleFactor: rating.settings.scaleFactor);
-      lifetimeAverage = lifetimeAverage.scale(scaleOffset: rating.settings.scaleOffset, scaleFactor: rating.settings.scaleFactor);
-      currentRating = rating.displayRating;
-    }
 
 
     int powerFactorsPresent = 0;
@@ -793,21 +788,21 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 4, child: Text("Current rating", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${currentRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text(widget.rating.formatNumericRating(currentRating), style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Peak rating", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${lifetimeAverage.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text(widget.rating.formatNumericRating(lifetimeAverage.maxRating), style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Average rating (${displayedStats.isCareer ? "past $averageWindow events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${average.averageOfIntermediates.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text(widget.rating.formatNumericRating(average.averageOfIntermediates), style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
@@ -821,7 +816,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 4, child: Text("Min-max rating (${displayedStats.isCareer ? "past $averageWindow events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${widget.rating.formatNumericRating(average.minRating)}-${widget.rating.formatNumericRating(average.maxRating)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
