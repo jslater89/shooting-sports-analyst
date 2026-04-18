@@ -767,7 +767,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     final rating = widget.rating;
     double currentRating = rating.rating;
 
-
     int powerFactorsPresent = 0;
     if(displayedStats.majorEntries > 0) powerFactorsPresent += 1;
     if(displayedStats.minorEntries > 0) powerFactorsPresent += 1;

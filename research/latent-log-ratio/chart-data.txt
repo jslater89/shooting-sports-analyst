@@ -1,0 +1,84 @@
+=== Per algorithm (overall) — mode=rated-only ===
+Elo  n=3067  MAPE=12.37%  MPE=-5.44%  MPE(arith)=-5.44%  MAE=0.0779  CRPS=0.0679  RankMAE=11.26 places  1σ coverage=30.7% (ideal ~68.3%)  2σ coverage=51.9% (ideal ~95.4%)
+Glicko  n=3046  MAPE=9.97%  MPE=-1.85%  MPE(arith)=-1.85%  MAE=0.0653  CRPS=0.0525  RankMAE=11.21 places  1σ coverage=50.2% (ideal ~68.3%)  2σ coverage=79.4% (ideal ~95.4%)
+LLR  n=2955  MAPE=8.47%  MPE=-0.96%  MPE(arith)=-1.27%  MAE=0.0490  CRPS=0.0361  RankMAE=10.27 places  1σ coverage=65.2% (ideal ~68.3%)  2σ coverage=90.5% (ideal ~95.4%)
+
+=== Per algorithm, bucketed by actual finish — mode=all ===
+Elo:
+  top 20%      n=  673  MPE=  -1.10%  MPE(arith)=  -1.10%  MAPE=  4.58%  MAE=0.0396  CRPS=0.0309  RankMAE= 6.46  1σ= 49.3%  2σ= 74.0%
+  20-40%       n=  657  MPE=  -1.67%  MPE(arith)=  -1.67%  MAPE=  7.33%  MAE=0.0558  CRPS=0.0443  RankMAE=13.23  1σ= 36.5%  2σ= 64.1%
+  40-60%       n=  626  MPE=  -1.20%  MPE(arith)=  -1.20%  MAPE=  8.76%  MAE=0.0599  CRPS=0.0484  RankMAE=18.48  1σ= 31.0%  2σ= 54.6%
+  60-80%       n=  570  MPE=  -0.97%  MPE(arith)=  -0.97%  MAPE= 12.07%  MAE=0.0722  CRPS=0.0617  RankMAE=20.44  1σ= 19.1%  2σ= 39.5%
+  bottom 20%   n=  541  MPE= -26.53%  MPE(arith)= -26.53%  MAPE= 33.80%  MAE=0.1853  CRPS=0.1774  RankMAE=35.55  1σ=  7.8%  2σ= 14.0%
+Glicko:
+  top 20%      n=  672  MPE=  +3.12%  MPE(arith)=  +3.12%  MAPE=  5.28%  MAE=0.0462  CRPS=0.0347  RankMAE= 7.18  1σ= 53.9%  2σ= 83.0%
+  20-40%       n=  654  MPE=  +2.69%  MPE(arith)=  +2.69%  MAPE=  6.31%  MAE=0.0484  CRPS=0.0361  RankMAE=12.71  1σ= 49.2%  2σ= 81.2%
+  40-60%       n=  622  MPE=  +1.57%  MPE(arith)=  +1.57%  MAPE=  6.37%  MAE=0.0438  CRPS=0.0321  RankMAE=16.41  1σ= 55.6%  2σ= 83.3%
+  60-80%       n=  564  MPE=  +0.49%  MPE(arith)=  +0.49%  MAPE=  8.14%  MAE=0.0488  CRPS=0.0362  RankMAE=18.51  1σ= 48.9%  2σ= 81.6%
+  bottom 20%   n=  534  MPE= -21.50%  MPE(arith)= -21.50%  MAPE= 26.54%  MAE=0.1518  CRPS=0.1353  RankMAE=34.73  1σ= 43.1%  2σ= 68.2%
+LLR:
+  top 20%      n=  663  MPE=  +3.59%  MPE(arith)=  +3.34%  MAPE=  5.11%  MAE=0.0453  CRPS=0.0322  RankMAE= 7.18  1σ= 75.3%  2σ= 95.9%
+  20-40%       n=  651  MPE=  +2.42%  MPE(arith)=  +2.15%  MAPE=  6.09%  MAE=0.0469  CRPS=0.0340  RankMAE=13.14  1σ= 68.4%  2σ= 92.2%
+  40-60%       n=  620  MPE=  +1.31%  MPE(arith)=  +1.02%  MAPE=  6.37%  MAE=0.0438  CRPS=0.0312  RankMAE=16.69  1σ= 66.1%  2σ= 93.7%
+  60-80%       n=  565  MPE=  -0.43%  MPE(arith)=  -0.75%  MAPE=  7.48%  MAE=0.0448  CRPS=0.0324  RankMAE=18.87  1σ= 61.2%  2σ= 91.0%
+  bottom 20%   n=  456  MPE= -17.68%  MPE(arith)= -18.14%  MAPE= 20.98%  MAE=0.0691  CRPS=0.0553  RankMAE=27.22  1σ= 50.0%  2σ= 74.8%
+
+=== Per algorithm, bucketed by actual finish — mode=rated-only ===
+Elo:
+  top 20%      n=  580  MPE=  -0.78%  MPE(arith)=  -0.78%  MAPE=  4.36%  MAE=0.0380  CRPS=0.0295  RankMAE= 6.38  1σ= 51.4%  2σ= 76.0%
+  20-40%       n=  611  MPE=  -1.15%  MPE(arith)=  -1.15%  MAPE=  6.61%  MAE=0.0516  CRPS=0.0403  RankMAE=10.99  1σ= 40.1%  2σ= 69.1%
+  40-60%       n=  618  MPE=  -0.51%  MPE(arith)=  -0.51%  MAPE=  8.39%  MAE=0.0587  CRPS=0.0471  RankMAE=13.16  1σ= 31.4%  2σ= 56.1%
+  60-80%       n=  611  MPE=  -0.34%  MPE(arith)=  -0.34%  MAPE= 10.64%  MAE=0.0663  CRPS=0.0557  RankMAE=10.80  1σ= 23.7%  2σ= 45.0%
+  bottom 20%   n=  647  MPE= -23.18%  MPE(arith)= -23.18%  MAPE= 30.45%  MAE=0.1678  CRPS=0.1598  RankMAE=14.49  1σ=  9.3%  2σ= 16.7%
+Glicko:
+  top 20%      n=  579  MPE=  +3.35%  MPE(arith)=  +3.35%  MAPE=  5.26%  MAE=0.0465  CRPS=0.0352  RankMAE= 7.55  1σ= 53.4%  2σ= 81.9%
+  20-40%       n=  607  MPE=  +3.09%  MPE(arith)=  +3.09%  MAPE=  6.06%  MAE=0.0478  CRPS=0.0355  RankMAE=11.61  1σ= 50.1%  2σ= 81.1%
+  40-60%       n=  617  MPE=  +2.43%  MPE(arith)=  +2.43%  MAPE=  6.48%  MAE=0.0457  CRPS=0.0338  RankMAE=12.43  1σ= 51.7%  2σ= 82.5%
+  60-80%       n=  605  MPE=  +1.24%  MPE(arith)=  +1.24%  MAPE=  7.47%  MAE=0.0467  CRPS=0.0343  RankMAE=10.33  1σ= 52.2%  2σ= 81.7%
+  bottom 20%   n=  638  MPE= -18.32%  MPE(arith)= -18.32%  MAPE= 23.69%  MAE=0.1357  CRPS=0.1197  RankMAE=13.78  1σ= 43.9%  2σ= 70.4%
+LLR:
+  top 20%      n=  575  MPE=  +3.77%  MPE(arith)=  +3.53%  MAPE=  5.07%  MAE=0.0454  CRPS=0.0325  RankMAE= 7.44  1σ= 75.7%  2σ= 95.8%
+  20-40%       n=  601  MPE=  +2.89%  MPE(arith)=  +2.62%  MAPE=  5.88%  MAE=0.0465  CRPS=0.0334  RankMAE=12.02  1σ= 68.2%  2σ= 93.2%
+  40-60%       n=  614  MPE=  +2.16%  MPE(arith)=  +1.87%  MAPE=  6.51%  MAE=0.0459  CRPS=0.0330  RankMAE=12.92  1σ= 65.8%  2σ= 92.3%
+  60-80%       n=  604  MPE=  +0.51%  MPE(arith)=  +0.20%  MAPE=  6.83%  MAE=0.0427  CRPS=0.0305  RankMAE=10.42  1σ= 63.6%  2σ= 92.7%
+  bottom 20%   n=  561  MPE= -14.92%  MPE(arith)= -15.37%  MAPE= 18.65%  MAE=0.0657  CRPS=0.0520  RankMAE= 8.26  1σ= 52.6%  2σ= 77.5%
+
+=== Per algorithm, bucketed by predicted rank (rating) — mode=all ===
+Elo:
+  top 20%      n=  884  MPE=  -7.54%  MPE(arith)=  -7.54%  MAPE=  8.74%  MAE=0.0676  CRPS=0.0578  RankMAE=14.07  1σ= 41.5%  2σ= 64.9%
+  20-40%       n=  794  MPE=  -6.58%  MPE(arith)=  -6.58%  MAPE= 10.62%  MAE=0.0702  CRPS=0.0590  RankMAE=20.67  1σ= 39.0%  2σ= 64.9%
+  40-60%       n=  736  MPE=  -4.02%  MPE(arith)=  -4.02%  MAPE= 13.03%  MAE=0.0823  CRPS=0.0713  RankMAE=21.25  1σ= 24.5%  2σ= 47.4%
+  60-80%       n=  522  MPE=  -3.06%  MPE(arith)=  -3.06%  MAPE= 17.93%  MAE=0.0999  CRPS=0.0911  RankMAE=18.21  1σ= 10.3%  2σ= 21.3%
+  bottom 20%   n=  131  MPE=  -7.99%  MPE(arith)=  -7.99%  MAPE= 26.24%  MAE=0.1065  CRPS=0.1013  RankMAE=11.41  1σ=  4.6%  2σ=  9.9%
+Glicko:
+  top 20%      n=  775  MPE=  -2.59%  MPE(arith)=  -2.59%  MAPE=  7.36%  MAE=0.0570  CRPS=0.0459  RankMAE=12.31  1σ= 57.0%  2σ= 87.0%
+  20-40%       n=  802  MPE=  -1.88%  MPE(arith)=  -1.88%  MAPE=  8.34%  MAE=0.0644  CRPS=0.0522  RankMAE=18.85  1σ= 52.1%  2σ= 81.7%
+  40-60%       n=  780  MPE=  -1.77%  MPE(arith)=  -1.77%  MAPE= 10.90%  MAE=0.0654  CRPS=0.0518  RankMAE=20.53  1σ= 45.5%  2σ= 74.6%
+  60-80%       n=  558  MPE=  -1.60%  MPE(arith)=  -1.60%  MAPE= 12.85%  MAE=0.0764  CRPS=0.0622  RankMAE=18.21  1σ= 46.6%  2σ= 75.3%
+  bottom 20%   n=  131  MPE=  -4.37%  MPE(arith)=  -4.37%  MAPE= 17.73%  MAE=0.0696  CRPS=0.0540  RankMAE=11.44  1σ= 46.6%  2σ= 76.3%
+LLR:
+  top 20%      n=  753  MPE=  -0.97%  MPE(arith)=  -1.23%  MAPE=  5.83%  MAE=0.0431  CRPS=0.0320  RankMAE=10.65  1σ= 78.5%  2σ= 96.4%
+  20-40%       n=  783  MPE=  -0.27%  MPE(arith)=  -0.57%  MAPE=  6.82%  MAE=0.0477  CRPS=0.0346  RankMAE=16.76  1σ= 69.0%  2σ= 94.0%
+  40-60%       n=  758  MPE=  -0.58%  MPE(arith)=  -0.89%  MAPE=  9.68%  MAE=0.0526  CRPS=0.0384  RankMAE=19.50  1σ= 58.3%  2σ= 87.9%
+  60-80%       n=  533  MPE=  -1.35%  MPE(arith)=  -1.71%  MAPE= 10.37%  MAE=0.0508  CRPS=0.0376  RankMAE=17.04  1σ= 56.1%  2σ= 85.4%
+  bottom 20%   n=  128  MPE= -11.21%  MPE(arith)= -11.65%  MAPE= 19.57%  MAE=0.0613  CRPS=0.0478  RankMAE=13.51  1σ= 43.8%  2σ= 69.5%
+
+=== Per algorithm, bucketed by predicted rank (rating) — mode=rated-only ===
+Elo:
+  top 20%      n=  658  MPE=  -7.12%  MPE(arith)=  -7.12%  MAPE=  8.35%  MAE=0.0633  CRPS=0.0539  RankMAE=10.45  1σ= 44.4%  2σ= 68.1%
+  20-40%       n=  643  MPE=  -5.54%  MPE(arith)=  -5.54%  MAPE=  8.35%  MAE=0.0656  CRPS=0.0545  RankMAE=15.01  1σ= 43.4%  2σ= 69.4%
+  40-60%       n=  603  MPE=  -5.05%  MPE(arith)=  -5.05%  MAPE= 11.65%  MAE=0.0721  CRPS=0.0605  RankMAE=13.05  1σ= 35.7%  2σ= 63.8%
+  60-80%       n=  568  MPE=  -1.49%  MPE(arith)=  -1.49%  MAPE= 13.62%  MAE=0.0895  CRPS=0.0782  RankMAE=10.46  1σ= 18.1%  2σ= 37.0%
+  bottom 20%   n=  595  MPE=  -7.63%  MPE(arith)=  -7.63%  MAPE= 20.72%  MAE=0.1023  CRPS=0.0955  RankMAE= 7.04  1σ=  8.9%  2σ= 17.5%
+Glicko:
+  top 20%      n=  580  MPE=  -2.34%  MPE(arith)=  -2.34%  MAPE=  7.23%  MAE=0.0580  CRPS=0.0473  RankMAE= 9.85  1σ= 57.2%  2σ= 86.4%
+  20-40%       n=  611  MPE=  -1.13%  MPE(arith)=  -1.13%  MAPE=  7.55%  MAE=0.0591  CRPS=0.0475  RankMAE=13.26  1σ= 52.2%  2σ= 82.2%
+  40-60%       n=  622  MPE=  -2.37%  MPE(arith)=  -2.37%  MAPE= 10.08%  MAE=0.0646  CRPS=0.0521  RankMAE=13.74  1σ= 48.4%  2σ= 77.7%
+  60-80%       n=  611  MPE=  -0.58%  MPE(arith)=  -0.58%  MAPE= 10.30%  MAE=0.0705  CRPS=0.0565  RankMAE=12.09  1σ= 45.8%  2σ= 74.8%
+  bottom 20%   n=  622  MPE=  -2.83%  MPE(arith)=  -2.83%  MAPE= 14.45%  MAE=0.0740  CRPS=0.0587  RankMAE= 7.06  1σ= 47.6%  2σ= 76.4%
+LLR:
+  top 20%      n=  566  MPE=  -0.48%  MPE(arith)=  -0.72%  MAPE=  5.59%  MAE=0.0420  CRPS=0.0314  RankMAE= 7.63  1σ= 80.4%  2σ= 96.8%
+  20-40%       n=  593  MPE=  -0.25%  MPE(arith)=  -0.53%  MAPE=  6.27%  MAE=0.0458  CRPS=0.0331  RankMAE=12.04  1σ= 71.2%  2σ= 95.4%
+  40-60%       n=  604  MPE=  -0.95%  MPE(arith)=  -1.25%  MAPE=  8.60%  MAE=0.0492  CRPS=0.0360  RankMAE=13.04  1σ= 65.7%  2σ= 92.2%
+  60-80%       n=  594  MPE=  +0.89%  MPE(arith)=  +0.59%  MAPE=  8.80%  MAE=0.0533  CRPS=0.0385  RankMAE=11.22  1σ= 55.7%  2σ= 87.0%
+  bottom 20%   n=  598  MPE=  -3.96%  MPE(arith)=  -4.38%  MAPE= 12.93%  MAE=0.0545  CRPS=0.0412  RankMAE= 7.30  1σ= 54.0%  2σ= 81.1%
