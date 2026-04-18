@@ -12,7 +12,6 @@ import "package:file_picker/file_picker.dart";
 import "package:flutter/material.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_importer.dart";
 import "package:shooting_sports_analyst/api/riff/impl/riff_importer.dart";
-import "package:shooting_sports_analyst/closed_sources/psv2/matchdef/match_info_zip.dart";
 import "package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart";
 import "package:shooting_sports_analyst/config/config.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
@@ -21,6 +20,7 @@ import "package:shooting_sports_analyst/data/database/schema/match_prep/match.da
 import "package:shooting_sports_analyst/data/import/type_detector.dart";
 import "package:shooting_sports_analyst/data/source/auto_importer.dart";
 import "package:shooting_sports_analyst/data/source/practiscore_report.dart";
+import "package:shooting_sports_analyst/data/source/psc/matchdef/match_info_zip.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/uspsa.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/logger.dart";

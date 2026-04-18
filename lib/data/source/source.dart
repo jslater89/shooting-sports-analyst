@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
+import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -119,7 +120,7 @@ abstract class MatchSource<
 
     InternalMatchFetchOptions? options;
     if (source is PSv2MatchSource) {
-      options = PSv2MatchFetchOptions(
+      options = PscMatchFetchOptions(
         downloadScoreLogs: matchInProgress,
         ignoreUnknownDivisions: true,
         fuzzyHitFactorDivisionMatching: true,

@@ -4,8 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/search.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class PSWebMatchSearchSource extends SearchSource {
   @override
@@ -18,4 +20,13 @@ class PSWebMatchSearchSource extends SearchSource {
 
   @override
   List<Sport> get supportedSports => [];
+
+  final String downloadSourceCode;
+
+  PSWebMatchSearchSource({required this.downloadSourceCode});
+
+  @override
+  Future<SearchSourceResult> searchByName(String name, {List<Sport>? sportFilter}) {
+    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
+  }
 }

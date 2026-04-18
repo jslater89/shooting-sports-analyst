@@ -11,7 +11,6 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:html/parser.dart' hide ParseError;
 import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
-import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/match_info_zip.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -19,6 +18,8 @@ import 'package:shooting_sports_analyst/data/database/extensions/future_match.da
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/psc/matchdef/match_info_zip.dart';
+import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
@@ -153,7 +154,7 @@ class AutoImporter {
           return;
         }
         var matchInfoFiles = matchInfoFilesRes.unwrap();
-        var options = PSv2MatchFetchOptions(fuzzyHitFactorDivisionMatching: _config.autoImportFuzzyHitFactorDivisionMatching);
+        var options = PscMatchFetchOptions(fuzzyHitFactorDivisionMatching: _config.autoImportFuzzyHitFactorDivisionMatching);
         var matchRes = await PSv2MatchSource().getMatchFromInfoFiles(matchInfoFiles, options: options);
         if(matchRes.isErr()) {
           _log.e("Error getting match from info files: ${matchRes.unwrapErr().message}");

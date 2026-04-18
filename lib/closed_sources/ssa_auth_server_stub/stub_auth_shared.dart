@@ -6,7 +6,7 @@ import "dart:math";
 import "dart:typed_data";
 
 import "package:shelf_plus/shelf_plus.dart";
-import "package:shooting_sports_analyst/closed_sources/ssa_auth_server_stub/stub_auth_types.dart";
+import "package:shooting_sports_analyst/server/auth/auth_identity.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:toml/toml.dart";
 
