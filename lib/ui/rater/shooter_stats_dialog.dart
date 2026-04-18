@@ -587,17 +587,17 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     double chartMaximum;
 
     if(maximumMinimum != null) {
-      chartMinimum = min(maximumMinimum, minWithError - 50);
+      chartMinimum = min(maximumMinimum, minWithError * 0.95);
     }
     else {
-      chartMinimum = minWithError - 50;
+      chartMinimum = minWithError * 0.95;
     }
 
     if(minimumMaximum != null) {
-      chartMaximum = max(minimumMaximum, maxWithError + 50);
+      chartMaximum = max(minimumMaximum, maxWithError * 1.05);
     }
     else {
-      chartMaximum = maxWithError + 50;
+      chartMaximum = maxWithError * 1.05;
     }
 
     if(_chart == null) {

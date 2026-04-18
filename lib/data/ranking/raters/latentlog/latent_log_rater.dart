@@ -1500,6 +1500,38 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     ];
   }
 
+  @override
+  int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
+    final totalSize = settings.scaleFactor + settings.scaleOffset;
+    if(totalSize >= 2000) {
+      return 100;
+    }
+    else if(totalSize >= 1000) {
+      return 75;
+    }
+    else if(totalSize >= 500) {
+      return 50;
+    }
+    else if(totalSize >= 250) {
+      return 30;
+    }
+    else if(totalSize >= 100) {
+      return 20;
+    }
+    else if(totalSize >= 50) {
+      return 10;
+    }
+    else if(totalSize >= 25) {
+      return 5;
+    }
+    else if(totalSize >= 10) {
+      return 2;
+    }
+    else {
+      return 1;
+    }
+  }
+
 }
 
 /// The probability that a given competitor is the presumed winner of the match, for the purposes
