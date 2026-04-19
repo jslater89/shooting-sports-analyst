@@ -1183,8 +1183,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);
       final withinComponentVariance =
         notWinnerProbability * (
-          ratingVariance +
-          2 * settings.predictionSportVariance
+          ratingVariance
+          + 2 * settings.predictionSportVariance
           + (ownCertainty * rating.dispersion * kappa)
         )
         + probabilityWeightedWinnerVariance
@@ -1195,7 +1195,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final upperCi = probabilityWeightedRatio * geometricSD;
 
       final rawLogSigma = sqrt(
-        ratingVariance
+        (1 - settings.intraclassCorrelation) * ratingVariance
         + kappa * rating.dispersion
         + settings.predictionSportVariance
       );

@@ -658,6 +658,7 @@ class RatingGroup with DbSportEntity {
 
   bool builtin;
 
+  /// Whether this group contains the given division.
   bool containsDivision(Division division) {
     // special case for USPSA/IPSC compatibility
     if(sport == uspsaSport && ipscSport.divisions.values.contains(division)) {
