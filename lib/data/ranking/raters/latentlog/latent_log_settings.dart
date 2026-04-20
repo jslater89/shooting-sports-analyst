@@ -25,6 +25,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultMomentumAdaptationRate = 0.20;
   static const defaultSurpriseAdaptationRate = 0.10;
   static const defaultPairwiseBlendWeight = 0.10;
+  static const defaultStudentTCutoffZ = 2.0;
 
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.40;
@@ -56,6 +57,7 @@ class LatentLogSettings extends RaterSettings {
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
   static const _momentumAdaptationRateKey = "latentLogMomentumAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
+  static const _studentTCutoffZKey = "latentLogStudentTCutoffZ";
   static const _baselineRobustnessZKey = "latentLogBaselineRobustnessZ";
   static const _tailNoiseStartPercentKey = "latentLogTailNoiseStartPercent";
   static const _tailNoiseVarianceKey = "latentLogTailNoiseVariance";
@@ -202,6 +204,21 @@ class LatentLogSettings extends RaterSettings {
   /// -> 1: pairwise residuals fully applied.
   /// -> > 1: pairwise residuals applied with additional emphasis.
   double pairwiseBlendWeight = defaultPairwiseBlendWeight;
+
+  /// Student-t full-strength cutoff c_t, in innovation sigmas.
+  ///
+  /// Interpretation: the robust mean-update weight is
+  /// w_t(z) = min(1, (ν + c_t^2) / (ν + z^2)). Innovations within c_t
+  /// sigmas of the expected update receive full weight; beyond c_t they are
+  /// downweighted with a heavy-tailed taper. Raising c_t widens the
+  /// "believable innovation" band before outlier damping begins; lowering it
+  /// pulls the taper in toward smaller surprises.
+  ///
+  /// Tuning: sigmas, nonnegative.
+  /// -> 1.0: legacy behavior; taper begins immediately past 1σ.
+  /// -> 2.0: default; typical matches pass through largely undamped.
+  /// -> 3.0+: only extreme innovations are downweighted.
+  double studentTCutoffZ = defaultStudentTCutoffZ;
 
   /// The intraclass correlation coefficient, i.e. ρ from the paper.
   ///
@@ -419,6 +436,7 @@ class LatentLogSettings extends RaterSettings {
     this.momentumAdaptationRate = defaultMomentumAdaptationRate,
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
+    this.studentTCutoffZ = defaultStudentTCutoffZ,
     this.baselineRobustnessZ = defaultBaselineRobustnessZ,
     this.intraclassCorrelation = defaultIntraclassCorrelation,
     this.tailNoiseStartPercent = defaultTailNoiseStartPercent,
@@ -452,6 +470,7 @@ class LatentLogSettings extends RaterSettings {
     json[_momentumAdaptationRateKey] = momentumAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
+    json[_studentTCutoffZKey] = studentTCutoffZ;
     json[_baselineRobustnessZKey] = baselineRobustnessZ;
     json[_tailNoiseStartPercentKey] = tailNoiseStartPercent;
     json[_tailNoiseVarianceKey] = tailNoiseVariance;
@@ -504,6 +523,8 @@ class LatentLogSettings extends RaterSettings {
             as double;
     pairwiseBlendWeight =
         (json[_pairwiseBlendWeightKey] ?? defaultPairwiseBlendWeight) as double;
+    studentTCutoffZ =
+        (json[_studentTCutoffZKey] ?? defaultStudentTCutoffZ) as double;
     baselineRobustnessZ =
         (json[_baselineRobustnessZKey] ?? defaultBaselineRobustnessZ) as double;
     tailNoiseStartPercent =

@@ -109,6 +109,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _momentumAdaptController = TextEditingController();
   final TextEditingController _surpriseAdaptController = TextEditingController();
   final TextEditingController _pairwiseBlendController = TextEditingController();
+  final TextEditingController _studentTCutoffZController = TextEditingController();
   final TextEditingController _baselineRobustnessZController = TextEditingController();
   final TextEditingController _tailNoiseStartPercentController = TextEditingController();
   final TextEditingController _tailNoiseVarianceController = TextEditingController();
@@ -220,6 +221,11 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         _validateText();
       }
     });
+    attachNumericListener(_studentTCutoffZController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
     attachNumericListener(_baselineRobustnessZController, () {
       if (!widget.controller._restoreDefaults) {
         _validateText();
@@ -286,6 +292,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _momentumAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
+    _studentTCutoffZController.dispose();
     _baselineRobustnessZController.dispose();
     _tailNoiseStartPercentController.dispose();
     _tailNoiseVarianceController.dispose();
@@ -321,6 +328,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _intraclassCorrelationController.text = settings.intraclassCorrelation.toStringAsFixed(3);
 
     _pairwiseBlendController.text = settings.pairwiseBlendWeight.toStringAsFixed(4);
+    _studentTCutoffZController.text = settings.studentTCutoffZ.toStringAsFixed(2);
     _baselineRobustnessZController.text = settings.baselineRobustnessZ.toStringAsFixed(4);
     _tailNoiseStartPercentController.text = settings.tailNoiseStartPercent.toStringAsFixed(4);
     _tailNoiseVarianceController.text = settings.tailNoiseVariance.toStringAsFixed(4);
@@ -482,6 +490,16 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     }
     if (pairwise < 0) {
       widget.controller.lastError = "Pairwise blend weight must be nonnegative";
+      return;
+    }
+
+    final studentTCutoffZ = double.tryParse(_studentTCutoffZController.text);
+    if (studentTCutoffZ == null) {
+      widget.controller.lastError = "Student-t cutoff c_t formatted incorrectly";
+      return;
+    }
+    if (studentTCutoffZ < 0) {
+      widget.controller.lastError = "Student-t cutoff c_t must be nonnegative";
       return;
     }
 
@@ -669,6 +687,7 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.momentumAdaptationRate = momentumAdapt;
       settings.surpriseAdaptationRate = surp;
       settings.pairwiseBlendWeight = pairwise;
+      settings.studentTCutoffZ = studentTCutoffZ;
       settings.baselineRobustnessZ = baselineRobustnessZ;
       settings.tailNoiseStartPercent = tailNoiseStartPercent;
       settings.tailNoiseVariance = tailNoiseVariance;
@@ -901,6 +920,14 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               tooltip:
                   "α in P = L + B + αD; dimensionless blend of pairwise residuals.",
               controller: _pairwiseBlendController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            _LatentLogLabeledNumericRow(
+              label: "Student-t cutoff c_t",
+              tooltip:
+                  "Innovation sigmas admitted at full weight before heavy-tailed downweighting begins. c_t = 1 reproduces the previous behavior; larger values trust more of the innovation distribution. 0 damps every nonzero innovation.",
+              controller: _studentTCutoffZController,
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
             ),

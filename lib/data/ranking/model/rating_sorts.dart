@@ -108,6 +108,11 @@ extension SortFunctions on RatingSortMode {
             double bLastMatchChange = b.lastMatchChange;
             return bLastMatchChange.compareTo(aLastMatchChange);
           }
+          else if(a is LatentLogRating && b is LatentLogRating) {
+            double aLastMatchChange = a.lastMatchChange;
+            double bLastMatchChange = b.lastMatchChange;
+            return bLastMatchChange.compareTo(aLastMatchChange);
+          }
           throw ArgumentError();
         };
       case RatingSortMode.direction:

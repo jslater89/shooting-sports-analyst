@@ -6,11 +6,13 @@
 
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/math/ratio_forecast_stats.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -22,7 +24,6 @@ import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-// ignore: unused_element
 final _log = SSALogger("MatchPrepPredictions");
 
 /// The predictions tab displays prediction sets from the match prep.
@@ -280,6 +281,24 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
         }
         lastHadOutcomes = true;
         model.setOutcomes(outcomes);
+        if (kDebugMode && outcomes.isNotEmpty) {
+          final stats = RatioForecastStatsAccumulator();
+          for (final entry in outcomes.entries) {
+            stats.tryAddPrediction(
+              entry.key,
+              actualRatio: entry.value.percent,
+              actualPlace: entry.value.place,
+            );
+          }
+          if (stats.n > 0) {
+            _log.d(
+              stats.debugSummary(
+                prefix:
+                    "Prediction vs outcome [${widget.group.uiLabel}]: ",
+              ),
+            );
+          }
+        }
       }
       else {
         lastHadOutcomes = false;

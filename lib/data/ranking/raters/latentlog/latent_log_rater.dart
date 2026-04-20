@@ -69,6 +69,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   List<RatingSortMode> get supportedSorts => [
     RatingSortMode.agedRating,
     RatingSortMode.rating,
+    RatingSortMode.lastChange,
     RatingSortMode.classification,
     RatingSortMode.trend,
     RatingSortMode.error,
@@ -558,7 +559,8 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     const nuMin = 2;
     const nuMax = 30;
     final nu = (nuMin + 0.5 * scores.length).clamp(nuMin, nuMax);
-    final weight = min(1.0, (nu + 1) / (nu + zScore * zScore));
+    final cT = settings.studentTCutoffZ;
+    final weight = min(1.0, (nu + cT * cT) / (nu + zScore * zScore));
     final dampedInnovation = innovation * weight;
 
     final kalmanGain = shooterVariance / totalNoise;
@@ -1507,24 +1509,21 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       return 100;
     }
     else if(totalSize >= 1000) {
-      return 75;
-    }
-    else if(totalSize >= 500) {
       return 50;
     }
+    else if(totalSize >= 500) {
+      return 25;
+    }
     else if(totalSize >= 250) {
-      return 30;
+      return 15;
     }
     else if(totalSize >= 100) {
-      return 20;
-    }
-    else if(totalSize >= 50) {
       return 10;
     }
-    else if(totalSize >= 25) {
+    else if(totalSize >= 50) {
       return 5;
     }
-    else if(totalSize >= 10) {
+    else if(totalSize >= 25) {
       return 2;
     }
     else {

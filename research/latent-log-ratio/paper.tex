@@ -344,10 +344,11 @@
 	\begin{equation}
 		z_i = \frac{e_i}{\sqrt{T_i}}
 	\end{equation}
-	Define a robust scalar using a degrees-of-freedom parameter $\nu = \mathrm{clamp}(2 + 0.5N,\,2,\,30)$:
+	Define a robust scalar using a degrees-of-freedom parameter $\nu = \mathrm{clamp}(2 + 0.5N,\,2,\,30)$ and a full-strength innovation cutoff $c_t \ge 0$ (in innovation sigmas):
 	\begin{equation}
-		w_t(z_i) = \min\!\left(1,\frac{\nu + 1}{\nu + z_i^2}\right)
+		w_t(z_i) = \min\!\left(1,\frac{\nu + c_t^2}{\nu + z_i^2}\right)
 	\end{equation}
+	Setting $c_t = 1$ recovers the standard Student-$t$ kernel; larger values admit a wider innovation band at full strength before tapering begins. In this implementation, the default is $c_t = 2$.
 	The rating moves toward the observation using the robust Kalman mean update:
 	\begin{equation}
 		R_i \leftarrow R_i + K_i \cdot w_t(z_i) \cdot e_i
