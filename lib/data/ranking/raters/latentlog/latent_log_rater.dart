@@ -176,11 +176,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   @override
   String ratingsToCsv(List<ShooterRating<RatingEvent>> ratings) {
     StringBuffer csv = StringBuffer();
-    csv.writeln("Member#,Name,Rating,Variance,Dispersion,Matches,Stages");
+    csv.writeln("Member#,Name,Rating,Variance,Dispersion,Momentum,Matches,Stages");
     for (var r in ratings) {
       r as LatentLogRating;
       csv.writeln(
-        '${r.memberNumber},"${r.name}",${r.rating},${r.variance},${r.dispersion},${r.lengthInMatches},${r.lengthInStages}',
+        '${r.memberNumber},"${r.name}",${r.displayAgedRating},${r.displayVariance},${r.displayDispersion},${r.displayMomentum},${r.lengthInMatches},${r.lengthInStages}',
       );
     }
     return csv.toString();
@@ -536,6 +536,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final dispersionCertainty =
         1.0 - (shooterVariance / settings.maximumVariance).clamp(0.0, 1.0);
 
+    // Certainty-scaled momentum adaptation rate (λ_i^eff in the paper).
+    // Computed here because it is the denominator of the Trend calculation
+    // below, as well as the EMA rate for the momentum update later on.
+    final effectiveMomentumAdaptationRate =
+        settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
+
     // Effective observation noise propagates uncertainty from the baseline
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
@@ -550,7 +556,24 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       + shooterTailNoise
       + weakFieldVariance
       + newFieldVariance;
-    final totalNoise = shooterVariance + totalObsNoise;
+
+    // Trend-driven prior inflation: the committed momentum (from prior
+    // matches) acts as adaptive process noise and inflates the prior before
+    // the Kalman update. This is the Kalman-canonical placement for process
+    // noise; sustained drift detected by the momentum EMA raises the gain on
+    // this match's mean update, not just the posterior variance.
+    //
+    // Dividing by λ_eff (rather than raw λ) is a self-normalizing detector:
+    // under the EMA null, E[m_i^2] ≈ λ_eff · Var(robustInnovation), so the
+    // expected "no-drift" Trend is constant across certainty levels.
+    final momentumCorrection = (shooter.momentum * shooter.momentum) / effectiveMomentumAdaptationRate;
+    final trendInjection = settings.surpriseAdaptationRate * max(0.0, momentumCorrection);
+    final priorVariance = min(
+      settings.maximumVariance,
+      shooterVariance + trendInjection,
+    );
+
+    final totalNoise = priorVariance + totalObsNoise;
     final zScore = innovation / sqrt(totalNoise);
 
     final obsQuality = cleanObsNoise / totalObsNoise;
@@ -563,31 +586,29 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final weight = min(1.0, (nu + cT * cT) / (nu + zScore * zScore));
     final dampedInnovation = innovation * weight;
 
-    final kalmanGain = shooterVariance / totalNoise;
+    final kalmanGain = priorVariance / totalNoise;
     final newRating = agedRating + kalmanGain * dampedInnovation;
 
     // Momentum is a signed EMA over innovation.
     // We operate on 'clean' innovation, i.e. only that portion of innovation that
     // is not explained by degenerate fields, tail noise, etc.
+    // The updated momentum drives the next match's Trend injection.
     final robustInnovation = dampedInnovation * obsQuality;
-    final effectiveMomentumAdaptationRate = settings.momentumAdaptationRate * max(0.25, dispersionCertainty);
     final newMomentum = shooter.momentum * (1 - effectiveMomentumAdaptationRate) +
         effectiveMomentumAdaptationRate * robustInnovation;
 
-    // Use the stronger of surprise or momentum to add to variance.
-    // For surprise, we explicitly don't want the full robust innovation, but we do want the physical innovation.
-    // We want to catch big outliers, but we don't want to catch big outliers caused by degenerate fields.
+    // Shock is a single-event posterior variance injection, independent of
+    // Trend. We use the physical innovation (structural noise stripped, but
+    // physical outliers retained) against the Trend-inflated totalNoise, so
+    // Shock only fires on surprises that exceed even the trend-authorized
+    // expectation.
     final physicalInnovation = innovation * obsQuality;
     final surpriseCorrection = (physicalInnovation * physicalInnovation) - totalNoise;
-    final momentumCorrection = (newMomentum * newMomentum) / settings.momentumAdaptationRate;
-    final strongerCorrection = max(surpriseCorrection, momentumCorrection);
+    final shockInjection = settings.surpriseAdaptationRate * max(0.0, surpriseCorrection);
 
-    final innovationCorrection =
-        settings.surpriseAdaptationRate *
-        max(0.0, strongerCorrection);
     final newVariance = min(
       settings.maximumVariance,
-      shooterVariance * (1 - kalmanGain) + innovationCorrection,
+      priorVariance * (1 - kalmanGain) + shockInjection,
     );
 
     final maximumDispersion = settings.maximumVariance * _dispersionScaleFactor;
@@ -635,8 +656,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final displayVarianceFromMomentum = settings.scaleFactor * (sqrt(undriftedVariance + max(0, momentumCorrection * settings.surpriseAdaptationRate)) - sqrt(undriftedVariance));
     final displayVarianceFromSurprise = settings.scaleFactor * (sqrt(undriftedVariance + max(0, surpriseCorrection * settings.surpriseAdaptationRate)) - sqrt(undriftedVariance));
 
-    final displayInnovationCorrection = settings.scaleFactor * (sqrt(undriftedVariance + innovationCorrection) - sqrt(undriftedVariance));
-
     final stagesForEvent = byStage ? 1.0 : match.stages.length.toDouble();
 
     return RatingChange(
@@ -658,8 +677,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
         "Rating ± Change: {{rating}}/{{change}}",
         "Momentum ± Change: {{momentum}}/{{momentumChange}}",
-        "Variance ± Change: {{variance}}/{{varianceChange}} (+{{innovationCorrection}} mods)",
-        "Change from surprise/momentum: {{surpriseCorrection}}/{{momentumCorrection}}",
+        "Trend vMod, λ_eff/c_i: {{momentumCorrection}}, {{lambdaEff}}/{{certainty}}",
+        "Variance ± Change: {{variance}}/{{varianceChange}}",
+        "Shock vMod, e_phys²/T_i: {{surpriseCorrection}}, {{ePhysSquared}}/{{totalNoise}} SV",
         "Dispersion ± Change: {{dispersion}}/{{dispersionChange}}",
         "Considered {{opponents}} opponents",
         "Global/local baseline: {{globalBaseline}}/{{localBaseline}}",
@@ -720,11 +740,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         RatingEventInfoElement.double(
           name: "varianceChange",
           doubleValue: displayVarianceChange,
-          numberFormat: "%00.2f",
-        ),
-        RatingEventInfoElement.double(
-          name: "innovationCorrection",
-          doubleValue: displayInnovationCorrection,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
@@ -835,6 +850,21 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           name: "momentumCorrection",
           doubleValue: displayVarianceFromMomentum,
           numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "ePhysSquared",
+          doubleValue: (physicalInnovation * physicalInnovation) / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "lambdaEff",
+          doubleValue: effectiveMomentumAdaptationRate,
+          numberFormat: "%00.4f",
+        ),
+        RatingEventInfoElement.double(
+          name: "certainty",
+          doubleValue: dispersionCertainty,
+          numberFormat: "%00.3f",
         ),
         RatingEventInfoElement.double(
           name: "noveltyNoise",

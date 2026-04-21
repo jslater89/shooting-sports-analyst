@@ -194,12 +194,12 @@
 
 		\item \textbf{Observation Variance Construction:} The total observation variance \(R_{\mathrm{obs},i}\) is formed as the sum of sport noise \(\sigma_{\mathrm{sport}}^2\), certainty-scaled individual dispersion \(\tilde{\sigma}_i^2\), baseline estimation variance \(\mathrm{Var}(B_{\mathrm{obs}})\), and a topological novelty penalty \(\sigma_{\mathrm{novel}}^2\) derived from field maturity \(\bar{\mu}\). An observation quality factor \(Q_i\) isolates physical components from structural noise.
 
-		\item \textbf{Robust Mean Update:} The latent rating \(R_i\) is updated using a Kalman filter with gain \(K_i = V_i^{\mathrm{age}} / (V_i^{\mathrm{age}} + R_{\mathrm{obs},i})\). A Student-$t$ robust weighting \(w_t(z_i)\) is applied exclusively to the mean update to limit the influence of extreme single-event anomalies.
+		\item \textbf{Robust Mean Update:} The latent rating \(R_i\) is updated using a Kalman filter with gain \(K_i = V_i^{\mathrm{prior}} / (V_i^{\mathrm{prior}} + R_{\mathrm{obs},i})\), where \(V_i^{\mathrm{prior}}\) is the Trend-inflated prior defined in the next step. A Student-$t$ robust weighting \(w_t(z_i)\) is applied exclusively to the mean update to limit the influence of extreme single-event anomalies.
 
 		\item \textbf{State-Space Adaptation:}
 		The innovation \(e_i = O_i - R_i\) is processed into a physical version \(\ephys\), stripping out artificial structural and topological noise but retaining genuine physical outliers, and a robust version \(\erobust\), which additionally applies a Student-$t$ robust weighting to limit the influence of extreme single-event anomalies, through the observation quality factor \(Q_i\).
-		These drive separate updates: the epistemic uncertainty \(V_i\) is first scaled by the Kalman posterior factor \((1 - K_i)\) and then augmented by an additive surprise term \(\gamma \cdot \max(\text{Shock}_i, \text{Trend}_i)\),
-		while the aleatoric dispersion \(\sigmai\) and momentum \(m_i\) receive exponential-moving-average updates.
+		Two complementary mechanisms adapt the epistemic uncertainty. A \textit{Trend} term, derived from the committed momentum \(m_i\) carried forward from prior matches, acts as adaptive process noise and is injected into the prior \emph{before} the Kalman update: \(V_i^{\mathrm{prior}} = V_i^{\mathrm{age}} + \gamma \cdot \text{Trend}_i\). This raises the Kalman gain when the filter has accumulated evidence of sustained skill drift, allowing the mean update to respond. A \textit{Shock} term, derived from the current match's physical innovation, is injected into the posterior independently: \(V_i \leftarrow V_i^{\mathrm{prior}}(1 - K_i) + \gamma \cdot \text{Shock}_i\). Shock widens uncertainty after a single surprising observation without forcing the mean to chase it, and earns its way into a subsequent mean response only if the inflated posterior survives into the next match's prior.
+		Meanwhile, the aleatoric dispersion \(\sigmai\) and momentum \(m_i\) receive exponential-moving-average updates.
 
 	\end{enumerate}
 
@@ -330,14 +330,29 @@
 
 	$Q_i$ fills this gap by playing the role of an observation-quality gate for the non-Kalman-filtered state variables. It is more selective than the Kalman gain: the gain discounts based on \emph{all} observation noise (physical and structural alike), while $Q_i$ strips only the structural component, deliberately leaving physical noise intact. This selectivity is essential because the adaptation trackers measure different things about a competitor's behavior: genuine physical outliers \emph{should} reach the shock detector and shatter epistemic confidence, but artificial noise from unanchored fields should not inflate momentum or dispersion.
 
-	\subsubsection*{Step 7: Filter Innovation and Mean Update}
+	\subsubsection*{Step 7: Trend-Driven Prior Inflation and Mean Update}
+	Before applying the Kalman mean update, we treat the competitor's carried-forward innovation momentum as evidence of adaptive process noise. Using the certainty factor $c_i$ from Step 6, define the effective momentum adaptation rate (reused in Step 8 for the momentum EMA itself):
+	\begin{equation}
+		\lambdad_i^{\mathrm{eff}} = \lambdad \cdot \max(0.25, c_i)
+	\end{equation}
+	The Trend term is computed from the \emph{committed} momentum $m_i$ (i.e., the value produced by prior matches, before this match's update):
+	\begin{equation}
+		\text{Trend}_i = \frac{m_i^2}{\lambdad_i^{\mathrm{eff}}}
+	\end{equation}
+	Trend acts as a one-match-delayed adaptive estimate of unmodelled skill drift beyond the fixed $\sdrift$ aging term. We inject it into the prior variance:
+	\begin{equation}
+		V_i^{\mathrm{prior}} = \min\!\left(V_{\max},\; V_i^{\mathrm{age}} + \gammad \cdot \text{Trend}_i\right)
+	\end{equation}
+
+	This is the canonical Kalman placement for process noise: time-step process noise belongs on the prior side of the update, and Trend is precisely the filter's own estimate of how much process noise the fixed $\sdrift$ term under-specified. Inflating the prior widens both the Kalman gain (allowing the mean to move further toward the observation when drift evidence has accumulated) and the posterior residual, maintaining self-consistency between the mean and variance responses.
+
 	The raw innovation measures how surprising the competitor's observed performance was relative to their current expected rating:
 	\begin{equation}
 		e_i = O_i - R_i
 	\end{equation}
-	Define the total system variance against which the innovation is judged, and construct the standard Kalman gain:
+	Define the total system variance against which the innovation is judged---now using the inflated prior---and construct the Kalman gain:
 	\begin{equation}
-		T_i = V_i^{\mathrm{age}} + R_{\mathrm{obs},i}, \qquad K_i = \frac{V_i^{\mathrm{age}}}{T_i}
+		T_i = V_i^{\mathrm{prior}} + R_{\mathrm{obs},i}, \qquad K_i = \frac{V_i^{\mathrm{prior}}}{T_i}
 	\end{equation}
 
 	Even with correctly scaled observation noise, individual match results can be corrupted by catastrophic physical anomalies (e.g., equipment failure or severe procedural penalties). To protect the core rating estimate, we introduce a heavy-tailed Student-$t$ downweighting factor for extreme innovations. Calculate a normalized $z$-score against the total system uncertainty $T_i$:
@@ -355,36 +370,32 @@
 	\end{equation}
 	Crucially, this downweighting applies \emph{only} to the mean rating update. The variance surprise logic and performance dispersion trackers must process physical anomalies as legitimate shocks to epistemic certainty.
 
-	\subsubsection*{Step 8: Update Momentum and Committed Variance (Surprise Adaptation)}
-	To properly handle the bifurcated needs of momentum (which tracks sustained, statistically valid trends) and variance surprise (which must react to genuine physical deviations without being artificially inflated by topological penalties), we define two distinct scaled innovations using the Observation Quality scalar $Q_i$:
+	\subsubsection*{Step 8: Update Momentum and Committed Variance (Shock Adaptation)}
+	To properly handle the bifurcated needs of momentum (which tracks sustained, statistically valid trends) and single-event shocks (which must react to genuine physical deviations without being artificially inflated by topological penalties), we define two distinct scaled innovations using the Observation Quality scalar $Q_i$:
 	\begin{align}
 		\ephys &= e_i \cdot Q_i \\
 		\erobust &= e_i \cdot w_t(z_i) \cdot Q_i
 	\end{align}
 	The \textit{physical innovation} $\ephys$ strips out structural and topological noise but retains heavy-tailed physical outliers. The \textit{robust innovation} $\erobust$ additionally applies the Student-$t$ damping to ignore single-event anomalies.
 
-	Update the competitor's innovation momentum using the robust innovation, ensuring it only builds upon believable, sustained trends. To prevent new competitors from accumulating false momentum during initial convergence, we apply the certainty factor $c_i$ to the adaptation rate:
-	\begin{equation}
-		\lambda_i^{\mathrm{eff}} = \lambda \cdot \max(0.25, c_i)
-	\end{equation}
+	Update the competitor's innovation momentum using the robust innovation, ensuring it only builds upon believable, sustained trends. The certainty-scaled effective adaptation rate $\lambda_i^{\mathrm{eff}}$ was defined in Step 7 and is reused here:
 	\begin{equation}
 		m_i \leftarrow (1 - \lambda_i^{\mathrm{eff}}) m_i + \lambda_i^{\mathrm{eff}} \erobust
 	\end{equation}
+	The updated $m_i$ is committed to the competitor's state and drives the Trend injection on the \emph{next} match's prior (Step 7, next iteration).
 
-	We then evaluate the system for necessary variance injection using two distinct pathways: a threshold-based single-event shock, and a continuous trend penalty. The Variance Surprise evaluation utilizes the physical innovation. This guarantees that massive outliers caused by degenerate or unanchored fields are safely ignored, but massive outliers caused by genuine physical deviations legitimately shatter the filter's epistemic confidence:
+	Evaluate the system for a single-event shock using the physical innovation against the inflated total system variance. This guarantees that massive outliers caused by degenerate or unanchored fields are safely ignored, but massive outliers caused by genuine physical deviations legitimately shatter the filter's epistemic confidence:
 	\begin{equation}
 		\text{Shock}_i = \max\!\left(0,\; (\ephys)^2 - T_i\right)
 	\end{equation}
+	Because $T_i$ already absorbs the Trend-authorized process noise from Step 7, Shock fires only on surprises that exceed even the trend-inflated expectation, which avoids double-counting when Trend and an outlier event co-occur.
+
+	Shock is injected directly into the posterior variance, without passing through the Kalman contraction factor:
 	\begin{equation}
-		\text{Trend}_i = \frac{m_i^2}{\lambda_i^{\mathrm{eff}}}
+		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{prior}}(1 - K_i) + \gammad \cdot \text{Shock}_i\right)
 	\end{equation}
 
-	The rating variance adapts using the stronger of the two signals:
-	\begin{equation}
-		V_i \leftarrow \min\!\left(V_{\max},\; V_i^{\mathrm{age}}(1 - K_i) + \gamma \cdot \max\!\left(\text{Shock}_i,\; \text{Trend}_i\right)\right)
-	\end{equation}
-
-	This bifurcated logic is critical. Single-event errors must exceed the model's expected noise floor ($T_i$) to trigger a reaction, protecting the filter from zero-mean aleatoric scatter. However, because the EMA inherently filters out zero-mean noise, a non-zero momentum strictly indicates that the model's latent rating is systematically lagging the competitor's true skill. By subjecting the momentum penalty to no deadband, the system continuously injects variance during slow, persistent skill improvements.
+	This placement carries distinct statistical meaning. Trend (injected as process noise on the prior) represents filter-validated evidence of directional drift: it is \emph{already} the output of an EMA that smooths away zero-mean scatter, so it is safe to let it raise $K_i$ and therefore move the mean. Shock (injected as a posterior variance bump) is a provisional response to a single-event surprise: it widens the epistemic uncertainty so that subsequent matches see a larger prior (via Step 10's aging step and Step 7's inflated prior on the next iteration), but it does not force the current mean to chase an unvalidated outlier. If the shock presages a true skill shift, the next match's higher prior will yield a larger $K_i$ and a correspondingly larger mean response; if it was a one-off, the posterior contraction on subsequent normal events returns $V_i$ to its pre-shock level within a few matches without having whipped the mean around.
 
 	\subsubsection*{Step 9: Update Performance Dispersion}
 	Behavioral dispersion tracks the zero-mean scatter of a competitor's performance. Define floor and ceiling bounds:

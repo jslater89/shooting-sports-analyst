@@ -9,21 +9,29 @@ import 'dart:math';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 
 class LatentLogSettings extends RaterSettings {
-  // Default scale generates roughly Elo-style numbers between 0 and 2000,
-  // per Shooting Sports Analyst tradition.
-  static const defaultScaleOffset = 1330.0;
-  static const defaultScaleFactor = 1400.0;
+  // The current defaults here represent a system that privileges sharpness (i.e.
+  // mean error, CRPS) over coverage/calibration (i.e. exact percentages in the 1sigma
+  // 2sigma bands). This is a default informed by (one of the) main uses of the system,
+  // driving the Prediction Game.
+  //
+  // They also are somewhat more aggressive in injecting variance and otherwise allowing
+  // ratings to move quickly, in an effort to keep the system more responsive (reacting to
+  // recent scores) vs more conservative (remaining more historically grounded), given
+  // the patterns of most competitors shooting <<10 major matches per year.
+
+  static const defaultScaleOffset = 100.0;
+  static const defaultScaleFactor = 100.0;
   static const defaultStartingRating = 0.0;
 
   static const defaultSportVariance = 0.0012;
-  static const defaultSkillDriftRate = 0.0005;
+  static const defaultSkillDriftRate = 0.0006;
   static const defaultStartingVariance = 0.0300;
   static const defaultMaximumVariance = 0.0400;
   static const defaultStartingDispersion = 0.000120;
   static const defaultIntraclassCorrelation = 0.3;
   static const defaultDispersionAdaptationRate = 0.10;
   static const defaultMomentumAdaptationRate = 0.20;
-  static const defaultSurpriseAdaptationRate = 0.10;
+  static const defaultSurpriseAdaptationRate = 0.20;
   static const defaultPairwiseBlendWeight = 0.10;
   static const defaultStudentTCutoffZ = 2.0;
 
@@ -38,7 +46,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultNoveltyVariance = 0.006;
 
   static const defaultPredictionSportVariance = 0.0;
-  static const defaultPredictionBehavioralDispersionKappa = 0.75;
+  static const defaultPredictionBehavioralDispersionKappa = 0.600;
   static const defaultMeanReversionGraceYears = 1.0;
   static const defaultMeanReversionDecayRate = 0.035;
 
