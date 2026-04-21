@@ -600,6 +600,34 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       chartMaximum = maxWithError * 1.05;
     }
 
+    List<charts.LineAnnotationSegment<Object>> yearAnnotations = [];
+    for(var (i, year) in yearIndices.keys.indexed) {
+      if(i == 0) {
+        yearAnnotations.add(charts.LineAnnotationSegment<Object>(
+          yearIndices[year]!,
+          charts.RangeAnnotationAxisType.domain,
+          startLabel: year.toString(),
+          labelDirection: charts.AnnotationLabelDirection.vertical,
+          labelPosition: charts.AnnotationLabelPosition.inside,
+          labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
+          color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          strokeWidthPx: 1,
+        ));
+      }
+      else {
+        yearAnnotations.add(charts.LineAnnotationSegment<Object>(
+          yearIndices[year]! - 0.5,
+          charts.RangeAnnotationAxisType.domain,
+          startLabel: year.toString(),
+          labelDirection: charts.AnnotationLabelDirection.vertical,
+          labelPosition: charts.AnnotationLabelPosition.inside,
+          labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
+          color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          strokeWidthPx: 1,
+        ));
+      }
+    }
+
     if(_chart == null) {
       _chart = charts.LineChart(
         [_series!],
@@ -620,17 +648,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             symbolRenderer: _EloTooltipRenderer(),
           ),
           charts.RangeAnnotation([
-            for(var year in yearIndices.keys)
-              charts.LineAnnotationSegment(
-                yearIndices[year]!,
-                charts.RangeAnnotationAxisType.domain,
-                startLabel: year.toString(),
-                labelDirection: charts.AnnotationLabelDirection.vertical,
-                labelPosition: charts.AnnotationLabelPosition.inside,
-                labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
-                color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
-                strokeWidthPx: 1,
-              ),
+            ...yearAnnotations,
           ]),
         ],
         selectionModels: [
