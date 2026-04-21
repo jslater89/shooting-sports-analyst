@@ -3,15 +3,13 @@
 // the list with real source IDs and/or exact names.
 // ignore_for_file: unused_element_parameter
 
-import "dart:math";
-
 import "package:dart_console/dart_console.dart";
-import "package:normal/normal.dart";
 import "package:shooting_sports_analyst/console/repl.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
+import "package:shooting_sports_analyst/data/math/ratio_forecast_stats.dart";
 import "package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart";
 import "package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
@@ -148,61 +146,6 @@ class _Sample {
   });
 }
 
-class _Stats {
-  int n = 0;
-  double mapeSum = 0.0;
-  /// Signed percentage error: (actual - predicted) / |actual|.
-  /// Positive mean => systematic under-prediction; negative => over-prediction.
-  ///
-  /// "Predicted" here is the forecast's central estimate: arithmetic mean for
-  /// normal raters, median for log-normal raters.
-  double mpeSum = 0.0;
-  /// Signed percentage error versus the forecast's arithmetic mean.
-  /// For normal raters this is identical to [mpeSum]. For log-normal raters
-  /// the center is lifted from the median to `median * exp(σ_log² / 2)`, which
-  /// removes the structural median-vs-mean offset baked into MPE for LLR.
-  double mpeArithSum = 0.0;
-  double maeSum = 0.0;
-  double crpsSum = 0.0;
-  double rankMaeSum = 0.0;
-  int within1Sigma = 0;
-  int within2Sigma = 0;
-
-  void add({
-    required double mape,
-    required double mpe,
-    required double mpeArith,
-    required double mae,
-    required double crps,
-    required double rankMae,
-    required bool within1,
-    required bool within2,
-  }) {
-    n++;
-    mapeSum += mape;
-    mpeSum += mpe;
-    mpeArithSum += mpeArith;
-    maeSum += mae;
-    crpsSum += crps;
-    rankMaeSum += rankMae;
-    if (within1) {
-      within1Sigma++;
-    }
-    if (within2) {
-      within2Sigma++;
-    }
-  }
-
-  double get mape => n == 0 ? double.nan : mapeSum / n;
-  double get mpe => n == 0 ? double.nan : mpeSum / n;
-  double get mpeArith => n == 0 ? double.nan : mpeArithSum / n;
-  double get mae => n == 0 ? double.nan : maeSum / n;
-  double get crps => n == 0 ? double.nan : crpsSum / n;
-  double get rankMae => n == 0 ? double.nan : rankMaeSum / n;
-  double get coverage1 => n == 0 ? double.nan : within1Sigma / n;
-  double get coverage2 => n == 0 ? double.nan : within2Sigma / n;
-}
-
 class BacktestRatersCommand extends DbOneoffCommand {
   BacktestRatersCommand(AnalystDatabase db) : super(db);
 
@@ -247,20 +190,20 @@ class BacktestRatersCommand extends DbOneoffCommand {
     }
 
     // (mode, algorithm) -> aggregated stats across all (project, group, match)
-    final Map<(_Mode, String), _Stats> overall = {};
+    final Map<(_Mode, String), RatioForecastStatsAccumulator> overall = {};
     // (mode, algorithm, project, group) -> stats
-    final Map<(_Mode, String), _Stats> perGroup = {};
+    final Map<(_Mode, String), RatioForecastStatsAccumulator> perGroup = {};
     // Ordered key for printing.
     final List<(_Mode, String)> perGroupOrder = [];
     // (mode, algorithm, actual finish quintile) -> stats. Answers "is the
     // bias concentrated in a particular region of the realized field?"
-    final Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile = {};
+    final Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByFinishQuintile = {};
     // (mode, algorithm, predicted finish quintile) -> stats. Answers "is the
     // bias concentrated in a particular region of the rating-ordered field?"
     // Predicted place is driven primarily by rating, so this is effectively
     // a rating-percentile bucketing that avoids the conditional-on-outcome
     // bias you get from bucketing by actual finish.
-    final Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile = {};
+    final Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByRatingQuintile = {};
 
     for (final entry in _projectsToTest.entries) {
       final projectName = entry.key;
@@ -282,7 +225,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
           final groupKey = "$algorithmLabel | $projectName | ${group.name}";
           perGroup.putIfAbsent((mode, groupKey), () {
             perGroupOrder.add((mode, groupKey));
-            return _Stats();
+            return RatioForecastStatsAccumulator();
           });
         }
 
@@ -396,18 +339,18 @@ class BacktestRatersCommand extends DbOneoffCommand {
     required ShootingMatch match,
     required Map<MatchEntry, RelativeMatchScore> scores,
     required Map<int, ShooterRating> ratingByEntryId,
-    required Map<(_Mode, String), _Stats> perGroup,
-    required Map<(_Mode, String), _Stats> overall,
-    required Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile,
-    required Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile,
+    required Map<(_Mode, String), RatioForecastStatsAccumulator> perGroup,
+    required Map<(_Mode, String), RatioForecastStatsAccumulator> overall,
+    required Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByFinishQuintile,
+    required Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByRatingQuintile,
   }) {
     final groupKey = "$algorithmLabel | $projectName | ${group.name}";
     final groupStats = perGroup.putIfAbsent((mode, groupKey), () {
-      return _Stats();
+      return RatioForecastStatsAccumulator();
     });
     final overallStats = overall.putIfAbsent(
       (mode, algorithmLabel),
-      () => _Stats(),
+      () => RatioForecastStatsAccumulator(),
     );
 
     // Build rating list and record each rating's actual (ratio, place) in
@@ -463,7 +406,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
       );
       final finishBucketStats = overallByFinishQuintile.putIfAbsent(
         (mode, algorithmLabel, finishBucket),
-        () => _Stats(),
+        () => RatioForecastStatsAccumulator(),
       );
       _accumulate(sample, finishBucketStats);
       final ratingBucket = _Quintile.fromPlace(
@@ -472,7 +415,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
       );
       final ratingBucketStats = overallByRatingQuintile.putIfAbsent(
         (mode, algorithmLabel, ratingBucket),
-        () => _Stats(),
+        () => RatioForecastStatsAccumulator(),
       );
       _accumulate(sample, ratingBucketStats);
     }
@@ -570,98 +513,26 @@ class BacktestRatersCommand extends DbOneoffCommand {
     );
   }
 
-  void _accumulate(_Sample s, _Stats stats) {
-    final signedError = s.actualRatio - s.mean;
-    final mae = signedError.abs();
-    final absActual = s.actualRatio.abs();
-    final mape = absActual < 1e-9 ? mae : mae / absActual;
-    final mpe = absActual < 1e-9 ? signedError : signedError / absActual;
-    final rankMae = (s.actualPlace - s.predictedPlace).abs().toDouble();
-
-    double crps;
-    bool within1;
-    bool within2;
-    // For the arithmetic-mean-centered MPE, the forecast center is the
-    // expected value of the predictive distribution. For a log-normal that's
-    // `median * exp(σ_log² / 2)`; for a normal it's just the mean.
-    double arithCenter;
-    if (s.isLogNormal) {
-      final muLog = log(s.mean);
-      final sigmaLog = log(s.oneSigma);
-      crps = _logNormalCrps(muLog, sigmaLog, s.actualRatio);
-      // 1σ band: [median / GSD, median * GSD]; 2σ: [median / GSD², median * GSD²]
-      final low1 = s.mean / s.oneSigma;
-      final high1 = s.mean * s.oneSigma;
-      final low2 = s.mean / (s.oneSigma * s.oneSigma);
-      final high2 = s.mean * (s.oneSigma * s.oneSigma);
-      within1 = s.actualRatio >= low1 && s.actualRatio <= high1;
-      within2 = s.actualRatio >= low2 && s.actualRatio <= high2;
-      arithCenter = s.mean * exp((sigmaLog * sigmaLog) / 2);
-    }
-    else {
-      crps = _normalCrps(s.mean, s.oneSigma, s.actualRatio);
-      within1 = (s.actualRatio - s.mean).abs() <= s.oneSigma;
-      within2 = (s.actualRatio - s.mean).abs() <= 2 * s.oneSigma;
-      arithCenter = s.mean;
-    }
-
-    final signedErrorArith = s.actualRatio - arithCenter;
-    final mpeArith = absActual < 1e-9
-        ? signedErrorArith
-        : signedErrorArith / absActual;
-
+  void _accumulate(_Sample s, RatioForecastStatsAccumulator stats) {
     stats.add(
-      mape: mape,
-      mpe: mpe,
-      mpeArith: mpeArith,
-      mae: mae,
-      crps: crps,
-      rankMae: rankMae,
-      within1: within1,
-      within2: within2,
+      ratioForecastMetrics(
+        actualRatio: s.actualRatio,
+        actualPlace: s.actualPlace,
+        predictedPlace: s.predictedPlace,
+        isLogNormal: s.isLogNormal,
+        mean: s.mean,
+        oneSigma: s.oneSigma,
+      ),
     );
-  }
-
-  /// Closed-form CRPS for a normal forecast (Gneiting & Raftery 2007).
-  ///
-  /// CRPS(N(μ,σ), x) = σ * [z*(2Φ(z) - 1) + 2φ(z) - 1/√π]
-  double _normalCrps(double mu, double sigma, double x) {
-    if (sigma <= 0) {
-      return (x - mu).abs();
-    }
-    final z = (x - mu) / sigma;
-    final phi = Normal.cdf(z);
-    final pdf = Normal.pdf(z);
-    return sigma * (z * (2 * phi - 1) + 2 * pdf - 1 / sqrt(pi));
-  }
-
-  /// Closed-form CRPS for a log-normal forecast (Baran & Lerch 2015).
-  ///
-  /// For Y ~ Lognormal(μ, σ²) and observation y > 0:
-  ///   CRPS(LN(μ,σ²), y) =
-  ///     y * (2Φ(ω) - 1)
-  ///     - 2 * exp(μ + σ²/2) * [Φ(ω - σ) + Φ(σ/√2) - 1]
-  /// where ω = (ln y - μ) / σ.
-  double _logNormalCrps(double muLog, double sigmaLog, double y) {
-    if (sigmaLog <= 0 || y <= 0) {
-      return double.nan;
-    }
-    final omega = (log(y) - muLog) / sigmaLog;
-    final term1 = y * (2 * Normal.cdf(omega) - 1);
-    final scale = exp(muLog + (sigmaLog * sigmaLog) / 2);
-    final term2 = 2 *
-        scale *
-        (Normal.cdf(omega - sigmaLog) + Normal.cdf(sigmaLog / sqrt(2)) - 1);
-    return term1 - term2;
   }
 
   void _printResults(
     Console console,
     List<(_Mode, String)> perGroupOrder,
-    Map<(_Mode, String), _Stats> perGroup,
-    Map<(_Mode, String), _Stats> overall,
-    Map<(_Mode, String, _Quintile), _Stats> overallByFinishQuintile,
-    Map<(_Mode, String, _Quintile), _Stats> overallByRatingQuintile,
+    Map<(_Mode, String), RatioForecastStatsAccumulator> perGroup,
+    Map<(_Mode, String), RatioForecastStatsAccumulator> overall,
+    Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByFinishQuintile,
+    Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByRatingQuintile,
   ) {
     for (final mode in _Mode.values) {
       console.print("");
@@ -678,7 +549,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
         console.print(
           "${key.$2}  n=${s.n}  "
           "MAPE=${(s.mape * 100).toStringAsFixed(2)}%  "
-          "MPE=${_fmtSignedPct(s.mpe)}  "
+          "MPE=${formatSignedForecastPercent(s.mpe)}  "
           "MAE=${s.mae.toStringAsFixed(4)}  "
           "CRPS=${s.crps.toStringAsFixed(4)}  "
           "RankMAE=${s.rankMae.toStringAsFixed(2)}  "
@@ -701,8 +572,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
         console.print(
           "$algo  n=${s.n}  "
           "MAPE=${(s.mape * 100).toStringAsFixed(2)}%  "
-          "MPE=${_fmtSignedPct(s.mpe)}  "
-          "MPE(arith)=${_fmtSignedPct(s.mpeArith)}  "
+          "MPE=${formatSignedForecastPercent(s.mpe)}  "
+          "MPE(arith)=${formatSignedForecastPercent(s.mpeArith)}  "
           "MAE=${s.mae.toStringAsFixed(4)}  "
           "CRPS=${s.crps.toStringAsFixed(4)}  "
           "RankMAE=${s.rankMae.toStringAsFixed(2)} places  "
@@ -745,7 +616,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
   /// predicted rank). Prints one block per [_Mode].
   void _printBucketedSection({
     required Console console,
-    required Map<(_Mode, String, _Quintile), _Stats> overallByBucket,
+    required Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByBucket,
     required String sectionTitle,
     required List<String> algoOrder,
   }) {
@@ -772,8 +643,8 @@ class BacktestRatersCommand extends DbOneoffCommand {
           console.print(
             "  ${bucket.label.padRight(11)}  "
             "n=${s.n.toString().padLeft(5)}  "
-            "MPE=${_fmtSignedPct(s.mpe).padLeft(8)}  "
-            "MPE(arith)=${_fmtSignedPct(s.mpeArith).padLeft(8)}  "
+            "MPE=${formatSignedForecastPercent(s.mpe).padLeft(8)}  "
+            "MPE(arith)=${formatSignedForecastPercent(s.mpeArith).padLeft(8)}  "
             "MAPE=${(s.mape * 100).toStringAsFixed(2).padLeft(6)}%  "
             "MAE=${s.mae.toStringAsFixed(4)}  "
             "CRPS=${s.crps.toStringAsFixed(4)}  "
@@ -784,16 +655,5 @@ class BacktestRatersCommand extends DbOneoffCommand {
         }
       }
     }
-  }
-
-  /// Formats a signed fractional error (e.g. 0.0123) as a percentage with
-  /// explicit sign, e.g. "+1.23%" or "-0.47%".
-  String _fmtSignedPct(double v) {
-    if (v.isNaN) {
-      return "NaN";
-    }
-    final pct = v * 100;
-    final sign = pct >= 0 ? "+" : "";
-    return "$sign${pct.toStringAsFixed(2)}%";
   }
 }
