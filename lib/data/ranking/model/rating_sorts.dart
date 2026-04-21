@@ -18,6 +18,7 @@ enum RatingSortMode {
   lastName,
   error,
   lastChange,
+  dispersion,
   trend,
   direction,
   stages,
@@ -39,6 +40,8 @@ extension RatingSortModeNames on RatingSortMode {
         return "Last ±";
       case RatingSortMode.trend:
         return "Trend";
+      case RatingSortMode.dispersion:
+        return "Dispersion";
       case RatingSortMode.stages:
         return "History";
       case RatingSortMode.firstName:
@@ -112,6 +115,15 @@ extension SortFunctions on RatingSortMode {
             double aLastMatchChange = a.lastMatchChange;
             double bLastMatchChange = b.lastMatchChange;
             return bLastMatchChange.compareTo(aLastMatchChange);
+          }
+          throw ArgumentError();
+        };
+      case RatingSortMode.dispersion:
+        return (a, b) {
+          if(a is LatentLogRating && b is LatentLogRating) {
+            double aDispersion = a.dispersion;
+            double bDispersion = b.dispersion;
+            return bDispersion.compareTo(aDispersion);
           }
           throw ArgumentError();
         };
