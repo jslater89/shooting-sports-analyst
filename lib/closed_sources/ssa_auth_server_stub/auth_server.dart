@@ -1,6 +1,6 @@
 // Open stub: dev-only SSA auth server "v1" surface (identical behavior to stub v2 via [StubSsaAuthShared]).
 import "package:shelf_plus/shelf_plus.dart";
-import "package:shooting_sports_analyst/closed_sources/ssa_auth_server/stub_auth_shared.dart";
+import "stub_auth_shared.dart";
 import "package:shooting_sports_analyst/server/auth/auth_identity.dart";
 
 class SSAAuthServer {

@@ -1,7 +1,7 @@
 // Open stub: "v2" HTTP surface and dispatching middleware — same [StubSsaAuthShared] as v1 stub.
 import "package:shelf_plus/shelf_plus.dart";
-import "package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart";
-import "package:shooting_sports_analyst/closed_sources/ssa_auth_server/stub_auth_shared.dart";
+import "auth_server.dart";
+import "stub_auth_shared.dart";
 import "package:shooting_sports_analyst/server/auth/auth_identity.dart";
 
 class SSAAuthServerV2 {
