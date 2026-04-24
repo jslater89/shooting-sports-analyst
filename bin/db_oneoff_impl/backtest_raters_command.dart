@@ -3,6 +3,9 @@
 // the list with real source IDs and/or exact names.
 // ignore_for_file: unused_element_parameter
 
+import "dart:convert";
+import "dart:io";
+
 import "package:dart_console/dart_console.dart";
 import "package:shooting_sports_analyst/console/repl.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
@@ -162,6 +165,17 @@ class BacktestRatersCommand extends DbOneoffCommand {
     "L2s Main LLR Backtesting": "LLR",
   };
 
+  /// Labels (from [_projectsToTest] values) to actually run. Trim this down
+  /// (e.g., `{"LLR"}`) to isolate a single rater during hand-sweep tuning and
+  /// avoid spending time on predictions/validations for raters you aren't
+  /// changing.
+  static const Set<String> _algorithmsToRun = {"LLR"};
+
+  /// Directory to write the per-run CSV dump to. A new timestamped file is
+  /// written on every run so results accumulate naturally across tuning
+  /// iterations. Set to null to skip CSV output.
+  static const String? _csvOutputDir = "backtesting";
+
   /// Matches to backtest against. Source IDs preferred; fall back to exact
   /// match name when source IDs are unavailable.
   static const List<_BacktestMatch> _matches = [
@@ -205,14 +219,37 @@ class BacktestRatersCommand extends DbOneoffCommand {
     // bias you get from bucketing by actual finish.
     final Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByRatingQuintile = {};
 
+    // algorithm label -> encoded rater settings, captured once per project
+    // so the companion JSON dump can describe exactly what was run.
+    final Map<String, ({String projectName, Map<String, dynamic> settings})> algorithmSettings = {};
+
     for (final entry in _projectsToTest.entries) {
       final projectName = entry.key;
       final algorithmLabel = entry.value;
+
+      if (!_algorithmsToRun.contains(algorithmLabel)) {
+        continue;
+      }
 
       final project = await db.getRatingProjectByName(projectName);
       if (project == null) {
         console.print("Project not found: $projectName");
         continue;
+      }
+
+      if (!algorithmSettings.containsKey(algorithmLabel)) {
+        final settingsJson = <String, dynamic>{};
+        try {
+          project.settings.algorithm.encodeToJson(settingsJson);
+        } catch (e) {
+          console.print(
+            "  [params] failed to encode settings for $algorithmLabel: $e",
+          );
+        }
+        algorithmSettings[algorithmLabel] = (
+          projectName: projectName,
+          settings: settingsJson,
+        );
       }
 
       if (!project.dbGroups.isLoaded) {
@@ -326,6 +363,37 @@ class BacktestRatersCommand extends DbOneoffCommand {
       overallByFinishQuintile,
       overallByRatingQuintile,
     );
+
+    final csvDir = _csvOutputDir;
+    if (csvDir != null) {
+      final timestamp = _timestampForFilename(DateTime.now());
+      final csvPath = _writeCsv(
+        console: console,
+        outputDir: csvDir,
+        timestamp: timestamp,
+        perGroupOrder: perGroupOrder,
+        perGroup: perGroup,
+        overall: overall,
+        overallByFinishQuintile: overallByFinishQuintile,
+        overallByRatingQuintile: overallByRatingQuintile,
+      );
+      _writeParamsJson(
+        console: console,
+        outputDir: csvDir,
+        timestamp: timestamp,
+        csvPath: csvPath,
+        algorithmSettings: algorithmSettings,
+      );
+    }
+  }
+
+  static String _timestampForFilename(DateTime t) {
+    return "${t.year.toString().padLeft(4, "0")}"
+        "${t.month.toString().padLeft(2, "0")}"
+        "${t.day.toString().padLeft(2, "0")}"
+        "_${t.hour.toString().padLeft(2, "0")}"
+        "${t.minute.toString().padLeft(2, "0")}"
+        "${t.second.toString().padLeft(2, "0")}";
   }
 
   /// Run the prediction + accumulation pipeline for one (mode, group, match)
@@ -559,7 +627,9 @@ class BacktestRatersCommand extends DbOneoffCommand {
       }
     }
 
-    final algoOrder = _projectsToTest.values.toList();
+    final algoOrder = _projectsToTest.values
+        .where(_algorithmsToRun.contains)
+        .toList();
     for (final mode in _Mode.values) {
       console.print("");
       console.print("=== Per algorithm (overall) — mode=${mode.label} ===");
@@ -655,5 +725,219 @@ class BacktestRatersCommand extends DbOneoffCommand {
         }
       }
     }
+  }
+
+  /// Dump a long-format CSV of every accumulated stats row (overall,
+  /// per-group, per-finish-bucket, per-rating-bucket). One file per run,
+  /// timestamped, so successive tuning iterations produce a natural audit
+  /// trail. Metrics are written on their natural scale (ratios, not
+  /// percentages) so downstream analysis can format as needed. Returns the
+  /// written path, or null on failure.
+  String? _writeCsv({
+    required Console console,
+    required String outputDir,
+    required String timestamp,
+    required List<(_Mode, String)> perGroupOrder,
+    required Map<(_Mode, String), RatioForecastStatsAccumulator> perGroup,
+    required Map<(_Mode, String), RatioForecastStatsAccumulator> overall,
+    required Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByFinishQuintile,
+    required Map<(_Mode, String, _Quintile), RatioForecastStatsAccumulator> overallByRatingQuintile,
+  }) {
+    final dir = Directory(outputDir);
+    if (!dir.existsSync()) {
+      try {
+        dir.createSync(recursive: true);
+      } catch (e) {
+        console.print("  [csv] failed to create output dir '$outputDir': $e");
+        return null;
+      }
+    }
+    final path = "${dir.path}${Platform.pathSeparator}backtest_results_$timestamp.csv";
+    final buffer = StringBuffer();
+    buffer.writeln(
+      "scope,mode,algorithm,project,group,bucket,"
+      "n,mape,mpe,mpe_arith,mae,crps,rank_mae,"
+      "coverage_1sigma,coverage_2sigma",
+    );
+
+    for (final entry in overall.entries) {
+      final (mode, algo) = entry.key;
+      _writeCsvRow(
+        buffer,
+        scope: "overall",
+        mode: mode.label,
+        algorithm: algo,
+        project: "",
+        group: "",
+        bucket: "",
+        stats: entry.value,
+      );
+    }
+
+    for (final key in perGroupOrder) {
+      final (mode, groupKey) = key;
+      final stats = perGroup[key];
+      if (stats == null || stats.n == 0) {
+        continue;
+      }
+      final parts = groupKey.split(" | ");
+      final algo = parts.isNotEmpty ? parts[0] : "";
+      final proj = parts.length > 1 ? parts[1] : "";
+      final grp = parts.length > 2 ? parts.sublist(2).join(" | ") : "";
+      _writeCsvRow(
+        buffer,
+        scope: "group",
+        mode: mode.label,
+        algorithm: algo,
+        project: proj,
+        group: grp,
+        bucket: "",
+        stats: stats,
+      );
+    }
+
+    for (final entry in overallByFinishQuintile.entries) {
+      final (mode, algo, bucket) = entry.key;
+      _writeCsvRow(
+        buffer,
+        scope: "finish_quintile",
+        mode: mode.label,
+        algorithm: algo,
+        project: "",
+        group: "",
+        bucket: bucket.label,
+        stats: entry.value,
+      );
+    }
+
+    for (final entry in overallByRatingQuintile.entries) {
+      final (mode, algo, bucket) = entry.key;
+      _writeCsvRow(
+        buffer,
+        scope: "rating_quintile",
+        mode: mode.label,
+        algorithm: algo,
+        project: "",
+        group: "",
+        bucket: bucket.label,
+        stats: entry.value,
+      );
+    }
+
+    try {
+      File(path).writeAsStringSync(buffer.toString());
+      console.print("");
+      console.print("Wrote CSV: $path");
+      return path;
+    } catch (e) {
+      console.print("  [csv] failed to write '$path': $e");
+      return null;
+    }
+  }
+
+  void _writeCsvRow(
+    StringBuffer buffer, {
+    required String scope,
+    required String mode,
+    required String algorithm,
+    required String project,
+    required String group,
+    required String bucket,
+    required RatioForecastStatsAccumulator stats,
+  }) {
+    if (stats.n == 0) {
+      return;
+    }
+    buffer
+      ..write(_csvEscape(scope))
+      ..write(",")
+      ..write(_csvEscape(mode))
+      ..write(",")
+      ..write(_csvEscape(algorithm))
+      ..write(",")
+      ..write(_csvEscape(project))
+      ..write(",")
+      ..write(_csvEscape(group))
+      ..write(",")
+      ..write(_csvEscape(bucket))
+      ..write(",")
+      ..write(stats.n)
+      ..write(",")
+      ..write(_csvNum(stats.mape))
+      ..write(",")
+      ..write(_csvNum(stats.mpe))
+      ..write(",")
+      ..write(_csvNum(stats.mpeArith))
+      ..write(",")
+      ..write(_csvNum(stats.mae))
+      ..write(",")
+      ..write(_csvNum(stats.crps))
+      ..write(",")
+      ..write(_csvNum(stats.rankMae))
+      ..write(",")
+      ..write(_csvNum(stats.coverage1))
+      ..write(",")
+      ..write(_csvNum(stats.coverage2))
+      ..writeln();
+  }
+
+  /// Write a companion JSON file describing what was run: algorithms,
+  /// per-algorithm rater settings, and the configured match list. Paired
+  /// (by timestamp) with the CSV metrics dump so each tuning run is fully
+  /// reproducible from its artifacts.
+  void _writeParamsJson({
+    required Console console,
+    required String outputDir,
+    required String timestamp,
+    required String? csvPath,
+    required Map<String, ({String projectName, Map<String, dynamic> settings})> algorithmSettings,
+  }) {
+    final path = "${outputDir}${Platform.pathSeparator}backtest_params_$timestamp.json";
+    final payload = <String, dynamic>{
+      "timestamp": timestamp,
+      "csv_file": csvPath == null ? null : _basename(csvPath),
+      "algorithms_run": _algorithmsToRun.toList(),
+      "algorithm_settings": {
+        for (final entry in algorithmSettings.entries)
+          entry.key: {
+            "project_name": entry.value.projectName,
+            "settings": entry.value.settings,
+          },
+      },
+      "matches": _matches
+          .map((m) => {
+                "sourceIds": m.sourceIds,
+                "exactName": m.exactName,
+              })
+          .toList(),
+    };
+
+    try {
+      const encoder = JsonEncoder.withIndent("  ");
+      File(path).writeAsStringSync(encoder.convert(payload));
+      console.print("Wrote params: $path");
+    } catch (e) {
+      console.print("  [params] failed to write '$path': $e");
+    }
+  }
+
+  static String _basename(String path) {
+    final sep = Platform.pathSeparator;
+    final idx = path.lastIndexOf(sep);
+    return idx < 0 ? path : path.substring(idx + 1);
+  }
+
+  static String _csvEscape(String s) {
+    if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+      return "\"${s.replaceAll("\"", "\"\"")}\"";
+    }
+    return s;
+  }
+
+  static String _csvNum(double v) {
+    if (v.isNaN || v.isInfinite) {
+      return "";
+    }
+    return v.toStringAsFixed(6);
   }
 }

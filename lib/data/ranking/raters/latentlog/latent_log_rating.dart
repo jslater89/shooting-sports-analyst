@@ -231,3 +231,10 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     return "$name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${dispersion.toStringAsFixed(2)} ($hashCode)";
   }
 }
+
+class StartingLatentLogRating {
+  final double rating;
+  final double varianceMultiplier;
+
+  const StartingLatentLogRating({required this.rating, required this.varianceMultiplier});
+}

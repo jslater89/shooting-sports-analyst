@@ -75,6 +75,7 @@ import 'db_oneoff_impl/long_shot_place_command.dart';
 import 'db_oneoff_impl/r_start_prior_command.dart';
 import 'db_oneoff_impl/backtest_raters_command.dart';
 import 'db_oneoff_impl/top_rated_finish_spread_command.dart';
+import "db_oneoff_impl/rating_demographics_by_class_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -167,6 +168,7 @@ Future<void> main(List<String> args) async {
     Glicko2RatingGapCommand(db),
     LongShotPlaceCommand(db),
     RStartPriorCommand(db),
+    RatingDemographicsByClassCommand(db),
     BacktestRatersCommand(db),
     TopRatedFinishSpreadCommand(db),
     QuitCommand(),

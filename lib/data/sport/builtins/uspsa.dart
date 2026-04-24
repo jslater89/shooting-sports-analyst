@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/ranking/connectivity/rating_carrier
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -31,6 +32,11 @@ const uspsaProduction = Division(name: "Production", shortName: "PROD");
 const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack", "Classic"]);
 const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
+
+/// Offset for the empirically-derived Bayesian priors for LLR, chosen to make the ratings
+/// match the original population mean of -0.11 with uninformed priors when the informed
+/// priors (population mean = -0.19) are applied.
+const _empiricalBayesOffset = 0.0800;
 
 const uspsaGM = Classification(
   index: 0,
@@ -169,6 +175,15 @@ final uspsaSport = Sport(
     uspsaC: 0.9,
     uspsaD: 0.8,
     uspsaU: 1.0,
+  },
+  initialLatentLogRatings: {
+    uspsaGM: StartingLatentLogRating(rating: 0.1800 + _empiricalBayesOffset, varianceMultiplier: 0.35),
+    uspsaM: StartingLatentLogRating(rating:  0.0825 + _empiricalBayesOffset, varianceMultiplier: 0.35),
+    uspsaA: StartingLatentLogRating(rating: -0.0115 + _empiricalBayesOffset, varianceMultiplier: 0.36),
+    uspsaB: StartingLatentLogRating(rating: -0.0744 + _empiricalBayesOffset, varianceMultiplier: 0.41),
+    uspsaC: StartingLatentLogRating(rating: -0.1250 + _empiricalBayesOffset, varianceMultiplier: 0.63),
+    uspsaD: StartingLatentLogRating(rating: -0.2700 + _empiricalBayesOffset, varianceMultiplier: 0.86),
+    uspsaU: StartingLatentLogRating(rating: 0.0 + _empiricalBayesOffset, varianceMultiplier: 1.0),
   },
   ratingStrengthProvider: _UspsaRatingStrengthProvider(),
   pubstompProvider: _UspsaPubstompProvider(),

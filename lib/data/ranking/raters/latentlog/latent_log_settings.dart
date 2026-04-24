@@ -19,7 +19,7 @@ class LatentLogSettings extends RaterSettings {
   // recent scores) vs more conservative (remaining more historically grounded), given
   // the patterns of most competitors shooting <<10 major matches per year.
 
-  static const defaultScaleOffset = 100.0;
+  static const defaultScaleOffset = 108.0;
   static const defaultScaleFactor = 100.0;
   static const defaultStartingRating = 0.0;
 
@@ -29,10 +29,10 @@ class LatentLogSettings extends RaterSettings {
   static const defaultMaximumVariance = 0.0400;
   static const defaultStartingDispersion = 0.000120;
   static const defaultIntraclassCorrelation = 0.3;
-  static const defaultDispersionAdaptationRate = 0.10;
-  static const defaultMomentumAdaptationRate = 0.20;
-  static const defaultSurpriseAdaptationRate = 0.20;
-  static const defaultPairwiseBlendWeight = 0.10;
+  static const defaultDispersionAdaptationRate = 0.15;
+  static const defaultMomentumAdaptationRate = 0.25;
+  static const defaultSurpriseAdaptationRate = 0.15;
+  static const defaultPairwiseBlendWeight = 0.2;
   static const defaultStudentTCutoffZ = 2.0;
 
   static const defaultBaselineRobustnessZ = 2.5;

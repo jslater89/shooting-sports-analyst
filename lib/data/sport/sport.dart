@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -72,7 +73,11 @@ class Sport {
   /// Initial rating for the OpenSkill rating engine.
   Map<Classification, List<double>> initialOpenskillRatings;
 
+  /// Initial rating multipliers for rating engines.
   Map<Classification, double> initialGenericRatingMultipliers;
+
+  /// Initial ratings and variances for the Latent Log-Ratio rating engine.
+  Map<Classification, StartingLatentLogRating> initialLatentLogRatings;
 
   PowerFactor get defaultPowerFactor {
     if(powerFactors.length == 1) {
@@ -145,6 +150,7 @@ class Sport {
     this.initialEloRatings = const {},
     this.initialOpenskillRatings = const {},
     this.initialGenericRatingMultipliers = const {},
+    this.initialLatentLogRatings = const {},
     this.ratingStrengthProvider,
     this.pubstompProvider,
     this.builtinRatingGroupsProvider,

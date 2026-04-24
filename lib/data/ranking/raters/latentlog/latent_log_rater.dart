@@ -149,18 +149,25 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     required DateTime date,
   }) {
     double initialRating = settings.startingRating;
+    double initialVariance = settings.startingVariance;
 
-    var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
-    if(ratingMultiplier != 1.0) {
-      // LLR ratings are log performance multipliers.
-      // We soften the prior by moving it only 1/3rd of the way from the global
-      // mean to the classification mean in pure log-space.
+    if(sport.initialLatentLogRatings.containsKey(shooter.classification)) {
+      initialRating = sport.initialLatentLogRatings[shooter.classification]!.rating;
+      initialVariance = sport.initialLatentLogRatings[shooter.classification]!.varianceMultiplier * settings.startingVariance;
+    }
+    else if(sport.initialGenericRatingMultipliers.containsKey(shooter.classification)) {
+      var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
+      if(ratingMultiplier != 1.0) {
+        // LLR ratings are log performance multipliers.
+        // We soften the prior by moving it only 1/3rd of the way from the global
+        // mean to the classification mean in pure log-space.
 
-    double logAdvantage = log(ratingMultiplier);
-      double softLogAdvantage = logAdvantage / 3.0; // Shrinkage applied here
+        double logAdvantage = log(ratingMultiplier);
+        double softLogAdvantage = logAdvantage / 3.0; // Shrinkage applied here
 
-      initialRating += softLogAdvantage;
-      // initialRating = log(ratingMultiplier);
+        initialRating += softLogAdvantage;
+        // initialRating = log(ratingMultiplier);
+      }
     }
 
     return LatentLogRating(
@@ -168,7 +175,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       sport: sport,
       date: date,
       initialRating: initialRating,
-      initialVariance: settings.startingVariance,
+      initialVariance: initialVariance,
       initialDispersion: settings.startingDispersion,
       settings: settings,
     );
