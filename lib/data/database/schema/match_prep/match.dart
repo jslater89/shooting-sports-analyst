@@ -224,16 +224,25 @@ class FutureMatch {
           if(surname != null) {
             var search = _UnmatchedRegistrationSearch(surname: surname.surname, isFinal: surname.isFinal);
             var cachedResult = unmatchedRatings[search];
+            List<DbShooterRating> partialMatches = [];
 
             if(cachedResult != null) {
-              matchingRatingsByName.addAll(cachedResult);
+              partialMatches.addAll(cachedResult);
             }
             else {
               var ratings = await project.findShooterRatings(group, search.surname, searchMode: search.isFinal ? FindShooterSearchMode.endsWith : FindShooterSearchMode.contains, limit: 50);
               if(ratings.isOk()) {
                 final foundRatings = ratings.unwrap();
-                unmatchedRatings[search] = foundRatings;
-                matchingRatingsByName.addAll(foundRatings);
+                partialMatches.addAll(foundRatings);
+                unmatchedRatings[search] = partialMatches;
+              }
+            }
+
+            // Add any partial matches that aren't already present (i.e., in the case where we have
+            // an exact name match but no exact classification match)
+            for(var partialMatch in partialMatches) {
+              if(matchingRatingsByName.none((r) => r.id == partialMatch.id)) {
+                matchingRatingsByName.add(partialMatch);
               }
             }
           }
