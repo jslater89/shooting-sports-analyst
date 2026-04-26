@@ -19,7 +19,7 @@ class LatentLogSettings extends RaterSettings {
   // recent scores) vs more conservative (remaining more historically grounded), given
   // the patterns of most competitors shooting <<10 major matches per year.
 
-  static const defaultScaleOffset = 108.0;
+  static const defaultScaleOffset = 100.0;
   static const defaultScaleFactor = 100.0;
   static const defaultStartingRating = 0.0;
 
