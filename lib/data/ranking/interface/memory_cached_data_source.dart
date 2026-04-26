@@ -8,7 +8,10 @@ import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MemoryCachedRatingSource");
 
 class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
   late Sport sport;
@@ -50,15 +53,54 @@ class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
     return outGroup;
   }
 
+  Future<void> addRatings(RatingDataSource source, List<MatchEntry> ratingsToCache) async {
+    for(var shooter in ratingsToCache) {
+      final group = groupForDivisionSync(shooter.division);
+      if(group == null) continue;
+
+      final existingRating = lookupRatingSync(group, shooter.memberNumber);
+      if(existingRating != null) continue;
+
+      final ratingRes = await source.lookupRating(group, shooter.memberNumber, allPossibleMemberNumbers: true);
+      if(ratingRes.isOk()) {
+        final rating = ratingRes.unwrap();
+        if(rating != null) {
+          ratings[group]![shooter.memberNumber] = rating;
+        }
+      }
+    }
+  }
+
   @override
   DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber) {
     return ratings[group]?[memberNumber];
   }
 
-  Future<void> initFrom(RatingDataSource source, {List<Shooter>? ratingsToCache}) async {
+  Future<void> initFrom(RatingDataSource source, {List<MatchEntry> ratingsToCache = const []}) async {
     settings = await source.getSettings().unwrap();
     groups = await source.getGroups().unwrap();
     sport = await source.getSport().unwrap();
+
+    if(ratingsToCache.isEmpty) {
+      _log.w("InMemoryCachedRatingSource called with no shooters to cache");
+    }
+
+    ratings = {};
+    for(var group in groups) {
+      ratings[group] = {};
+    }
+    for(var shooter in ratingsToCache) {
+      final group = groupForDivisionSync(shooter.division);
+      if(group == null) continue;
+
+      final ratingRes = await source.lookupRating(group, shooter.memberNumber, allPossibleMemberNumbers: true);
+      if(ratingRes.isOk()) {
+        final rating = ratingRes.unwrap();
+        if(rating != null) {
+          ratings[group]![shooter.memberNumber] = rating;
+        }
+      }
+    }
   }
 
   @override

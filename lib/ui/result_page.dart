@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
@@ -88,6 +89,7 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _verticalScrollController = ScrollController();
   ScrollController _horizontalScrollController = ScrollController();
   ChangeNotifierRatingDataSource? _ratingCache;
+  InMemoryCachedRatingSource? _cachedRatings;
 
   /// widget.canonicalMatch is copied here, so we can save changes to the DB
   /// after we refresh.
@@ -95,7 +97,19 @@ class _ResultPageState extends State<ResultPage> {
   late ShootingMatch _currentMatch;
   late MatchStatsCalculator _matchStats;
 
-  bool _operationInProgress = false;
+  int _operationCounter = 0;
+  bool get _operationInProgress => _operationCounter > 0;
+
+  void _startOperation() {
+    setState(() {
+      _operationCounter += 1;
+    });
+  }
+  void _endOperation() {
+    setState(() {
+      _operationCounter -= 1;
+    });
+  }
 
   /// This uses widget.canonicalMatch instead of _canonicalMatch, because the
   /// sport won't change during a refresh.
@@ -247,10 +261,18 @@ class _ResultPageState extends State<ResultPage> {
       return;
     }
 
-    PreloadedRatingDataSource? cachedRatings = null;
-    if(widget.ratings != null) {
-      cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: filteredShooters));
+    if(widget.ratings != null && _settings.value.predictionMode.ratingAware) {
+      _startOperation();
+      if(_cachedRatings == null) {
+        _cachedRatings = InMemoryCachedRatingSource();
+        await _cachedRatings!.initFrom(widget.ratings!, ratingsToCache: filteredShooters);
+      }
+      else {
+        await _cachedRatings!.addRatings(widget.ratings!, filteredShooters);
+      }
+      _endOperation();
     }
+
     if(_settings.value.fantasyPointsMode == FantasyPointsMode.currentFilters) {
       _fantasyStats = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyStats(_currentMatch, byDivision: false, entries: filteredShooters);
       _fantasyScores = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyScores(stats: _fantasyStats!, pointsAvailable: FantasyScoringCategory.defaultCategoryPoints);
@@ -261,7 +283,7 @@ class _ResultPageState extends State<ResultPage> {
         scoreDQ: _filters.scoreDQs,
         stages: _filteredStages,
         predictionMode: _settings.value.predictionMode,
-        ratings: cachedRatings,
+        ratings: _cachedRatings,
       ).values.toList();
       _searchedScores = []..addAll(_baseScores);
     });
@@ -387,9 +409,16 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   Future<void> _updateHypotheticalScores() async {
-    PreloadedRatingDataSource? cachedRatings = null;
-    if(widget.ratings != null) {
-      cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: _filteredShooters));
+    if(widget.ratings != null && _settings.value.predictionMode.ratingAware) {
+      _startOperation();
+      if(_cachedRatings == null) {
+        _cachedRatings = InMemoryCachedRatingSource();
+        await _cachedRatings!.initFrom(widget.ratings!, ratingsToCache: _filteredShooters);
+      }
+      else {
+        await _cachedRatings!.addRatings(widget.ratings!, _filteredShooters);
+      }
+      _endOperation();
     }
 
     var scores = _currentMatch.getScores(
@@ -397,7 +426,7 @@ class _ResultPageState extends State<ResultPage> {
       scoreDQ: _filters.scoreDQs,
       stages: _filteredStages,
       predictionMode: _settings.value.predictionMode,
-      ratings: cachedRatings,
+      ratings: _cachedRatings,
     );
 
     setState(() {
@@ -840,6 +869,8 @@ class _ResultPageState extends State<ResultPage> {
       ),
     );
 
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
     return KeyboardListener(
       onKeyEvent: (KeyEvent e) {
         if(e is KeyDownEvent) {
@@ -903,8 +934,8 @@ class _ResultPageState extends State<ResultPage> {
                 centerTitle: true,
                 actions: actions,
                 bottom: _operationInProgress ? PreferredSize(
-                  preferredSize: Size(double.infinity, 5),
-                  child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+                  preferredSize: Size(double.infinity, 5 * uiScaleFactor),
+                  child: LinearProgressIndicator(value: null),
                 ) : null,
               ),
               body: Builder(

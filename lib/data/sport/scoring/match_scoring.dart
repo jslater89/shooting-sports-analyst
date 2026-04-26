@@ -229,15 +229,15 @@ final class RelativeStageFinishScoring extends MatchScoring {
       RatingSystem? algorithm;
       double Function(double delta, {RaterSettings? settings})? ratioFloorPredictor;
 
-      if(predictionMode.eloAware) {
+      if(predictionMode.ratingAware && ratings != null) {
         highRating = double.negativeInfinity;
         lowRating = double.infinity;
         for(var shooter in shooters) {
-          var group = ratings!.groupForDivisionSync(shooter.division);
+          var group = ratings.groupForDivisionSync(shooter.division);
           if(group == null) continue;
 
           var rating = ratings.lookupRatingSync(group, shooter.memberNumber);
-          if(predictionMode == MatchPredictionMode.eloAwarePartial) {
+          if(predictionMode == MatchPredictionMode.ratingAwarePartial) {
             var nonDnf = false;
             for(var score in shooter.scores.values) {
               if(score.scoring is IgnoredScoring) continue;
@@ -273,7 +273,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
       for(var shooter in shooters) {
         // Do match predictions for shooters who have completed at least one stage.
-        if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
+        if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.ratingAwareFull) {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
 
@@ -329,20 +329,23 @@ final class RelativeStageFinishScoring extends MatchScoring {
                   }
                 }
               }
-              else if (predictionMode.eloAware) {
+              else if (predictionMode.ratingAware && ratings != null) {
                 var group = ratings!.groupForDivisionSync(shooter.division);
                 if(group != null) {
                   var rating = predictions.keys.firstWhereOrNull((e) => e.group == group && e.knownMemberNumbers.contains(shooter.memberNumber));
                   var prediction = predictions[rating];
                   double predictionComponent;
                   if (prediction != null && highPrediction != null) {
-                    if(ratioFloorPredictor != null && rating != null &&highRating != null && lowRating != null) {
+                    if(ratioFloorPredictor != null && rating != null && highRating != null && lowRating != null) {
                       var ratingDelta = highRating - rating.rating;
                       predictionComponent = ratioFloorPredictor(ratingDelta);
                     }
+                    else if(prediction.hasRatioPredictions) {
+                      predictionComponent = prediction.expectedRatio!;
+                    }
                     else {
-                      var floor = RatingSystem.defaultRatioFloor;
-                      var mult = RatingSystem.defaultRatioMult;
+                      final floor = RatingSystem.defaultRatioFloor;
+                      final mult = RatingSystem.defaultRatioMult;
                       predictionComponent = floor + ((prediction.displayCenter + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * mult);
                     }
                     // Use more average stage percentage the more scores we have, up to 75%.

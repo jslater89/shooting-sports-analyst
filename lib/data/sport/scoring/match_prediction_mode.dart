@@ -10,18 +10,25 @@ enum MatchPredictionMode {
   averageStageFinish,
   averageHistoricalFinish,
   /// Predict only shooters who have completed at least one stage.
-  eloAwarePartial,
+  ratingAwarePartial,
   /// Predict shooters who haven't appeared at the match yet, but are registered.
-  eloAwareFull;
+  ratingAwareFull;
 
-  static List<MatchPredictionMode> dropdownValues(bool includeElo) {
-    if(includeElo) return values;
+  static List<MatchPredictionMode> dropdownValues(bool includeRatings) {
+    if(includeRatings) return values;
     else return [none, highAvailable, averageStageFinish];
   }
 
-  bool get eloAware => switch(this) {
-    eloAwarePartial => true,
-    eloAwareFull => true,
+  bool get requiresRatings => switch(this) {
+    ratingAwarePartial => true,
+    ratingAwareFull => true,
+    averageHistoricalFinish => true,
+    _ => false,
+  };
+
+  bool get ratingAware => switch(this) {
+    ratingAwarePartial => true,
+    ratingAwareFull => true,
     _ => false,
   };
 
@@ -30,7 +37,7 @@ enum MatchPredictionMode {
     highAvailable => "High available",
     averageStageFinish => "Average stage finish",
     averageHistoricalFinish => "Average finish in ratings",
-    eloAwarePartial => "Elo-aware (seen only)",
-    eloAwareFull => "Elo-aware (all entrants)",
+    ratingAwarePartial => "Rating-aware (seen only)",
+    ratingAwareFull => "Rating-aware (all entrants)",
   };
 }
