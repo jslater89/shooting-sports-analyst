@@ -627,8 +627,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final minimumDispersion = 0.001 * settings.startingVariance * _dispersionScaleFactor;
 
     // Clamp observations to 3SD
+    final maxInstantaneousVarianceSigmaSquared = 9.0;
+    final maxInstantaneousVarianceReference = max(shooter.dispersion, 0.25 * settings.sportVariance);
+
     final maxInstantaneousVariance = max(
-      9.0 * shooter.dispersion,
+      maxInstantaneousVarianceSigmaSquared * maxInstantaneousVarianceReference,
       minimumDispersion
     );
 

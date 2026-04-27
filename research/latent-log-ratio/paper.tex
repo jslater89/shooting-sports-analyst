@@ -408,9 +408,13 @@
 	\end{equation}
 	This estimator is approximate: the $Q_i$ scaling attenuates the innovation magnitude rather than exactly removing structural variance components from the squared residual, and the subtracted terms $V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2$ omit the baseline estimation variance $\mathrm{Var}(\bobs)$. In practice, both omissions are conservative---in mature fields, $Q_i \approx 1$ and $\mathrm{Var}(\bobs)$ is negligible; in degenerate fields, $Q_i$ suppresses the entire driving term. By utilizing the physical innovation, artificial match anomalies (such as an unanchored topological island) do not permanently inflate a competitor's aleatoric profile, while real-world volatility does. Furthermore, subtracting $m_i$ prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
 
-	We form an instantaneous target representing the realized behavioral variance for the current observation:
+	We form an instantaneous target representing the realized behavioral variance for the current observation. To prevent the upper clamp from becoming unrealistically tight when a competitor's current dispersion is very small, we use a reference-anchored hard cap. Let
 	\begin{equation}
-		q_i = \mathrm{clamp}\left(E_i,\; \sigma_{i,\mathrm{lo}}^2,\; 9\,\sigma_i^2\right)
+		\sigma_{i,\mathrm{ref}}^2 = 0.25\,\sigma_{\mathrm{sport}}^2
+	\end{equation}
+	and define:
+	\begin{equation}
+		q_i = \mathrm{clamp}\left(E_i,\; \sigma_{i,\mathrm{lo}}^2,\; 9\cdot\,\max\!\left(\sigma_i^2,\sigma_{i,\mathrm{ref}}^2\right)\right)
 	\end{equation}
 	Re-using the certainty factor $c_i$ defined in Step 6, we construct an effective EMA rate $\beta_i^{\mathrm{eff}}$ to inhibit dispersion growth for unrated or long-inactive competitors:
 	\begin{equation}

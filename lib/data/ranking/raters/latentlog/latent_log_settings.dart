@@ -24,7 +24,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultStartingRating = 0.0;
 
   static const defaultSportVariance = 0.0012;
-  static const defaultSkillDriftRate = 0.0006;
+  static const defaultSkillDriftRate = 0.0009;
   static const defaultStartingVariance = 0.0300;
   static const defaultMaximumVariance = 0.0400;
   static const defaultStartingDispersion = 0.000120;
