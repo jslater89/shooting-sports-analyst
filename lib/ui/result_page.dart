@@ -665,13 +665,7 @@ class _ResultPageState extends State<ResultPage> {
       editedShooters: _stage == null ? _allEditedShooters : _editedShooters[_stage!] ?? [],
     );
 
-    final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).colorScheme.surface;
-
     if(_operationInProgress) _log.v("Operation in progress");
-
-    var animation = (_operationInProgress) ?
-    AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
     List<Widget> actions = [];
 

@@ -357,6 +357,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var boothModel = context.read<BroadcastBoothModel>();
     var match = boothModel.latestMatch;
     var sizeModel = context.read<ScorecardGridSizeModel>();
@@ -371,24 +372,24 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var isMaximized = widget.scorecard.id == boothModel.maximizedScorecardId;
 
     return Container(
-      padding: EdgeInsets.all(2),
+      padding: EdgeInsets.all(2 * uiScaleFactor),
       width: sizeModel.cardWidth.roundToDouble(),
       height: sizeModel.cardHeight.roundToDouble(),
       alignment: Alignment.center,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(2.0),
+          padding: EdgeInsets.all(2 * uiScaleFactor),
           child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
+                    padding: EdgeInsets.only(left: 8 * uiScaleFactor),
                     child: Text(title),
                   ),
                   SizedBox(
-                    height: 40,
+                    height: 40 * uiScaleFactor,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
