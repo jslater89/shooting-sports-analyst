@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -86,24 +87,32 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
     await progressCallback?.call(0, deduplicatorNames.length, "Detecting conflicts");
     int step = 0;
 
+    Map<String, List<DbShooterRating>> ratingsByDeduplicatorName = {};
+    final allRatingsRes = await ratingProject.getRatings(group);
+    if(allRatingsRes.isErr()) {
+      _log.w("Failed to retrieve ratings for group $group", error: allRatingsRes.unwrapErr());
+      return DeduplicationResult.err(RatingsRetrievalError());
+    }
+
+    for(var rating in allRatingsRes.unwrap()) {
+      ratingsByDeduplicatorName.addToListIfMissing(rating.deduplicatorName, rating);
+    }
+
+    _log.i("Deduplicating ${ratingsByDeduplicatorName.length} ratings in ${group.name}");
+
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
       Map<String, String> detectedMappings = {};
       Map<String, String> detectedUserMappings = {};
 
-      var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(group, name);
-
-      if(ratingsRes.isErr()) {
-        _log.w("Failed to retrieve ratings for deduplicator name $name", error: ratingsRes.unwrapErr());
-        continue;
-      }
+      final ratingsByName = ratingsByDeduplicatorName[name] ?? [];
 
       step += 1;
       await progressCallback?.call(step, deduplicatorNames.length, "Detecting conflicts: $name");
 
       List<DbShooterRating> ratings = [];
       Map<int, bool> dbIdsSeen = {};
-      for(var rating in ratingsByName[name]!) {
+      for(var rating in ratingsByName) {
         if(dbIdsSeen[rating.id] != true) {
           ratings.add(rating);
         }
@@ -111,7 +120,7 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
           dbIdsSeen[rating.id] = true;
         }
       }
-      for(var rating in ratingsRes.unwrap()) {
+      for(var rating in ratingsByName) {
         if(dbIdsSeen[rating.id] != true) {
           ratings.add(rating);
         }

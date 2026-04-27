@@ -13,6 +13,11 @@ abstract class RatingError extends ResultErr {
   String get message;
 }
 
+class RatingsRetrievalError extends RatingError {
+  @override
+  String get message => "Error retrieving ratings";
+}
+
 class ShooterMappingError extends RatingError {
   ShooterMappingError({required this.culprits, required this.accomplices, this.dataEntry = false}) : super();
 

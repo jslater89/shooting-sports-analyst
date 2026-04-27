@@ -330,7 +330,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 }
               }
               else if (predictionMode.ratingAware && ratings != null) {
-                var group = ratings!.groupForDivisionSync(shooter.division);
+                var group = ratings.groupForDivisionSync(shooter.division);
                 if(group != null) {
                   var rating = predictions.keys.firstWhereOrNull((e) => e.group == group && e.knownMemberNumbers.contains(shooter.memberNumber));
                   var prediction = predictions[rating];
