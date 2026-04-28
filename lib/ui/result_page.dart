@@ -956,6 +956,11 @@ class _ResultPageState extends State<ResultPage> {
 
 class ScoreDisplaySettingsModel extends ValueNotifier<ScoreDisplaySettings> {
   ScoreDisplaySettingsModel(super.value);
+
+  void setRatingDisplayMode(RatingDisplayMode mode) {
+    value.ratingMode = mode;
+    notifyListeners();
+  }
 }
 
 class ScoreDisplaySettings {

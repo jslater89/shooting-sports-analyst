@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
@@ -198,10 +199,26 @@ class _ScoreListState extends State<ScoreList> {
                           message = "(n/a)";
                           break;
                       }
-                      return Expanded(flex: 1, child: Tooltip(
-                        message: message,
-                        child: Text("Rating"),
-                      ));
+                      return Expanded(
+                        flex: 1,
+                        child: ClickableLink(
+                          onTap: () {
+                            if(model.value.ratingMode == RatingDisplayMode.preMatch) {
+                              model.setRatingDisplayMode(RatingDisplayMode.change);
+                            }
+                            else if(model.value.ratingMode == RatingDisplayMode.change) {
+                              model.setRatingDisplayMode(RatingDisplayMode.postMatch);
+                            }
+                            else if(model.value.ratingMode == RatingDisplayMode.postMatch) {
+                              model.setRatingDisplayMode(RatingDisplayMode.preMatch);
+                            }
+                          },
+                          child: Tooltip(
+                          message: message,
+                          child: Text("Rating"),
+                        ),
+                        ),
+                      );
                     }
                 ),
                 if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text("Class")),
