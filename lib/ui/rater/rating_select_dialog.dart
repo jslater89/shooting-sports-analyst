@@ -9,11 +9,18 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 /// A dialog to select a set of ratings from a list of ratings.
 class RatingSelectDialog extends StatefulWidget {
-  const RatingSelectDialog({super.key, required this.ratings, required this.showDivision, this.barrierDismissible = false});
+  const RatingSelectDialog({
+    super.key,
+    required this.ratings,
+    required this.showDivision,
+    this.barrierDismissible = false,
+    this.multiple = true,
+  });
 
   final List<ShooterRating> ratings;
   final bool showDivision;
   final bool barrierDismissible;
+  final bool multiple;
 
   @override
   State<RatingSelectDialog> createState() => _RatingSelectDialogState();
@@ -22,6 +29,7 @@ class RatingSelectDialog extends StatefulWidget {
     required Iterable<ShooterRating> ratings,
     bool showDivision = false,
     bool barrierDismissible = false,
+    bool multiple = true,
   }) {
     List<ShooterRating> ratingsList = [];
     if(ratings is List<ShooterRating>) {
@@ -31,7 +39,12 @@ class RatingSelectDialog extends StatefulWidget {
       ratingsList = ratings.toList();
     }
     return showDialog<List<ShooterRating>>(context: context, builder: (context) =>
-      RatingSelectDialog(ratings: ratingsList, showDivision: showDivision, barrierDismissible: barrierDismissible)
+      RatingSelectDialog(
+        ratings: ratingsList,
+        showDivision: showDivision,
+        barrierDismissible: barrierDismissible,
+        multiple: multiple,
+      )
     );
   }
 }
@@ -68,7 +81,7 @@ class _RatingSelectDialogState extends State<RatingSelectDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text("Select ratings"),
+      title: Text("Select rating${widget.multiple ? "s" : ""}"),
       content: SizedBox(
         width: 500,
         child: Column(
@@ -96,15 +109,20 @@ class _RatingSelectDialogState extends State<RatingSelectDialog> {
             SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemBuilder: (context, index) => CheckboxListTile(
-                  value: selectedRatings[ratings[index]] ?? false,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedRatings[ratings[index]] = value ?? false;
-                    });
+                itemBuilder: (context, index) => _RatingListTile(
+                  multiple: widget.multiple,
+                  rating: ratings[index],
+                  selectedRatings: selectedRatings,
+                  onChanged: (rating, value) {
+                    if(widget.multiple) {
+                      setState(() {
+                        selectedRatings[rating] = value;
+                      });
+                    }
+                    else {
+                      Navigator.of(context).pop([rating]);
+                    }
                   },
-                  title: Text(ratings[index].name),
-                  subtitle: Text("${ratings[index].memberNumber} - ${ratings[index].formattedRating}")
                 ),
                 itemCount: ratings.length,
               ),
@@ -117,11 +135,48 @@ class _RatingSelectDialogState extends State<RatingSelectDialog> {
           onPressed: () => Navigator.of(context).pop(null),
           child: Text("CANCEL"),
         ),
-        TextButton(
+        if(widget.multiple) TextButton(
           onPressed: selectedRatingsList.isEmpty ? null : () => Navigator.of(context).pop(selectedRatingsList),
           child: Text("SELECT ${selectedRatingsList.length} RATINGS"),
         ),
       ],
     );
+  }
+}
+
+class _RatingListTile extends StatelessWidget {
+  const _RatingListTile({
+    required this.multiple,
+    required this.rating,
+    required this.selectedRatings,
+    required this.onChanged,
+  });
+
+  final bool multiple;
+  final ShooterRating rating;
+  final Map<ShooterRating, bool> selectedRatings;
+  final Function(ShooterRating, bool) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if(multiple) {
+      return CheckboxListTile(
+        value: selectedRatings[rating] ?? false,
+        onChanged: (value) {
+          onChanged(rating, value ?? false);
+        },
+        title: Text(rating.name),
+        subtitle: Text("${rating.memberNumber} - ${rating.formattedRating}"),
+      );
+    }
+    else {
+      return ListTile(
+        title: Text(rating.name),
+        subtitle: Text("${rating.memberNumber} - ${rating.formattedRating}"),
+        onTap: () {
+          onChanged(rating, true);
+        },
+      );
+    }
   }
 }

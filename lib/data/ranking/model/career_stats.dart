@@ -362,7 +362,7 @@ extension HitPercentagesText on RawScore {
     return result;
   }
 
-  String hitPercentagesText(Sport sport) {
+  String hitPercentagesText(Sport sport, {bool bestOnly = false}) {
     List<String> entries = [];
     var totalCount = this.targetEventCount;
     Map<String, int> eventCountsByName = {};
@@ -378,6 +378,9 @@ extension HitPercentagesText on RawScore {
       var event = powerFactor.targetEvents.lookupByName(entry.key);
       if(event != null && event.displayInOverview) {
         entries.add("${(entry.value / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
+        if(bestOnly) {
+          break;
+        }
       }
     }
 

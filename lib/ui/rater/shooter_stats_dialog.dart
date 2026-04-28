@@ -17,9 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -27,6 +25,9 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
+import 'package:shooting_sports_analyst/ui/rater/chart/rating_accumulator.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_select_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_comparison_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -55,6 +56,7 @@ class ShooterStatsDialog extends StatefulWidget {
     this.match,
     this.sport,
     this.ratings,
+    this.comparableRatings,
     this.showDivisions = false,
   }) : super(key: key);
 
@@ -62,6 +64,7 @@ class ShooterStatsDialog extends StatefulWidget {
   final ShooterRating rating;
   final ShootingMatch? match;
   final RatingDataSource? ratings;
+  final Iterable<ShooterRating>? comparableRatings;
   final Sport? sport;
 
   @override
@@ -297,6 +300,22 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
                       "All possible member numbers:\n${widget.rating.allPossibleMemberNumbers.join("\n")}",
                   ),
+                  if(widget.comparableRatings != null && widget.comparableRatings!.isNotEmpty) Tooltip(
+                    message: "Compare this rating to another",
+                    child: IconButton(
+                      icon: Icon(Icons.compare_arrows),
+                      onPressed: () async {
+                        final rating2Result = await RatingSelectDialog.show(
+                          context,
+                          ratings: widget.comparableRatings!.where((r) => r != widget.rating),
+                          multiple: false,
+                        );
+                        if(rating2Result != null && rating2Result.isNotEmpty) {
+                          RatingComparisonDialog.show(context, widget.rating, rating2Result.first);
+                        }
+                      },
+                    ),
+                  ),
                   Tooltip(
                     message: "Export event-by-event ratings for this shooter",
                     child: IconButton(
@@ -434,25 +453,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   // TODO: let raters build their own series, optionally?
   // Mostly for points rater, which doesn't do charts well
   // Doesn't do recreating well
-  charts.Series<_AccumulatedRatingEvent, int>? _series;
+  charts.Series<AccumulatedRatingEvent, int>? _series;
   charts.LineChart? _chart;
-  late List<_AccumulatedRatingEvent> _ratings;
+  late List<AccumulatedRatingEvent> _ratings;
   // TODO: go back to Division as key once rater is updated
   Map<String, charts.Color> _divisionColors = {};
   int _colorIndex = 0;
-  double _chartMeasureForShooterEvent(ShooterRating shooterRating, RatingEvent e) {
-    if(shooterRating is LatentLogRating) {
-      return (e as LatentLogRatingEvent).newDisplayRating;
-    }
-    return e.newRating;
-  }
-
-  double _chartRatingChangeForShooter(ShooterRating shooterRating, RatingEvent e) {
-    if(shooterRating is LatentLogRating) {
-      return e.ratingChange * shooterRating.settings.scaleFactor;
-    }
-    return e.ratingChange;
-  }
 
   List<charts.Color> _colorOptions = [
     charts.MaterialPalette.blue.shadeDefault,
@@ -467,82 +473,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   ];
 
   Widget _buildChart(ShooterRating rating) {
-    double accumulator = 0;
-    double minRating = 10000000;
-    double maxRating = -10000000;
-    double minWithError = 10000000;
-    double maxWithError = -10000000;
-
     var size = MediaQuery.of(context).size;
-    Map<int, int> yearIndices = {};
-
-    // Raters may provide alternate chart values to avoid the Glicko-2 problem
-    // where rating immediately jumps to the correct value and the Y axis ends
-    // up only showing 100-200 rating points of range.
-    double? maximumMinimum;
-    double? minimumMaximum;
-
-    if(rating is Glicko2Rating) {
-      // For Glicko-2, always include 1500 in the range
-      minimumMaximum = 1500;
-      maximumMinimum = 1500;
-    }
-    else if(rating is LatentLogRating) {
-      final o = rating.settings.scaleOffset;
-      minimumMaximum = o;
-      maximumMinimum = o;
-    }
-    else if(rating is EloShooterRating && careerStats.isAnnualStats(displayedStats)) {
-      // minimumMaximum = 1000;
-      // maximumMinimum = 1000;
-    }
-    // Elo doesn't really have this problem because the initial rating jump is usually
-    // much smaller.
 
     if(_series == null) {
-      var eventsOfInterest = displayedStats.events.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
-      // Map from year to index of first event in that year,
-      // used to show year separators.
-      _ratings = eventsOfInterest.mapIndexed((i, e) {
 
-        // Update year indices
-        // We're starting at the beginning, so the first event we see with a given
-        // year is the index we care about.
-        if(!yearIndices.containsKey(e.wrappedEvent.date.year)) {
-          yearIndices[e.wrappedEvent.date.year] = i;
-        }
+      final accumulatedResult = accumulateRatingEvents(
+        rating: rating,
+        careerStats: careerStats,
+        displayedStats: displayedStats,
+      );
 
-        final measureRating = _chartMeasureForShooterEvent(rating, e);
-        if(measureRating < minRating) minRating = measureRating;
-        if(measureRating > maxRating) maxRating = measureRating;
+      _ratings = accumulatedResult.events;
 
-        double error = 0;
-        if(rating is EloShooterRating) {
-          error = rating.standardErrorWithOffset(offset: eventsOfInterest.length - (i + 1));
-
-          // print("Comparison: ${error.toStringAsFixed(2)} vs ${e2.toStringAsFixed(2)}");
-        }
-        else if(rating is OpenskillRating) {
-          error = rating.sigmaWithOffset(eventsOfInterest.length - (i + 1)) / 2;
-        }
-        else if(rating is Glicko2Rating) {
-          e as Glicko2RatingEvent;
-          error = e.newDisplayRD / 2;
-        }
-        else if(rating is LatentLogRating) {
-          e as LatentLogRatingEvent;
-          error = sqrt(e.newVariance) * e.settings.scaleFactor / 2;
-        }
-
-        var plusError = measureRating + error;
-        var minusError = measureRating - error;
-        if(plusError > maxWithError) maxWithError = plusError;
-        if(minusError < minWithError) minWithError = minusError;
-
-        return _AccumulatedRatingEvent(e, accumulator += _chartRatingChangeForShooter(rating, e), error);
-      }).toList();
-
-      _series = charts.Series<_AccumulatedRatingEvent, int>(
+      _series = charts.Series<AccumulatedRatingEvent, int>(
         id: 'Results',
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
@@ -563,152 +506,154 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             return color;
           }
         },
-        measureFn: (_AccumulatedRatingEvent e, _) {
-          return _chartMeasureForShooterEvent(rating, e.baseEvent);
+        measureFn: (AccumulatedRatingEvent e, _) {
+          return chartMeasureForShooterEvent(rating, e.baseEvent);
         },
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
           if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
-            return _chartMeasureForShooterEvent(rating, e.baseEvent) - e.errorAt;
+            return chartMeasureForShooterEvent(rating, e.baseEvent) - e.errorAt;
           }
           return null;
         },
         measureUpperBoundFn: (e, i) {
           if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
-            return _chartMeasureForShooterEvent(rating, e.baseEvent) + e.errorAt;
+            return chartMeasureForShooterEvent(rating, e.baseEvent) + e.errorAt;
           }
           return null;
         },
         data: _ratings,
       );
-    }
 
-    double chartMinimum;
-    double chartMaximum;
 
-    if(maximumMinimum != null) {
-      chartMinimum = min(maximumMinimum, minWithError * 0.95);
-    }
-    else {
-      chartMinimum = minWithError * 0.95;
-    }
+      double chartMinimum;
+      double chartMaximum;
 
-    if(minimumMaximum != null) {
-      chartMaximum = max(minimumMaximum, maxWithError * 1.05);
-    }
-    else {
-      chartMaximum = maxWithError * 1.05;
-    }
-
-    List<charts.LineAnnotationSegment<Object>> yearAnnotations = [];
-    for(var (i, year) in yearIndices.keys.indexed) {
-      if(i == 0) {
-        yearAnnotations.add(charts.LineAnnotationSegment<Object>(
-          yearIndices[year]!,
-          charts.RangeAnnotationAxisType.domain,
-          startLabel: year.toString(),
-          labelDirection: charts.AnnotationLabelDirection.vertical,
-          labelPosition: charts.AnnotationLabelPosition.inside,
-          labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
-          color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
-          strokeWidthPx: 1,
-        ));
+      if(accumulatedResult.maximumMinimum != null) {
+        chartMinimum = min(accumulatedResult.maximumMinimum!, accumulatedResult.minWithError * 0.95);
       }
       else {
-        yearAnnotations.add(charts.LineAnnotationSegment<Object>(
-          yearIndices[year]! - 0.5,
-          charts.RangeAnnotationAxisType.domain,
-          startLabel: year.toString(),
-          labelDirection: charts.AnnotationLabelDirection.vertical,
-          labelPosition: charts.AnnotationLabelPosition.inside,
-          labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
-          color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
-          strokeWidthPx: 1,
-        ));
+        chartMinimum = accumulatedResult.minWithError * 0.95;
       }
-    }
 
-    if(_chart == null) {
-      _chart = charts.LineChart(
-        [_series!],
-        animate: false,
-        behaviors: [
-          charts.SelectNearest(
-            eventTrigger: charts.SelectionTrigger.hover,
-            selectionModelType: charts.SelectionModelType.info,
-            maximumDomainDistancePx: 100,
+      if(accumulatedResult.minimumMaximum != null) {
+        chartMaximum = max(accumulatedResult.minimumMaximum!, accumulatedResult.maxWithError * 1.05);
+      }
+      else {
+        chartMaximum = accumulatedResult.maxWithError * 1.05;
+      }
+
+      List<charts.LineAnnotationSegment<Object>> yearAnnotations = [];
+      for(var (i, year) in accumulatedResult.yearIndices.keys.indexed) {
+        if(i == 0) {
+          yearAnnotations.add(charts.LineAnnotationSegment<Object>(
+            accumulatedResult.yearIndices[year]!,
+            charts.RangeAnnotationAxisType.domain,
+            startLabel: year.toString(),
+            labelDirection: charts.AnnotationLabelDirection.vertical,
+            labelPosition: charts.AnnotationLabelPosition.inside,
+            labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            strokeWidthPx: 1,
+          ));
+        }
+        else {
+          yearAnnotations.add(charts.LineAnnotationSegment<Object>(
+            accumulatedResult.yearIndices[year]! - 0.5,
+            charts.RangeAnnotationAxisType.domain,
+            startLabel: year.toString(),
+            labelDirection: charts.AnnotationLabelDirection.vertical,
+            labelPosition: charts.AnnotationLabelPosition.inside,
+            labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            strokeWidthPx: 1,
+          ));
+        }
+      }
+
+
+      if(_chart == null) {
+        _chart = charts.LineChart(
+          [_series!],
+          animate: false,
+          behaviors: [
+            charts.SelectNearest(
+              eventTrigger: charts.SelectionTrigger.hover,
+              selectionModelType: charts.SelectionModelType.info,
+              maximumDomainDistancePx: 100,
+            ),
+            charts.SelectNearest(
+              eventTrigger: charts.SelectionTrigger.tap,
+              selectionModelType: charts.SelectionModelType.action,
+              maximumDomainDistancePx: 100,
+            ),
+            charts.LinePointHighlighter(
+              selectionModelType: charts.SelectionModelType.info,
+              symbolRenderer: _EloTooltipRenderer(),
+            ),
+            charts.RangeAnnotation([
+              ...yearAnnotations,
+            ]),
+          ],
+          selectionModels: [
+            charts.SelectionModelConfig(
+              type: charts.SelectionModelType.info,
+              updatedListener: (model) {
+                if(model.hasDatumSelection) {
+                  final picked = _ratings[model.selectedDatum[0].index!];
+                  _EloTooltipRenderer.context = context;
+                  _EloTooltipRenderer.index = model.selectedDatum[0].index!;
+                  _EloTooltipRenderer.indexTotal = _ratings.length;
+                  _EloTooltipRenderer.rating = chartMeasureForShooterEvent(rating, picked.baseEvent);
+                  _EloTooltipRenderer.error = picked.errorAt;
+                  _highlight(picked);
+                }
+              },
+            ),
+            charts.SelectionModelConfig(
+              type: charts.SelectionModelType.action,
+              updatedListener: (model) {
+                if(model.hasDatumSelection) {
+                  final rating = _ratings[model.selectedDatum[0].index!];
+                  _launchScoreView(rating.baseEvent.entry.division, rating.baseEvent.match, stage: rating.baseEvent.stage);
+                }
+              },
+            )
+          ],
+          domainAxis: charts.NumericAxisSpec(
+            renderSpec: charts.NoneRenderSpec(
+                axisLineStyle: charts.LineStyleSpec(
+                  color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+                  thickness: 1,
+                )
+            ),
+            showAxisLine: true,
           ),
-          charts.SelectNearest(
-            eventTrigger: charts.SelectionTrigger.tap,
-            selectionModelType: charts.SelectionModelType.action,
-            maximumDomainDistancePx: 100,
-          ),
-          charts.LinePointHighlighter(
-            selectionModelType: charts.SelectionModelType.info,
-            symbolRenderer: _EloTooltipRenderer(),
-          ),
-          charts.RangeAnnotation([
-            ...yearAnnotations,
-          ]),
-        ],
-        selectionModels: [
-          charts.SelectionModelConfig(
-            type: charts.SelectionModelType.info,
-            updatedListener: (model) {
-              if(model.hasDatumSelection) {
-                final picked = _ratings[model.selectedDatum[0].index!];
-                _EloTooltipRenderer.context = context;
-                _EloTooltipRenderer.index = model.selectedDatum[0].index!;
-                _EloTooltipRenderer.indexTotal = _ratings.length;
-                _EloTooltipRenderer.rating = _chartMeasureForShooterEvent(rating, picked.baseEvent);
-                _EloTooltipRenderer.error = picked.errorAt;
-                _highlight(picked);
-              }
-            },
-          ),
-          charts.SelectionModelConfig(
-            type: charts.SelectionModelType.action,
-            updatedListener: (model) {
-              if(model.hasDatumSelection) {
-                final rating = _ratings[model.selectedDatum[0].index!];
-                _launchScoreView(rating.baseEvent.entry.division, rating.baseEvent.match, stage: rating.baseEvent.stage);
-              }
-            },
-          )
-        ],
-        domainAxis: charts.NumericAxisSpec(
-          renderSpec: charts.NoneRenderSpec(
+          primaryMeasureAxis: charts.NumericAxisSpec(
+            viewport: charts.NumericExtents(chartMinimum, chartMaximum),
+            tickProviderSpec: charts.BasicNumericTickProviderSpec(
+              dataIsInWholeNumbers: true,
+              desiredMinTickCount: 8,
+              desiredTickCount: 10,
+            ),
+            tickFormatterSpec: charts.BasicNumericTickFormatterSpec.fromNumberFormat(_nf),
+            renderSpec: charts.GridlineRendererSpec(
+              labelStyle: charts.TextStyleSpec(
+                color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+              ),
               axisLineStyle: charts.LineStyleSpec(
                 color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
                 thickness: 1,
-              )
-          ),
-          showAxisLine: true,
-        ),
-        primaryMeasureAxis: charts.NumericAxisSpec(
-          viewport: charts.NumericExtents(chartMinimum, chartMaximum),
-          tickProviderSpec: charts.BasicNumericTickProviderSpec(
-            dataIsInWholeNumbers: true,
-            desiredMinTickCount: 8,
-            desiredTickCount: 10,
-          ),
-          tickFormatterSpec: charts.BasicNumericTickFormatterSpec.fromNumberFormat(_nf),
-          renderSpec: charts.GridlineRendererSpec(
-            labelStyle: charts.TextStyleSpec(
-              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+              ),
+              lineStyle: charts.LineStyleSpec(
+                color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+                thickness: 1,
+              ),
             ),
-            axisLineStyle: charts.LineStyleSpec(
-              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
-              thickness: 1,
-            ),
-            lineStyle: charts.LineStyleSpec(
-              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
-              thickness: 1,
-            ),
+            showAxisLine: true,
           ),
-          showAxisLine: true,
-        ),
-      );
+        );
+      }
     }
 
     double width = max(600, size.width * 0.9);
@@ -737,7 +682,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }));
   }
 
-  void _highlight(_AccumulatedRatingEvent e) {
+  void _highlight(AccumulatedRatingEvent e) {
     var oldState = GlobalObjectKey(_highlighted.hashCode).currentState;
     if(oldState != null) {
       oldState as _StatefulContainerState;
@@ -1005,14 +950,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       if(widget.rating is PointsRating) Divider(height: 2, thickness: 1),
     ];
   }
-}
-
-class _AccumulatedRatingEvent {
-  RatingEvent baseEvent;
-  double accumulated;
-  double errorAt;
-
-  _AccumulatedRatingEvent(this.baseEvent, this.accumulated, this.errorAt);
 }
 
 class _EloTooltipRenderer extends charts.CircleSymbolRenderer {

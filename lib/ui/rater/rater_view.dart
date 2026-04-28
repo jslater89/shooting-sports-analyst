@@ -276,6 +276,8 @@ class _RaterViewState extends State<RaterView> {
 
     var comparator = settings.algorithm.comparatorFor(widget.sortMode, changeSince: widget.changeSince)
         ?? widget.sortMode.comparator(changeSince: widget.changeSince);
+
+    final allSorted = uniqueRatings.sorted(comparator);
     var asList = sortedRatings.sorted(comparator);
 
     widget.onRatingsFiltered?.call(asList, uniqueRatings);
@@ -307,7 +309,13 @@ class _RaterViewState extends State<RaterView> {
                   if(rating.length == 0) return;
 
                   showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(rating: rating, match: widget.currentMatch, ratings: widget.dataSource, showDivisions: widget.group.divisions.length > 1);
+                    return ShooterStatsDialog(
+                      rating: rating,
+                      match: widget.currentMatch,
+                      ratings: widget.dataSource,
+                      showDivisions: widget.group.divisions.length > 1,
+                      comparableRatings: allSorted,
+                    );
                   });
                 },
                 child: RatingSystemUiBuilder.buildRatingRow(

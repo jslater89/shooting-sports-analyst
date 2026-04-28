@@ -781,6 +781,15 @@ class MatchHistoryEntry {
   String get percentFinish => finishRatio.asPercentage();
   String? get percentVictory => victoryRatio != null ? "+${victoryRatio?.asPercentage()}" : null;
 
+  String get displayPercentage {
+    if(victoryRatio != null) {
+      return "+${victoryRatio!.asPercentage(includePercent: true)}";
+    }
+    else {
+      return finishRatio.asPercentage(includePercent: true);
+    }
+  }
+
   MatchHistoryEntry({
     required this.match,
     required ShooterRating shooter,

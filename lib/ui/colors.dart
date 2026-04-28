@@ -87,7 +87,7 @@ class ThemeColors {
   static Color fadedTextColor(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     if(isDark) {
-      return Colors.grey[400]!;
+      return Colors.grey[500]!;
     }
     else {
       return Colors.grey[700]!;
