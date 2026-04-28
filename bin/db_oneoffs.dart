@@ -129,6 +129,9 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "BR") {
+      await BacktestRatersCommand(db).executor(console, []);
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
