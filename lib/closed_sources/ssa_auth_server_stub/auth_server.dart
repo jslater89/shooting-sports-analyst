@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 // Open stub: dev-only SSA auth server "v1" surface (identical behavior to stub v2 via [StubSsaAuthShared]).
 import "package:shelf_plus/shelf_plus.dart";
 import "stub_auth_shared.dart";
