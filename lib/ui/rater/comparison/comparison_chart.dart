@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
@@ -12,8 +13,12 @@ import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/chart/rating_accumulator.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -64,7 +69,7 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
   AccumulatedRatingResult? _accumulatedResult1;
   AccumulatedRatingResult? _accumulatedResult2;
 
-  void _buildChart() {
+  void _buildChart(BuildContext context) {
     if(_accumulatedResult1 == null) {
       _accumulatedResult1 = accumulateRatingEvents(
         rating: widget.rating1,
@@ -193,6 +198,37 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
                 }
               },
             ),
+            charts.SelectionModelConfig(
+              type: charts.SelectionModelType.action,
+              updatedListener: (model) {
+                if(model.hasDatumSelection) {
+                  AccumulatedRatingEvent? picked1;
+                  AccumulatedRatingEvent? picked2;
+                  for(var datum in model.selectedDatum) {
+                    if(datum.series.id == _series1!.id) {
+                      picked1 = datum.series.data[datum.index!];
+                    }
+                    else if(datum.series.id == _series2!.id) {
+                      picked2 = datum.series.data[datum.index!];
+                    }
+                  }
+
+                  if(picked1 == null && picked2 == null) {
+                    return;
+                  }
+
+                  AccumulatedRatingEvent? referenceEvent;
+                  if(picked1 != null) {
+                    referenceEvent = picked1;
+                  }
+                  else {
+                    referenceEvent = picked2;
+                  }
+
+                  _launchScoreView(context, referenceEvent!.baseEvent.entry.division, referenceEvent!.baseEvent.match, stage: referenceEvent!.baseEvent.stage);
+                }
+              },
+            )
           ],
         domainAxis: charts.NumericAxisSpec(
           viewport: charts.NumericExtents(domainMinimum, domainMaximum),
@@ -232,7 +268,7 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
 
   @override
   Widget build(BuildContext context) {
-    _buildChart();
+    _buildChart(context);
     return SizedBox(
       width: _width,
       height: _height,
@@ -256,6 +292,22 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
         return chartMeasureForShooterEvent(accumulatedResult.rating, e.baseEvent) + e.errorAt;
       },
     );
+  }
+
+  void _launchScoreView(BuildContext context, Division? division, ShootingMatch match, {MatchStage? stage}) {
+    var filters = FilterSet(match.sport, empty: true)
+      ..mode = FilterMode.or;
+    if(division != null) {
+      filters.divisions = FilterSet.divisionListToMap(match.sport, [division]);
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ResultPage(
+        canonicalMatch: match,
+        initialStage: stage,
+        initialFilters: filters,
+        allowWhatIf: true,
+      );
+    }));
   }
 }
 

@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/comparison/comparison_model.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
@@ -193,11 +197,16 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
       return Text("${programmerYmdFormat.format(match.date)}", textAlign: TextAlign.start, style: dimmedStyle);
     }
     else if(vicinity.column == 2) {
-      return Text(
-        key: GlobalObjectKey(match.sourceIds.first),
-        "${match.name}",
-        textAlign: TextAlign.start,
-        style: dimmedStyle
+      return ClickableLink(
+        onTap: () {
+          _launchScoreView(pairedResult.match1?.divisionEntered, match);
+        },
+        child: Text(
+          key: GlobalObjectKey(match.sourceIds.first),
+          "${match.name}",
+          textAlign: TextAlign.start,
+          style: dimmedStyle
+        ),
       );
     }
     else {
@@ -215,5 +224,21 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
         return Center(child: Text("-", style: style));
       }
     }
+  }
+
+  void _launchScoreView(Division? division, ShootingMatch match, {MatchStage? stage}) {
+    var filters = FilterSet(match.sport, empty: true)
+      ..mode = FilterMode.or;
+    if(division != null) {
+      filters.divisions = FilterSet.divisionListToMap(match.sport, [division]);
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ResultPage(
+        canonicalMatch: match,
+        initialStage: stage,
+        initialFilters: filters,
+        allowWhatIf: true,
+      );
+    }));
   }
 }
