@@ -555,25 +555,29 @@
 	\begin{equation}
 		N_{\mathrm{eff}} = \left(\sum_w p_w^2\right)^{-1}
 	\end{equation}
-
-	We find the expected maximum of $N_{\mathrm{eff}}$ standard normal variables using Blom's approximation. However, a naive application assumes that the $N_{\mathrm{eff}}$ variables are strictly independent. The epistemic variance $V_w^{\mathrm{age}}$ inherently contains shared structural uncertainty---the off-diagonal covariance formalized in the core loop by the intraclass correlation $\rho$.
-
-	If a cohort of competitors shares a latent evaluation error (e.g., an unanchored local sub-graph), their true global skills may be uniformly higher or lower than expected, but they will vary \textit{together}. Mathematically, if $Y_i = Z + W_i$, where $Z$ is a shared random intercept (cohort covariance) and $W_i$ is independent variance, the maximum operator distributes additively over the shared constant: $\max_i(Z + W_i) = Z + \max_i(W_i)$. Because the shared error $Z$ is zero-mean, it vanishes in expectation: $E[\max(Y)] = E[\max(W)]$.
-
-	A shared cohort shift translates the entire field but cannot stretch the gap between the mean and the maximum order statistic. Consequently, passing the total epistemic variance into the extreme-value approximation structurally overestimates the winner's predicted margin of victory, artifactually depressing the predicted finish percentages of the rest of the field.
-
-	To preserve Extreme Value Theory assumptions, we must strictly isolate the independent fraction of the variance. We partition the epistemic uncertainty using $(1 - \rho)$, and rely on the purely idiosyncratic prediction sport noise $\sigma_{\mathrm{pred}}^2$ to represent match-day variance. The presumed winner's rating is shifted upward by this corrected extreme-value expectation:
+	
+	We find the expected maximum of $N_{\mathrm{eff}}$ variables using Blom's approximation. However, a naive application of Extreme Value Theory assumes that performance variance is perfectly symmetric and unbounded. In practical shooting, a competitor's performance is dominated by downside risk (mistakes, penalties, equipment malfunctions), while their maximum potential speed is biomechanically bounded by human visual processing and mechanical cycle rates.
+	
+	Because competitors cannot draw infinitely from an upper Gaussian tail, the actual maximum order statistic of an elite field is highly compressed. To model this physical ``speed wall,'' we introduce a structural asymmetry parameter $\theta_{\mathrm{up}} \in [0.35, 0.60]$ to dampen the expected extreme value shift. 
+	
+	To preserve Extreme Value Theory assumptions regarding cohort covariance, we must also strictly isolate the independent fraction of the variance. We partition the epistemic uncertainty using $(1 - \rho)$, and rely on the purely idiosyncratic prediction sport noise $\sigma_{\mathrm{pred}}^2$ to represent match-day variance. The presumed winner's rating is shifted upward by this corrected, dampened extreme-value expectation:
 	\begin{equation}
-		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}}(1 - \rho) + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
+		\Delta_w = \theta_{\mathrm{up}} \cdot \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}}(1 - \rho) + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
 	\end{equation}
-	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), $\Delta_w$ gracefully vanishes to zero, preserving unbiased predictions.
+	The adjusted pairwise log-difference between competitor $i$ and presumed winner $w$ is therefore $\tilde{\mu}_{iw} = R_i - (R_w + \Delta_w)$. For matches with a single dominant favorite ($N_{\mathrm{eff}} \approx 1$), the Blom approximation naturally evaluates to zero, preserving unbiased predictions.
 
 	\subsubsection*{The Truncation Correction ($\Lambda_{iw}$)}
 	Because $S_i$ represents a score relative to the match winner, it is strictly bounded by $S_i \le 1.0$. Conditioning the prediction on $w$ being the winner implicitly conditions the expected ratio on $L_i \le L_w$. We enforce this physical ceiling by defining a right-truncation modifier (truncated at $0$ in log space) for the log-normal expectation:
 	\begin{equation}
 		\Lambda_{iw} = \frac{\Phi\!\left(-\frac{\tilde{\mu}_{iw} + \sigma_{iw}^2}{\sigma_{iw}}\right)}{\Phi\!\left(-\frac{\tilde{\mu}_{iw}}{\sigma_{iw}}\right)}
 	\end{equation}
-	where $\Phi$ is the standard normal CDF, and the pairwise variance is $\sigma_{iw}^2 = V_i^{\mathrm{age}} + V_w^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2$. The denominator isolates the probability mass to the universe where $w$ beats $i$, and the numerator perfectly cancels the mass of the unconstrained integral that lies above 1.0.
+	where $\Phi$ is the standard normal CDF. Because competitors share structural cohort uncertainty (formalized by the intraclass correlation $\rho$), the epistemic variance of their pairwise difference must subtract their covariance. The adjusted pairwise variance is:
+	
+	\begin{equation}
+		\sigma_{iw}^2 = V_i^{\mathrm{age}} + V_w^{\mathrm{age}} - 2\rho\sqrt{V_i^{\mathrm{age}} V_w^{\mathrm{age}}} + 2\sigma_{\mathrm{pred}}^2 + \kappa(\tilde{\sigma}_i^2 + \tilde{\sigma}_w^2)
+	\end{equation}
+	
+	The denominator isolates the probability mass to the universe where $w$ beats $i$, and the numerator perfectly cancels the mass of the unconstrained integral that lies above 1.0.
 
 	\subsubsection*{The Final Expected Ratio}
 	By the law of total expectation over the random winner, applying both the max order shift and the truncation boundary, the expected ratio of competitor $i$ to the winner is:
@@ -585,9 +589,11 @@
 	\subsection{Predictive Variance and Confidence Intervals}
 	To generate predictive confidence intervals, we calculate the total log-space predictive variance using the Law of Total Variance over the mixture distribution of possible winners. The total variance is the sum of the average predictive uncertainty assuming the winner is known (Within-Component) and the variance introduced by the uncertainty of who wins (Between-Component).
 
-	The Within-Component variance evaluates the pairwise uncertainty against the presumed winner. The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic noise for both the focal competitor and the uncertain winner. The parameter $\kappa \in [0,1]$ scales the projection of the certainty-discounted behavioral dispersion ($\tilde{\sigma}^2$):
+	The Within-Component variance evaluates the expected pairwise uncertainty against the presumed winner. Because the predictive baseline is formed by the difference of two ratings ($R_i - R_w$), we must calculate the variance of that difference. This requires subtracting the shared cohort covariance ($\rho \sqrt{V_i V_w}$) from their combined epistemic variances. 
+	
+	The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic match-day noise for both competitors, and $\kappa \in [0,1]$ scales the projection of their certainty-discounted behavioral dispersions ($\tilde{\sigma}^2$). The total probability-weighted Within-Component variance is:
 	\begin{equation}
-		\varsigma_{i,\mathrm{within}}^2 = \left(1 - p_i\right)\Big(V_i^{\mathrm{age}} + 2\sigma_{\mathrm{pred}}^2 + \kappa\tilde{\sigma}_i^2\Big) + \sum_{w \neq i} p_w \left(V_w^{\mathrm{age}} + \kappa\tilde{\sigma}_w^2\right)
+		\varsigma_{i,\mathrm{within}}^2 = \sum_{w \neq i} p_w \left[ V_i^{\mathrm{age}} + V_w^{\mathrm{age}} - 2\rho\sqrt{V_i^{\mathrm{age}} V_w^{\mathrm{age}}} + 2\sigma_{\mathrm{pred}}^2 + \kappa(\tilde{\sigma}_i^2 + \tilde{\sigma}_w^2) \right]
 	\end{equation}
 
 	Because the focal competitor's expected score shifts depending on which universe occurs, we must calculate the Between-Component variance. We first establish the unconditional expected log-score (Grand Mean) across all universes:

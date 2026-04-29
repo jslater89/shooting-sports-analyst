@@ -1152,6 +1152,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       /// (same weighting as [probabilityWeightedWinnerVariance]).
       double probabilityWeightedWinnerDispersion = 0.0;
 
+      /// Probability-weighted sum of the within-component variance of the difference
+      /// between the focal competitor and each presumed winner.
+      double probabilityWeightedWithinVariance = 0.0;
+
       /// The win probability of the focal competitor as the presumed winner.
       double ownPresumedWinProbability = 0.0;
 
@@ -1169,9 +1173,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         sumOfSquaredWinProbabilities += p.winProbability * p.winProbability;
       }
       final nEff = 1.0 / sumOfSquaredWinProbabilities;
-      final eMax = Normal.quantile((nEff - 0.375) / (nEff + 0.25));
+
+      // Account for the fact that winning performances are typically physically bounded;
+      // it's asymmetric.
+      final eMax = 0.4 * Normal.quantile((nEff - 0.375) / (nEff + 0.25));
 
       final kappa = settings.predictionBehavioralDispersionKappa;
+      final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);
 
       for(var presumedWinner in presumedWinners) {
         final winProbability = presumedWinner.winProbability;
@@ -1203,7 +1211,18 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         probabilityWeightedGrandMean += logDifference * winProbability;
         probabilityWeightedLogDifferences.add((pW: winProbability, muIW: logDifference));
 
-        final pairwiseVariance = winnerVariance + ratingVariance + 2 * settings.predictionSportVariance;
+        // The variance of the difference (R_i - R_w) equals V_i + V_w - 2*Cov(i,w)
+        // Covariance is approximated by rho * sqrt(V_i * V_w)
+        final epistemicPairwise = ratingVariance + winnerVariance
+            - 2 * settings.intraclassCorrelation * sqrt(ratingVariance * winnerVariance);
+
+        final dispersionComponent =
+          settings.predictionBehavioralDispersionKappa
+          * (ownCertainty * rating.dispersion + winnerCertainty * presumedWinner.shooter.dispersion);
+
+        final pairwiseVariance = epistemicPairwise + 2 * settings.predictionSportVariance + dispersionComponent;
+
+        probabilityWeightedWithinVariance += pairwiseVariance * winProbability;
 
         final truncationCorrectionNumerator = -((logDifference + pairwiseVariance) / sqrt(pairwiseVariance));
         final truncationCorrectionDenominator = -(logDifference / sqrt(pairwiseVariance));
@@ -1221,17 +1240,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       for(var (pW: double winProbability, muIW: double logDifference) in probabilityWeightedLogDifferences) {
         betweenComponentVariance += winProbability * pow(logDifference - probabilityWeightedGrandMean, 2);
       }
-
-      final notWinnerProbability = 1.0 - ownPresumedWinProbability;
-      final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);
-      final withinComponentVariance =
-        notWinnerProbability * (
-          ratingVariance
-          + 2 * settings.predictionSportVariance
-          + (ownCertainty * rating.dispersion * kappa)
-        )
-        + probabilityWeightedWinnerVariance
-        + probabilityWeightedWinnerDispersion * kappa;
+      final withinComponentVariance = probabilityWeightedWithinVariance;
 
       final geometricSD = exp(sqrt(withinComponentVariance + betweenComponentVariance));
       final lowerCi = probabilityWeightedRatio / geometricSD;
