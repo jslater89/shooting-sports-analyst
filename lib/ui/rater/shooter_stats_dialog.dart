@@ -26,6 +26,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/chart/rating_accumulator.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_database_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_comparison_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -265,6 +266,33 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     return _historyLines!;
   }
 
+  Future<ShooterRating?> _selectRating() async {
+    ShooterRating? result;
+    if(widget.comparableRatings != null && widget.comparableRatings!.isNotEmpty) {
+      final rating2Result = await RatingListSelectDialog.show(
+        context,
+        ratings: widget.comparableRatings!.where((r) => r != widget.rating),
+        multiple: false,
+      );
+      if(rating2Result != null && rating2Result.isNotEmpty) {
+        result = rating2Result.first;
+      }
+    }
+    else if(widget.ratings != null) {
+      final rating2Result = await RatingDatabaseSelectDialog.show(
+        context,
+        dataSource: widget.ratings!,
+        group: widget.rating.group,
+        excludedRatings: [widget.rating],
+        multiple: false,
+      );
+      if(rating2Result != null && rating2Result.isNotEmpty) {
+        result = rating2Result.first;
+      }
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     // if(rating.ratingEvents.length < 30) {
@@ -300,18 +328,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
                       "All possible member numbers:\n${widget.rating.allPossibleMemberNumbers.join("\n")}",
                   ),
-                  if(widget.comparableRatings != null && widget.comparableRatings!.isNotEmpty) Tooltip(
+                  Tooltip(
                     message: "Compare this rating to another",
                     child: IconButton(
                       icon: Icon(Icons.compare_arrows),
                       onPressed: () async {
-                        final rating2Result = await RatingSelectDialog.show(
-                          context,
-                          ratings: widget.comparableRatings!.where((r) => r != widget.rating),
-                          multiple: false,
-                        );
-                        if(rating2Result != null && rating2Result.isNotEmpty) {
-                          RatingComparisonDialog.show(context, widget.rating, rating2Result.first);
+                        final rating2Result = await _selectRating();
+                        if(rating2Result != null) {
+                          RatingComparisonDialog.show(context, widget.rating, rating2Result);
                         }
                       },
                     ),

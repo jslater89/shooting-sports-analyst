@@ -5,42 +5,45 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 /// A dialog to select a set of ratings from a list of ratings.
-class RatingListSelectDialog extends StatefulWidget {
-  const RatingListSelectDialog({
+class RatingDatabaseSelectDialog extends StatefulWidget {
+  const RatingDatabaseSelectDialog({
     super.key,
     required this.ratings,
+    required this.group,
+    this.excludedRatings,
     required this.showDivision,
     this.barrierDismissible = false,
     this.multiple = true,
   });
 
-  final List<ShooterRating> ratings;
+  final RatingDataSource ratings;
+  final RatingGroup group;
+  final List<ShooterRating>? excludedRatings;
   final bool showDivision;
   final bool barrierDismissible;
   final bool multiple;
 
   @override
-  State<RatingListSelectDialog> createState() => _RatingListSelectDialogState();
+  State<RatingDatabaseSelectDialog> createState() => _RatingDatabaseSelectDialogState();
 
   static Future<List<ShooterRating>?> show(BuildContext context, {
-    required Iterable<ShooterRating> ratings,
+    required RatingDataSource dataSource,
+    required RatingGroup group,
+    List<ShooterRating>? excludedRatings,
     bool showDivision = false,
     bool barrierDismissible = false,
     bool multiple = true,
   }) {
-    List<ShooterRating> ratingsList = [];
-    if(ratings is List<ShooterRating>) {
-      ratingsList = ratings;
-    }
-    else {
-      ratingsList = ratings.toList();
-    }
     return showDialog<List<ShooterRating>>(context: context, builder: (context) =>
-      RatingListSelectDialog(
-        ratings: ratingsList,
+      RatingDatabaseSelectDialog(
+        ratings: dataSource,
+        group: group,
+        excludedRatings: excludedRatings,
         showDivision: showDivision,
         barrierDismissible: barrierDismissible,
         multiple: multiple,
@@ -49,29 +52,48 @@ class RatingListSelectDialog extends StatefulWidget {
   }
 }
 
-class _RatingListSelectDialogState extends State<RatingListSelectDialog> {
+class _RatingDatabaseSelectDialogState extends State<RatingDatabaseSelectDialog> {
   Map<ShooterRating, bool> selectedRatings = {};
 
   var searchController = TextEditingController();
 
-  List<ShooterRating> get ratings => _filteredRatings != null ? _filteredRatings! : widget.ratings;
-  List<ShooterRating>? _filteredRatings;
+  List<ShooterRating> matchingRatings = [];
   String? _searchTerm;
 
-  void _search(String value) {
+  @override
+  void initState() {
+    super.initState();
+    _search("");
+  }
+
+  Future<void> _search(String value) async {
+    _searchTerm = value;
+    DataSourceResult<List<DbShooterRating>> ratingsRes;
     if(value.isEmpty) {
+      ratingsRes = await widget.ratings.getTopRatings(widget.group, limit: 50);
+    }
+    else {
+      ratingsRes = await widget.ratings.findShooterRatings(widget.group, value);
+    }
+
+    if(ratingsRes.isOk()) {
+      List<ShooterRating> wrappedRatings = [];
+      for(var rating in ratingsRes.unwrap()) {
+        if(widget.excludedRatings != null && widget.excludedRatings!.any((r) => r.wrappedRating.id == rating.id)) {
+          continue;
+        }
+        final wrappedRatingRes = await widget.ratings.wrapDbRating(rating);
+        if(wrappedRatingRes.isOk()) {
+          wrappedRatings.add(wrappedRatingRes.unwrap());
+        }
+      }
       setState(() {
-        _searchTerm = null;
-        _filteredRatings = null;
+        matchingRatings = wrappedRatings;
       });
     }
     else {
       setState(() {
-        _searchTerm = value;
-        _filteredRatings = widget.ratings.where((r) =>
-          r.name.toLowerCase().contains(value.toLowerCase()) ||
-          r.knownMemberNumbers.any((n) => n.toLowerCase().contains(value.toLowerCase()))
-        ).toList();
+        matchingRatings = [];
       });
     }
   }
@@ -91,10 +113,11 @@ class _RatingListSelectDialogState extends State<RatingListSelectDialog> {
               decoration: InputDecoration(
                 hintText: "Search",
                 suffix: IconButton(
-                  icon: _searchTerm != null ? Icon(Icons.cancel) : Icon(Icons.search),
+                  icon: _searchTerm!.isNotEmpty ? Icon(Icons.cancel) : Icon(Icons.search),
                   onPressed: () {
-                    if(_searchTerm != null) {
+                    if(_searchTerm!.isNotEmpty) {
                       _search("");
+                      searchController.clear();
                     }
                     else {
                       _search(searchController.text);
@@ -111,7 +134,7 @@ class _RatingListSelectDialogState extends State<RatingListSelectDialog> {
               child: ListView.builder(
                 itemBuilder: (context, index) => _RatingListTile(
                   multiple: widget.multiple,
-                  rating: ratings[index],
+                  rating: matchingRatings[index],
                   selectedRatings: selectedRatings,
                   onChanged: (rating, value) {
                     if(widget.multiple) {
@@ -124,7 +147,7 @@ class _RatingListSelectDialogState extends State<RatingListSelectDialog> {
                     }
                   },
                 ),
-                itemCount: ratings.length,
+                itemCount: matchingRatings.length,
               ),
             ),
           ],

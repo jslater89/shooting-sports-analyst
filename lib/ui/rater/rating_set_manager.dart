@@ -153,7 +153,7 @@ class _RatingSetManagerState extends State<RatingSetManager> {
         TextButton(
           child: Text("CREATE NEW"),
           onPressed: () async {
-            var ratingSelection = await RatingSelectDialog.show(context, ratings: widget.validRatings);
+            var ratingSelection = await RatingListSelectDialog.show(context, ratings: widget.validRatings);
             if(ratingSelection != null) {
               var set = RatingSet.create();
               set.memberNumbers = ratingSelection.map((r) => r.memberNumber).toList();
@@ -192,7 +192,7 @@ class _RatingSetManagerState extends State<RatingSetManager> {
                     visualDensity: VisualDensity.compact,
                     icon: Icon(Icons.edit),
                     onPressed: () async {
-                      var ratingSelection = await RatingSelectDialog.show(context, ratings: widget.validRatings);
+                      var ratingSelection = await RatingListSelectDialog.show(context, ratings: widget.validRatings);
                       if(ratingSelection != null) {
                         var set = ratingSets[index];
                         set.memberNumbers = ratingSelection.map((r) => r.memberNumber).toList();

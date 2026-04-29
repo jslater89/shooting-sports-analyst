@@ -380,6 +380,15 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       .findAll());
   }
 
+  @override
+  Future<DataSourceResult<List<DbShooterRating>>> getTopRatings(RatingGroup group, {int limit = 10}) async {
+    return DataSourceResult.ok(await ratings.filter()
+      .group((q) => q.idEqualTo(group.id))
+      .sortByRatingDesc()
+      .limit(limit)
+      .findAll());
+  }
+
   DataSourceResult<List<DbShooterRating>> getRatingsSync(RatingGroup group) {
     return DataSourceResult.ok(ratings.filter().group((q) => q.idEqualTo(group.id)).findAllSync());
   }

@@ -75,8 +75,13 @@ abstract interface class RatingDataSource {
   /// Returns an empty list if fewer than three characters are provided.
   Future<DataSourceResult<List<DbShooterRating>>> findShooterRatings(RatingGroup group, String name, {int limit = 10});
 
+  /// Get the top ratings for a group.
+  Future<DataSourceResult<List<DbShooterRating>>> getTopRatings(RatingGroup group, {int limit = 10});
+
+  /// Wrap a DbShooterRating into a ShooterRating.
   Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating);
 
+  /// Get all ratings for a group.
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
 
   Future<DataSourceResult<List<RatingReport>>> getAllReports();
