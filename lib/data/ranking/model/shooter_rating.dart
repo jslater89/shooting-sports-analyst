@@ -123,13 +123,25 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   double get rating => wrappedRating.rating;
   set rating(double v) => wrappedRating.rating = v;
 
+  /// The current rating, as of the current clock time, for rating systems that
+  /// have an aging component.
+  double get currentRating => rating;
+
   /// The scaled rating, if the rating system has a scaling
   /// factor or offset.
   ///
   /// The default implementation returns the rating unchanged.
   double get scaledRating => rating;
 
-  String get formattedRating => rating.round().toString();
+  /// The formatted rating, for display.
+  ///
+  /// The default implementation calls [formatNumericRating] on the rating.
+  String get formattedRating => formatNumericRating(rating);
+
+  /// The formatted current rating, for display.
+  ///
+  /// The default implementation calls [formatNumericRating] on the current rating.
+  String get formattedCurrentRating => formatNumericRating(currentRating);
 
   /// Format a numeric rating for display.
   String formatNumericRating(double rating) {

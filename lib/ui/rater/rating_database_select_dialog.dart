@@ -16,9 +16,11 @@ class RatingDatabaseSelectDialog extends StatefulWidget {
     required this.ratings,
     required this.group,
     this.excludedRatings,
+    this.useAgedRatings = true,
     required this.showDivision,
     this.barrierDismissible = false,
     this.multiple = true,
+    this.resortAgedRatings = true,
   });
 
   final RatingDataSource ratings;
@@ -27,6 +29,8 @@ class RatingDatabaseSelectDialog extends StatefulWidget {
   final bool showDivision;
   final bool barrierDismissible;
   final bool multiple;
+  final bool useAgedRatings;
+  final bool resortAgedRatings;
 
   @override
   State<RatingDatabaseSelectDialog> createState() => _RatingDatabaseSelectDialogState();
@@ -36,8 +40,10 @@ class RatingDatabaseSelectDialog extends StatefulWidget {
     required RatingGroup group,
     List<ShooterRating>? excludedRatings,
     bool showDivision = false,
+    bool useAgedRatings = true,
     bool barrierDismissible = false,
     bool multiple = true,
+    bool resortAgedRatings = true,
   }) {
     return showDialog<List<ShooterRating>>(context: context, builder: (context) =>
       RatingDatabaseSelectDialog(
@@ -47,6 +53,8 @@ class RatingDatabaseSelectDialog extends StatefulWidget {
         showDivision: showDivision,
         barrierDismissible: barrierDismissible,
         multiple: multiple,
+        useAgedRatings: useAgedRatings,
+        resortAgedRatings: resortAgedRatings,
       )
     );
   }
@@ -86,6 +94,10 @@ class _RatingDatabaseSelectDialogState extends State<RatingDatabaseSelectDialog>
         if(wrappedRatingRes.isOk()) {
           wrappedRatings.add(wrappedRatingRes.unwrap());
         }
+      }
+
+      if(widget.useAgedRatings && widget.resortAgedRatings) {
+        wrappedRatings.sort((a, b) => b.currentRating.compareTo(a.currentRating));
       }
       setState(() {
         matchingRatings = wrappedRatings;
@@ -136,6 +148,7 @@ class _RatingDatabaseSelectDialogState extends State<RatingDatabaseSelectDialog>
                   multiple: widget.multiple,
                   rating: matchingRatings[index],
                   selectedRatings: selectedRatings,
+                  useAgedRatings: widget.useAgedRatings,
                   onChanged: (rating, value) {
                     if(widget.multiple) {
                       setState(() {
@@ -173,12 +186,14 @@ class _RatingListTile extends StatelessWidget {
     required this.rating,
     required this.selectedRatings,
     required this.onChanged,
+    required this.useAgedRatings,
   });
 
   final bool multiple;
   final ShooterRating rating;
   final Map<ShooterRating, bool> selectedRatings;
   final Function(ShooterRating, bool) onChanged;
+  final bool useAgedRatings;
 
   @override
   Widget build(BuildContext context) {
@@ -189,13 +204,13 @@ class _RatingListTile extends StatelessWidget {
           onChanged(rating, value ?? false);
         },
         title: Text(rating.name),
-        subtitle: Text("${rating.memberNumber} - ${rating.formattedRating}"),
+        subtitle: Text("${rating.memberNumber} - ${useAgedRatings ? rating.formattedCurrentRating : rating.formattedRating}"),
       );
     }
     else {
       return ListTile(
         title: Text(rating.name),
-        subtitle: Text("${rating.memberNumber} - ${rating.formattedRating}"),
+        subtitle: Text("${rating.memberNumber} - ${useAgedRatings ? rating.formattedCurrentRating : rating.formattedRating}"),
         onTap: () {
           onChanged(rating, true);
         },

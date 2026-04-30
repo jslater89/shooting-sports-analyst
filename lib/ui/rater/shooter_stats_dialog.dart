@@ -285,10 +285,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         group: widget.rating.group,
         excludedRatings: [widget.rating],
         multiple: false,
+        useAgedRatings: true,
+        resortAgedRatings: true,
       );
       if(rating2Result != null && rating2Result.isNotEmpty) {
         result = rating2Result.first;
       }
+    }
+    else {
+      _log.w("Shooter stats dialog has no rating source to select from");
     }
     return result;
   }

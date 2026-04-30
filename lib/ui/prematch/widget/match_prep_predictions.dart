@@ -399,6 +399,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     for(var group in matchPrepModel.ratingProject.groups) {
       var groupPredictions = getPredictionsForGroup(group);
       tabModels[group] = PredictionViewModel(
+        dataSource: matchPrepModel.ratingProject,
         matchId: matchPrepModel.futureMatch.matchId,
         initialPredictions: groupPredictions,
         showWager: true,

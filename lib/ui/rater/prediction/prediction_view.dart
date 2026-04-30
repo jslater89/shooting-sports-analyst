@@ -66,7 +66,11 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
   void initState() {
       super.initState();
 
-    predictionViewModel = PredictionViewModel(matchId: widget.matchId, initialPredictions: widget.predictions);
+    predictionViewModel = PredictionViewModel(
+      matchId: widget.matchId,
+      initialPredictions: widget.predictions,
+      dataSource: widget.dataSource,
+    );
   }
 
   @override
@@ -266,6 +270,7 @@ class PredictionViewModel extends ChangeNotifier {
 
   PredictionViewModel({
     List<AlgorithmPrediction>? initialPredictions,
+    required this.dataSource,
     required this.matchId,
     this.showSearch = true,
     this.showWager = false,
@@ -275,6 +280,8 @@ class PredictionViewModel extends ChangeNotifier {
       setPredictions(initialPredictions, notify: false);
     }
   }
+
+  RatingDataSource dataSource;
   String matchId;
   List<AlgorithmPrediction> predictions = [];
   bool get hasOutcomes => outcomes.isNotEmpty;
@@ -559,7 +566,12 @@ class PredictionListRow extends StatelessWidget {
         var latestEvent = prediction.shooter.eventsWithWindow(window: 1).firstOrNull;
         if(latestEvent != null) {
           var latestMatch = latestEvent.match;
-          ShooterStatsDialog.show(context, prediction.shooter, match: latestMatch);
+          ShooterStatsDialog.show(
+            context,
+            prediction.shooter,
+            match: latestMatch,
+            ratings: model.dataSource
+          );
         }
       },
       child: ConstrainedBox(
@@ -581,16 +593,7 @@ class PredictionListRow extends StatelessWidget {
               ),
               Expanded(
                 flex: PredictionListViewScreen._nameFlex,
-                child: GestureDetector(
-                  onTap: () async {
-                    var latestEvent = prediction.shooter.eventsWithWindow(window: 1).firstOrNull;
-                    if(latestEvent != null) {
-                      var latestMatch = latestEvent.match;
-                      ShooterStatsDialog.show(context, prediction.shooter, match: latestMatch);
-                    }
-                  },
-                  child: Text(prediction.shooter.getName(suffixes: false)),
-                ),
+                child: Text(prediction.shooter.getName(suffixes: false)),
               ),
               Expanded(
                 flex: PredictionListViewScreen._classFlex,

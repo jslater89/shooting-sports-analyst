@@ -80,6 +80,8 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     return settings.formatNumericRatingChange(ratingChange);
   }
 
+  double get currentRating => calculateAgedRating(asOfDate: DateTime.now());
+
   DateTime? _cachedAgedRatingDate;
   double? _cachedAgedRating;
   double calculateAgedRating({DateTime? asOfDate}) {
