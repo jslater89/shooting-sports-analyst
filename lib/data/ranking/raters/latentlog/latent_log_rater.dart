@@ -1176,7 +1176,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
       // Account for the fact that winning performances are typically physically bounded;
       // it's asymmetric.
-      final eMax = 0.4 * Normal.quantile((nEff - 0.375) / (nEff + 0.25));
+      final eMax = Normal.quantile((nEff - 0.375) / (nEff + 0.25));
 
       final kappa = settings.predictionBehavioralDispersionKappa;
       final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);

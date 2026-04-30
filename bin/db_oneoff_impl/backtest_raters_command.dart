@@ -19,6 +19,7 @@ import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
 import "package:shooting_sports_analyst/logger.dart";
+import "package:shooting_sports_analyst/util.dart";
 
 import "base.dart";
 
@@ -441,7 +442,7 @@ class BacktestRatersCommand extends DbOneoffCommand {
     }
 
     final predictions = project.settings.algorithm
-        .predict(ratings, matchDate: match.date);
+        .predict(ratings, seed: match.name.stableHash64, matchDate: match.date);
 
     // Field size for bucketing is the number of scored competitors in this
     // pipeline run (full field for mode=all, rated subset for mode=ratedOnly).

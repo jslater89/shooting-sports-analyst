@@ -28,7 +28,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultStartingVariance = 0.0300;
   static const defaultMaximumVariance = 0.0400;
   static const defaultStartingDispersion = 0.000120;
-  static const defaultIntraclassCorrelation = 0.3;
+  static const defaultIntraclassCorrelation = 0.6;
   static const defaultDispersionAdaptationRate = 0.15;
   static const defaultMomentumAdaptationRate = 0.25;
   static const defaultSurpriseAdaptationRate = 0.15;
@@ -45,8 +45,8 @@ class LatentLogSettings extends RaterSettings {
   static const defaultGraphMaturityThreshold = 10.0;
   static const defaultNoveltyVariance = 0.006;
 
-  static const defaultPredictionSportVariance = 0.0;
-  static const defaultPredictionBehavioralDispersionKappa = 0.600;
+  static const defaultPredictionSportVariance = 0.00006;
+  static const defaultPredictionBehavioralDispersionKappa = 1.0;
   static const defaultMeanReversionGraceYears = 1.0;
   static const defaultMeanReversionDecayRate = 0.035;
 

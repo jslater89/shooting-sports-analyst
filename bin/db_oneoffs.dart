@@ -76,6 +76,7 @@ import 'db_oneoff_impl/r_start_prior_command.dart';
 import 'db_oneoff_impl/backtest_raters_command.dart';
 import 'db_oneoff_impl/top_rated_finish_spread_command.dart';
 import "db_oneoff_impl/rating_demographics_by_class_command.dart";
+import "db_oneoff_impl/area_match_research_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -132,6 +133,29 @@ Future<void> main(List<String> args) async {
     else if(command == "BR") {
       await BacktestRatersCommand(db).executor(console, []);
     }
+    else if(command == "AMR") {
+      if(args.length < 3) {
+        console.print("Usage: AMR <year> <finishRatio>");
+        console.print("Example: AMR 2024 0.8   # year 2024, min 80% of winner score");
+        return;
+      }
+      final year = int.tryParse(args[1]);
+      final ratioStr = args[2];
+      if(year == null) {
+        console.print("Invalid year: ${args[1]}");
+        return;
+      }
+      await AreaMatchResearchCommand(db).executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: IntMenuArgument(label: "Year", required: true), value: year),
+          MenuArgumentValue<String>(
+            argument: StringMenuArgument(label: "Finish ratio", required: true),
+            value: ratioStr,
+          ),
+        ],
+      );
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -174,6 +198,7 @@ Future<void> main(List<String> args) async {
     RatingDemographicsByClassCommand(db),
     BacktestRatersCommand(db),
     TopRatedFinishSpreadCommand(db),
+    AreaMatchResearchCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
