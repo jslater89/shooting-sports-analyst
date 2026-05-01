@@ -23,11 +23,11 @@ import "dart:math";
 
 import "package:collection/collection.dart";
 import "package:isar_community/src/native/isar_core.dart" show initializeCoreBinary;
-import "package:normal/normal.dart";
 import "package:shooting_sports_analyst/config/serialized_config.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/hydrated_cache.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
+import "package:shooting_sports_analyst/data/math/distribution_tools.dart";
 import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/ipsc.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/uspsa.dart";
@@ -417,7 +417,7 @@ Future<void> _writeQqCsv(
 
   for(var i = 0; i < n; i++) {
     var p = (i + 0.5) / n;
-    var z = Normal.quantile(p);
+    var z = stdNormal.quantile(p).toDouble();
     out.writeln("${sorted[i]},$z");
   }
 

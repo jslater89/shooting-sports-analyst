@@ -125,14 +125,14 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(widget.descriptionText ?? "Enter a link to a match."),
-            TypeAheadFormField(
+            TypeAheadField(
               // Use the default no items found builder if we have suggestions but no results, and no-op widget
               // if we don't have suggestions at all.
-              noItemsFoundBuilder: typeaheadSuggestionsFunction != null ? null : (context) => Container(width: 0, height: 0),
+              emptyBuilder: typeaheadSuggestionsFunction != null ? null : (context) => Container(width: 0, height: 0),
               suggestionsCallback: (String pattern) async {
                 return typeaheadSuggestionsFunction?.call(pattern) ?? [];
               },
-              onSuggestionSelected: (suggestion) {
+              onSelected: (suggestion) {
                 _urlController.text = suggestion.url;
               },
               itemBuilder: (context, suggestion) {
@@ -141,13 +141,15 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
                   subtitle: Text(suggestion.url),
                 );
               },
-              textFieldConfiguration: TextFieldConfiguration(
-                decoration: InputDecoration(
-                  hintText: widget.hintText ?? "https://practiscore.com/results/new/...",
-                  errorText: errorText,
-                ),
-                controller: _urlController,
-              ),
+              builder: (context, controller, focusNode) {
+                return TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: widget.hintText ?? "https://practiscore.com/results/new/...",
+                    errorText: errorText,
+                  ),
+                );
+              },
             ),
             if(widget.sources != null)
               DropdownButton<MatchSource>(

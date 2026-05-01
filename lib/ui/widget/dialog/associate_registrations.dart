@@ -112,7 +112,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       child: Text(_formatMapping(unmatched, rating)),
                                     );
                                   },
-                                  onSuggestionSelected: (rating) {
+                                  onSelected: (rating) {
                                     _log.d("Selected $rating");
                                     setState(() {
                                       enabled = false;
@@ -122,10 +122,12 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                     });
                                     controller.text = _formatMapping(unmatched, rating);
                                   },
-                                  textFieldConfiguration: TextFieldConfiguration(
-                                    controller: controller,
-                                    enabled: enabled,
-                                  ),
+                                  builder: (context, controller, focusNode) {
+                                    return TextField(
+                                      controller: controller,
+                                      enabled: enabled,
+                                    );
+                                  },
                                 ),
                               ),
                             ),

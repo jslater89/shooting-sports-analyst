@@ -26,23 +26,25 @@ class _AddComparisonDialogState extends State<AddComparisonDialog> {
     return AlertDialog(
       title: Text("Select Shooter"),
       content: TypeAheadField<RelativeMatchScore>(
-        textFieldConfiguration: TextFieldConfiguration(
-          controller: selectionController,
-        ),
+        builder: (context, controller, focusNode) {
+          return TextField(
+            controller: controller,
+          );
+        },
         itemBuilder: (context, score) {
           return Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text("${score.shooter.getName(suffixes: false)}"),
           );
         },
-        suggestionsCallback: (query) {
+        suggestionsCallback: (query) async {
           query = query.toLowerCase();
           return widget.scores.where((element) =>
             element.shooter.getName(suffixes: false).toLowerCase().startsWith(query) ||
             element.shooter.lastName.toLowerCase().startsWith(query)
-          );
+          ).toList();
         },
-        onSuggestionSelected: (suggestion) {
+        onSelected: (suggestion) {
           selectionController.text = suggestion.shooter.getName(suffixes: false);
           selected = suggestion;
         },

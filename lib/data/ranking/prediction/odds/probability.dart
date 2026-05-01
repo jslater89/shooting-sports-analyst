@@ -7,7 +7,6 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -242,7 +241,7 @@ class PredictionProbability {
         else break;
       }
       final double w = countFirst / trials;
-      final double zBoundary = countFirst > 0 ? Normal.quantile(w) : 0.0;
+      final num zBoundary = countFirst > 0 ? stdNormal.quantile(w) : 0.0;
 
       // Continuous place evaluation: fractional contribution at boundaries so probability
       // is smooth in delta (same logic as Bayesian odds place evaluation).
@@ -253,7 +252,7 @@ class PredictionProbability {
 
         if(originalPlace <= 1.0) {
           final percentile = (i + 0.5) / trials;
-          final zScore = Normal.quantile(percentile);
+          final zScore = stdNormal.quantile(percentile).toDouble();
 
           // How far past the boundary is this specific Z-score?
           final zDiff = zScore - zBoundary; // (This will be negative)
@@ -378,7 +377,7 @@ class PredictionProbability {
         else break;
       }
       final double w = countMax / trials;
-      zBoundary = countMax > 0 ? Normal.quantile(w) : 0.0;
+      zBoundary = countMax > 0 ? stdNormal.quantile(w).toDouble() : 0.0;
     }
 
     final meanPercentage = sortedPercentages.average;
@@ -392,7 +391,7 @@ class PredictionProbability {
       if(ratioDelta != null && ratioDelta != 0.0 && originalPercentage >= 1.0) {
         // Upper tail
         final percentile = (i + 0.5) / trials;
-        final zScore = Normal.quantile(percentile);
+        final zScore = stdNormal.quantile(percentile).toDouble();
 
         // zDiff will be positive (e.g. 2.5 - 1.28 = +1.22)
         final zDiff = zScore - zBoundary;
@@ -521,13 +520,13 @@ class PredictionProbability {
     int favMaxCount = 0;
     for (var i = actualTrials - 1; i >= 0 && sortedFav[i] >= 1.0; i--) favMaxCount++;
     final double favWMax = max(0.5 / actualTrials, (actualTrials - favMaxCount) / actualTrials);
-    final double favZBoundary = favMaxCount > 0 ? Normal.quantile(favWMax) : 0.0;
+    final double favZBoundary = favMaxCount > 0 ? stdNormal.quantile(favWMax).toDouble() : 0.0;
 
     final favLatentQueue = <double>[];
     for(var i = 0; i < actualTrials; i++) {
       if(sortedFav[i] >= 1.0) {
         final percentile = (i + 0.5) / actualTrials;
-        final zScore = Normal.quantile(percentile);
+        final zScore = stdNormal.quantile(percentile).toDouble();
         final impliedPct = 1.0 + ((zScore - favZBoundary) * favoriteStdDev);
         favLatentQueue.add(max(1.0, impliedPct));
       }
@@ -539,13 +538,13 @@ class PredictionProbability {
     int undMaxCount = 0;
     for (var i = actualTrials - 1; i >= 0 && sortedUnd[i] >= 1.0; i--) undMaxCount++;
     final double undWMax = max(0.5 / actualTrials, (actualTrials - undMaxCount) / actualTrials);
-    final double undZBoundary = undMaxCount > 0 ? Normal.quantile(undWMax) : 0.0;
+    final double undZBoundary = undMaxCount > 0 ? stdNormal.quantile(undWMax).toDouble() : 0.0;
 
     final undLatentQueue = <double>[];
     for(var i = 0; i < actualTrials; i++) {
       if(sortedUnd[i] >= 1.0) {
         final percentile = (i + 0.5) / actualTrials;
-        final zScore = Normal.quantile(percentile);
+        final zScore = stdNormal.quantile(percentile).toDouble();
         final impliedPct = 1.0 + ((zScore - undZBoundary) * underdogStdDev);
         undLatentQueue.add(max(1.0, impliedPct));
       }

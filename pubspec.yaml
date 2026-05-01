@@ -29,8 +29,8 @@ dependencies:
   fluro: ^2.0.3 # routing
   http: ^1.1.0 # web requests
   collection: ^1.17.0
-  file_picker: ^8.3.3
-  url_launcher: 6.1.14
+  file_picker: ^11.0.2
+  url_launcher: ^6.3.2
   sprintf: ^7.0.0
   intl: ^0.20.1
   flutter_charts: ^0.5.0
@@ -43,31 +43,31 @@ dependencies:
   shared_preferences:
   path_provider: ^2.0.15
   sanitize_filename: ^1.0.4
-  normal: ^0.6.0
+  normal: ^0.7.0
   fluttericon: ^2.0.0
-  flutter_typeahead: ^4.1.1
+  flutter_typeahead: ^6.0.0
   hive: 2.2.3
   isar_community: ^3.3.0
   isar_community_flutter_libs: ^3.3.0
-  fuzzywuzzy: ^0.2.0
+  fuzzywuzzy: ^1.2.0
   html_unescape: ^2.0.0
   provider: ^6.0.5
   json_annotation: ^4.9.0
   archive: ^4.0.7
   mutex: ^3.1.0
-  toml: ^0.14.0
+  toml: ^0.18.0
   stack_trace: ^1.11.0
   uuid: ^4.2.2
   fading_edge_scrollview: ^4.1.1
   audioplayers: ^6.0.0
-  two_dimensional_scrollables: ^0.0.4
+  two_dimensional_scrollables: ^0.5.1
   window_manager: ^0.5.1
-  data: ^0.14.0
-  color_models: ^1.3.3
+  data: ^0.15.2
+  color_models: ^2.0.0
   dart_numerics: ^0.0.6
-  cookie_store: ^0.3.5
-  flutter_secure_storage: ^9.2.0
-  package_info_plus: ^8.0.2
+  cookie_store: ^0.4.2
+  flutter_secure_storage: ^10.0.0
+  package_info_plus: ^9.0.1
   meta: ^1.16.0
   shelf: ^1.4.2
   shelf_router: ^1.1.4
@@ -77,19 +77,19 @@ dependencies:
   encrypt: ^5.0.3
   hashlib: ^2.2.0
   html: ^0.15.6
-  advance_math: ^4.0.0
+  advance_math: ^5.3.6
   string_similarity: ^2.1.1
   flutter_svg: ^2.2.2
   path_drawing: ^1.0.1
   cryptography: ^2.8.0
   device_info_plus: ^12.2.0
   watcher: ^1.1.4
-  csv: ^7.2.0
+  csv: ^8.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.0
+  flutter_launcher_icons: ^0.14.4
   build_runner: ^2.2.0
   isar_community_generator: ^3.3.0
   json_serializable: ^6.6.0

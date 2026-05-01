@@ -496,10 +496,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
         pinnedRowCount: 1,
         cellBuilder: (context, vicinity) {
           if(vicinity.row == 0) {
-            return _buildHeaderCell(context, vicinity, match);
+            return TableViewCell(child: _buildHeaderCell(context, vicinity, match));
           }
           else {
-            return _buildScoreCell(context, vicinity, match);
+            return TableViewCell(child: _buildScoreCell(context, vicinity, match));
           }
         },
         columnBuilder: (column) {

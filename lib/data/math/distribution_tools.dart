@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:data/data.dart';
+import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/gaussian/gaussian_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
@@ -255,3 +256,5 @@ extension ParameterString on ContinuousDistribution {
 extension NonOverlappingIterableNumExtension on Iterable<num> {
   double stdDev() => this.standardDeviation();
 }
+
+final stdNormal = Normal(0.0, 1.0);

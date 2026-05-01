@@ -7,9 +7,9 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
@@ -1176,7 +1176,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
       // Account for the fact that winning performances are typically physically bounded;
       // it's asymmetric.
-      final eMax = Normal.quantile((nEff - 0.375) / (nEff + 0.25));
+      final eMax = stdNormal.quantile((nEff - 0.375) / (nEff + 0.25)).toDouble();
 
       final kappa = settings.predictionBehavioralDispersionKappa;
       final ownCertainty = 1.0 - (ratingVariance / settings.maximumVariance).clamp(0.0, 1.0);
@@ -1226,7 +1226,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
         final truncationCorrectionNumerator = -((logDifference + pairwiseVariance) / sqrt(pairwiseVariance));
         final truncationCorrectionDenominator = -(logDifference / sqrt(pairwiseVariance));
-        final truncationCorrection = Normal.cdf(truncationCorrectionNumerator) / Normal.cdf(truncationCorrectionDenominator);
+        final truncationCorrection = stdNormal.cdf(truncationCorrectionNumerator) / stdNormal.cdf(truncationCorrectionDenominator);
 
         final correctionTerm = pairwiseVariance / 2;
         final weightedRatio = exp(logDifference + correctionTerm) * truncationCorrection * winProbability;
@@ -1365,7 +1365,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           + 2 * settings.predictionSportVariance
         );
 
-        double probability = Normal.cdf(numerator / denominator);
+        double probability = stdNormal.cdf(numerator / denominator).toDouble();
         pairwiseProbabilities.add(probability);
       }
       double winProbability = pairwiseProbabilities.reduce((a, b) => a * b);

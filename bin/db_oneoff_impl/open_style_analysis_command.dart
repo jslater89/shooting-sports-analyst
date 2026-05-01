@@ -10,7 +10,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:dart_console/src/console.dart';
 import 'package:data/stats.dart' show StudentDistribution;
-import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -380,13 +379,13 @@ class OpenStyleAnalysisCommand extends DbOneoffCommand {
     // For other df, use normal approximation: sqrt(2*χ²) - sqrt(2*df - 1) ~ N(0,1)
     if(df > 30) {
       var z = sqrt(2 * chiSquare) - sqrt(2 * df - 1);
-      return 2 * (1 - Normal.cdf(z.abs()));
+      return (2 * (1 - stdNormal.cdf(z.abs())).toDouble());
     }
 
     // For small df, use a more accurate approximation
     // P(χ² > x) ≈ 1 - Normal.cdf((x - df) / sqrt(2*df))
     var z = (chiSquare - df) / sqrt(2 * df);
-    return 2 * (1 - Normal.cdf(z.abs()));
+    return (2 * (1 - stdNormal.cdf(z.abs())).toDouble());
   }
 
   ({double tStatistic, double pValue, double df}) _welchTTest(List<double> group1, List<double> group2) {
@@ -519,7 +518,7 @@ class OpenStyleAnalysisCommand extends DbOneoffCommand {
     var absStat = statistic.abs();
     if(df.isInfinite || df > 100) {
       // Normal distribution: P(|Z| > z) = 2 * (1 - Φ(z))
-      return 2 * (1 - Normal.cdf(absStat));
+      return (2 * (1 - stdNormal.cdf(absStat)).toDouble());
     }
     else {
       // t-distribution: P(|T| > t) = 2 * (1 - F(t))
@@ -532,7 +531,7 @@ class OpenStyleAnalysisCommand extends DbOneoffCommand {
     // Use proper t-distribution inverse CDF for critical values
     if(df.isInfinite || df > 100) {
       // For large df, use normal distribution
-      return Normal.quantile(1 - alpha);
+      return stdNormal.quantile(1 - alpha).toDouble();
     }
     else {
       // Use Student's t-distribution inverse CDF

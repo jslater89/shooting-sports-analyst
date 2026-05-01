@@ -124,16 +124,16 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
         },
         cellBuilder: (context, vicinity) {
           if(vicinity.row == 0) {
-            return Center(child: _buildHeaderCell(context, model, vicinity));
+            return TableViewCell(child: Center(child: _buildHeaderCell(context, model, vicinity)));
           }
           else {
-            return Center(child: _buildCell(
+            return TableViewCell(child: Center(child: _buildCell(
               context,
               model,
               _sortedMatches,
               vicinity,
               model.pairedMatchResults,
-            ));
+            )));
           }
         },
       ),

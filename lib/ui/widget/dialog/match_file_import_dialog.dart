@@ -72,7 +72,7 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(withData: false);
+      final result = await FilePicker.pickFiles(withData: false);
       if (!mounted) {
         return;
       }

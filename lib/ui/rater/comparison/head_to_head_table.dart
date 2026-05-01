@@ -83,44 +83,44 @@ class HeadToHeadStatsTable extends StatelessWidget {
       },
       cells: [
         [
-          _LeftAlignedText(text: "Stat", style: TextStyle(fontWeight: FontWeight.w500)),
-          _RightAlignedText(text: "$surname1/$surname2", style: TextStyle(fontWeight: FontWeight.w500)),
+          TableViewCell(child: _LeftAlignedText(text: "Stat", style: TextStyle(fontWeight: FontWeight.w500))),
+          TableViewCell(child: _RightAlignedText(text: "$surname1/$surname2", style: TextStyle(fontWeight: FontWeight.w500))),
         ],
         [
-          _LeftAlignedText(text: "Head to head matches"),
-          _RightAlignedText(text: "${headToHeadMatches.length}"),
+          TableViewCell(child: _LeftAlignedText(text: "Head to head matches")),
+          TableViewCell(child: _RightAlignedText(text: "${headToHeadMatches.length}")),
         ],
         [
-          _LeftAlignedText(text: "Head to head wins"),
-          _RightAlignedText(text: "$headToHead1Wins/${headToHeadMatches.length - headToHead1Wins}"),
+          TableViewCell(child: _LeftAlignedText(text: "Head to head wins")),
+          TableViewCell(child: _RightAlignedText(text: "$headToHead1Wins/${headToHeadMatches.length - headToHead1Wins}")),
         ],
         [
-          _LeftAlignedText(text: "Total matches"),
-          _RightAlignedText(text: "$totalMatches1/$totalMatches2"),
+          TableViewCell(child: _LeftAlignedText(text: "Total matches")),
+          TableViewCell(child: _RightAlignedText(text: "$totalMatches1/$totalMatches2")),
         ],
         [
-          _LeftAlignedText(text: "Total wins"),
-          _RightAlignedText(text: "$totalWins1/$totalWins2"),
+          TableViewCell(child: _LeftAlignedText(text: "Total wins")),
+          TableViewCell(child: _RightAlignedText(text: "$totalWins1/$totalWins2")),
         ],
         [
-          _LeftAlignedText(text: "Current rating"),
-          _RightAlignedText(text: "${fR(currentRating1)}/${fR(currentRating2)}"),
+          TableViewCell(child: _LeftAlignedText(text: "Current rating")),
+          TableViewCell(child: _RightAlignedText(text: "${fR(currentRating1)}/${fR(currentRating2)}")),
         ],
         [
-          _LeftAlignedText(text: "Recent average"),
-          _RightAlignedText(text: "${fR(recentAverage1.averageOfIntermediates)}/${fR(recentAverage2.averageOfIntermediates)}"),
+          TableViewCell(child: _LeftAlignedText(text: "Recent average")),
+          TableViewCell(child: _RightAlignedText(text: "${fR(recentAverage1.averageOfIntermediates)}/${fR(recentAverage2.averageOfIntermediates)}")),
         ],
         [
-          _LeftAlignedText(text: "Career peak"),
-          _RightAlignedText(text: "${fR(lifetimeAverage1.maxRating)}/${fR(lifetimeAverage2.maxRating)}"),
+          TableViewCell(child: _LeftAlignedText(text: "Career peak")),
+          TableViewCell(child: _RightAlignedText(text: "${fR(lifetimeAverage1.maxRating)}/${fR(lifetimeAverage2.maxRating)}")),
         ],
         if(model.rating1.sport.type.isHitFactor || model.rating1.sport.type == SportType.icore) [
-          _LeftAlignedText(text: "Alpha percentage"),
-          _RightAlignedText(text: "${careerStats1.careerStats.totalScore?.hitPercentagesText(model.rating1.sport, bestOnly: true)}/${careerStats2.careerStats.totalScore?.hitPercentagesText(model.rating2.sport, bestOnly: true)}"),
+          TableViewCell(child: _LeftAlignedText(text: "Alpha percentage")),
+          TableViewCell(child: _RightAlignedText(text: "${careerStats1.careerStats.totalScore?.hitPercentagesText(model.rating1.sport, bestOnly: true)}/${careerStats2.careerStats.totalScore?.hitPercentagesText(model.rating2.sport, bestOnly: true)}")),
         ],
         [
-          _LeftAlignedText(text: "DQs"),
-          _RightAlignedText(text: "${careerStats1.careerStats.dqs.length}/${careerStats2.careerStats.dqs.length}"),
+          TableViewCell(child: _LeftAlignedText(text: "DQs")),
+          TableViewCell(child: _RightAlignedText(text: "${careerStats1.careerStats.dqs.length}/${careerStats2.careerStats.dqs.length}")),
         ]
       ],
     );

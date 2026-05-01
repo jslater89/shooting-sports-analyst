@@ -9,7 +9,7 @@
 
 import "dart:math";
 
-import "package:normal/normal.dart";
+import "package:shooting_sports_analyst/data/math/distribution_tools.dart";
 import "package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart";
 
 /// Per-shooter metrics for one forecast versus one realized finish ratio (and rank).
@@ -118,8 +118,8 @@ double ratioForecastCrpsNormal(double mu, double sigma, double x) {
     return (x - mu).abs();
   }
   final z = (x - mu) / sigma;
-  final phi = Normal.cdf(z);
-  final pdf = Normal.pdf(z);
+  final phi = stdNormal.cdf(z);
+  final pdf = stdNormal.pdf(z);
   return sigma * (z * (2 * phi - 1) + 2 * pdf - 1 / sqrt(pi));
 }
 
@@ -135,11 +135,11 @@ double ratioForecastCrpsLogNormal(double muLog, double sigmaLog, double y) {
     return double.nan;
   }
   final omega = (log(y) - muLog) / sigmaLog;
-  final term1 = y * (2 * Normal.cdf(omega) - 1);
+  final term1 = y * (2 * stdNormal.cdf(omega) - 1);
   final scale = exp(muLog + (sigmaLog * sigmaLog) / 2);
   final term2 = 2 *
       scale *
-      (Normal.cdf(omega - sigmaLog) + Normal.cdf(sigmaLog / sqrt(2)) - 1);
+      (stdNormal.cdf(omega - sigmaLog) + stdNormal.cdf(sigmaLog / sqrt(2)) - 1);
   return term1 - term2;
 }
 

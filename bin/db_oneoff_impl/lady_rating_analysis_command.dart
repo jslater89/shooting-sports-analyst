@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:data/stats.dart' show StudentDistribution;
-import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -648,9 +647,9 @@ class LadyRatingAnalysisCommand extends DbOneoffCommand {
     var zStatistic = (z1 - z2).abs() / se;
 
     // Two-tailed p-value using normal distribution
-    var pValue = 2 * (1 - Normal.cdf(zStatistic));
+    var pValue = 2 * (1 - stdNormal.cdf(zStatistic));
 
-    return (zStatistic: zStatistic, pValue: pValue);
+    return (zStatistic: zStatistic, pValue: pValue.toDouble());
   }
 
   void _printTopLineSummary(List<_ShooterData> data, StringBuffer output) {
@@ -933,7 +932,7 @@ class LadyRatingAnalysisCommand extends DbOneoffCommand {
     var absStat = statistic.abs();
     if(df.isInfinite || df > 100) {
       // Normal distribution: P(|Z| > z) = 2 * (1 - Φ(z))
-      return 2 * (1 - Normal.cdf(absStat));
+      return (2 * (1 - stdNormal.cdf(absStat)).toDouble());
     }
     else {
       // t-distribution: P(|T| > t) = 2 * (1 - F(t))
@@ -946,7 +945,7 @@ class LadyRatingAnalysisCommand extends DbOneoffCommand {
     // Use proper t-distribution inverse CDF for critical values
     if(df.isInfinite || df > 100) {
       // For large df, use normal distribution
-      return Normal.quantile(1 - alpha);
+      return stdNormal.quantile(1 - alpha).toDouble();
     }
     else {
       // Use Student's t-distribution inverse CDF

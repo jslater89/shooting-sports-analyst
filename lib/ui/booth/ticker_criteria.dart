@@ -591,17 +591,19 @@ class NewShooterScore extends TickerEventType {
     return StatefulBuilder(
       builder: (context, setState) {
         return TypeAheadField<MatchEntry>(
-          textFieldConfiguration: TextFieldConfiguration(
-            controller: textController,
-            decoration: InputDecoration(labelText: "Competitor"),
-          ),
+          builder: (context, controller, focusNode) {
+            return TextField(
+              controller: controller,
+              decoration: InputDecoration(labelText: "Competitor"),
+            );
+          },
           suggestionsCallback: (pattern) async {
-            return match.shooters.where((e) => e.name.toLowerCase().contains(pattern.toLowerCase()));
+            return match.shooters.where((e) => e.name.toLowerCase().contains(pattern.toLowerCase())).toList();
           },
           itemBuilder: (context, MatchEntry entry) => ListTile(
             title: Text(entry.name)
           ),
-          onSuggestionSelected: (MatchEntry entry) {
+          onSelected: (MatchEntry entry) {
             setState(() {
               shooterUuid = entry.sourceId ?? "${entry.entryId}";
               shooterName = entry.name;

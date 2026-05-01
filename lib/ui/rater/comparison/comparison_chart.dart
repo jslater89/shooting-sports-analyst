@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 import 'package:community_charts_common/community_charts_common.dart' as common;
@@ -225,7 +224,7 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
                     referenceEvent = picked2;
                   }
 
-                  _launchScoreView(context, referenceEvent!.baseEvent.entry.division, referenceEvent!.baseEvent.match, stage: referenceEvent!.baseEvent.stage);
+                  _launchScoreView(context, referenceEvent!.baseEvent.entry.division, referenceEvent.baseEvent.match, stage: referenceEvent.baseEvent.stage);
                 }
               },
             )

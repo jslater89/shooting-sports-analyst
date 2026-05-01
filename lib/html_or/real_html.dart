@@ -30,7 +30,7 @@ class Controller extends ControlInterface {
 
   @override
   void pickAndReadFile(Function(String? p1) onFileContents) async {
-    var result = await FilePicker.platform.pickFiles();
+    var result = await FilePicker.pickFiles();
     if(result != null) {
       var f = result.files[0];
       onFileContents(Utf8Decoder().convert(f.bytes?.toList() ?? []));
@@ -42,7 +42,7 @@ class Controller extends ControlInterface {
 
   @override
   Future<String?> pickAndReadFileNow() async {
-    var result = await FilePicker.platform.pickFiles();
+    var result = await FilePicker.pickFiles();
     if(result != null) {
       var f = result.files[0];
       return Utf8Decoder().convert(f.bytes?.toList() ?? []);
