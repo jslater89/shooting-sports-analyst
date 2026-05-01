@@ -1,0 +1,99 @@
+{
+  "timestamp": "20260430_130541",
+  "csv_file": "backtest_results_20260430_130541.csv",
+  "algorithms_run": [
+    "LLR"
+  ],
+  "algorithm_settings": {
+    "LLR": {
+      "project_name": "L2s Main LLR Backtesting",
+      "settings": {
+        "algo": "latentLog",
+        "latentLogByStage": false,
+        "latentLogScaleOffset": 100.0,
+        "latentLogScaleFactor": 100.0,
+        "latentLogStartingRating": 0.0,
+        "latentLogSportVolatility": 0.0012,
+        "latentLogSkillDriftRate": 0.0009,
+        "latentLogStartingVariance": 0.03,
+        "latentLogStartingDispersion": 0.00012,
+        "latentLogMaximumVariance": 0.04,
+        "latentLogIntraclassCorrelation": 0.4,
+        "latentLogVolatilityAdaptationRate": 0.15,
+        "latentLogMomentumAdaptationRate": 0.25,
+        "latentLogSurpriseAdaptationRate": 0.15,
+        "latentLogPairwiseBlendWeight": 0.2,
+        "latentLogStudentTCutoffZ": 2.0,
+        "latentLogBaselineRobustnessZ": 2.5,
+        "latentLogTailNoiseStartPercent": 0.4,
+        "latentLogTailNoiseVariance": 0.04,
+        "latentLogWeakFieldVariance": 0.25,
+        "latentLogWeakFieldMaxSize": 10.0,
+        "latentLogWeakFieldWeakFinishThreshold": 0.6,
+        "latentLogWeakFieldWeakFractionThreshold": 0.4,
+        "latentLogGraphMaturityThreshold": 10.0,
+        "latentLogNoveltyVariance": 0.006,
+        "latentLogPredictionSportVariance": 0.00012,
+        "latentLogPredictionBehavioralVolatilityKappa": 1.0,
+        "latentLogMeanReversionGraceYears": 1.0,
+        "latentLogMeanReversionDecayRate": 0.035
+      }
+    }
+  },
+  "matches": [
+    {
+      "sourceIds": [
+        "a36f1dc5-7954-4fc5-9488-0c81d37e8c1d"
+      ],
+      "exactName": null
+    },
+    {
+      "sourceIds": [
+        "1530fa4f-c371-433f-ae8a-c58f13f722a3"
+      ],
+      "exactName": null
+    },
+    {
+      "sourceIds": [
+        "27529bb0-411b-4aac-911c-704ef41791b7"
+      ],
+      "exactName": null
+    },
+    {
+      "sourceIds": [],
+      "exactName": "The 2025 SIG Sauer Factory Gun Nationals presented by Vortex Optics"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 Go Fast Don't Suck Maryland State USPSA Championship"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 GLOCK Area 6 Championship"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 Gatorz Missouri Fall Classic"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "The 2025 CZ Free State Championship Presented by Vortex"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 Cheely Custom Gunworks Michigan Sectional Presented By S3 Range Carts"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 USPSA Arkansas Section Championship"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 Vortex Optics Illinois Sectional"
+    },
+    {
+      "sourceIds": [],
+      "exactName": "2025 GP Arms USPSA TN Section Championship"
+    }
+  ]
+}
