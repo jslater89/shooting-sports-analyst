@@ -183,8 +183,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var parentSize = MediaQuery.of(context).size;
-    var width = parentSize.width * 0.8;
+    var width = parentSize.width * 0.9;
     var height = parentSize.height * 0.9;
 
     bool shouldAllowApply = _approvedCount == _totalCount;
@@ -217,7 +218,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 300,
+                width: 300 * uiScaleFactor,
                 child: Column(
                   children: [
                     Padding(
@@ -278,10 +279,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                         onApprove: () => setState(() {
                           _approved[_selectedCollision!] = true;
                           if(_selectedCollisionIndex! < _sortedCollisions.length - 1) {
-                            // observed extent is 64 pixels per row
                             _selectedCollisionIndex = _selectedCollisionIndex! + 1;
                             _viewed[_selectedCollision!] = true;
-                            _sidebarScrollController.animateTo(_selectedCollisionIndex! * 64, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+                            _sidebarScrollController.animateTo(_selectedCollisionIndex! * 80 * uiScaleFactor, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
                           }
                           else {
                             _selectedCollisionIndex = 0;
@@ -354,7 +354,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             title: "Review incomplete",
                             content: const Text("You have not reviewed all conflicts. Are you sure you want to continue?"),
                             positiveButtonLabel: "CONTINUE",
-                            width: 400,
+                            width: 400 * uiScaleFactor,
                           );
 
                           if(confirm == true) {
@@ -419,7 +419,7 @@ class ConflictListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Icon? statusIcon;
-
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     if(_conflictIsRed(collision, approved)) {
       statusIcon = Icon(Icons.warning, color: Colors.red.shade600);
     }
@@ -458,17 +458,20 @@ class ConflictListItem extends StatelessWidget {
       subtitleText += ")";
     }
 
-    return ListTile(
-      onTap: onTap,
-      visualDensity: VisualDensity.comfortable,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(collision.deduplicatorName, style: style),
-          statusIcon,
-        ],
+    return SizedBox(
+      height: 88 * uiScaleFactor,
+      child: ListTile(
+        onTap: onTap,
+        visualDensity: VisualDensity.standard,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(collision.deduplicatorName, style: style),
+            statusIcon,
+          ],
+        ),
+        subtitle: Text(subtitleText, softWrap: false, overflow: TextOverflow.ellipsis),
       ),
-      subtitle: Text(subtitleText, softWrap: false, overflow: TextOverflow.ellipsis),
     );
   }
 }
@@ -495,7 +498,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
   @override
   Widget build(BuildContext context) {
     var c = widget.collision;
-    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     if(c == null) {
       return const Center(child: Text("No collision selected"));
     }
@@ -533,7 +536,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                       ConstrainedTooltip(
                         waitDuration: const Duration(milliseconds: 250),
                         message: "The detected causes of this collision.",
-                        constraints: const BoxConstraints(maxWidth: 300),
+                        constraints: BoxConstraints(maxWidth: 300 * uiScaleFactor),
                         child: Padding(
                           padding: const EdgeInsets.only(left: 4.0),
                           child: const Icon(Icons.help_outline, size: 20),
@@ -551,7 +554,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                         waitDuration: const Duration(milliseconds: 250),
                         message: "Member numbers in this conflict arranged by type. Numbers that appear in the proposed fixes " +
                           "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
-                        constraints: const BoxConstraints(maxWidth: 300),
+                        constraints: BoxConstraints(maxWidth: 300 * uiScaleFactor),
                         child: Padding(
                           padding: const EdgeInsets.only(left: 4.0),
                           child: const Icon(Icons.help_outline, size: 20),
@@ -579,7 +582,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                           "Mappings detected by the deduplicator are labeled 'Automatic Mapping'. Mappings specified by " +
                           "the user are labeled 'User Mapping'. Mappings that appear in project settings but do not fully " +
                           "resolve a conflict are labeled 'Preexisting Mapping'.",
-                        constraints: const BoxConstraints(maxWidth: 300),
+                        constraints: BoxConstraints(maxWidth: 300 * uiScaleFactor),
                         child: Padding(
                           padding: const EdgeInsets.only(left: 4.0),
                           child: const Icon(Icons.help_outline, size: 20),
@@ -811,7 +814,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                       "This conflict will be raised again on the next full recalculation. Do you want to ignore it?"
                     ),
                     positiveButtonLabel: "IGNORE",
-                    width: 400,
+                    width: 400 * uiScaleFactor,
                   );
                   if(confirm == true) {
                     widget.onApprove();

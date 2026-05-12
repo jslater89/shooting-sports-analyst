@@ -204,7 +204,7 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
                       )
                     ],
                   ),
-                  for(var target in mappings[source]!)
+                  for(var target in mappings[source] ?? [])
                     Padding(
                       padding: const EdgeInsets.only(left: 24),
                       child: Row(

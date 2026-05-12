@@ -81,6 +81,8 @@ data/export**
 **.exe
 db/auth_identities.toml
 dist/**
+backtesting/*.png
+backtesting/**/*.png
 
 # Things shared with me under NDA that I can't put on Git
 private/

@@ -75,7 +75,7 @@ class CSVRegistrationSourceUI extends FutureMatchSourceUI {
                 TextButton(
                   child: Text("SELECT"),
                   onPressed: selectedMatch == null ? null : () async {
-                    var result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ["csv"]);
+                    var result = await FilePicker.pickFiles(dialogTitle: "Select a CSV file", type: FileType.custom, allowedExtensions: ["csv"]);
                     if(result != null) {
                       var processedRegistrations = source.processCsvFile(matchId: selectedMatch!.matchId, csvFile: File(result.files.first.path ?? ""));
 

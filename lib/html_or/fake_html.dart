@@ -40,7 +40,7 @@ class Controller extends ControlInterface {
 
   @override
   void pickAndReadFile(Function(String? p1) onFileContents) async {
-    var result = await FilePicker.pickFiles();
+    var result = await FilePicker.pickFiles(dialogTitle: "Select a file");
     if(result != null) {
       var f = result.files[0];
       var nativeFile = File(f.path ?? "/error!");
@@ -54,7 +54,7 @@ class Controller extends ControlInterface {
 
   @override
   Future<String?> pickAndReadFileNow() async {
-    var result = await FilePicker.pickFiles(initialDirectory: Directory.current.absolute.path + Platform.pathSeparator);
+    var result = await FilePicker.pickFiles(dialogTitle: "Select a file", initialDirectory: Directory.current.absolute.path + Platform.pathSeparator);
     if(result != null) {
       var f = result.files[0];
       var nativeFile = File(f.path ?? "/error!");
@@ -75,7 +75,7 @@ class Controller extends ControlInterface {
   Future<bool> saveFile(String defaultName, String fileContents) async {
     _log.d("Last directory? $lastDirectoryPath");
     try {
-      var path = await FilePicker.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+      var path = await FilePicker.saveFile(dialogTitle: "Save file", fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
       if(path != null) {
         var file = File(path);
         lastDirectoryPath = file.parent.absolute.path;
@@ -96,7 +96,7 @@ class Controller extends ControlInterface {
   Future<bool> saveBuffer(String defaultName, List<int> buffer) async {
     _log.d("Last directory? $lastDirectoryPath");
     try {
-      var path = await FilePicker.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+      var path = await FilePicker.saveFile(dialogTitle: "Save file", fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
       if(path != null) {
         var file = File(path);
         lastDirectoryPath = file.parent.absolute.path;
