@@ -244,7 +244,7 @@ class Division extends NameLookupEntity {
   final List<String> alternateNames;
 
   /// The full display name for this division.
-  String get displayName => name;
+  final String displayName;
   /// The short or abbreviated display name for this division.
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
@@ -259,8 +259,9 @@ class Division extends NameLookupEntity {
     this.alternateNames = const [],
     this.fallback = false,
     this.powerFactorOverride,
-    String? longName
-  }) : _longName = longName;
+    String? longName,
+    String? displayName,
+  }) : _longName = longName, displayName = displayName ?? name;
 
   @override
   String toString() {

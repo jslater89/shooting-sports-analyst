@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/entries/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -75,6 +76,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   double _maxClassStrength = -2e32;
   List<MatchPointer> _highlightedMatches = [];
 
+  double _medianReference = 800;
+  double _medianReferenceDivisor = 40;
+  double _top10PercentReference = 1200;
+  double _top10PercentReferenceDivisor = 50;
+
   void _loadMatchHeat() async {
     var db = AnalystDatabase();
     var projectId = await widget.dataSource.getProjectId();
@@ -86,6 +92,13 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     if(_project == null) {
       _log.w("Rating project not found: ${projectId.unwrap()}");
       return;
+    }
+
+    if(_project!.settings.algorithm is LatentLogRater) {
+      _medianReference = 90;
+      _medianReferenceDivisor = 2.5;
+      _top10PercentReference = 110;
+      _top10PercentReferenceDivisor = 3;
     }
 
     var sport = _project!.sport;
@@ -156,37 +169,40 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     _maxTopRating = -2e32;
     _minMedianRating = 2e32;
     _maxMedianRating = -2e32;
-    var yMinOffset = switch(_settings.yAxis) {
-        MatchHeatValue.matchSize => 0,
-        MatchHeatValue.topTenPercentAverageRating => 100,
-        MatchHeatValue.medianRating => 100,
-        MatchHeatValue.averageClassification => 0,
-      };
-      var yMaxOffset = switch(_settings.yAxis) {
-        MatchHeatValue.matchSize => 10,
-        MatchHeatValue.topTenPercentAverageRating => 100,
-        MatchHeatValue.medianRating => 100,
-        MatchHeatValue.averageClassification => 0.5,
-      };
-      var xMinOffset = switch(_settings.xAxis) {
-        MatchHeatValue.matchSize => 0,
-        MatchHeatValue.topTenPercentAverageRating => 100,
-        MatchHeatValue.medianRating => 100,
-        MatchHeatValue.averageClassification => 0,
-      };
-      var xMaxOffset = switch(_settings.xAxis) {
-        MatchHeatValue.matchSize => 10,
-        MatchHeatValue.topTenPercentAverageRating => 100,
-        MatchHeatValue.medianRating => 100,
-        MatchHeatValue.averageClassification => 0.5,
-      };
 
-      if(_settings.yAxis == MatchHeatValue.averageClassification || _settings.yAxis == MatchHeatValue.matchSize) {
-        _minY = 1;
-      }
-      else if(_settings.xAxis == MatchHeatValue.averageClassification || _settings.xAxis == MatchHeatValue.matchSize) {
-        _minX = 1;
-      }
+    bool isLatentLog = _project!.settings.algorithm is LatentLogRater;
+
+    var yMinOffset = switch(_settings.yAxis) {
+      MatchHeatValue.matchSize => 0,
+      MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.averageClassification => 0,
+    };
+    var yMaxOffset = switch(_settings.yAxis) {
+      MatchHeatValue.matchSize => 10,
+      MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.averageClassification => 0.5,
+    };
+    var xMinOffset = switch(_settings.xAxis) {
+      MatchHeatValue.matchSize => 0,
+      MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.averageClassification => 0,
+    };
+    var xMaxOffset = switch(_settings.xAxis) {
+      MatchHeatValue.matchSize => 10,
+      MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.averageClassification => 0.5,
+    };
+
+    if(_settings.yAxis == MatchHeatValue.averageClassification || _settings.yAxis == MatchHeatValue.matchSize) {
+      _minY = 1;
+    }
+    else if(_settings.xAxis == MatchHeatValue.averageClassification || _settings.xAxis == MatchHeatValue.matchSize) {
+      _minX = 1;
+    }
     for(var heat in _matchHeat.values) {
       var yValue = switch(_settings.yAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
@@ -383,19 +399,19 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           }
         }
         else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating) {
-          if(heat.weightedMedianRating < 1200) {
+          if(heat.weightedMedianRating < _top10PercentReference) {
             return 1;
           }
           else {
-            return 1 + ((heat.weightedMedianRating - 1200) / 50);
+            return 1 + ((heat.weightedMedianRating - _top10PercentReference) / _top10PercentReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.medianRating) {
-          if(heat.weightedMedianRating < 800) {
+          if(heat.weightedMedianRating < _medianReference) {
             return 1;
           }
           else {
-            return 1 + ((heat.weightedMedianRating - 800) / 40);
+            return 1 + ((heat.weightedMedianRating - _medianReference) / _medianReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.averageClassification) {

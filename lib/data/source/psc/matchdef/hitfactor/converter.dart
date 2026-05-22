@@ -396,7 +396,7 @@ class HitFactorConverter {
 
   static StageScoring _matchScoring(String stageScoring) {
     return switch(stageScoring) {
-      comstockScoring || virginiaScoring => HitFactorScoring(),
+      comstockScoring || comstock2Scoring || virginiaScoring => HitFactorScoring(),
       fixedTimeScoring => PointsScoring(),
       String() => IgnoredScoring(),
     };

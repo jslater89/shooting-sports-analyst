@@ -77,9 +77,20 @@ class HitFactorScore {
   List<Map<ScoringEvent, int>> decodeTargetHits(PowerFactor pf) {
     List<Map<ScoringEvent, int>> events = [];
 
+    var bravoEventName = "B";
+
+    // PCSL in Comstock2 scoring encodes Kilo/Tango zones in the B slot.
+    if(pf.targetEvents.lookupByName("K") != null) {
+      bravoEventName = "K";
+    }
+    else if(pf.targetEvents.lookupByName("T") != null) {
+      bravoEventName = "T";
+    }
+
+
     List<ScoringEvent?> orderedEvents = [
       pf.targetEvents.lookupByName("A"),
-      pf.targetEvents.lookupByName("B"),
+      pf.targetEvents.lookupByName(bravoEventName),
       pf.targetEvents.lookupByName("C"),
       pf.targetEvents.lookupByName("D"),
       pf.targetEvents.lookupByName("NS"),

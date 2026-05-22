@@ -41,6 +41,7 @@ class HitFactorMatchDef {
 }
 
 const comstockScoring = "Comstock";
+const comstock2Scoring = "Comstock2";
 const virginiaScoring = "Virginia";
 const fixedTimeScoring = "Fixed";
 const chronoScoring = "Chrono";

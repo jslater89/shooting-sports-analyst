@@ -25,7 +25,6 @@ const _pcslC = ScoringEvent("C", pointChange: 3);
 const _pcslD = ScoringEvent("D", pointChange: 1);
 const _pcslM = ScoringEvent("M", pointChange: -10);
 const _pcslNS = ScoringEvent("NS", pointChange: -10);
-const _pcslPseudoK = ScoringEvent("NPM", pointChange: 0);
 
 const pcslSportName = "PCSL";
 const pcslDivisions = [
@@ -91,10 +90,12 @@ const pcslDivisions = [
   const Division(
     name: "Defensive Practical",
     shortName: "DPRAC",
+    displayName: "D. Prac.",
   ),
   const Division(
     name: "Defensive Competition",
     shortName: "DCOMP",
+    displayName: "D. Comp.",
   ),
 ];
 
@@ -116,13 +117,6 @@ final _pcslDisplaySettings = SportDisplaySettings(
         ScoringEventGroup.single(_pcslProcedural, label: _pcslProcedural.shortDisplayName),
       ]
     ),
-    ColumnGroup(
-      headerLabel: "K Hits",
-      headerTooltip: "Probable K hits (recorded as NPM in PractiScore)",
-      eventGroups: [
-        ScoringEventGroup.single(_pcslPseudoK, label: "K"),
-      ]
-    )
   ]
 );
 
@@ -148,7 +142,6 @@ final pcslSport = Sport(
         _pcslD,
         _pcslM,
         _pcslNS,
-        _pcslPseudoK,
       ],
       penaltyEvents: _pcslPenalties,
     ),

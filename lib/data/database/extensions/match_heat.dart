@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
@@ -125,7 +126,12 @@ extension MatchHeatDatabase on AnalystDatabase {
       var scaler = scalers[group.uuid];
       if(scaler == null) {
         var groupInfo = await _calculateGroupInfo(this, project, group);
-        scaler = StandardizedMaximumScaler(info: groupInfo, scaleMax: 2000, scaleMin: 0);
+        var minScale = 0.0;
+        var maxScale = 2000.0;
+        if(project.settings.algorithm is LatentLogRater) {
+          maxScale = 150.0;
+        }
+        scaler = StandardizedMaximumScaler(info: groupInfo, scaleMax: maxScale, scaleMin: minScale);
         scalers[group.uuid] = scaler;
       }
 
