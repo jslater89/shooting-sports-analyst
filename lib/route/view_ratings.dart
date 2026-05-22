@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -235,7 +236,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var title = _projectName;
     return MultiProvider(
       providers: [
@@ -258,7 +259,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
               ) : null,
             ),
-          body: _ratingView(),
+          body: _ratingView(uiScaleFactor),
         );
       },
     );
@@ -267,7 +268,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<ShooterRating> _completeRatings = [];
   List<ShooterRating> _ratings = [];
 
-  Widget _ratingView() {
+  Widget _ratingView(double uiScaleFactor) {
     if(!initialized) {
       _log.w("No match selected!");
       return Container();
@@ -287,7 +288,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             }).toList(),
           ),
         ),
-        ..._buildRatingViewHeader(),
+        ..._buildRatingViewHeader(uiScaleFactor),
         Expanded(
           child: TabBarView(
             controller: _tabController,
@@ -321,7 +322,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     );
   }
 
-  List<Widget> _buildRatingViewHeader() {
+  List<Widget> _buildRatingViewHeader(double uiScaleFactor) {
     var size = MediaQuery.of(context).size;
     var sortModes = _settings.algorithm.supportedSorts;
 
@@ -342,19 +343,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                   // TODO: replace with display only
                   // at least until we support using the database to go back
                   // in time more easily
-                  DropdownButton<ShootingMatch>(
-                    underline: Container(
-                      height: 1,
-                      color: ThemeColors.onBackgroundColor(context),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 600 * uiScaleFactor),
+                    child: DropdownButton<ShootingMatch>(
+                      isExpanded: true,
+                      underline: Container(
+                        height: 1,
+                        color: ThemeColors.onBackgroundColor(context),
+                      ),
+                      items: [
+                        DropdownMenuItem<ShootingMatch>(
+                          child: Text(_selectedMatch.name, overflow: TextOverflow.ellipsis),
+                          value: _selectedMatch,
+                        )
+                      ],
+                      value: _selectedMatch,
+                      onChanged: null,
                     ),
-                    items: [
-                      DropdownMenuItem<ShootingMatch>(
-                        child: Text(_selectedMatch.name),
-                        value: _selectedMatch,
-                      )
-                    ],
-                    value: _selectedMatch,
-                    onChanged: null,
                   ),
                   Tooltip(
                     message: "Sort rows by this field.",
