@@ -77,6 +77,7 @@ import 'db_oneoff_impl/backtest_raters_command.dart';
 import 'db_oneoff_impl/top_rated_finish_spread_command.dart';
 import "db_oneoff_impl/rating_demographics_by_class_command.dart";
 import "db_oneoff_impl/area_match_research_command.dart";
+import "db_oneoff_impl/career_field_adjusted_metrics_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -156,6 +157,53 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if (command == "CFA") {
+      final careerCmd = CareerFieldAdjustedMetricsCommand(db);
+      final defs = careerCmd.arguments;
+      final str0 = defs[0] as StringMenuArgument;
+      final int0 = defs[1] as IntMenuArgument;
+      final int1 = defs[2] as IntMenuArgument;
+      final int2 = defs[3] as IntMenuArgument;
+      final int3 = defs[4] as IntMenuArgument;
+      final strCompare = defs[5] as StringMenuArgument;
+      final strCsv = defs[6] as StringMenuArgument;
+      final strTraj = defs[7] as StringMenuArgument;
+      if (args.length == 1) {
+        console.print(
+          "Usage: CFA [projectName] [durationYears] [minMatches] [minYearsTrajectory] [minDataYear] [compareProject] [csvPath] [trajectoryCsvPath]",
+        );
+        console.print("Example: CFA \"L2s Main LLR\" 3 8 4 2018 \"\" \"\" /tmp/co_trajectories.csv");
+        console.print("Omit trailing args to use defaults from ${careerCmd.key} menu definitions.");
+      }
+      int pickInt(int argIndex, IntMenuArgument spec) {
+        if (args.length <= argIndex) {
+          return spec.getDefault()!;
+        }
+        return int.tryParse(args[argIndex]) ?? spec.getDefault()!;
+      }
+
+      final projectName = args.length > 1 ? args[1] : str0.getDefault()!;
+      final durationYears = pickInt(2, int0);
+      final minMatches = pickInt(3, int1);
+      final minYearsTrajectory = pickInt(4, int2);
+      final minDataYear = pickInt(5, int3);
+      final compareProject = args.length > 6 ? args[6] : (strCompare.getDefault() ?? "");
+      final csvPath = args.length > 7 ? args[7] : (strCsv.getDefault() ?? "");
+      final trajectoryCsv = args.length > 8 ? args[8] : (strTraj.getDefault() ?? "");
+      await careerCmd.executor(
+        console,
+        [
+          MenuArgumentValue<String>(argument: str0, value: projectName),
+          MenuArgumentValue<int>(argument: int0, value: durationYears),
+          MenuArgumentValue<int>(argument: int1, value: minMatches),
+          MenuArgumentValue<int>(argument: int2, value: minYearsTrajectory),
+          MenuArgumentValue<int>(argument: int3, value: minDataYear),
+          MenuArgumentValue<String>(argument: strCompare, value: compareProject),
+          MenuArgumentValue<String>(argument: strCsv, value: csvPath),
+          MenuArgumentValue<String>(argument: strTraj, value: trajectoryCsv),
+        ],
+      );
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -196,6 +244,7 @@ Future<void> main(List<String> args) async {
     LongShotPlaceCommand(db),
     RStartPriorCommand(db),
     RatingDemographicsByClassCommand(db),
+    CareerFieldAdjustedMetricsCommand(db),
     BacktestRatersCommand(db),
     TopRatedFinishSpreadCommand(db),
     AreaMatchResearchCommand(db),

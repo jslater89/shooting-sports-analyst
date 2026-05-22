@@ -88,6 +88,14 @@ const pcslDivisions = [
       "1-Gun Pistol Caliber Carbine",
     ],
   ),
+  const Division(
+    name: "Defensive Practical",
+    shortName: "DPRAC",
+  ),
+  const Division(
+    name: "Defensive Competition",
+    shortName: "DCOMP",
+  ),
 ];
 
 const _pcslStandardCompetitor = const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true);

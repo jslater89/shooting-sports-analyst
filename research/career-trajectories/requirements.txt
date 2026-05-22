@@ -1,0 +1,3 @@
+# pip install -r research/career-trajectories/requirements.txt
+matplotlib>=3.7
+numpy>=1.24

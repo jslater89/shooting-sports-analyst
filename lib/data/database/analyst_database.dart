@@ -199,6 +199,7 @@ class AnalystDatabase {
   Future<void> saveBackup(Directory path) async {
     var filename = "${DateTime.now().toIso8601String()}.backup.isar";
     var fullPath = path.absolute.path + Platform.pathSeparator + filename;
+    _log.i("Saving backup to $fullPath");
     await isar.copyToFile(fullPath);
   }
 
