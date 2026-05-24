@@ -13,6 +13,9 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("MatchService");
 
 class MatchService {
   MatchService([List<Middleware> middleware = const []]) {
@@ -152,6 +155,7 @@ class MatchService {
   /// Upload a match in MIFF format.
   Future<Response> upload(Request request) async {
     if(!validateAuth(request, ["uploader", "admin"])) {
+      _log.w("unauthorized upload request");
       return Response.unauthorized(jsonEncode({"error": "Unauthorized"}));
     }
     var bodyBytes = await request.body.asBinary.reduce((a, b) => a + b);
@@ -162,6 +166,8 @@ class MatchService {
     var match = importRes.unwrap();
     var saveRes = await database.saveMatch(match);
     if(saveRes.isErr()) {
+      final error = saveRes.unwrapErr();
+      _log.e("error saving match", error: error);
       return Response.internalServerError(body: jsonEncode({"error": saveRes.unwrapErr().message}));
     }
     return Response.ok(jsonEncode({"success": "Match uploaded"}));
