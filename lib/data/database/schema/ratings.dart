@@ -677,6 +677,12 @@ class RatingGroup with DbSportEntity {
     return divisions.contains(division);
   }
 
+  /// Whether this group fully contains the given other group
+  /// (i.e. all divisions of the other group are contained in this group).
+  bool fullyContains(RatingGroup other) {
+    return other.divisions.every((division) => containsDivision(division));
+  }
+
   @ignore
   List<Division> get divisions =>
       divisionNames.map((name) => sport.divisions.lookupByName(name))

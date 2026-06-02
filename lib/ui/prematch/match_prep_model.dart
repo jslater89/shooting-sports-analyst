@@ -54,55 +54,23 @@ class MatchPrepPageModel extends ChangeNotifier {
   // ===========================
 
   Future<PredictionSet> createPredictionSet(String name) async {
-    // predict for all rating groups
-    Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
-    var seed = futureMatch.date.millisecondsSinceEpoch;
-    for(var group in ratingProject.groups) {
-      var ratings = matchedRegistrations.values.where((r) => r.group == group).toList();
-      var groupPredictions = ratingProject.settings.algorithm.predict(ratings, seed: seed);
-      predictions[group] = groupPredictions;
-    }
-
-    // create and save prediction set
-    var predictionSet = PredictionSet.create(
-      matchPrep: prep,
-      name: name,
-    );
-    predictionSet = await db.savePredictionSet(predictionSet, savePredictions: false);
-
-    // dehydrate and save algorithm predictions
-    List<DbAlgorithmPrediction> dbPredictions = [];
-    for(var group in predictions.keys) {
-      for(var prediction in predictions[group]!) {
-        try {
-          var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
-          dbPredictions.add(dbPrediction);
-        } catch(e) {
-          _log.e("Error dehydrating prediction for ${prediction.shooter.name}", error: e);
-        }
-      }
-    }
-
-    List<Future> saveFutures = [];
-    for(var prediction in dbPredictions) {
-      saveFutures.add(db.saveAlgorithmPrediction(prediction, saveLinks: true));
-    }
-    await Future.wait(saveFutures);
-
-    // add to prep and save prediction set link, but not the predictions (saved above)
-    prep.predictionSets.add(predictionSet);
-    await db.saveMatchPrep(prep, savePredictionSetLinks: false);
-
-    _log.i("Created prediction set ${predictionSet.name} for match ${prep.futureMatch.value!.eventName} with ${dbPredictions.length} predictions for ${predictions.keys.map((k) => k.name).join(", ")}");
-
+    final set = await db.createPredictionSet(matchPrep: prep, name: name, prematchedRegistrations: matchedRegistrations);
     notifyListeners();
-    return predictionSet;
+    return set;
   }
 
   Future<void> deletePredictionSet(PredictionSet predictionSet) async {
     prep.predictionSets.remove(predictionSet);
     await db.saveMatchPrep(prep, savePredictionSetLinks: false);
     await db.deletePredictionSet(predictionSet);
+    notifyListeners();
+  }
+
+  List<RatingGroup> getNonexcludedRatingGroups() {
+    return ratingProject.groups.where((group) => !prep.isRatingGroupExcluded(group)).toList();
+  }
+
+  void notifyPredictionSettingsChanged() {
     notifyListeners();
   }
 

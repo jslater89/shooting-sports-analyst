@@ -51,7 +51,9 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
     if(algorithmPredictionCache.containsKey(group)) {
       return algorithmPredictionCache[group]!;
     }
-    var predictions = selectedMatchPrep?.latestPredictionSet()?.algorithmPredictions.where((p) => p.group.value == group).toList();
+
+    final predictionSet = selectedMatchPrep?.latestPredictionSet();
+    var predictions = predictionSet?.algorithmPredictions.where((p) => p.effectiveScoringGroup == group).toList();
     algorithmPredictionCache[group] = predictions?.map((p) => p.hydrate()).nonNulls.toList() ?? [];
     return algorithmPredictionCache[group]!;
   }

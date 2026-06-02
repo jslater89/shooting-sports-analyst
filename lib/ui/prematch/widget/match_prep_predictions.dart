@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/prematch/dialog/match_prep_prediction_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
@@ -63,15 +64,17 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with Automa
     super.build(context);
     // rebuild on main model changes
     var mainModel = Provider.of<MatchPrepPageModel>(context);
+    final groups = mainModel.getNonexcludedRatingGroups();
     return ChangeNotifierProvider.value(
       value: localModel,
       child: DefaultTabController(
-        length: mainModel.ratingProject.groups.length,
+        key: ValueKey(groups.map((g) => g.uuid).join(",")),
+        length: groups.length,
         child: Column(
           children: [
             _PredictionsHeader(),
             Expanded(
-              child: _PredictionBody(groups: mainModel.ratingProject.groups),
+              child: _PredictionBody(groups: groups),
             )
           ]
         ),
@@ -115,7 +118,7 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
     else if(nameController.text != model.selectedPredictionSet?.name) {
       nameController.text = model.selectedPredictionSet?.name ?? "";
 
-      for(var group in model.matchPrepModel.ratingProject.groups) {
+      for(var group in model.matchPrepModel.getNonexcludedRatingGroups()) {
         predictions[group] = model.getPredictionsForGroup(group);
       }
     }
@@ -204,11 +207,30 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
                   model.exportPredictionsCsv();
                 },
               ),
+              if(MatchPrepUspsaPredictionSettings.isSupportedSport(model.matchPrepModel.sport)) TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    Text("SETTINGS"),
+                  ],
+                ),
+                onPressed: () async {
+                  final saved = await MatchPrepPredictionSettingsDialog.show(
+                    context,
+                    prep: model.matchPrepModel.prep,
+                    sport: model.matchPrepModel.sport,
+                  );
+                  if(saved) {
+                    model.matchPrepModel.notifyPredictionSettingsChanged();
+                    model.reloadPredictionSets();
+                  }
+                },
+              ),
             ],
           ),
         ),
         if(model.selectedPredictionSet != null) TabBar(
-          tabs: model.matchPrepModel.ratingProject.groups.map((g) => Tab(text: g.name)).toList(),
+          tabs: model.matchPrepModel.getNonexcludedRatingGroups().map((g) => Tab(text: g.uiLabel)).toList(),
         ),
       ],
     );
@@ -353,7 +375,8 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     if(_algorithmPredictionCache.containsKey(group)) {
       return _algorithmPredictionCache[group]!;
     }
-    var predictions = selectedPredictionSet?.algorithmPredictions.where((p) => p.group.value == group).toList();
+
+    var predictions = selectedPredictionSet?.algorithmPredictions.where((p) => p.effectiveScoringGroup == group).toList();
     _algorithmPredictionCache[group] = predictions?.map((p) => p.hydrate()).nonNulls.toList() ?? [];
     return _algorithmPredictionCache[group]!;
   }
@@ -396,7 +419,8 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   }
 
   void _initTabModels() {
-    for(var group in matchPrepModel.ratingProject.groups) {
+    tabModels = {};
+    for(var group in matchPrepModel.getNonexcludedRatingGroups()) {
       var groupPredictions = getPredictionsForGroup(group);
       tabModels[group] = PredictionViewModel(
         dataSource: matchPrepModel.ratingProject,

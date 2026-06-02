@@ -9,12 +9,19 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/entity_changes.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MatchPrepDatabase");
 
 extension MatchPrepDatabase on AnalystDatabase {
   /// Get all match preps.
@@ -206,6 +213,7 @@ extension MatchPrepDatabase on AnalystDatabase {
         await prediction.project.save();
         await prediction.group.save();
         await prediction.predictionSet.save();
+        await prediction.scoringGroup.save();
       }
     });
   }
@@ -219,5 +227,108 @@ extension MatchPrepDatabase on AnalystDatabase {
         }
       }
     });
+  }
+
+  /// Create a prediction set for a given match prep.
+  ///
+  /// If not provided, [name] defaults to the current date and time in YYYY-MM-DD HH:MM format.
+  ///
+  /// If not provided, [seed] defaults to the Unix timestamp of the match date (i.e., stable for a
+  /// given FutureMatch).
+  ///
+  /// If [prematchedRegistrations] is provided, this method will look up ratings for the given registrations
+  /// instead of making database lookups.
+  Future<PredictionSet> createPredictionSet({
+    required MatchPrep matchPrep,
+    String? name,
+    int? seed,
+    Map<MatchRegistration, ShooterRating>? prematchedRegistrations,
+  }) async {
+    final prep = matchPrep;
+    final ratingProject = prep.ratingProject.value!;
+    final futureMatch = prep.futureMatch.value!;
+
+    // predict for all rating groups
+    Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
+    seed ??= futureMatch.date.millisecondsSinceEpoch;
+    final groups = ratingProject.groups.where((group) => !prep.isRatingGroupExcluded(group)).toList();
+    for(var scoringGroup in groups) {
+      final ratingSourceGroup = prep.ratingSourceGroupFor(ratingProject, scoringGroup);
+      final hasGroupOverride = ratingSourceGroup != scoringGroup;
+
+      final registrations = futureMatch.getRegistrationsFor(ratingProject.sport, group: scoringGroup);
+
+      // TODO: deduplicate by rating identity, although we won't generally have multiple registrations per shooter/division.
+      List<ShooterRating> ratings = [];
+      for(var r in registrations) {
+        // MatchRegistration implements database equality, so we can use query results to look up ratings
+        // in the provided map.
+        bool foundCachedRating = false;
+        if(prematchedRegistrations?.containsKey(r) ?? false) {
+          final rating = prematchedRegistrations![r];
+          if(rating != null && rating.group == ratingSourceGroup) {
+            ratings.add(prematchedRegistrations[r]!);
+            foundCachedRating = true;
+          }
+        }
+        if(!foundCachedRating) {
+          DbShooterRating? rating;
+          for(var memberNumber in r.shooterMemberNumbers) {
+            rating = await maybeKnownShooter(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber, useCache: true);
+            if(rating != null) {
+              break;
+            }
+          }
+          if(rating == null) {
+            continue;
+          }
+          ratings.add(ratingProject.wrapDbRatingSync(rating));
+        }
+      }
+
+      var groupPredictions = ratingProject.settings.algorithm.predict(ratings, seed: seed);
+      if(hasGroupOverride) {
+        for(var prediction in groupPredictions) {
+          prediction.scoringGroup = scoringGroup;
+        }
+      }
+      predictions[scoringGroup] = groupPredictions;
+    }
+
+    // create and save prediction set
+    var predictionSet = PredictionSet.create(
+      matchPrep: prep,
+      name: name ?? programmerYmdHmFormat.format(DateTime.now()),
+      excludedRatingGroupUuids: prep.excludedRatingGroupUuids,
+      predictionSourceOverrides: prep.dbRatingGroupPredictionSourceOverrides.where((o) => o.ratingGroupUuid != o.scoringGroupUuid).toList(),
+    );
+    predictionSet = await savePredictionSet(predictionSet, savePredictions: false);
+
+    // dehydrate and save algorithm predictions
+    List<DbAlgorithmPrediction> dbPredictions = [];
+    for(var group in predictions.keys) {
+      for(var prediction in predictions[group]!) {
+        try {
+          var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
+          dbPredictions.add(dbPrediction);
+        } catch(e) {
+          _log.e("Error dehydrating prediction for ${prediction.shooter.name}", error: e);
+        }
+      }
+    }
+
+    List<Future> saveFutures = [];
+    for(var prediction in dbPredictions) {
+      saveFutures.add(saveAlgorithmPrediction(prediction, saveLinks: true));
+    }
+    await Future.wait(saveFutures);
+
+    // add to prep and save prediction set link, but not the predictions (saved above)
+    prep.predictionSets.add(predictionSet);
+    await saveMatchPrep(prep, savePredictionSetLinks: false);
+
+    _log.i("Created prediction set ${predictionSet.name} for match ${prep.futureMatch.value!.eventName} with ${dbPredictions.length} predictions for ${predictions.keys.map((k) => k.name).join(", ")}");
+
+    return predictionSet;
   }
 }
