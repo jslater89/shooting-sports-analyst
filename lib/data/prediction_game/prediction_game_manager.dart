@@ -152,12 +152,12 @@ class PredictionGameManager {
     return db.getMatchPrepByIdSync(id);
   }
 
-  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringGroup, PredictionSet? predictionSet}) async {
-    return db.getAlgorithmPredictionForRating(rating, matchPrep, scoringGroup, predictionSet: predictionSet);
+  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringContext, PredictionSet? predictionSet}) async {
+    return db.getAlgorithmPredictionForRating(rating, matchPrep, scoringContext, predictionSet: predictionSet);
   }
 
-  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringGroup, PredictionSet? predictionSet}) {
-    return db.getAlgorithmPredictionForRatingSync(rating, matchPrep, scoringGroup, predictionSet: predictionSet);
+  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringContext, PredictionSet? predictionSet}) {
+    return db.getAlgorithmPredictionForRatingSync(rating, matchPrep, scoringContext, predictionSet: predictionSet);
   }
 
   Future<void> clearMatchPrepResolutionInformation(MatchPrep matchPrep) async {
