@@ -152,12 +152,12 @@ class PredictionGameManager {
     return db.getMatchPrepByIdSync(id);
   }
 
-  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) async {
-    return db.getAlgorithmPredictionForRating(rating, matchPrep, predictionSet: predictionSet);
+  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringContext, PredictionSet? predictionSet}) async {
+    return db.getAlgorithmPredictionForRating(rating, matchPrep, scoringContext, predictionSet: predictionSet);
   }
 
-  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) {
-    return db.getAlgorithmPredictionForRatingSync(rating, matchPrep, predictionSet: predictionSet);
+  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync({required ShooterRating rating, required MatchPrep matchPrep, required RatingGroup scoringContext, PredictionSet? predictionSet}) {
+    return db.getAlgorithmPredictionForRatingSync(rating, matchPrep, scoringContext, predictionSet: predictionSet);
   }
 
   Future<void> clearMatchPrepResolutionInformation(MatchPrep matchPrep) async {
@@ -249,6 +249,11 @@ class PredictionGameManager {
 
     wager.maximumWager = maximumWager;
 
+    // TODO: Defensive validation before save — ensure [wager.scoringGroup] is allowed for this
+    // game ([PredictionGame.wagerExcludedRatingGroupUuids]) and [wager.predictionSet]
+    // ([PredictionSet.excludedRatingGroupUuids]), e.g. via [PredictionGame.isRatingGroupAvailableForWagers],
+    // and return a typed [AddWagerError]. UI hides unavailable groups via [PredictionGame.availableRatingGroups] today.
+
     // It's already backlinked to everything else, so we can just save it
     // and its links.
     try {
@@ -289,6 +294,8 @@ class PredictionGameManager {
     }
 
     wager.maximumWager = maximumWager;
+
+    // TODO: Same scoring-group availability validation as [addWager].
 
     db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();
@@ -527,8 +534,10 @@ class PredictionGameManager {
             matchesToWageredShooters.addToListIfMissingByEquality(match, s, (a, b) => a.equalsShooter(b, allPossibleMemberNumbers: true));
           }
         }
-        // Rating groups and prediction sets both implement DB equality
-        matchesToGroups.addToSet(match, wager.ratingGroup.value!);
+
+        // Rating groups and prediction sets both implement DB equality.
+        // For groups, we want the scoring group, so we ask the wager directly.
+        matchesToGroups.addToSet(match, wager.scoringGroup.value!);
         matchesToPredictionSets.addToSet(match, wager.predictionSet.value!);
       }
     }
@@ -601,7 +610,7 @@ class PredictionGameManager {
     for(var wager in wagers) {
       var match = matches[wager];
       if(match != null) {
-        var group = wager.ratingGroup.value!;
+        var group = wager.scoringGroup.value!;
         var predictionSet = wager.predictionSet.value!;
         var scores = WagerScores(wager: wager);
         scores.scores = groupScores[match]![group]!;
@@ -650,7 +659,7 @@ class PredictionGameManager {
       }
     }
 
-    var group = wager.ratingGroup.value!;
+    var group = wager.scoringGroup.value!;
     var predictionSet = wager.predictionSet.value;
 
     scores.scores = _getScoresForShooters(shooters, group, actualMatch, null);

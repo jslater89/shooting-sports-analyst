@@ -492,6 +492,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<charts.Color> _colorOptions = [
     charts.MaterialPalette.blue.shadeDefault,
     charts.MaterialPalette.indigo.shadeDefault,
+    charts.MaterialPalette.teal.shadeDefault,
     charts.MaterialPalette.cyan.shadeDefault,
     charts.MaterialPalette.green.shadeDefault,
     charts.MaterialPalette.lime.shadeDefault,

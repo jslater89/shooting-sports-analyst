@@ -29,13 +29,17 @@ class PredictionSet {
     required this.name,
     required this.created,
     this.note,
+    this.excludedRatingGroupUuids = const [],
+    this.predictionSourceOverrides = const [],
   });
 
   PredictionSet.create({
     required MatchPrep matchPrep,
     required this.name,
     DateTime? created,
-    this.note
+    this.note,
+    this.excludedRatingGroupUuids = const [],
+    this.predictionSourceOverrides = const [],
   }) {
     this.matchPrep.value = matchPrep;
     this.matchPrepId = matchPrep.id;
@@ -55,6 +59,14 @@ class PredictionSet {
 
   /// A note about the prediction set.
   String? note;
+
+  /// Prediction source overrides used when calculating this prediction set. Only
+  /// entries corresponding to actual overrides (i.e. scoring group != rating group)
+  /// are included.
+  List<RatingGroupPredictionSourceOverride> predictionSourceOverrides = [];
+
+  /// A list of rating group UUIDs that were excluded from this prediction set.
+  List<String> excludedRatingGroupUuids = [];
 
   /// The [MatchPrep] that this prediction set belongs to.
   @Backlink(to: 'predictionSets')

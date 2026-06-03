@@ -19,6 +19,7 @@ See if rating percentage correlates with match finish percentage?
 
 import 'dart:math';
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
@@ -30,6 +31,13 @@ class AlgorithmPrediction {
   final RatingSystem algorithm;
 
   final ShooterRating shooter;
+
+  /// The group against which this prediction should be scored, if it differs from [shooter.group].
+  RatingGroup? scoringGroup;
+
+  /// The effective group against which this prediction should be scored, defaulting to [shooter.group]
+  /// if an explicit [scoringGroup] is not provided.
+  RatingGroup get effectiveScoringGroup => scoringGroup ?? shooter.group;
 
   /// The center point of the performance in display terms.
   final double displayCenter;
@@ -74,6 +82,7 @@ class AlgorithmPrediction {
 
   AlgorithmPrediction({
     required this.shooter,
+    this.scoringGroup,
     required this.displayCenter,
     required double sigma,
     this.ciOffset = 0.0,

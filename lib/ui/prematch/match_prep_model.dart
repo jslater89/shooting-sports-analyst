@@ -12,7 +12,6 @@ import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
@@ -20,7 +19,6 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/registra
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -54,55 +52,23 @@ class MatchPrepPageModel extends ChangeNotifier {
   // ===========================
 
   Future<PredictionSet> createPredictionSet(String name) async {
-    // predict for all rating groups
-    Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
-    var seed = futureMatch.date.millisecondsSinceEpoch;
-    for(var group in ratingProject.groups) {
-      var ratings = matchedRegistrations.values.where((r) => r.group == group).toList();
-      var groupPredictions = ratingProject.settings.algorithm.predict(ratings, seed: seed);
-      predictions[group] = groupPredictions;
-    }
-
-    // create and save prediction set
-    var predictionSet = PredictionSet.create(
-      matchPrep: prep,
-      name: name,
-    );
-    predictionSet = await db.savePredictionSet(predictionSet, savePredictions: false);
-
-    // dehydrate and save algorithm predictions
-    List<DbAlgorithmPrediction> dbPredictions = [];
-    for(var group in predictions.keys) {
-      for(var prediction in predictions[group]!) {
-        try {
-          var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
-          dbPredictions.add(dbPrediction);
-        } catch(e) {
-          _log.e("Error dehydrating prediction for ${prediction.shooter.name}", error: e);
-        }
-      }
-    }
-
-    List<Future> saveFutures = [];
-    for(var prediction in dbPredictions) {
-      saveFutures.add(db.saveAlgorithmPrediction(prediction, saveLinks: true));
-    }
-    await Future.wait(saveFutures);
-
-    // add to prep and save prediction set link, but not the predictions (saved above)
-    prep.predictionSets.add(predictionSet);
-    await db.saveMatchPrep(prep, savePredictionSetLinks: false);
-
-    _log.i("Created prediction set ${predictionSet.name} for match ${prep.futureMatch.value!.eventName} with ${dbPredictions.length} predictions for ${predictions.keys.map((k) => k.name).join(", ")}");
-
+    final set = await db.createPredictionSet(matchPrep: prep, name: name, prematchedRegistrations: matchedRegistrations);
     notifyListeners();
-    return predictionSet;
+    return set;
   }
 
   Future<void> deletePredictionSet(PredictionSet predictionSet) async {
     prep.predictionSets.remove(predictionSet);
     await db.saveMatchPrep(prep, savePredictionSetLinks: false);
     await db.deletePredictionSet(predictionSet);
+    notifyListeners();
+  }
+
+  List<RatingGroup> getNonexcludedRatingGroups() {
+    return ratingProject.groups.where((group) => !prep.isRatingGroupExcluded(group)).toList();
+  }
+
+  void notifyPredictionSettingsChanged() {
     notifyListeners();
   }
 

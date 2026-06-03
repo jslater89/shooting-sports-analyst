@@ -39,8 +39,12 @@ class DbWager {
   /// The prediction set this wager references.
   final predictionSet = IsarLink<PredictionSet>();
 
-  /// The rating group this wager references.
-  final ratingGroup = IsarLink<RatingGroup>();
+  /// The rating group this wager references. In AlgorithmPrediction
+  /// parlance, this is the scoring group, not the rating group: the
+  /// legs' subjects/targets belong to the rating group (e.g. LO/CO), but may be
+  /// scored against a narrower group contained here (e.g. CO only).
+  @Name('ratingGroup')
+  final scoringGroup = IsarLink<RatingGroup>();
 
   /// The game this wager is part of.
   final game = IsarLink<PredictionGame>();
@@ -192,13 +196,13 @@ class DbWager {
     created = DateTime.now();
   }
 
-  factory DbWager.fromWager(Wager wager) {
-    var ratingGroup = wager.prediction.shooter.wrappedRating.group.value;
+  /// [scoringGroup] defaults to [Wager.prediction.effectiveScoringGroup] when omitted.
+  factory DbWager.fromWager(Wager wager, [RatingGroup? scoringGroup]) {
     var dbWager = DbWager(
       legs: [DbPrediction.fromWager(wager)],
       amount: wager.amount,
     );
-    dbWager.ratingGroup.value = ratingGroup;
+    dbWager.scoringGroup.value = scoringGroup ?? wager.prediction.effectiveScoringGroup;
     return dbWager;
   }
 
@@ -207,8 +211,8 @@ class DbWager {
     double? worstPossibleOdds,
     double? houseEdgePerLeg,
     double? parlayEdge,
+    RatingGroup? scoringGroup,
   }) {
-    var ratingGroup = parlay.legs.first.prediction.shooter.wrappedRating.group.value;
     var dbWager = DbWager(
       legs: parlay.legs.map((leg) => DbPrediction.fromWager(leg)).toList(),
       amount: parlay.amount,
@@ -220,31 +224,33 @@ class DbWager {
       parlayEdge: parlayEdge,
       houseEdgePerLeg: houseEdgePerLeg,
     );
-    dbWager.ratingGroup.value = ratingGroup;
+    dbWager.scoringGroup.value = scoringGroup ?? parlay.legs.first.prediction.effectiveScoringGroup;
     return dbWager;
   }
 
   IWager hydrate() {
     final db = AnalystDatabase();
     final project = matchPrep.value!.ratingProject.value!;
+    scoringGroup.loadSync();
+    final scoringContext = scoringGroup.value;
     ShooterRating target = project.wrapDbRatingSync(legs.first.target.getShooterRatingSync(db)!);
     ShooterRating? underdog;
     if(legs.first.underdog != null) {
       underdog = project.wrapDbRatingSync(legs.first.underdog!.getShooterRatingSync(db)!);
     }
     if(isParlay) {
-      return _hydrateParlay(db, project);
+      return _hydrateParlay(db, project, scoringContext);
     }
     else {
-      return _hydrateWager(db, project, target, underdog);
+      return _hydrateWager(db, project, target, underdog, scoringContext);
     }
   }
 
-  Wager _hydrateWager(AnalystDatabase db, DbRatingProject project, ShooterRating target, ShooterRating? underdog) {
+  Wager _hydrateWager(AnalystDatabase db, DbRatingProject project, ShooterRating target, ShooterRating? underdog, RatingGroup? scoringGroup) {
     var dbPrediction = legs.first;
     var dbProbability = dbPrediction.probability;
 
-    UserPrediction prediction = _hydratePrediction(dbPrediction, target, underdog);
+    UserPrediction prediction = _hydratePrediction(dbPrediction, target, underdog, scoringGroup: scoringGroup);
 
     return Wager(
       prediction: prediction,
@@ -258,23 +264,26 @@ class DbWager {
     );
   }
 
-  UserPrediction _hydratePrediction(DbPrediction dbPrediction, ShooterRating target, ShooterRating? underdog) {
+  UserPrediction _hydratePrediction(DbPrediction dbPrediction, ShooterRating target, ShooterRating? underdog, {RatingGroup? scoringGroup}) {
     UserPrediction prediction;
     switch(dbPrediction.type) {
       case DbPredictionType.place:
         prediction = PlacePrediction(
           shooter: target,
+          scoringGroup: scoringGroup,
           bestPlace: dbPrediction.bestPlace!,
           worstPlace: dbPrediction.worstPlace!);
       case DbPredictionType.percentage:
         prediction = PercentagePrediction(
           shooter: target,
+          scoringGroup: scoringGroup,
           ratio: dbPrediction.percentage!,
           above: dbPrediction.abovePercentage,
         );
       case DbPredictionType.spread:
         prediction = PercentageSpreadPrediction(
           shooter: target,
+          scoringGroup: scoringGroup,
           underdog: underdog!,
           ratioSpread: dbPrediction.percentage!,
           favoriteCovers: dbPrediction.favoriteCovers,
@@ -285,7 +294,7 @@ class DbWager {
     return prediction;
   }
 
-  Parlay _hydrateParlay(AnalystDatabase db, DbRatingProject project) {
+  Parlay _hydrateParlay(AnalystDatabase db, DbRatingProject project, RatingGroup? scoringGroup) {
     var outLegs = <Wager>[];
     for(var dbPrediction in legs) {
       ShooterRating target = project.wrapDbRatingSync(dbPrediction.target.getShooterRatingSync(db)!);
@@ -293,7 +302,7 @@ class DbWager {
       if(dbPrediction.underdog != null) {
         underdog = project.wrapDbRatingSync(dbPrediction.underdog!.getShooterRatingSync(db)!);
       }
-      var prediction = _hydratePrediction(dbPrediction, target, underdog);
+      var prediction = _hydratePrediction(dbPrediction, target, underdog, scoringGroup: scoringGroup);
       outLegs.add(Wager(
         prediction: prediction,
         probability: PredictionProbability.fromDecimalOdds(dbPrediction.probability.rawDecimalOdds),

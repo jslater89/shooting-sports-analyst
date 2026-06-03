@@ -570,7 +570,8 @@ class PredictionListRow extends StatelessWidget {
             context,
             prediction.shooter,
             match: latestMatch,
-            ratings: model.dataSource
+            ratings: model.dataSource,
+            showDivisions: prediction.shooter.group.divisions.length > 1
           );
         }
       },

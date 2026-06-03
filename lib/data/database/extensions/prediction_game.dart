@@ -25,6 +25,29 @@ import 'package:shooting_sports_analyst/util.dart';
 // ignore: unused_element
 final _log = SSALogger("PredictionGameDb");
 
+/// Whether [prediction] is the algorithm row for [rating] scored on [scoringContext].
+///
+/// Override rows ([DbAlgorithmPrediction.scoringGroupUuid] set) match [scoringContext] via that
+/// field. Legacy rows (no explicit scoring group) match when [DbAlgorithmPrediction.groupUuid]
+/// equals [scoringContext].
+bool _algorithmPredictionMatchesRatingAndScoringContext({
+  required DbAlgorithmPrediction prediction,
+  required ShooterRating rating,
+  required RatingGroup scoringContext,
+}) {
+  if(!rating.knownMemberNumbers.contains(prediction.memberNumber)) {
+    return false;
+  }
+  final ratingGroupUuid = prediction.groupUuid ?? prediction.group.value?.uuid;
+  if(ratingGroupUuid != rating.group.uuid) {
+    return false;
+  }
+  if(prediction.scoringGroupUuid != null) {
+    return prediction.scoringGroupUuid == scoringContext.uuid;
+  }
+  return ratingGroupUuid == scoringContext.uuid;
+}
+
 extension PredictionGameExtension on AnalystDatabase {
   /// Get a prediction game by its ID.
   Future<PredictionGame?> getPredictionGame(int id) async {
@@ -157,22 +180,37 @@ extension PredictionGameExtension on AnalystDatabase {
   }
 
   /// Get the algorithm prediction for a rating in a match prep, using the latest prediction set if none is provided.
-  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) async {
+  ///
+  /// [scoringContext] is the group the prediction should be scored against (e.g. the wager's
+  /// scoring group or the active UI tab). It may differ from [ShooterRating.group] when predictions
+  /// use a combined rating source (LO/CO) for a division-specific tab (CO).
+  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, RatingGroup scoringContext, {PredictionSet? predictionSet}) async {
     predictionSet ??= matchPrep.latestPredictionSet();
-    return predictionSet?.algorithmPredictions
-      .filter()
-      .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
-      .group((q) => q.uuidEqualTo(rating.group.uuid))
-      .findFirst();
+    if(predictionSet == null) {
+      return null;
+    }
+    await predictionSet.algorithmPredictions.load();
+    return predictionSet.algorithmPredictions.firstWhereOrNull((prediction) =>
+      _algorithmPredictionMatchesRatingAndScoringContext(
+        prediction: prediction,
+        rating: rating,
+        scoringContext: scoringContext,
+      ));
   }
 
-  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) {
+  /// Synchronous variant of [getAlgorithmPredictionForRating].
+  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, RatingGroup scoringContext, {PredictionSet? predictionSet}) {
     predictionSet ??= matchPrep.latestPredictionSet();
-    return predictionSet?.algorithmPredictions
-      .filter()
-      .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
-      .group((q) => q.uuidEqualTo(rating.group.uuid))
-      .findFirstSync();
+    if(predictionSet == null) {
+      return null;
+    }
+    predictionSet.algorithmPredictions.loadSync();
+    return predictionSet.algorithmPredictions.firstWhereOrNull((prediction) =>
+      _algorithmPredictionMatchesRatingAndScoringContext(
+        prediction: prediction,
+        rating: rating,
+        scoringContext: scoringContext,
+      ));
   }
 
   /// Save a prediction game player to the database.
@@ -267,6 +305,20 @@ extension PredictionGameExtension on AnalystDatabase {
     });
   }
 
+  void _assertWagerScoringGroupAllowed(DbWager wager) {
+    final game = wager.game.value;
+    final predictionSet = wager.predictionSet.value;
+    final scoringGroup = wager.scoringGroup.value;
+    if(game == null || predictionSet == null || scoringGroup == null) {
+      return;
+    }
+    if(!game.isRatingGroupAvailableForWagers(predictionSet, scoringGroup)) {
+      throw ArgumentError(
+        "Rating group ${scoringGroup.name} is not available for wagers in prediction game ${game.name}",
+      );
+    }
+  }
+
   /// Save a wager to the database.
   ///
   /// If [saveLinks] is true, the wager's links will be saved, and if this wager
@@ -280,6 +332,12 @@ extension PredictionGameExtension on AnalystDatabase {
     }
 
     bool alreadySaved = wager.id != Isar.autoIncrement;
+
+    // Defensive validation before save — ensure [wager.scoringGroup] is allowed for this game.
+    // We don't load the links prior to this call because either the links are DB-backed already
+    // and Isar will load them for us, or they're new and calling load will throw.
+    _assertWagerScoringGroupAllowed(wager);
+
     if(alreadySaved) {
       var transactionsToSave = <PredictionGameTransaction>[];
       if(wager.wagerTransaction.value?.id == Isar.autoIncrement) {
@@ -304,7 +362,7 @@ extension PredictionGameExtension on AnalystDatabase {
         await wager.matchPrep.save();
         await wager.game.save();
         await wager.user.save();
-        await wager.ratingGroup.save();
+        await wager.scoringGroup.save();
         await wager.wagerTransaction.save();
         await wager.payoutTransaction.save();
         await wager.refundTransaction.save();
@@ -339,6 +397,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
+    _assertWagerScoringGroupAllowed(wager);
     if(createWagerTransaction && wager.wagerTransaction.value == null) {
       var transaction = PredictionGameTransaction(
         type: PredictionGameTransactionType.wager,

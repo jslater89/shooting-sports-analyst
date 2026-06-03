@@ -28,14 +28,18 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       return combineHashList64([
         projectId,
         predictionSetId,
-        memberNumber.stableHash]);
+        memberNumber.stableHash,
+        if(scoringGroupUuid != null) scoringGroupUuid!.stableHash
+      ]);
     }
     else {
       return combineHashList64([
         projectId,
         predictionSetId,
         groupUuid!.stableHash,
-        memberNumber.stableHash]);
+        memberNumber.stableHash,
+        if(scoringGroupUuid != null) scoringGroupUuid!.stableHash
+      ]);
     }
   }
 
@@ -44,9 +48,32 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
   @Backlink(to: 'algorithmPredictions')
   final predictionSet = IsarLink<PredictionSet>();
 
+  /// The group in [predictionSet] where the rating backing this prediction can be
+  /// found.
   @override
   final group = IsarLink<RatingGroup>();
+
+  /// The UUID identifying [group] in the sport of [project].
   final String? groupUuid;
+
+  /// If set, the group identifying the registrations against which this prediction
+  /// was made/should be scored. Otherwise, [group] is assumed to be the scoring group.
+  ///
+  /// See [effectiveScoringGroup] for a convenience getter.
+  final scoringGroup = IsarLink<RatingGroup>();
+
+  /// The UUID identifying [scoringGroup] in the sport of [project].
+  final String? scoringGroupUuid;
+
+  /// The scoring group for this prediction: the group from which registrations were selected,
+  /// and against which outcomes should be evaluated. Distinct from [group], which contains the
+  /// rating used to generate predictions.
+  ///
+  /// i.e., if [group] is USPSA LO/CO and effectiveScoringGroup is USPSA CO, then this prediction
+  /// should be displayed on a Carry Optics tab and evaluated only against CO competitors, but was
+  /// generated against a set of combined LO/CO ratings.
+  @ignore
+  RatingGroup get effectiveScoringGroup => scoringGroup.value ?? group.value!;
 
   /// A member number that can locate the correct shooter rating for this prediction
   /// in [group].
@@ -133,12 +160,14 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     required this.isLogNormal,
     required this.logMean,
     required this.logSigma,
+    required this.scoringGroupUuid,
   });
 
   DbAlgorithmPrediction.fromHydrated(DbRatingProject project, PredictionSet predictionSet, AlgorithmPrediction prediction) :
     projectId = project.id,
     predictionSetId = predictionSet.id,
     groupUuid = prediction.shooter.group.uuid,
+    scoringGroupUuid = prediction.scoringGroup?.uuid,
     mean = prediction.displayCenter,
     oneSigma = prediction.oneSigma,
     twoSigma = prediction.twoSigma,
@@ -155,6 +184,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       this.rating.value = prediction.shooter.wrappedRating;
       this.project.value = project;
       this.group.value = prediction.shooter.group;
+      this.scoringGroup.value = prediction.scoringGroup;
       this.predictionSet.value = predictionSet;
       this.memberNumber = prediction.shooter.originalMemberNumber;
     }
@@ -188,6 +218,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       isLogNormal: isLogNormal,
       logMean: logMean,
       logSigma: logSigma,
+      scoringGroup: scoringGroup.value,
     );
     prediction.lowPlace = lowPlace;
     prediction.highPlace = highPlace;
@@ -223,6 +254,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     await rating.save();
     await project.save();
     await group.save();
+    await scoringGroup.save();
     await predictionSet.save();
   }
 }
