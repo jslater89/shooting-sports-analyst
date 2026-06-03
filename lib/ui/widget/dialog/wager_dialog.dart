@@ -125,8 +125,9 @@ class _WagerDialogState extends State<WagerDialog> {
   void initState() {
     super.initState();
     for(var prediction in widget.predictions) {
+      final scoringGroup = prediction.effectiveScoringGroup;
       _shootersToPredictions[prediction.shooter] = prediction;
-      _competitorCountsByGroup.increment(prediction.shooter.group);
+      _competitorCountsByGroup.increment(scoringGroup);
     }
     _updateIneligibleCompetitors();
   }
@@ -139,7 +140,7 @@ class _WagerDialogState extends State<WagerDialog> {
     }
     _ineligibleCompetitors.clear();
     for(var prediction in widget.predictions) {
-      var ineligibilityReason = game.checkValidity(prediction, competitorCount: _competitorCountsByGroup[prediction.shooter.group]!);
+      var ineligibilityReason = game.checkValidity(prediction, competitorCount: _competitorCountsByGroup[prediction.effectiveScoringGroup]!);
       if(ineligibilityReason != null) {
         _ineligibleCompetitors[prediction.shooter] = ineligibilityReason;
       }

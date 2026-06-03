@@ -98,11 +98,23 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
   }
 
   void _saveParlay(PredictionGamePlayer player, PredictionGameManagerModel model, Parlay parlay) {
-    model.saveParlay(player, selectedMatchPrep!, selectedPredictionSet!, parlay);
+    model.saveParlay(
+      player: player,
+      matchPrep: selectedMatchPrep!,
+      predictionSet: selectedPredictionSet!,
+      parlay: parlay,
+      scoringGroup: selectedRatingGroup!,
+    );
   }
 
   void _saveIndependentWagers(PredictionGamePlayer player, PredictionGameManagerModel model, List<Wager> wagers) {
-    model.saveIndependentWagers(player, selectedMatchPrep!, selectedPredictionSet!, wagers);
+    model.saveIndependentWagers(
+      player: player,
+      matchPrep: selectedMatchPrep!,
+      predictionSet: selectedPredictionSet!,
+      wagers: wagers,
+      scoringGroup: selectedRatingGroup!,
+    );
   }
 
   @override

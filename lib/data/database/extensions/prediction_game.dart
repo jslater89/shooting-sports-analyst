@@ -157,22 +157,40 @@ extension PredictionGameExtension on AnalystDatabase {
   }
 
   /// Get the algorithm prediction for a rating in a match prep, using the latest prediction set if none is provided.
-  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) async {
+  ///
+  /// [scoringGroup] mirrors [DbAlgorithmPrediction.scoringGroup]: when absent on the entity,
+  /// [DbAlgorithmPrediction.effectiveScoringGroup] falls back to the rating's [DbAlgorithmPrediction.group].
+  ///
+  /// Pass [scoringGroup] as null when the rating group is also the scoring group (no override row).
+  /// In that case the query matches member number and rating source only.
+  ///
+  /// Pass a non-null [scoringGroup] to disambiguate override rows (e.g. ratings from LO/CO but
+  /// scored on the CO tab). Do not pass [effectiveScoringGroup] unconditionally: native predictions
+  /// with no explicit scoring-group link will not match a scoring-group filter even when their
+  /// effective scoring group equals the rating group.
+  Future<DbAlgorithmPrediction?> getAlgorithmPredictionForRating(ShooterRating rating, MatchPrep matchPrep, RatingGroup? scoringGroup, {PredictionSet? predictionSet}) async {
     predictionSet ??= matchPrep.latestPredictionSet();
-    return predictionSet?.algorithmPredictions
+    var query = predictionSet?.algorithmPredictions
       .filter()
       .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
-      .group((q) => q.uuidEqualTo(rating.group.uuid))
-      .findFirst();
+      .group((q) => q.uuidEqualTo(rating.group.uuid));
+    if(scoringGroup != null) {
+      query = query?.scoringGroup((q) => q.uuidEqualTo(scoringGroup.uuid));
+    }
+    return query?.findFirst();
   }
 
-  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, {PredictionSet? predictionSet}) {
+  /// Synchronous variant of [getAlgorithmPredictionForRating].
+  DbAlgorithmPrediction? getAlgorithmPredictionForRatingSync(ShooterRating rating, MatchPrep matchPrep, RatingGroup? scoringGroup, {PredictionSet? predictionSet}) {
     predictionSet ??= matchPrep.latestPredictionSet();
-    return predictionSet?.algorithmPredictions
+    var query = predictionSet?.algorithmPredictions
       .filter()
       .anyOf(rating.knownMemberNumbers, (query, number) => query.memberNumberEqualTo(number))
-      .group((q) => q.uuidEqualTo(rating.group.uuid))
-      .findFirstSync();
+      .group((q) => q.uuidEqualTo(rating.group.uuid));
+    if(scoringGroup != null) {
+      query = query?.scoringGroup((q) => q.uuidEqualTo(scoringGroup.uuid));
+    }
+    return query?.findFirstSync();
   }
 
   /// Save a prediction game player to the database.
@@ -304,7 +322,7 @@ extension PredictionGameExtension on AnalystDatabase {
         await wager.matchPrep.save();
         await wager.game.save();
         await wager.user.save();
-        await wager.ratingGroup.save();
+        await wager.scoringGroup.save();
         await wager.wagerTransaction.save();
         await wager.payoutTransaction.save();
         await wager.refundTransaction.save();

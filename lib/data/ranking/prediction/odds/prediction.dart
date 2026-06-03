@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
@@ -14,6 +15,14 @@ import 'package:shooting_sports_analyst/util.dart';
 
 abstract class UserPrediction {
   final ShooterRating shooter;
+
+  /// The rating group this prediction should be scored against, which may be narrower
+  /// than the shooter's rating group. If this is null, the shooter's rating group is used.
+  final RatingGroup? scoringGroup;
+
+  /// The effective rating group this prediction should be scored against, which is [scoringGroup]
+  /// if it is not null, otherwise [shooter.group].
+  RatingGroup get effectiveScoringGroup => scoringGroup ?? shooter.group;
 
   PredictionProbability calculateProbability(
     Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
@@ -29,6 +38,7 @@ abstract class UserPrediction {
 
   UserPrediction({
     required this.shooter,
+    this.scoringGroup,
   });
 
   UserPrediction deepCopy();

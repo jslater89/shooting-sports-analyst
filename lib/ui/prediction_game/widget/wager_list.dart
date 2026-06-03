@@ -109,7 +109,7 @@ class _WagerListState extends State<WagerList> {
         var wager = model.wagers[index];
         var playerName = wager.user.value!.nickname ?? wager.user.value!.serverUser.value?.username ?? "(no username)";
         var hydratedWager = wager.hydrate();
-        var prediction = "${hydratedWager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})";
+        var prediction = "${hydratedWager.descriptiveString} (${wager.scoringGroup.value?.name ?? "unknown group"})";
         var tooltipString = hydratedWager.parlayDescription;
 
         var moneylineOdds = hydratedWager.probability.moneylineOdds;

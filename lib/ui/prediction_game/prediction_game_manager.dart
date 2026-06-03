@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/predicti
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -117,8 +118,14 @@ class PredictionGameManagerModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveParlay(PredictionGamePlayer player, MatchPrep matchPrep, PredictionSet predictionSet, Parlay parlay) async {
-    var dbWager = DbWager.fromParlay(parlay);
+  Future<void> saveParlay({
+    required PredictionGamePlayer player,
+    required MatchPrep matchPrep,
+    required PredictionSet predictionSet,
+    required Parlay parlay,
+    required RatingGroup scoringGroup,
+  }) async {
+    var dbWager = DbWager.fromParlay(parlay, scoringGroup: scoringGroup);
     dbWager.matchPrep.value = matchPrep;
     dbWager.predictionSet.value = predictionSet;
     dbWager.game.value = predictionGame;
@@ -128,9 +135,15 @@ class PredictionGameManagerModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveIndependentWagers(PredictionGamePlayer player, MatchPrep matchPrep, PredictionSet predictionSet, List<Wager> wagers) async {
+  Future<void> saveIndependentWagers({
+    required PredictionGamePlayer player,
+    required MatchPrep matchPrep,
+    required PredictionSet predictionSet,
+    required List<Wager> wagers,
+    required RatingGroup scoringGroup,
+  }) async {
     for(var wager in wagers) {
-      var dbWager = DbWager.fromWager(wager);
+      var dbWager = DbWager.fromWager(wager, scoringGroup);
       dbWager.matchPrep.value = matchPrep;
       dbWager.predictionSet.value = predictionSet;
       dbWager.game.value = predictionGame;

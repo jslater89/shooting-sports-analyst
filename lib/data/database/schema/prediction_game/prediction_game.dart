@@ -72,9 +72,10 @@ class PredictionGame {
     Map<PredictionSet, List<RatingGroup>> availableRatingGroups = {};
     var ratingGroups = prep.ratingProject.value!.groups;
     for(var predictionSet in prep.predictionSets) {
-      for(var group in ratingGroups) {
+      final validRatingGroups = ratingGroups.where((group) => !predictionSet.excludedRatingGroupUuids.contains(group.uuid)).toList();
+      for(var group in validRatingGroups) {
         var registrations = predictionSet.algorithmPredictions.where((prediction) =>
-          prediction.group.value == group).map((prediction) => prediction.rating.value).toList();
+          prediction.effectiveScoringGroup == group).map((prediction) => prediction.rating.value).toList();
         if(registrations.length >= minimumCompetitorsRequired) {
           availableRatingGroups.addToList(predictionSet, group);
         }

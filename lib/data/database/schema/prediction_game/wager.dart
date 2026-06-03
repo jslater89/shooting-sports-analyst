@@ -39,8 +39,12 @@ class DbWager {
   /// The prediction set this wager references.
   final predictionSet = IsarLink<PredictionSet>();
 
-  /// The rating group this wager references.
-  final ratingGroup = IsarLink<RatingGroup>();
+  /// The rating group this wager references. In AlgorithmPrediction
+  /// parlance, this is the scoring group, not the rating group: the
+  /// legs' subjects/targets belong to the rating group (e.g. LO/CO), but may be
+  /// scored against a narrower group contained here (e.g. CO only).
+  @Name('ratingGroup')
+  final scoringGroup = IsarLink<RatingGroup>();
 
   /// The game this wager is part of.
   final game = IsarLink<PredictionGame>();
@@ -192,13 +196,12 @@ class DbWager {
     created = DateTime.now();
   }
 
-  factory DbWager.fromWager(Wager wager) {
-    var ratingGroup = wager.prediction.shooter.wrappedRating.group.value;
+  factory DbWager.fromWager(Wager wager, RatingGroup scoringGroup) {
     var dbWager = DbWager(
       legs: [DbPrediction.fromWager(wager)],
       amount: wager.amount,
     );
-    dbWager.ratingGroup.value = ratingGroup;
+    dbWager.scoringGroup.value = scoringGroup;
     return dbWager;
   }
 
@@ -207,8 +210,8 @@ class DbWager {
     double? worstPossibleOdds,
     double? houseEdgePerLeg,
     double? parlayEdge,
+    required RatingGroup scoringGroup,
   }) {
-    var ratingGroup = parlay.legs.first.prediction.shooter.wrappedRating.group.value;
     var dbWager = DbWager(
       legs: parlay.legs.map((leg) => DbPrediction.fromWager(leg)).toList(),
       amount: parlay.amount,
@@ -220,7 +223,7 @@ class DbWager {
       parlayEdge: parlayEdge,
       houseEdgePerLeg: houseEdgePerLeg,
     );
-    dbWager.ratingGroup.value = ratingGroup;
+    dbWager.scoringGroup.value = scoringGroup;
     return dbWager;
   }
 

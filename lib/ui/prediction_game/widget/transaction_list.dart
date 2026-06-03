@@ -56,7 +56,7 @@ class TransactionList extends StatelessWidget {
 
         String? descriptionString;
         if(wager != null) {
-          descriptionString = "${wager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})";
+          descriptionString = "${wager.descriptiveString} (${wager.scoringGroup.value?.name ?? "unknown group"})";
         }
 
         Widget title = Row(
