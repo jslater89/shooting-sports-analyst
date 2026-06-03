@@ -249,6 +249,11 @@ class PredictionGameManager {
 
     wager.maximumWager = maximumWager;
 
+    // TODO: Defensive validation before save — ensure [wager.scoringGroup] is allowed for this
+    // game ([PredictionGame.wagerExcludedRatingGroupUuids]) and [wager.predictionSet]
+    // ([PredictionSet.excludedRatingGroupUuids]), e.g. via [PredictionGame.isRatingGroupAvailableForWagers],
+    // and return a typed [AddWagerError]. UI hides unavailable groups via [PredictionGame.availableRatingGroups] today.
+
     // It's already backlinked to everything else, so we can just save it
     // and its links.
     try {
@@ -289,6 +294,8 @@ class PredictionGameManager {
     }
 
     wager.maximumWager = maximumWager;
+
+    // TODO: Same scoring-group availability validation as [addWager].
 
     db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();

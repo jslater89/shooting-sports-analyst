@@ -66,6 +66,7 @@ class PlacePrediction extends UserPrediction {
 
   PlacePrediction({
     required super.shooter,
+    super.scoringGroup,
     required this.bestPlace,
     required this.worstPlace,
   }) {
@@ -74,7 +75,9 @@ class PlacePrediction extends UserPrediction {
     }
   }
 
-  PlacePrediction.exactPlace(ShooterRating shooter, this.bestPlace) : this.worstPlace = bestPlace, super(shooter: shooter);
+  PlacePrediction.exactPlace(ShooterRating shooter, this.bestPlace, {RatingGroup? scoringGroup}) :
+    this.worstPlace = bestPlace,
+    super(shooter: shooter, scoringGroup: scoringGroup);
 
   /// Return a copy of the prediction with the given fields updated.
   ///
@@ -82,10 +85,12 @@ class PlacePrediction extends UserPrediction {
   /// the other fields are copied by value.
   PlacePrediction copyWith({
     ShooterRating? shooter,
+    RatingGroup? scoringGroup,
     int? bestPlace,
     int? worstPlace,
   }) => PlacePrediction(
     shooter: shooter ?? this.shooter,
+    scoringGroup: scoringGroup ?? this.scoringGroup,
     bestPlace: bestPlace ?? this.bestPlace,
     worstPlace: worstPlace ?? this.worstPlace,
   );
@@ -149,6 +154,7 @@ class PercentagePrediction extends UserPrediction {
 
   PercentagePrediction({
     required super.shooter,
+    super.scoringGroup,
     required this.ratio,
     this.above = true,
   });
@@ -182,10 +188,12 @@ class PercentagePrediction extends UserPrediction {
 
   PercentagePrediction copyWith({
     ShooterRating? shooter,
+    RatingGroup? scoringGroup,
     double? ratio,
     bool? above,
   }) => PercentagePrediction(
     shooter: shooter ?? this.shooter,
+    scoringGroup: scoringGroup ?? this.scoringGroup,
     ratio: ratio ?? this.ratio,
     above: above ?? this.above,
   );
@@ -217,6 +225,7 @@ class PercentageSpreadPrediction extends UserPrediction {
 
   PercentageSpreadPrediction({
     required super.shooter,
+    super.scoringGroup,
     required this.underdog,
     required this.ratioSpread,
     this.favoriteCovers = true,
@@ -252,11 +261,13 @@ class PercentageSpreadPrediction extends UserPrediction {
 
   PercentageSpreadPrediction copyWith({
     ShooterRating? shooter,
+    RatingGroup? scoringGroup,
     ShooterRating? underdog,
     double? ratioSpread,
     bool? favoriteCovers,
   }) => PercentageSpreadPrediction(
     shooter: shooter ?? this.shooter,
+    scoringGroup: scoringGroup ?? this.scoringGroup,
     underdog: underdog ?? this.underdog,
     ratioSpread: ratioSpread ?? this.ratioSpread,
     favoriteCovers: favoriteCovers ?? this.favoriteCovers,

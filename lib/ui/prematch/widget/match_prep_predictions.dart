@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/data/match_prep/match_prep_uspsa_prediction_settings.dart';
 import 'package:shooting_sports_analyst/ui/prematch/dialog/match_prep_prediction_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';

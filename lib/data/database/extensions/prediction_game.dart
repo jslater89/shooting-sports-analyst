@@ -305,21 +305,7 @@ extension PredictionGameExtension on AnalystDatabase {
     });
   }
 
-  Future<void> _assertWagerScoringGroupAllowed(DbWager wager) async {
-    await wager.game.load();
-    await wager.predictionSet.load();
-    await wager.scoringGroup.load();
-    _assertWagerScoringGroupAllowedAfterLoad(wager);
-  }
-
-  void _assertWagerScoringGroupAllowedSync(DbWager wager) {
-    wager.game.loadSync();
-    wager.predictionSet.loadSync();
-    wager.scoringGroup.loadSync();
-    _assertWagerScoringGroupAllowedAfterLoad(wager);
-  }
-
-  void _assertWagerScoringGroupAllowedAfterLoad(DbWager wager) {
+  void _assertWagerScoringGroupAllowed(DbWager wager) {
     final game = wager.game.value;
     final predictionSet = wager.predictionSet.value;
     final scoringGroup = wager.scoringGroup.value;
@@ -344,9 +330,14 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
-    await _assertWagerScoringGroupAllowed(wager);
 
     bool alreadySaved = wager.id != Isar.autoIncrement;
+
+    // Defensive validation before save — ensure [wager.scoringGroup] is allowed for this game.
+    // We don't load the links prior to this call because either the links are DB-backed already
+    // and Isar will load them for us, or they're new and calling load will throw.
+    _assertWagerScoringGroupAllowed(wager);
+
     if(alreadySaved) {
       var transactionsToSave = <PredictionGameTransaction>[];
       if(wager.wagerTransaction.value?.id == Isar.autoIncrement) {
@@ -406,7 +397,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
-    _assertWagerScoringGroupAllowedSync(wager);
+    _assertWagerScoringGroupAllowed(wager);
     if(createWagerTransaction && wager.wagerTransaction.value == null) {
       var transaction = PredictionGameTransaction(
         type: PredictionGameTransactionType.wager,
