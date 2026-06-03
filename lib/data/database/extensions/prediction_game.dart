@@ -305,6 +305,34 @@ extension PredictionGameExtension on AnalystDatabase {
     });
   }
 
+  Future<void> _assertWagerScoringGroupAllowed(DbWager wager) async {
+    await wager.game.load();
+    await wager.predictionSet.load();
+    await wager.scoringGroup.load();
+    _assertWagerScoringGroupAllowedAfterLoad(wager);
+  }
+
+  void _assertWagerScoringGroupAllowedSync(DbWager wager) {
+    wager.game.loadSync();
+    wager.predictionSet.loadSync();
+    wager.scoringGroup.loadSync();
+    _assertWagerScoringGroupAllowedAfterLoad(wager);
+  }
+
+  void _assertWagerScoringGroupAllowedAfterLoad(DbWager wager) {
+    final game = wager.game.value;
+    final predictionSet = wager.predictionSet.value;
+    final scoringGroup = wager.scoringGroup.value;
+    if(game == null || predictionSet == null || scoringGroup == null) {
+      return;
+    }
+    if(!game.isRatingGroupAvailableForWagers(predictionSet, scoringGroup)) {
+      throw ArgumentError(
+        "Rating group ${scoringGroup.name} is not available for wagers in prediction game ${game.name}",
+      );
+    }
+  }
+
   /// Save a wager to the database.
   ///
   /// If [saveLinks] is true, the wager's links will be saved, and if this wager
@@ -316,6 +344,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
+    await _assertWagerScoringGroupAllowed(wager);
 
     bool alreadySaved = wager.id != Isar.autoIncrement;
     if(alreadySaved) {
@@ -377,6 +406,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
+    _assertWagerScoringGroupAllowedSync(wager);
     if(createWagerTransaction && wager.wagerTransaction.value == null) {
       var transaction = PredictionGameTransaction(
         type: PredictionGameTransactionType.wager,

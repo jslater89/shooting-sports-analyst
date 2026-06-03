@@ -52,9 +52,26 @@ class PredictionGame {
   /// If null, all competitors are eligible.
   int? maximumWagerableRatingAgeDays;
 
-  // TODO: a way to specify matchPrep -> allowed rating groups
-  // and/or other ways to determine what we want to offer odds on
+  /// Scoring-group UUIDs for which this game never offers wagers (e.g. combined USPSA LO/CO).
+  ///
+  /// Independent of [MatchPrep.excludedRatingGroupUuids], which controls whether predictions are
+  /// generated for a group. Wager eligibility also respects [PredictionSet.excludedRatingGroupUuids]
+  /// on each set so groups with no predictions in that set are not offered.
+  List<String> wagerExcludedRatingGroupUuids = [];
+
+  // TODO: per–match-prep allowed rating groups and/or other market filters
   // (e.g. Glicko-2 can say "we couldn't do accurate predictions because of too big a rating gap")
+
+  /// Whether [group] is excluded from wagers for this game.
+  bool isRatingGroupExcludedForWagers(RatingGroup group) {
+    return wagerExcludedRatingGroupUuids.contains(group.uuid);
+  }
+
+  /// Whether wagers may be offered on [group] using [predictionSet].
+  bool isRatingGroupAvailableForWagers(PredictionSet predictionSet, RatingGroup group) {
+    return !isRatingGroupExcludedForWagers(group)
+      && !predictionSet.excludedRatingGroupUuids.contains(group.uuid);
+  }
 
   /// Get the available rating groups for the prediction sets in a given match prep.
   ///
@@ -72,7 +89,7 @@ class PredictionGame {
     Map<PredictionSet, List<RatingGroup>> availableRatingGroups = {};
     var ratingGroups = prep.ratingProject.value!.groups;
     for(var predictionSet in prep.predictionSets) {
-      final validRatingGroups = ratingGroups.where((group) => !predictionSet.excludedRatingGroupUuids.contains(group.uuid)).toList();
+      final validRatingGroups = ratingGroups.where((group) => isRatingGroupAvailableForWagers(predictionSet, group)).toList();
       for(var group in validRatingGroups) {
         var registrations = predictionSet.algorithmPredictions.where((prediction) =>
           prediction.effectiveScoringGroup == group).map((prediction) => prediction.rating.value).toList();
@@ -114,6 +131,7 @@ class PredictionGame {
     this.start,
     this.end,
     this.minimumCompetitorsRequired = 10,
+    this.wagerExcludedRatingGroupUuids = const [],
   });
 
   /// Check if a competitor is eligible for a wager.
