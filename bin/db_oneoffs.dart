@@ -78,6 +78,7 @@ import 'db_oneoff_impl/top_rated_finish_spread_command.dart';
 import "db_oneoff_impl/rating_demographics_by_class_command.dart";
 import "db_oneoff_impl/area_match_research_command.dart";
 import "db_oneoff_impl/career_field_adjusted_metrics_command.dart";
+import "db_oneoff_impl/co_lo_nationals_overlap_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -248,6 +249,7 @@ Future<void> main(List<String> args) async {
     BacktestRatersCommand(db),
     TopRatedFinishSpreadCommand(db),
     AreaMatchResearchCommand(db),
+    CoLoNationalsOverlapCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
