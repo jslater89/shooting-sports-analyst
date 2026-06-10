@@ -237,13 +237,14 @@ class MatchPrepPageModel extends ChangeNotifier {
         if(division == null) {
           continue;
         }
-        var ratingGroup = ratingProject.groupForDivisionSync(division);
-        if(ratingGroup == null) {
+        var scoringGroup = ratingProject.groupForDivisionSync(division);
+        if(scoringGroup == null) {
           continue;
         }
+        var ratingSourceGroup = prep.ratingSourceGroupFor(ratingProject, scoringGroup);
         DbShooterRating? rating;
         for(var memberNumber in registration.shooterMemberNumbers) {
-          rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingGroup, memberNumber: memberNumber);
+          rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber);
           if(rating != null) {
             break;
           }
