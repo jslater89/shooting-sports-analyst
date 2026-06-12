@@ -31,13 +31,13 @@
    inkscape:pageopacity="0"
    inkscape:pageshadow="2"
    inkscape:window-width="2560"
-   inkscape:window-height="1523"
+   inkscape:window-height="1408"
    id="namedview23755"
    showgrid="false"
-   inkscape:zoom="3.8414092"
-   inkscape:cx="380.32918"
-   inkscape:cy="477.68928"
-   inkscape:window-x="0"
+   inkscape:zoom="0.48017615"
+   inkscape:cx="747.6423"
+   inkscape:cy="688.28908"
+   inkscape:window-x="2560"
    inkscape:window-y="0"
    inkscape:window-maximized="1"
    inkscape:current-layer="svg23753"
@@ -67,13 +67,7 @@
 
 
 </defs>
-<rect
-   style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:5.10337;stroke-linecap:round;stroke-linejoin:round"
-   id="rect14434"
-   width="1604.6108"
-   height="841.05731"
-   x="-49.538246"
-   y="-24.775101" /><g
+<g
    clip-path="url(#clipId0)"
    id="g16141"
    style="fill:none;stroke:#000000;stroke-width:0.1" />
@@ -82,7 +76,7 @@
 
 <g
    id="g693"
-   transform="translate(119.25796)"><g
+   transform="matrix(1.2280133,0,0,1.2280133,-28.6639,-87.557135)"><g
      id="g33600"
      transform="translate(353.14103,-317.91972)"><g
        id="g79749"
