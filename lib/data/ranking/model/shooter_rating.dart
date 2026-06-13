@@ -786,6 +786,12 @@ class MatchHistoryEntry {
   DateTime get date => match.date;
   Division divisionEntered;
   double ratingChange;
+
+  /// The rating change scaled by the rating system's scale factor. Used to avoid
+  /// double-scaling issues when displaying rating changes, since end users of
+  /// history entries are the ones who apply the scale factor.
+  double? scaledRatingChange;
+
   late int place;
   late int competitors;
   late double finishRatio;

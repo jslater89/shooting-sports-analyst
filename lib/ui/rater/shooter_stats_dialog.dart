@@ -231,7 +231,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
       if(widget.rating is LatentLogRating) {
         final sf = (widget.rating as LatentLogRating).settings.scaleFactor;
-        entry.ratingChange *= sf;
+        entry.scaledRatingChange = entry.ratingChange * sf;
+      }
+      else {
+        entry.scaledRatingChange = entry.ratingChange;
       }
 
       widgets.add(ClickableLink(
@@ -251,7 +254,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: textWidget),
-              Expanded(flex: 1, child: Text("${entry.ratingChange.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
+              Expanded(flex: 1, child: Text("${entry.scaledRatingChange?.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
             ],
           ),
         ),
