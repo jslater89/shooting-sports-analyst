@@ -65,7 +65,7 @@ Future<void> _importIcoreDump(AnalystDatabase db, Console console, File file) as
   var progressBar = LabeledProgressBar(maxValue: matches.length, initialLabel: "Saving matches...", canHaveErrors: true);
   for(var match in matches) {
     var saveResult = await db.saveMatch(match);
-    progressBar.tick("Saved ${dbInserts} matches of ${matches.length} total");
+    progressBar.tick("Saved ${dbInserts} matches of ${matches.length} total (${match.date.year}/${match.date.month})");
 
     if(saveResult.isOk()) {
       dbInserts++;

@@ -205,6 +205,12 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "IID") {
+      var file = args[1];
+      await ImportIcoreDumpCommand(db).executor(console, [
+        MenuArgumentValue<String>(argument: StringMenuArgument(label: "file"), value: file),
+      ]);
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
