@@ -20,10 +20,14 @@ class MonteCarloSimulationLruKey {
   /// For shooters with multiple known member numbers, all should be cached.
   final String memberNumber;
 
+  /// The scoring group of the shooter whose predictions this key points to.
+  final String scoringGroupUuid;
+
   MonteCarloSimulationLruKey({
     required this.predictionSetId,
     required this.trials,
     required this.memberNumber,
+    required this.scoringGroupUuid,
   });
 
   @override
@@ -33,10 +37,11 @@ class MonteCarloSimulationLruKey {
     if(predictionSetId != other.predictionSetId) return false;
     if(trials != other.trials) return false;
     if(memberNumber != other.memberNumber) return false;
+    if(scoringGroupUuid != other.scoringGroupUuid) return false;
 
     return true;
   }
 
   @override
-  int get hashCode => combineHashList64([predictionSetId.stableHash64, trials.stableHash64, memberNumber.stableHash64]);
+  int get hashCode => combineHashList64([predictionSetId.stableHash64, trials.stableHash64, memberNumber.stableHash64, scoringGroupUuid.stableHash64]);
 }

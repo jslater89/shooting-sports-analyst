@@ -307,10 +307,12 @@ class BayesianWagerUpdater {
     required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
     required int subjectStageHistoryLength,
   }) async {
+    final incomingScoringGroup = incomingWager.prediction.effectiveScoringGroup;
     var wagersForSubject = wagersForMatch.where((w) =>
       w.legs.any((l) => l.type.isCompatibleWith(targetType)) &&
       w.subjectMemberNumbers.intersects(subjectRating.knownMemberNumbers) &&
-      w.status != DbWagerStatus.voided
+      w.status != DbWagerStatus.voided &&
+      w.scoringGroup.value?.uuid == incomingScoringGroup.uuid
     ).toList();
 
     if(wagersForSubject.isEmpty) {
@@ -377,6 +379,7 @@ class BayesianWagerUpdater {
       wagers: wagersForSubject,
       targetType: targetType,
       subjectRating: subjectRating,
+      subjectScoringGroup: incomingScoringGroup,
       subjectMonteCarlo: subjectMonteCarlo,
       cache: cache,
       shootersToPredictions: shootersToPredictions,
@@ -434,6 +437,7 @@ class BayesianWagerUpdater {
     required List<DbWager> wagers,
     required DbPredictionType targetType,
     required ShooterRating subjectRating,
+    required RatingGroup subjectScoringGroup,
     required MonteCarloSimulationResult subjectMonteCarlo,
     IMonteCarloCache? cache,
     Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
@@ -470,6 +474,7 @@ class BayesianWagerUpdater {
             predictionSetId: predictionSetId,
             memberNumber: neededSubject.memberNumber,
             trials: 12500,
+            scoringGroupUuid: subjectScoringGroup.uuid,
           );
           MonteCarloSimulationResult? neededSubjectMonteCarlo;
           if(cache != null) {
