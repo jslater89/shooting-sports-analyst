@@ -448,6 +448,10 @@ class BayesianWagerUpdater {
       Map<DbPrediction, MonteCarloSimulationResult> spreadFavoriteMonteCarloResults = {};
       Map<DbPrediction, MonteCarloSimulationResult> spreadUnderdogMonteCarloResults = {};
 
+      if(wager.scoringGroup.value?.uuid != subjectScoringGroup.uuid) {
+        _log.i("Skipping wager ${wager.descriptiveString} because ${wager.scoringGroup.value?.name} != ${subjectScoringGroup.name}");
+      }
+
       for(var leg in wager.legs) {
         if(!leg.type.isCompatibleWith(targetType)) {
           continue;
