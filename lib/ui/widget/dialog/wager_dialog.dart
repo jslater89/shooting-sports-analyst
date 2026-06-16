@@ -188,6 +188,7 @@ class _WagerDialogState extends State<WagerDialog> {
           predictionSetId: predictionSetId,
           memberNumber: number,
           trials: trials,
+          scoringGroupUuid: newPrediction.effectiveScoringGroup.uuid,
         ));
       }
 
@@ -199,6 +200,7 @@ class _WagerDialogState extends State<WagerDialog> {
             predictionSetId: predictionSetId,
             memberNumber: number,
             trials: trials,
+            scoringGroupUuid: newPrediction.effectiveScoringGroup.uuid,
           ));
         }
 

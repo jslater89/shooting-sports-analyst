@@ -499,7 +499,7 @@ class BayesianWagerUpdater {
               continue;
             }
             var result = runOddsSimulation(
-              shootersToPredictions: shootersToPredictions!,
+              shootersToPredictions: shootersToPredictions,
               target: project.wrapDbRatingSync(neededSubjectRating),
               trials: 12500,
               random: Random(matchId.stableHash),
