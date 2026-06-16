@@ -450,6 +450,7 @@ class BayesianWagerUpdater {
 
       if(wager.scoringGroup.value?.uuid != subjectScoringGroup.uuid) {
         _log.i("Skipping wager ${wager.descriptiveString} because ${wager.scoringGroup.value?.name} != ${subjectScoringGroup.name}");
+        continue;
       }
 
       for(var leg in wager.legs) {
@@ -490,6 +491,11 @@ class BayesianWagerUpdater {
             final neededSubjectRating = await neededSubject.getShooterRating(db);
             if(neededSubjectRating == null) {
               _log.w("Subject ${neededSubject.name} not found in database");
+              continue;
+            }
+            final prediction = shootersToPredictions![neededSubjectRating];
+            if(prediction == null) {
+              _log.w("Subject ${neededSubject.name} not found in shootersToPredictions for scoring group ${subjectScoringGroup.name}");
               continue;
             }
             var result = runOddsSimulation(
