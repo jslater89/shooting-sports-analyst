@@ -544,12 +544,45 @@ class _ResultPageState extends State<ResultPage> {
       case _MenuEntry.viewCompetitorMap:
         Map<String, int> intData = {};
         int locatedCount = 0;
+
+        _startOperation();
+        List<MatchEntry> attemptToLocateInRatings = [];
         for(var shooter in _canonicalMatch.shooters) {
+          bool foundShooter = false;
           if(shooter.region == "USA" && shooter.regionSubdivision != null) {
             intData.increment(shooter.regionSubdivision!);
             locatedCount++;
+            foundShooter = true;
+          }
+
+          if(!foundShooter && widget.ratings != null) {
+            attemptToLocateInRatings.add(shooter);
           }
         }
+
+        if(attemptToLocateInRatings.isNotEmpty && widget.ratings != null) {
+          if(_cachedRatings == null) {
+            _cachedRatings = InMemoryCachedRatingSource();
+            await _cachedRatings!.initFrom(widget.ratings!, ratingsToCache: attemptToLocateInRatings);
+          }
+          else {
+            await _cachedRatings!.addRatings(widget.ratings!, attemptToLocateInRatings);
+          }
+
+          for(var shooter in attemptToLocateInRatings) {
+            final group = _cachedRatings!.groupForDivisionSync(shooter.division);
+            if(group != null) {
+              final rating = _cachedRatings!.lookupRatingSync(group, shooter.memberNumber);
+              if(rating?.regionSubdivision != null) {
+                intData.increment(rating!.regionSubdivision!);
+                locatedCount++;
+              }
+            }
+          }
+        }
+
+        _endOperation();
+
         _log.i("Located $locatedCount of ${_canonicalMatch.shooters.length} shooters");
         Map<String, double> doubleData = {};
         for(var entry in intData.entries) {
@@ -566,6 +599,10 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   bool _matchHasLocatedShooters() {
+    if(widget.ratings != null) {
+      return true;
+    }
+
     for(var shooter in _canonicalMatch.shooters) {
       if(shooter.region == "USA" && shooter.regionSubdivision != null) {
         return true;
