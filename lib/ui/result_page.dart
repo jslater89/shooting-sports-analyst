@@ -549,7 +549,7 @@ class _ResultPageState extends State<ResultPage> {
         List<MatchEntry> attemptToLocateInRatings = [];
         for(var shooter in _canonicalMatch.shooters) {
           bool foundShooter = false;
-          if(shooter.region == "USA" && shooter.regionSubdivision != null) {
+          if(shooter.region == "USA" && shooter.regionSubdivision != null && shooter.regionSubdivision!.isNotEmpty) {
             intData.increment(shooter.regionSubdivision!);
             locatedCount++;
             foundShooter = true;
@@ -573,8 +573,8 @@ class _ResultPageState extends State<ResultPage> {
             final group = _cachedRatings!.groupForDivisionSync(shooter.division);
             if(group != null) {
               final rating = _cachedRatings!.lookupRatingSync(group, shooter.memberNumber);
-              if(rating?.regionSubdivision != null) {
-                intData.increment(rating!.regionSubdivision!);
+              if(rating?.regionSubdivision != null && rating!.regionSubdivision!.isNotEmpty) {
+                intData.increment(rating.regionSubdivision!);
                 locatedCount++;
               }
             }

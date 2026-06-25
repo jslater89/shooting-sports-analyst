@@ -885,7 +885,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. no. competitors", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${displayedStats.competitorCounts.average.toStringAsFixed(1)}",
+              "${displayedStats.competitorCounts.isNotEmpty ? displayedStats.competitorCounts.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -1003,8 +1003,12 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
       return;
     }
 
+    if(rating.isNaN || rating.isInfinite) {
+      return;
+    }
+
     var ratingText = "${rating.round()}";
-    if(error != 0) {
+    if(error != 0 && !error.isNaN && !error.isInfinite) {
       ratingText += "±${error.round()}";
     }
 
