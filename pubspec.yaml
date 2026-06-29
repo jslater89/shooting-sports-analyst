@@ -85,6 +85,7 @@ dependencies:
   device_info_plus: ^12.2.0
   watcher: ^1.1.4
   csv: ^8.0.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

@@ -239,29 +239,34 @@ extension RatingProjectDatabase on AnalystDatabase {
         return null;
       }
     }
-    if(usePossibleMemberNumbers) {
-      var rating = await isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
-        .filter()
-        .project((q) => q.idEqualTo(project.id))
-        .group((q) => q.uuidEqualTo(group.uuid))
-        .findFirst();
-      if(rating != null) {
-        if(saveToCache) {
+    try {
+      if(usePossibleMemberNumbers) {
+        var rating = await isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .project((q) => q.idEqualTo(project.id))
+          .group((q) => q.uuidEqualTo(group.uuid))
+          .findFirst();
+        if(rating != null) {
+          if(saveToCache) {
+            cacheRating(project, group, rating);
+          }
+          return rating;
+        }
+      }
+      else {
+        var rating = await isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .project((q) => q.idEqualTo(project.id))
+          .group((q) => q.uuidEqualTo(group.uuid))
+          .findFirst();
+        if(rating != null && saveToCache) {
           cacheRating(project, group, rating);
         }
         return rating;
       }
-    }
-    else {
-      var rating = await isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
-        .filter()
-        .project((q) => q.idEqualTo(project.id))
-        .group((q) => q.uuidEqualTo(group.uuid))
-        .findFirst();
-      if(rating != null && saveToCache) {
-        cacheRating(project, group, rating);
-      }
-      return rating;
+    } catch(e, st) {
+      _log.e("Error looking up shooter rating", error: e, stackTrace: st);
+      _log.e("Project: ${project.name}, group: ${group.name}, member number: $memberNumber, use possible: $usePossibleMemberNumbers, use cache: $useCache, only cache: $onlyCache, save to cache: $saveToCache");
     }
     return null;
   }
@@ -289,29 +294,36 @@ extension RatingProjectDatabase on AnalystDatabase {
         return null;
       }
     }
-    if(usePossibleMemberNumbers) {
-      var rating = isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
-        .filter()
-        .project((q) => q.idEqualTo(project.id))
-        .group((q) => q.uuidEqualTo(group.uuid))
-        .findFirstSync();
-      if(rating != null) {
-        if(saveToCache) {
+
+    try {
+      if(usePossibleMemberNumbers) {
+        var rating = isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .project((q) => q.idEqualTo(project.id))
+          .group((q) => q.uuidEqualTo(group.uuid))
+          .findFirstSync();
+        if(rating != null) {
+          if(saveToCache) {
+            cacheRating(project, group, rating);
+          }
+          return rating;
+        }
+      }
+      else {
+        var rating = isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .project((q) => q.idEqualTo(project.id))
+          .group((q) => q.uuidEqualTo(group.uuid))
+          .findFirstSync();
+        if(rating != null && saveToCache) {
           cacheRating(project, group, rating);
         }
         return rating;
       }
     }
-    else {
-      var rating = isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
-        .filter()
-        .project((q) => q.idEqualTo(project.id))
-        .group((q) => q.uuidEqualTo(group.uuid))
-        .findFirstSync();
-      if(rating != null && saveToCache) {
-        cacheRating(project, group, rating);
-      }
-      return rating;
+    catch(e, st) {
+      _log.e("Error looking up shooter rating", error: e, stackTrace: st);
+      _log.e("Project: ${project.name}, group: ${group.name}, member number: $memberNumber, use possible: $usePossibleMemberNumbers, use cache: $useCache, only cache: $onlyCache, save to cache: $saveToCache");
     }
     return null;
   }

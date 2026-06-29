@@ -158,7 +158,7 @@ class AnalystDatabase {
         maxSizeMiB: 1024 * 32,
         directory: db.path,
         name: test ? "test-database" : "database",
-        // compactOnLaunch: CompactCondition(minRatio: 1.5),
+        // compactOnLaunch: CompactCondition(minRatio: 1.25),
       );
     }
     on IsarError catch(e, stackTrace) {
@@ -185,6 +185,9 @@ class AnalystDatabase {
       await migration.checkAndApply(this);
     }
 
+    // await isar.verify();
+    // _log.i("Database verified");
+
     _readyCompleter.complete();
   }
 
@@ -196,8 +199,8 @@ class AnalystDatabase {
     return isar.writeTxnSync(txn, silent: silent);
   }
 
-  Future<void> saveBackup(Directory path) async {
-    var filename = "${DateTime.now().toIso8601String()}.backup.isar";
+  Future<void> saveBackup(Directory path, {String? filename}) async {
+    filename = filename ??"${DateTime.now().toIso8601String()}.backup.isar";
     var fullPath = path.absolute.path + Platform.pathSeparator + filename;
     _log.i("Saving backup to $fullPath");
     await isar.copyToFile(fullPath);

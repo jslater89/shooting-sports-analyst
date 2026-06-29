@@ -4,14 +4,24 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
 import 'package:shooting_sports_analyst/data/help/entries/match_database_manager_help.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/ui/database/stats/db_statistics_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+final _log = SSALogger("MatchDatabaseManagerPage");
 
 class MatchDatabaseManagerPage extends StatefulWidget {
   const MatchDatabaseManagerPage({super.key});
@@ -62,22 +72,44 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                 ),
               ),
               Tooltip(
-                message: "Migrate matches from old match cache",
+                message: "Back up database to file",
                 child: IconButton(
                   icon: Icon(Icons.copy),
-                  onPressed: () {
-                    showDialog(context: context, builder: (context) => AlertDialog(
-                      title: Text("Migration no longer supported"),
-                      content: Text("Due to the age of the data store used by the match cache,\n"
-                          "migration is no longer supported. Use an 8.0.0 beta version or\n"
-                          "earlier to migrate matches."),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text("OK"),
-                        ),
-                      ],
-                    ));
+                  onPressed: () async {
+                    final now = DateFormat("yyyy-MM-dd-HH-mm").format(DateTime.now());
+                    final fileChoice = await FilePicker.saveFile(
+                      dialogTitle: "Backup path",
+                      fileName: "analyst-$now.isar",
+                      initialDirectory: Directory.current.path,
+                    );
+                    if(fileChoice != null) {
+                      _log.i("Backup file choice: $fileChoice");
+                      final backupFile = File(fileChoice);
+                      final backupDir = backupFile.parent;
+                      final filename = basename(backupFile.path);
+                      _log.d("Backup dir: $backupDir, filename: $filename");
+                      final db = AnalystDatabase();
+
+                      final start = DateTime.now();
+                      final dbFuture = db.saveBackup(backupDir, filename: filename);
+                      await LoadingDialog.show(context: context, waitOn: dbFuture, title: "Saving backup...");
+                      final end = DateTime.now();
+                      _log.i("Backup took ${end.difference(start).inMilliseconds} milliseconds");
+
+                      final uri = Uri.file(backupDir.path);
+                      final canLaunchFile = await canLaunchUrl(uri);
+                      _log.d("Can launch $uri: $canLaunchFile");
+                      final action = canLaunchFile ? SnackBarAction(
+                        label: "Open",
+                        onPressed: () {
+                          launchUrl(uri);
+                        },
+                      ) : null;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text("Backup saved to ${backupFile.path}"),
+                        action: action,
+                      ));
+                    }
                   },
                 ),
               ),
