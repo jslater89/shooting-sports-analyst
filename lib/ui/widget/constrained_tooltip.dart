@@ -17,7 +17,7 @@ class ConstrainedTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var style = Theme.of(context).textTheme.bodySmall!.copyWith(color: ThemeColors.onBackgroundColor(context));
+    var style = Theme.of(context).textTheme.bodySmall!.copyWith(color: ThemeColors.onBackgroundColor(context, adaptToTheme: false));
     return Tooltip(
       waitDuration: waitDuration,
       richMessage: WidgetSpan(

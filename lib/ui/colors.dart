@@ -30,9 +30,9 @@ class ThemeColors {
     }
   }
 
-  static Color onBackgroundColor(BuildContext context) {
+  static Color onBackgroundColor(BuildContext context, {bool adaptToTheme = true}) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
-    if(isDark) {
+    if(isDark && adaptToTheme) {
       return Colors.grey[300]!;
     }
     else {
