@@ -7,6 +7,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/migrations/add_subjects_to_wagers.dart';
+import 'package:shooting_sports_analyst/data/database/migrations/resave_precalculated_scores.dart';
 // import 'package:shooting_sports_analyst/data/database/migrations/backfill_wager_scoring_groups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/migration.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -43,6 +44,7 @@ abstract class Migration {
   static List<Migration> availableMigrations = [
     AddSubjectsToWagers(),
     FixWagerTransactions(),
+    ResavePrecalculatedScoresMigration(),
     // BackfillWagerScoringGroups(),
   ];
 }

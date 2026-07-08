@@ -543,7 +543,7 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case _MenuEntry.viewCompetitorMap:
         Map<String, int> intData = {};
-        int locatedCount = 0;
+        int locatedInRegistrationCount = 0;
 
         _startOperation();
         List<MatchEntry> attemptToLocateInRatings = [];
@@ -551,7 +551,7 @@ class _ResultPageState extends State<ResultPage> {
           bool foundShooter = false;
           if(shooter.region == "USA" && shooter.regionSubdivision != null && shooter.regionSubdivision!.isNotEmpty) {
             intData.increment(shooter.regionSubdivision!);
-            locatedCount++;
+            locatedInRegistrationCount++;
             foundShooter = true;
           }
 
@@ -560,6 +560,7 @@ class _ResultPageState extends State<ResultPage> {
           }
         }
 
+        int locatedInRatingsCount = 0;
         if(attemptToLocateInRatings.isNotEmpty && widget.ratings != null) {
           if(_cachedRatings == null) {
             _cachedRatings = InMemoryCachedRatingSource();
@@ -575,7 +576,7 @@ class _ResultPageState extends State<ResultPage> {
               final rating = _cachedRatings!.lookupRatingSync(group, shooter.memberNumber);
               if(rating?.regionSubdivision != null && rating!.regionSubdivision!.isNotEmpty) {
                 intData.increment(rating.regionSubdivision!);
-                locatedCount++;
+                locatedInRatingsCount++;
               }
             }
           }
@@ -583,7 +584,8 @@ class _ResultPageState extends State<ResultPage> {
 
         _endOperation();
 
-        _log.i("Located $locatedCount of ${_canonicalMatch.shooters.length} shooters");
+        _log.i("Located $locatedInRegistrationCount of ${_canonicalMatch.shooters.length} shooters in registration");
+        _log.i("Located $locatedInRatingsCount of ${attemptToLocateInRatings.length} remaining shooters in ratings");
         Map<String, double> doubleData = {};
         for(var entry in intData.entries) {
           doubleData[entry.key] = entry.value.toDouble();
