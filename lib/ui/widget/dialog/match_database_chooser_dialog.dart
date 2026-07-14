@@ -13,11 +13,13 @@ import 'package:shooting_sports_analyst/data/database/match/match_query_element.
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("MatchDatabaseChooserDialog");
 
@@ -95,11 +97,19 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
 }
 
 class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog> {
+  static const _allSports = "All";
+
   late AnalystDatabase db;
 
   int page = 0;
 
-  List<Sport>? sports;
+  /// Hard constraint from the caller, if any.
+  List<Sport>? constrainedSports;
+  /// Interactive sport filter; null means all within [constrainedSports].
+  Sport? selectedSport;
+  DateTime? after;
+  DateTime? before;
+
   List<String> addedMatches = [];
   bool alphabeticSort = false;
 
@@ -108,19 +118,40 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   Set<int> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
+  TextEditingController afterController = TextEditingController();
+  TextEditingController beforeController = TextEditingController();
+  TextEditingController sportController = TextEditingController(text: _allSports);
   ScrollController _scrollController = ScrollController();
 
   Timer? _searchDebouncer;
+
+  bool get _showSportFilter => widget.sport == null;
+
+  List<Sport> get _sportFilterOptions {
+    if(constrainedSports != null) {
+      return constrainedSports!;
+    }
+    return SportRegistry().availableSports;
+  }
+
+  List<Sport>? get _querySports {
+    if(selectedSport != null) {
+      return [selectedSport!];
+    }
+    return constrainedSports;
+  }
+
   @override
   void initState() {
     super.initState();
     db = AnalystDatabase();
 
     if(widget.sport != null) {
-      sports = [widget.sport!];
+      constrainedSports = [widget.sport!];
+      selectedSport = widget.sport;
     }
     else {
-      sports = widget.sports;
+      constrainedSports = widget.sports;
     }
     searchController.addListener(() {
       _searchDebouncer?.cancel();
@@ -149,34 +180,56 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   void dispose() {
     _scrollController.dispose();
     searchController.dispose();
+    afterController.dispose();
+    beforeController.dispose();
+    sportController.dispose();
     _searchDebouncer?.cancel();
     super.dispose();
+  }
+
+  List<DbShootingMatch> _filterLocalMatches(List<DbShootingMatch> source) {
+    var filtered = [...source];
+
+    var querySports = _querySports;
+    if(querySports != null && querySports.isNotEmpty) {
+      var names = querySports.map((s) => s.name).toSet();
+      filtered = filtered.where((m) => names.contains(m.sportName)).toList();
+    }
+
+    if(after != null) {
+      filtered = filtered.where((m) => m.date.isAfter(after!)).toList();
+    }
+    if(before != null) {
+      filtered = filtered.where((m) => m.date.isBefore(before!)).toList();
+    }
+
+    if(searchController.text.isNotEmpty) {
+      var search = searchController.text.toLowerCase();
+      filtered = filtered.where((m) =>
+        m.eventName.toLowerCase().contains(search)).toList();
+    }
+
+    if(alphabeticSort) {
+      filtered.sort((a, b) => a.eventName.compareTo(b.eventName));
+    }
+    else {
+      filtered.sort((a, b) => b.date.compareTo(a.date));
+    }
+
+    return filtered;
   }
 
   Future<List<int>> _getAllMatchIdsMatchingSearch() async {
     var matchIds = <int>[];
     if(widget.matches != null) {
-      var matches = [...widget.matches!];
-
-      if(searchController.text.isNotEmpty) {
-        var search = searchController.text;
-        matches = matches.where((m) =>
-          m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
-      }
-
-      if(alphabeticSort) {
-        matches.sort((a, b) => a.eventName.compareTo(b.eventName));
-      }
-      else {
-        matches.sort((a, b) => b.date.compareTo(a.date));
-      }
-
-      matchIds = matches.map((m) => m.id).toList();
+      matchIds = _filterLocalMatches(widget.matches!).map((m) => m.id).toList();
     }
     else {
       matchIds = await db.queryMatchIds(
         name: searchController.text.isNotEmpty ? searchController.text : null,
-        sports: sports,
+        sports: _querySports,
+        after: after,
+        before: before,
         pageSize: 100000,
         sort: alphabeticSort ? const NameSort() : const DateSort(),
       );
@@ -187,27 +240,16 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
 
   Future<void> _updateMatches() async {
     if(widget.matches != null) {
-      setState(() {
-        matches = [...widget.matches!];
-      });
-      if(searchController.text.isNotEmpty) {
-        _applySearch();
-      }
-      else {
-        searchedMatches = [...matches];
-      }
-      if(alphabeticSort) {
-        matches.sort((a, b) => a.eventName.compareTo(b.eventName));
-      }
-      else {
-        matches.sort((a, b) => b.date.compareTo(a.date));
-      }
+      matches = [...widget.matches!];
+      searchedMatches = _filterLocalMatches(matches);
     }
     else {
       if(page > 0) {
         var newMatches = await db.queryMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
-          sport: widget.sport,
+          sports: _querySports,
+          after: after,
+          before: before,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
           page: page,
         );
@@ -216,7 +258,9 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       else {
         matches = await db.queryMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
-          sport: widget.sport,
+          sports: _querySports,
+          after: after,
+          before: before,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
         );
       }
@@ -230,9 +274,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
 
   void _applySearch() {
     if(widget.matches != null) {
-      var search = searchController.text;
-      searchedMatches = matches.where((m) =>
-          m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
+      searchedMatches = _filterLocalMatches(matches);
     }
     else {
       page = 0;
@@ -244,6 +286,13 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       duration: Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  void _updateDates() {
+    beforeController.text = before != null ? programmerYmdFormat.format(before!) : "(none)";
+    afterController.text = after != null ? programmerYmdFormat.format(after!) : "(none)";
+    page = 0;
+    _applySearch();
   }
 
   @override
@@ -436,6 +485,131 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                 },
               ),
             )
+          ],
+        ),
+        SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if(_showSportFilter) ...[
+              DropdownMenu<String>(
+                width: 140,
+                label: Text("Sport"),
+                controller: sportController,
+                dropdownMenuEntries: [
+                  DropdownMenuEntry(value: _allSports, label: _allSports),
+                  ..._sportFilterOptions.map((s) =>
+                    DropdownMenuEntry(value: s.name, label: s.name)),
+                ],
+                onSelected: (value) {
+                  if(value == null || value == _allSports) {
+                    selectedSport = null;
+                    sportController.text = _allSports;
+                  }
+                  else {
+                    selectedSport = SportRegistry().lookup(value);
+                    if(selectedSport == null) {
+                      for(var s in _sportFilterOptions) {
+                        if(s.name == value) {
+                          selectedSport = s;
+                          break;
+                        }
+                      }
+                    }
+                    sportController.text = value;
+                  }
+                  page = 0;
+                  _applySearch();
+                },
+                initialSelection: selectedSport?.name ?? _allSports,
+              ),
+              SizedBox(width: 12),
+            ],
+            SizedBox(
+              width: 180,
+              child: TextField(
+                decoration: InputDecoration(
+                  labelText: "After",
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.calendar_month),
+                    onPressed: () async {
+                      var date = await showDatePicker(
+                        context: context,
+                        initialDate: after ?? DateTime.now(),
+                        firstDate: DateTime(1976, 5, 24),
+                        lastDate: DateTime.now(),
+                      );
+                      after = date;
+                      _updateDates();
+                    },
+                  ),
+                ),
+                controller: afterController,
+                onSubmitted: (text) {
+                  if(text.isEmpty) {
+                    if(after != null) {
+                      after = null;
+                      _updateDates();
+                    }
+                  }
+                  else {
+                    try {
+                      var date = programmerYmdFormat.parseLoose(text);
+                      if(after != date) {
+                        after = date;
+                        _updateDates();
+                      }
+                    } on FormatException catch (e) {
+                      _log.w("Format error", error: e);
+                    }
+                  }
+                },
+              ),
+            ),
+            SizedBox(width: 12),
+            SizedBox(
+              width: 180,
+              child: TextField(
+                decoration: InputDecoration(
+                  labelText: "Before",
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.calendar_month),
+                    onPressed: () async {
+                      var date = await showDatePicker(
+                        context: context,
+                        initialDate: before ?? DateTime.now(),
+                        firstDate: DateTime(1976, 5, 24),
+                        lastDate: DateTime.now(),
+                      );
+                      before = date;
+                      _updateDates();
+                    },
+                  ),
+                ),
+                controller: beforeController,
+                onSubmitted: (text) {
+                  if(text.isEmpty) {
+                    if(before != null) {
+                      before = null;
+                      _updateDates();
+                    }
+                  }
+                  else {
+                    try {
+                      var date = programmerYmdFormat.parseLoose(text);
+                      if(before != date) {
+                        before = date;
+                        _updateDates();
+                      }
+                    } on FormatException catch (e) {
+                      _log.w("Format error", error: e);
+                    }
+                  }
+                },
+              ),
+            ),
           ],
         ),
         SizedBox(height: 10),

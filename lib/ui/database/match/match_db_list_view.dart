@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/match/match_query_element.
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/database/match/widget/match_db_list_view_search.dart';
@@ -164,6 +165,7 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
   MatchSortField sort = const DateSort();
   DateTime? before;
   DateTime? after;
+  Sport? sport;
 
   void changed() {
     notifyListeners();
@@ -175,6 +177,7 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
     sort = const DateSort();
     before = null;
     after = null;
+    sport = null;
     notifyListeners();
   }
 }
@@ -211,8 +214,9 @@ class MatchDatabaseListModel extends ChangeNotifier {
         matchAll: search?.matchAll ?? false,
         sort: search?.sort ?? const DateSort(),
         limit: 100,
-        after: search?.before,
-        before: search?.after,
+        after: search?.after,
+        before: search?.before,
+        sport: search?.sport,
       );
       searchedMatches = newMatches;
       loading = false;
@@ -221,8 +225,9 @@ class MatchDatabaseListModel extends ChangeNotifier {
 
     var newMatches = await matchDb.queryMatches(
       name: search?.name ?? "",
-      after: search?.before,
-      before: search?.after,
+      after: search?.after,
+      before: search?.before,
+      sport: search?.sport,
       sort: search?.sort ?? const DateSort(),
     );
 
@@ -240,6 +245,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
       name: _currentSearch?.name,
       before: _currentSearch?.before,
       after: _currentSearch?.after,
+      sport: _currentSearch?.sport,
       page: _page,
       sort: _currentSearch?.sort ?? const DateSort(),
     );

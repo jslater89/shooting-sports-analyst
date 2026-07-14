@@ -232,13 +232,15 @@ class AnalystDatabase {
     int pageSize = 100,
     MatchSortField sort = const DateSort(),
     Sport? sport,
+    List<Sport>? sports,
   }) {
+    final sportFilter = sports ?? (sport != null ? [sport] : null);
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(
       [
         if(name != null)
           NamePartsQuery(name),
-        if(sport != null)
-          SportQuery([sport]),
+        if(sportFilter != null && sportFilter.isNotEmpty)
+          SportQuery(sportFilter),
         if(after != null || before != null)
           DateQuery(after: after, before: before),
       ],
@@ -286,7 +288,10 @@ class AnalystDatabase {
     DateTime? before,
     bool matchAll = false,
     MatchSortField sort = const NameSort(),
+    Sport? sport,
+    List<Sport>? sports,
   }) async {
+    final sportFilter = sports ?? (sport != null ? [sport] : null);
     var queryLower = query.toLowerCase();
     var words = Isar.splitWords(queryLower);
     final numRegex = RegExp(r'^\d{1,2}$');
@@ -310,6 +315,8 @@ class AnalystDatabase {
     // so get the names only and load exactly the number of requested hits at the end.
     Query<String> dbQuery = _buildMatchNameQuery([
       TextSearchQuery(terms),
+      if(sportFilter != null && sportFilter.isNotEmpty)
+        SportQuery(sportFilter),
       if(after != null || before != null)
         DateQuery(after: after, before: before),
     ]);

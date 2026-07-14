@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
@@ -28,6 +29,9 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
   TextEditingController _searchController = TextEditingController();
   TextEditingController _beforeController = TextEditingController();
   TextEditingController _afterController = TextEditingController();
+  TextEditingController _sportController = TextEditingController(text: "All");
+
+  static const _allSports = "All";
 
   @override
   void initState() {
@@ -40,6 +44,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
     _searchController.dispose();
     _beforeController.dispose();
     _afterController.dispose();
+    _sportController.dispose();
   }
 
   @override
@@ -130,6 +135,29 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                         searchModel.changed();
                       },
                       initialSelection: searchModel.sort,
+                    ),
+                    SizedBox(width: 12),
+                    DropdownMenu<String>(
+                      width: 120 * uiScaleFactor,
+                      label: Text("Sport"),
+                      controller: _sportController,
+                      dropdownMenuEntries: [
+                        DropdownMenuEntry(value: _allSports, label: _allSports),
+                        ...SportRegistry().availableSports.map((s) =>
+                          DropdownMenuEntry(value: s.name, label: s.name)),
+                      ],
+                      onSelected: (value) {
+                        if(value == null || value == _allSports) {
+                          searchModel.sport = null;
+                          _sportController.text = _allSports;
+                        }
+                        else {
+                          searchModel.sport = SportRegistry().lookup(value);
+                          _sportController.text = value;
+                        }
+                        searchModel.changed();
+                      },
+                      initialSelection: searchModel.sport?.name ?? _allSports,
                     ),
                   ],
                 ),

@@ -17,7 +17,8 @@
 /// qualifying finishes at counting matches break streaks.
 ///
 /// Match-first online pass: per match and division, only shooters who qualify
-/// or hold an active streak get rating lookups.
+/// or hold an active streak get rating lookups. Each shooter may contribute
+/// multiple completed runs to top-K (not only their single longest).
 ///
 /// Usage: `STR [topK]` from the menu, then enter thresholds when prompted
 /// (place ints and/or percentages with `%`, space- or comma-separated),
@@ -141,7 +142,9 @@ class _ShooterStreakState {
 
   final ShooterRating rating;
   final List<_Finish> currentRun = [];
-  List<_Finish> bestRun = [];
+  /// Completed runs (broken by a non-qualifying counting finish), plus the
+  /// final open run after [finalize]. Multiple runs per shooter can make top-K.
+  final List<List<_Finish>> completedRuns = [];
   _Finish? lastCountingFinish;
 
   void onQualifying(_Finish finish) {
@@ -150,22 +153,24 @@ class _ShooterStreakState {
   }
 
   void onNonQualifying(_Finish finish) {
-    _commitBest();
+    _commitCurrent();
     currentRun.clear();
     lastCountingFinish = finish;
   }
 
   void finalize() {
-    _commitBest();
+    _commitCurrent();
   }
 
-  void _commitBest() {
-    if (currentRun.length > bestRun.length) {
-      bestRun = [...currentRun];
+  void _commitCurrent() {
+    if (currentRun.isNotEmpty) {
+      completedRuns.add([...currentRun]);
     }
   }
 
-  List<_Finish>? finishesFor(
+  /// Candidate streak finish lists for [bound]. All-time / 2025 emit every
+  /// completed run; active emits only the trailing open run when eligible.
+  List<List<_Finish>> runsFor(
     _StreakBound bound,
     _Threshold threshold,
     int currentYear,
@@ -173,25 +178,27 @@ class _ShooterStreakState {
     switch (bound) {
       case _StreakBound.allTime:
       case _StreakBound.in2025:
-        if (bestRun.isEmpty) {
-          return null;
-        }
-        return bestRun;
+        return [
+          for (final run in completedRuns)
+            if (run.isNotEmpty) run,
+        ];
       case _StreakBound.active:
         final last = lastCountingFinish;
         if (last == null) {
-          return null;
+          return const [];
         }
         if (last.date.year != currentYear) {
-          return null;
+          return const [];
         }
         if (!threshold.qualifies(last)) {
-          return null;
+          return const [];
         }
         if (currentRun.isEmpty) {
-          return null;
+          return const [];
         }
-        return [...currentRun];
+        return [
+          [...currentRun],
+        ];
     }
   }
 }
@@ -313,17 +320,15 @@ class _GroupStreakTracker {
     final stateMap = _states[thresholdIndex][bound]!;
     final streaks = <_Streak>[];
     for (final state in stateMap.values) {
-      final finishes = state.finishesFor(bound, threshold, currentYear);
-      if (finishes == null || finishes.isEmpty) {
-        continue;
+      for (final finishes in state.runsFor(bound, threshold, currentYear)) {
+        streaks.add(_Streak(
+          finishes: finishes,
+          groupName: groupName,
+          rating: state.rating,
+          threshold: threshold,
+          bound: bound,
+        ));
       }
-      streaks.add(_Streak(
-        finishes: finishes,
-        groupName: groupName,
-        rating: state.rating,
-        threshold: threshold,
-        bound: bound,
-      ));
     }
     streaks.sort((a, b) {
       final byLen = b.length.compareTo(a.length);

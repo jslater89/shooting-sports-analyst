@@ -27,7 +27,6 @@ enum _DoubleKeys {
 }
 
 class LatentLogRatingEvent extends RatingEvent {
-  @override
   LatentLogRatingEvent({
     required this.settings,
     required ShootingMatch match,
