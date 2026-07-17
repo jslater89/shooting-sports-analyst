@@ -10,6 +10,7 @@ import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/server/providers.dart";
 
 import "admin_console_impl/context.dart";
+import "admin_console_impl/export_rating_projects_command.dart";
 import "admin_console_impl/import_calculate_projects_command.dart";
 import "admin_console_impl/main_menu.dart";
 
@@ -58,6 +59,11 @@ Future<void> main(List<String> args) async {
       fullRecalc: fullRecalc,
       skipDeduplication: skipDeduplication,
     );
+    exit(ok ? 0 : 1);
+  }
+  else if(args.isNotEmpty && args[0] == "ERP") {
+    final names = args.skip(1).toList();
+    final ok = await ExportRatingProjectsCommand(ctx).runNames(console, names);
     exit(ok ? 0 : 1);
   }
 

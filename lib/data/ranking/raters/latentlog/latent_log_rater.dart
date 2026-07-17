@@ -227,7 +227,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     Map<ShooterRating, double> competitorWeights = {};
     Map<ShooterRating, double> competitorBaselineResiduals = {};
     double baselineResidual = 0.0;
-    double weightedHistorySum = 0.0;
+    double weightedMaturitySum = 0.0;
     double totalWeight = 0.0;
     double weightedSquareRootVarianceSum = 0.0;
     double squaredWeightedVarianceSum = 0.0;
@@ -266,7 +266,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       weightedSquareRootVarianceSum += weight * sqrt(shooterVariance);
       squaredWeightedVarianceSum += weight * weight * shooterVariance;
       totalWeight += weight;
-      weightedHistorySum += weight * shooter.length;
+      // Per-competitor logarithmic maturity μ_i, then precision-weighted
+      // into field maturity μ̄ (paper Step 6).
+      weightedMaturitySum += weight * _graphMaturity(shooter.length.toDouble());
 
       final residual = agedRating - scoreEvidence;
       competitorBaselineResiduals[shooter] = residual;
@@ -283,7 +285,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final rawBaseline = baselineResidual / totalWeight;
       double robustResidualSum = 0.0;
       double robustWeightSum = 0.0;
-      double robustAverageHistorySum = 0.0;
+      double robustWeightedMaturitySum = 0.0;
       for (var shooter in validShooters) {
         final baseWeight = competitorWeights[shooter];
         final residual = competitorBaselineResiduals[shooter];
@@ -305,12 +307,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         competitorWeights[shooter] = effectiveWeight;
         robustResidualSum += effectiveWeight * residual;
         robustWeightSum += effectiveWeight;
-        robustAverageHistorySum += effectiveWeight * shooter.length;
+        robustWeightedMaturitySum +=
+            effectiveWeight * _graphMaturity(shooter.length.toDouble());
       }
       if (robustWeightSum > 0) {
         baselineResidual = robustResidualSum;
         totalWeight = robustWeightSum;
-        weightedHistorySum = robustAverageHistorySum;
+        weightedMaturitySum = robustWeightedMaturitySum;
       }
     }
 
@@ -321,10 +324,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       scores,
     );
 
-    final fieldMaturity = weightedHistorySum / totalWeight;
-    final newFieldVariance = settings.noveltyVariance
-      * (1 - ((log(fieldMaturity + 1) / log(settings.graphMaturityThreshold + 1)).clamp(0.0, 1.0)));
-
+    // Field maturity μ̄ ∈ [0, 1]: precision-weighted mean of per-competitor
+    // logarithmic maturity fractions. Novelty scales by (1 - μ̄).
+    final fieldMaturity =
+        totalWeight > 0 ? (weightedMaturitySum / totalWeight).clamp(0.0, 1.0) : 0.0;
+    final newFieldVariance = settings.noveltyVariance * (1.0 - fieldMaturity);
     for (var shooter in validShooters) {
       shooter as LatentLogRating;
       final shooterVariance = competitorVariances[shooter];
@@ -697,7 +701,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         "Own variance (time drift): {{ownVariance}} ({{timeVariance}}) SV",
         "Own dispersion: {{ownDispersion}} SV",
         "Tail/weak field noise: {{tailNoise}}/{{weakField}} SV",
-        "Novelty noise/k: {{noveltyNoise}} SV, k = {{fieldMaturity}}",
+        "Novelty noise/μ̄: {{noveltyNoise}} SV, μ̄ = {{fieldMaturity}}",
         "Global/local noise: {{globalBaselineNoise}}/{{localBaselineNoise}} SV",
         "Observation/total noise: {{observationNoise}}/{{totalNoise}} SV",
         "z-score/damping/Kalman gain: {{innovationZScore}}/{{weight}}x/{{kalmanGain}}",
@@ -889,6 +893,15 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         ),
       ],
     );
+  }
+
+  /// Per-competitor graph maturity μ_i = min(1, ln(k+1) / ln(k_max+1)).
+  double _graphMaturity(double experienceCount) {
+    final kMax = settings.graphMaturityThreshold;
+    if (kMax <= 0) {
+      return 1.0;
+    }
+    return (log(experienceCount + 1.0) / log(kMax + 1.0)).clamp(0.0, 1.0);
   }
 
   double _scoreEvidence(double ratio) {

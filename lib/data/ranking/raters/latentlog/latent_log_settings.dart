@@ -330,10 +330,11 @@ class LatentLogSettings extends RaterSettings {
 
   /// Match-count threshold k_max for full graph maturity.
   ///
-  /// Interpretation: each competitor contributes a maturity fraction
-  /// μ_i = min(1, k_i / k_max), where k_i is their match/stage history count.
-  /// Small values mature cohorts quickly; larger values keep novelty penalties
-  /// active for longer.
+  /// Interpretation: each competitor contributes a logarithmic maturity
+  /// fraction μ_i = min(1, ln(k_i+1) / ln(k_max+1)), where k_i is their
+  /// history count. Field maturity μ̄ is the precision-weighted mean of μ_i;
+  /// novelty variance scales by (1 - μ̄). Small values mature cohorts
+  /// quickly; larger values keep novelty penalties active for longer.
   ///
   /// Tuning: count-like scalar, positive.
   double graphMaturityThreshold = defaultGraphMaturityThreshold;

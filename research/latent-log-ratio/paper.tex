@@ -152,8 +152,8 @@
 			Maximum variance & \(\vmax\) & Upper bound on epistemic uncertainty after updates and drift \\
 			Skill drift rate & \(\sdrift\) & Rate at which epistemic uncertainty grows during periods of inactivity \\
 			Novelty variance & \(\psii\) & Penalty applied to topologically isolated or immature fields \\
-			Tail noise variance & \(\xii\) & Additional observation variance for deep-tail finishes \\
-			Weak-field variance & \(\omegai\) & Additional variance penalty for small, bottom-heavy matches \\
+			Tail noise variance & \(\xii\) & Score-dependent reliability penalty for deep-tail finishes (in \(W_i\) and \(R_{\mathrm{obs},i}\)) \\
+			Weak-field variance & \(\omegai\) & Match-level reliability penalty for small, bottom-heavy matches \\
 			Prediction sport variance & \(\spred\) & Sport noise used only in the prediction pipeline \\
 			\bottomrule
 		\end{tabular}
@@ -192,13 +192,13 @@
 
 		\item \textbf{Anchoring (Baseline Estimation):} A precision-weighted baseline \(B_{-i}\) is computed for each competitor by comparing expected ratings \(R_i\) to observed log-scores \(L_i\). Off-diagonal cohort covariance, controlled by the intraclass correlation parameter \(\rhoc\), is incorporated to produce a floating anchor in low-history fields rather than a rigid datum.
 
-		\item \textbf{Observation Variance Construction:} The total observation variance \(R_{\mathrm{obs},i}\) is formed as the sum of sport noise \(\sigma_{\mathrm{sport}}^2\), certainty-scaled individual dispersion \(\tilde{\sigma}_i^2\), baseline estimation variance \(\mathrm{Var}(B_{\mathrm{obs}})\), and a topological novelty penalty \(\sigma_{\mathrm{novel}}^2\) derived from field maturity \(\bar{\mu}\). An observation quality factor \(Q_i\) isolates physical components from structural noise.
+		\item \textbf{Observation Variance Construction:} The total observation variance \(R_{\mathrm{obs},i}\) is formed as the sum of generative physical noise (\(\sigma_{\mathrm{sport}}^2\), certainty-scaled individual dispersion \(\tilde{\sigma}_i^2\)), baseline estimation variance \(\mathrm{Var}(B_{\mathrm{obs}})\), and reliability/misspecification penalties (topological novelty \(\sigma_{\mathrm{novel}}^2\) in the core loop; deep-tail noise \(\eta(S_i)\) and weak-field pathology \(\sigma_{\mathrm{path}}^2\) in the extended model). An observation quality factor \(Q_i\) isolates generative physical components from those reliability penalties.
 
 		\item \textbf{Robust Mean Update:} The latent rating \(R_i\) is updated using a Kalman filter with gain \(K_i = V_i^{\mathrm{prior}} / (V_i^{\mathrm{prior}} + R_{\mathrm{obs},i})\), where \(V_i^{\mathrm{prior}}\) is the Trend-inflated prior defined in the next step. A Student-$t$ robust weighting \(w_t(z_i)\) is applied exclusively to the mean update to limit the influence of extreme single-event anomalies.
 
 		\item \textbf{State-Space Adaptation:}
-		The innovation \(e_i = O_i - R_i\) is processed into a physical version \(\ephys\), stripping out artificial structural and topological noise but retaining genuine physical outliers, and a robust version \(\erobust\), which additionally applies a Student-$t$ robust weighting to limit the influence of extreme single-event anomalies, through the observation quality factor \(Q_i\).
-		Two complementary mechanisms adapt the epistemic uncertainty. A \textit{Trend} term, derived from the committed momentum \(m_i\) carried forward from prior matches, acts as adaptive process noise and is injected into the prior \emph{before} the Kalman update: \(V_i^{\mathrm{prior}} = V_i^{\mathrm{age}} + \gamma \cdot \text{Trend}_i\). This raises the Kalman gain when the filter has accumulated evidence of sustained skill drift, allowing the mean update to respond. A \textit{Shock} term, derived from the current match's physical innovation, is injected into the posterior independently: \(V_i \leftarrow V_i^{\mathrm{prior}}(1 - K_i) + \gamma \cdot \text{Shock}_i\). Shock widens uncertainty after a single surprising observation without forcing the mean to chase it, and earns its way into a subsequent mean response only if the inflated posterior survives into the next match's prior.
+		The innovation \(e_i = O_i - R_i\) is processed into a quality-gated version \(\ephys\), stripping reliability/misspecification penalties while retaining generative physical outliers under a trustworthy log-link, and a robust version \(\erobust\), which additionally applies a Student-$t$ robust weighting to limit the influence of extreme single-event anomalies, through the observation quality factor \(Q_i\).
+		Two complementary mechanisms adapt the epistemic uncertainty. A \textit{Trend} term, derived from the committed momentum \(m_i\) carried forward from prior matches, acts as adaptive process noise and is injected into the prior \emph{before} the Kalman update: \(V_i^{\mathrm{prior}} = V_i^{\mathrm{age}} + \gamma \cdot \text{Trend}_i\). This raises the Kalman gain when the filter has accumulated evidence of sustained skill drift, allowing the mean update to respond. A \textit{Shock} term, derived from the current match's quality-gated innovation, is injected into the posterior independently: \(V_i \leftarrow V_i^{\mathrm{prior}}(1 - K_i) + \gamma \cdot \text{Shock}_i\). Shock widens uncertainty after a single surprising observation without forcing the mean to chase it, and earns its way into a subsequent mean response only if the inflated posterior survives into the next match's prior.
 		Meanwhile, the aleatoric dispersion \(\sigmai\) and momentum \(m_i\) receive exponential-moving-average updates.
 
 	\end{enumerate}
@@ -318,17 +318,18 @@
 	\end{equation}
 	When $\bar{\mu} = 0$ (a field of entirely new competitors), the penalty reaches $\psi^2$, safely throttling the update velocity for the entire cohort. As the competitors log their first few matches, $\bar{\mu}$ grows logarithmically, driving a rapid initial decay in the novelty penalty until it reaches exactly zero for mature fields.
 
-	Because $\sigma_{\mathrm{novel}}^2$ represents topological isolation rather than physical variance, we define an Observation Quality scalar $Q_i \in (0,1]$ as a heuristic denoising factor:
+	We partition observation variance into \emph{generative physical} noise---quantities that belong in the match-day likelihood under the log-ratio model---and \emph{reliability / misspecification} penalties that express skepticism about whether the observation's magnitude is a precise instrument for latent skill. In the core loop the only reliability term is novelty; the extended model (Section~2.4) adds deep-tail noise $\eta(S_i)$ and weak-field pathology $\sigma_{\mathrm{path}}^2$. The total observation variance and Observation Quality scalar $Q_i \in (0,1]$ are therefore:
 	\begin{equation}
-		R_{\mathrm{obs},i} = R_{\mathrm{clean},i} + \sigma_{\mathrm{novel}}^2
+		R_{\mathrm{obs},i} = R_{\mathrm{clean},i} + \sigma_{\mathrm{novel}}^2 + \eta(S_i) + \sigma_{\mathrm{path}}^2
 	\end{equation}
 	\begin{equation}
 		Q_i = \frac{R_{\mathrm{clean},i}}{R_{\mathrm{obs},i}}
 	\end{equation}
+	with $\eta(S_i) = \sigma_{\mathrm{path}}^2 = 0$ in the idealized core. Because every reliability term sits outside $R_{\mathrm{clean},i}$, $Q_i$ automatically strips novelty, deep-tail skepticism, and weak-field pathology together.
 
-	For the Kalman mean update (Step 7), observation quality is handled automatically: when structural noise inflates $R_{\mathrm{obs},i}$, the Kalman gain $K_i = V_i^{\mathrm{age}} / (V_i^{\mathrm{age}} + R_{\mathrm{obs},i})$ shrinks, and the rating barely moves. However, the momentum and dispersion trackers \mbox{(Steps 8--9)} are plain exponential moving averages with no built-in gain denominator---they process whatever innovation is fed to them at their configured adaptation rate. Without correction, a degenerate field inflated by novelty variance would pump structurally meaningless signal into these trackers at full strength.
+	For the Kalman mean update (Step 7), observation quality is handled automatically: when reliability penalties inflate $R_{\mathrm{obs},i}$, the Kalman gain $K_i = V_i^{\mathrm{prior}} / (V_i^{\mathrm{prior}} + R_{\mathrm{obs},i})$ shrinks, and the rating barely moves. However, the momentum and dispersion trackers \mbox{(Steps 8--9)} are plain exponential moving averages with no built-in gain denominator---they process whatever innovation is fed to them at their configured adaptation rate. Without correction, a degenerate field inflated by novelty variance (or a geometrically unreliable deep-tail residual) would pump untrustworthy signal into these trackers at full strength.
 
-	$Q_i$ fills this gap by playing the role of an observation-quality gate for the non-Kalman-filtered state variables. It is more selective than the Kalman gain: the gain discounts based on \emph{all} observation noise (physical and structural alike), while $Q_i$ strips only the structural component, deliberately leaving physical noise intact. This selectivity is essential because the adaptation trackers measure different things about a competitor's behavior: genuine physical outliers \emph{should} reach the shock detector and shatter epistemic confidence, but artificial noise from unanchored fields should not inflate momentum or dispersion.
+	$Q_i$ fills this gap by playing the role of an observation-quality gate for the non-Kalman-filtered state variables. It is more selective than the Kalman gain: the gain discounts based on \emph{all} observation noise (generative and reliability alike), while $Q_i$ strips only the reliability / misspecification component, deliberately leaving generative physical noise intact. This selectivity is essential because the adaptation trackers measure different things about a competitor's behavior: large residuals under a trustworthy log-link \emph{should} reach the shock detector and shatter epistemic confidence, but artificial noise from unanchored fields---or score-dependent contamination whose reported magnitude is not a calibrated physical innovation---should not inflate momentum or dispersion.
 
 	\subsubsection*{Step 7: Trend-Driven Prior Inflation and Mean Update}
 	Before applying the Kalman mean update, we treat the competitor's carried-forward innovation momentum as evidence of adaptive process noise. Using the certainty factor $c_i$ from Step 6, define the effective momentum adaptation rate (reused in Step 8 for the momentum EMA itself):
@@ -371,12 +372,12 @@
 	Crucially, this downweighting applies \emph{only} to the mean rating update. The variance surprise logic and performance dispersion trackers must process physical anomalies as legitimate shocks to epistemic certainty.
 
 	\subsubsection*{Step 8: Update Momentum and Committed Variance (Shock Adaptation)}
-	To properly handle the bifurcated needs of momentum (which tracks sustained, statistically valid trends) and single-event shocks (which must react to genuine physical deviations without being artificially inflated by topological penalties), we define two distinct scaled innovations using the Observation Quality scalar $Q_i$:
+	To properly handle the bifurcated needs of momentum (which tracks sustained, statistically valid trends) and single-event shocks (which must react to generative physical deviations without being artificially inflated by reliability penalties), we define two distinct scaled innovations using the Observation Quality scalar $Q_i$:
 	\begin{align}
 		\ephys &= e_i \cdot Q_i \\
 		\erobust &= e_i \cdot w_t(z_i) \cdot Q_i
 	\end{align}
-	The \textit{physical innovation} $\ephys$ strips out structural and topological noise but retains heavy-tailed physical outliers. The \textit{robust innovation} $\erobust$ additionally applies the Student-$t$ damping to ignore single-event anomalies.
+	The \textit{physical innovation} $\ephys$ strips reliability / misspecification penalties (novelty, deep-tail noise, and weak-field pathology) but retains heavy-tailed generative outliers under a trustworthy log-link. The \textit{robust innovation} $\erobust$ additionally applies the Student-$t$ damping to ignore single-event anomalies.
 
 	Update the competitor's innovation momentum using the robust innovation, ensuring it only builds upon believable, sustained trends. The certainty-scaled effective adaptation rate $\lambda_i^{\mathrm{eff}}$ was defined in Step 7 and is reused here:
 	\begin{equation}
@@ -384,7 +385,7 @@
 	\end{equation}
 	The updated $m_i$ is committed to the competitor's state and drives the Trend injection on the \emph{next} match's prior (Step 7, next iteration).
 
-	Evaluate the system for a single-event shock using the physical innovation against the inflated total system variance. This guarantees that massive outliers caused by degenerate or unanchored fields are safely ignored, but massive outliers caused by genuine physical deviations legitimately shatter the filter's epistemic confidence:
+	Evaluate the system for a single-event shock using the physical innovation against the inflated total system variance. This guarantees that massive outliers caused by degenerate fields, unanchored cohorts, or geometrically unreliable deep-tail finishes are safely ignored, but massive outliers caused by generative physical deviations under a trustworthy log-link legitimately shatter the filter's epistemic confidence:
 	\begin{equation}
 		\text{Shock}_i = \max\!\left(0,\; (\ephys)^2 - T_i\right)
 	\end{equation}
@@ -406,7 +407,7 @@
 	\begin{equation}
 		E_i = \max\!\left(0,\; (\ephys - m_i)^2 - V_i^{\mathrm{age}} - \sigma_{\mathrm{sport}}^2\right)
 	\end{equation}
-	This estimator is approximate: the $Q_i$ scaling attenuates the innovation magnitude rather than exactly removing structural variance components from the squared residual, and the subtracted terms $V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2$ omit the baseline estimation variance $\mathrm{Var}(\bobs)$. In practice, both omissions are conservative---in mature fields, $Q_i \approx 1$ and $\mathrm{Var}(\bobs)$ is negligible; in degenerate fields, $Q_i$ suppresses the entire driving term. By utilizing the physical innovation, artificial match anomalies (such as an unanchored topological island) do not permanently inflate a competitor's aleatoric profile, while real-world volatility does. Furthermore, subtracting $m_i$ prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
+	This estimator is approximate: the $Q_i$ scaling attenuates the innovation magnitude rather than exactly removing reliability-penalty components from the squared residual, and the subtracted terms $V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2$ omit the baseline estimation variance $\mathrm{Var}(\bobs)$. In practice, both omissions are conservative---in mature, bulk-finish fields, $Q_i \approx 1$ and $\mathrm{Var}(\bobs)$ is negligible; when novelty, deep-tail, or weak-field penalties dominate, $Q_i$ suppresses the entire driving term. By utilizing the quality-gated physical innovation, untrustworthy observation magnitudes (unanchored topological islands, geometrically unreliable deep tails) do not permanently inflate a competitor's aleatoric profile, while generative physical volatility under a trustworthy log-link does. Furthermore, subtracting $m_i$ prevents the ``aleatoric armor'' pathology: during a rapid skill breakout, a sequence of large positive errors will be absorbed by $m_i$, bringing the trend-adjusted residual near zero and allowing $\sigma_i^2$ to correctly shrink rather than artificially inflate.
 
 	We form an instantaneous target representing the realized behavioral variance for the current observation. To prevent the upper clamp from becoming unrealistically tight when a competitor's current dispersion is very small, we use a reference-anchored hard cap. Let
 	\begin{equation}
@@ -435,8 +436,8 @@
 	Real-world match data routinely violates the assumptions of the pure core loop: fields can be tiny, individual finishes can be extreme outliers, and severe geometric non-linearities exist in the deep tail of ratio scoring\footnote{After an acquaintance whose match performances---specifically winning several recent events by margins $> 0.7$---revealed these additional complexities, the author refers to them collectively as `the Yang pathology'.}. The extended model introduces the parameters from the ``Small and Degenerate Fields'' configuration to robustify the process. These modifications are injected directly into specific steps of the core loop.
 
 	\subsubsection*{A. Log-Score Flooring and Deep-Tail Noise ($\eta(S_i)$)}
-	\emph{Modifies Step 1 and Step 2.}\\
-	Very weak finishes are not reliable linear evidence about top-end skill separation. A competitor finishing at 20\% of the winner is worse than one finishing at 40\%, but the 20\% finisher does not provide proportionally trustworthy information about how far the winner sits above the rest of the field in latent space. Deep-tail results are often contaminated by penalties, stage failures, or the nonlinear geometry of far-tail fractions.
+	\emph{Modifies Step 1, Step 2, and Step 6.}\\
+	Very weak finishes are not reliable linear evidence about top-end skill separation. A competitor finishing at 20\% of the winner is worse than one finishing at 40\%, but the 20\% finisher does not provide proportionally trustworthy information about how far the winner sits above the rest of the field in latent space---nor, dually, about how far that finisher sits below their own latent skill. Deep-tail results are often contaminated by penalties, stage failures, or the nonlinear geometry of far-tail fractions. Critically, $\eta(S_i)$ is \emph{not} competitor-intrinsic generative noise of the form $\varepsilon_i \sim \mathcal{N}(0,\, \sigma_{\mathrm{sport}}^2 + \sigma_i^2)$; it is score-dependent observation-model skepticism---heteroskedastic reliability / misspecification variance that grows as $S_i$ enters the deep tail.
 
 	A naive fix would compress the log-score directly, but this destroys the model's clean log-linear predictive semantics. Instead, we keep the expected mean link intact and introduce score-dependent skepticism in the observation variance.
 
@@ -452,15 +453,20 @@
 			\xi^2 \left(\frac{s_0 - S_i}{s_0}\right)^2, & S_i < s_0
 		\end{cases}
 	\end{equation}
-	This tail noise is added directly to the denominators of the competitor weights in Step 2 and the pairwise weighting in Step 4:
+	This term plays two dual roles. First, it is added to the denominators of the competitor weights in Step 2 and the pairwise weighting in Step 4, so deep-tail finishes cannot dominate the match anchor:
 	\begin{equation}
 		W_i \leftarrow \frac{1}{V_i^{\mathrm{age}} + \sigma_{\mathrm{sport}}^2 + \sigma_i^2 + \eta(S_i)}
 	\end{equation}
+	Second, the same $\eta(S_i)$ enters competitor $i$'s own observation variance in Step 6 (and therefore the $Q_i$ denominator):
+	\begin{equation}
+		R_{\mathrm{obs},i} \leftarrow R_{\mathrm{obs},i} + \eta(S_i)
+	\end{equation}
+	The first role protects the field's estimate of $\ln(\xwin)$ from geometrically unreliable anchors. The second is the dual own-update skepticism implied by ``score-dependent skepticism in the observation variance'': a deep-tail finish should not move $R_i$ at full Kalman strength, nor train momentum, dispersion, or Shock as if its residual magnitude were a calibrated generative innovation. Because $\eta(S_i)$ sits outside $R_{\mathrm{clean},i}$, the Observation Quality factor automatically attenuates $\ephys$ and $\erobust$ for deep-tail finishes. Finishes above $s_0$ are unaffected ($\eta = 0$); large mid-pack residuals under a trustworthy log-link remain fully available to Shock.
 
 	\subsubsection*{B. Match-Context Weak-Field Damping ($\sigma_{\mathrm{path}}^2$)}
 	\label{sec:weakfield}
 	\emph{Modifies Step 6.}\\
-	Tiny matches in which a large share of the non-winners finish extremely far behind the winner are structurally pathological. The match as a whole provides little trustworthy information about elite top-end skill separation. To model this, we introduce a match-level variance penalty.
+	Tiny matches in which a large share of the non-winners finish extremely far behind the winner are structurally pathological. The match as a whole provides little trustworthy information about elite top-end skill separation. To model this, we introduce a match-level reliability penalty---the same ontological category as novelty and deep-tail noise.
 
 	Define a small-field taper that decays to zero at $n_{\mathrm{max}}$:
 
@@ -473,9 +479,9 @@
 	\end{equation}
 	The match-level pathology variance is $\sigma_{\mathrm{path}}^2 = \omega^2 \cdot (f_{size}(N) \cdot q \cdot g)$. This is added directly into the total observation variance computed in Step 6:
 	\begin{equation}
-		R_{obs,i} \leftarrow R_{obs,i} + \sigma_{\mathrm{path}}^2
+		R_{\mathrm{obs},i} \leftarrow R_{\mathrm{obs},i} + \sigma_{\mathrm{path}}^2
 	\end{equation}
-	This elegantly throttles the Kalman update $K_i$ for the entire field, formalizing the heuristic: ``this match may be real, but it is not a precise instrument.''
+	Because $\sigma_{\mathrm{path}}^2$ lies outside $R_{\mathrm{clean},i}$, it both throttles the Kalman update $K_i$ for the entire field and reduces $Q_i$, formalizing the heuristic: ``this match may be real, but it is not a precise instrument.''
 
 	\subsubsection*{C. Chronological Mean Reversion (Skill Rust)}
 	\emph{Modifies Step 10 and all expected rating evaluations.}\\
@@ -555,9 +561,9 @@
 	\begin{equation}
 		N_{\mathrm{eff}} = \left(\sum_w p_w^2\right)^{-1}
 	\end{equation}
-	
+
 	We find the expected maximum of $N_{\mathrm{eff}}$ variables using Blom's approximation. However, a naive application of Extreme Value Theory assumes that performance variance is perfectly symmetric and unbounded. In practical shooting, a competitor's performance is dominated by downside risk (mistakes, penalties, equipment malfunctions), while their maximum potential speed is biomechanically bounded by human visual processing and mechanical cycle rates.
-	
+
 	To preserve Extreme Value Theory assumptions regarding cohort covariance, we must strictly isolate the independent fraction of the variance. We partition the epistemic uncertainty using $(1 - \rho)$, and rely on the purely idiosyncratic prediction sport noise $\sigma_{\mathrm{pred}}^2$ to represent match-day variance. The presumed winner's rating is shifted upward by this corrected, dampened extreme-value expectation:
 	\begin{equation}
 		\Delta_w = \Phi^{-1}\Big(\frac{N_\mathrm{eff} - 0.375}{N_\mathrm{eff} + 0.25}\Big) \cdot \sqrt{V_w^{\mathrm{age}}(1 - \rho) + (\kappa \cdot \tilde{\sigma}_w^2) + \sigma_{\mathrm{pred}}^2}
@@ -570,11 +576,11 @@
 		\Lambda_{iw} = \frac{\Phi\!\left(-\frac{\tilde{\mu}_{iw} + \sigma_{iw}^2}{\sigma_{iw}}\right)}{\Phi\!\left(-\frac{\tilde{\mu}_{iw}}{\sigma_{iw}}\right)}
 	\end{equation}
 	where $\Phi$ is the standard normal CDF. Because competitors share structural cohort uncertainty (formalized by the intraclass correlation $\rho$), the epistemic variance of their pairwise difference must subtract their covariance. The adjusted pairwise variance is:
-	
+
 	\begin{equation}
 		\sigma_{iw}^2 = V_i^{\mathrm{age}} + V_w^{\mathrm{age}} - 2\rho\sqrt{V_i^{\mathrm{age}} V_w^{\mathrm{age}}} + 2\sigma_{\mathrm{pred}}^2 + \kappa(\tilde{\sigma}_i^2 + \tilde{\sigma}_w^2)
 	\end{equation}
-	
+
 	The denominator isolates the probability mass to the universe where $w$ beats $i$, and the numerator perfectly cancels the mass of the unconstrained integral that lies above 1.0.
 
 	\subsubsection*{The Final Expected Ratio}
@@ -587,8 +593,8 @@
 	\subsection{Predictive Variance and Confidence Intervals}
 	To generate predictive confidence intervals, we calculate the total log-space predictive variance using the Law of Total Variance over the mixture distribution of possible winners. The total variance is the sum of the average predictive uncertainty assuming the winner is known (Within-Component) and the variance introduced by the uncertainty of who wins (Between-Component).
 
-	The Within-Component variance evaluates the expected pairwise uncertainty against the presumed winner. Because the predictive baseline is formed by the difference of two ratings ($R_i - R_w$), we must calculate the variance of that difference. This requires subtracting the shared cohort covariance ($\rho \sqrt{V_i V_w}$) from their combined epistemic variances. 
-	
+	The Within-Component variance evaluates the expected pairwise uncertainty against the presumed winner. Because the predictive baseline is formed by the difference of two ratings ($R_i - R_w$), we must calculate the variance of that difference. This requires subtracting the shared cohort covariance ($\rho \sqrt{V_i V_w}$) from their combined epistemic variances.
+
 	The sport contribution $2\sigma_{\mathrm{pred}}^2$ represents the idiosyncratic match-day noise for both competitors, and $\kappa \in [0,1]$ scales the projection of their certainty-discounted behavioral dispersions ($\tilde{\sigma}^2$). The total probability-weighted Within-Component variance is:
 	\begin{equation}
 		\varsigma_{i,\mathrm{within}}^2 = \sum_{w \neq i} p_w \left[ V_i^{\mathrm{age}} + V_w^{\mathrm{age}} - 2\rho\sqrt{V_i^{\mathrm{age}} V_w^{\mathrm{age}}} + 2\sigma_{\mathrm{pred}}^2 + \kappa(\tilde{\sigma}_i^2 + \tilde{\sigma}_w^2) \right]

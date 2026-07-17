@@ -4,6 +4,7 @@ import "package:shooting_sports_analyst/console/repl.dart";
 import "calculate_rating_project_command.dart";
 import "clear_bayesian_odds_cache_command.dart";
 import "context.dart";
+import "export_rating_projects_command.dart";
 import "import_miffs_command.dart";
 import "load_rating_project_command.dart";
 import "menu_helpers.dart";
@@ -14,6 +15,7 @@ Future<void> ssaServerToolsMenuLoop(Console console, AdminConsoleContext ctx) as
     LoadRatingProjectCommand(ctx),
     CalculateRatingProjectCommand(ctx),
     ClearBayesianOddsCacheCommand(ctx),
+    ExportRatingProjectsCommand(ctx),
     BackMenuCommand(),
   ],
     menuHeader: "SSA Server Tools",
