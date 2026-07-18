@@ -19,8 +19,10 @@ import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -570,28 +572,58 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     return events.map((e) => wrapEvent(e)).toList();
   }
 
-  List<MatchHistoryEntry> careerHistory() {
+  List<MatchHistoryEntry> careerHistory({CareerStatsMatchScoreCache? matchScoreCache, List<Division>? divisions}) {
+    final totalSw = Stopwatch()..start();
     List<MatchHistoryEntry> history = [];
     Set<String> visitedMatchSourceIds = {};
 
+    final loadSw = Stopwatch()..start();
+    Map<String, double> ratingChangesByMatchId = {};
+    final events = ratingEvents;
+    loadSw.stop();
+    _log.v("careerHistory ratingEvents load: ${loadSw.elapsedMilliseconds}ms (${events.length} events)");
+
+    final mapSw = Stopwatch()..start();
+    for(final e in events) {
+      final id = e.wrappedEvent.matchId;
+      ratingChangesByMatchId.incrementBy(id, e.ratingChange);
+    }
+    mapSw.stop();
+    _log.v("careerHistory change map: ${mapSw.elapsedMilliseconds}ms");
+
+    final buildSw = Stopwatch()..start();
     ShootingMatch? lastMatch;
-    for(var e in ratingEvents) {
+    for(var e in events) {
       if(e.match != lastMatch && !visitedMatchSourceIds.contains(e.match.sourceIds.first)) {
         visitedMatchSourceIds.add(e.match.sourceIds.first);
         var matchEntry = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element));
-        var division = matchEntry?.division;
-        if(matchEntry == null || division == null) {
+        var entryDivision = matchEntry?.division;
+        if(matchEntry == null || entryDivision == null) {
           _log.w("Unable to match division for $this at ${e.match}");
           lastMatch = e.match;
           continue;
         }
+
+        double ratingChange = 0;
+        for(var id in e.match.sourceIds) {
+          final changeForId = ratingChangesByMatchId[id];
+          if(changeForId != null) {
+            ratingChange += changeForId;
+            break;
+          }
+        }
+
         history.add(MatchHistoryEntry(
-          match: e.match, shooter: this, divisionEntered: division, matchEntry: matchEntry,
-          ratingChange: changeForEvent(e.match, null) ?? 0,
+          match: e.match, shooter: this, divisionEntered: entryDivision, matchEntry: matchEntry,
+          scoredDivisions: divisions, matchScoreCache: matchScoreCache,
+          ratingChange: ratingChange,
         ));
         lastMatch = e.match;
       }
     }
+    buildSw.stop();
+    _log.v("careerHistory hydrate+MatchHistoryEntry: ${buildSw.elapsedMilliseconds}ms (${history.length} matches)");
+    _log.v("careerHistory total: ${totalSw.elapsedMilliseconds}ms");
 
     return history;
   }
@@ -786,6 +818,8 @@ class MatchHistoryEntry {
   DateTime get date => match.date;
   Division divisionEntered;
   double ratingChange;
+  List<Division>? scoredDivisions;
+  CareerStatsMatchScoreCache? matchScoreCache;
 
   /// The rating change scaled by the rating system's scale factor. Used to avoid
   /// double-scaling issues when displaying rating changes, since end users of
@@ -814,14 +848,39 @@ class MatchHistoryEntry {
     required this.divisionEntered,
     required this.ratingChange,
     required this.matchEntry,
+    this.scoredDivisions,
+    this.matchScoreCache,
   }) {
-    var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: [divisionEntered], allowReentries: false));
-    var score = scores.values.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
+    final divisionsForScore = scoredDivisions ?? [divisionEntered];
+
+    RelativeMatchScore? score;
+    if(matchScoreCache != null) {
+      score = matchScoreCache!.getScore(match, divisionsForScore, null);
+      if(score == null) {
+        var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: divisionsForScore, allowReentries: false));
+        score = scores.values.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
+        this.competitors = scores.length;
+        if(score == null) {
+          _log.w("Shooter ${shooter.name} doesn't have a score for match ${match.name}");
+        }
+        else {
+          matchScoreCache!.setScore(match, divisionsForScore, null, score);
+        }
+      }
+      else {
+        final shooters = match.filterShooters(filterMode: FilterMode.and, divisions: divisionsForScore, allowReentries: false);
+        this.competitors = shooters.length;
+      }
+    }
+    else {
+      var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: divisionsForScore, allowReentries: false));
+      score = scores.values.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
+      this.competitors = scores.length;
+    }
 
     this.place = score!.place;
     this.finishRatio = score.ratio;
     this.victoryRatio = score.ratioMargin;
-    this.competitors = scores.length;
   }
 
   @override

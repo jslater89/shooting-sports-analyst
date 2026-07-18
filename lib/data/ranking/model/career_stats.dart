@@ -16,6 +16,7 @@ var _log = SSALogger("CareerStats");
 class CareerStats {
   Sport sport;
   ShooterRating rating;
+  CareerStatsMatchScoreCache matchScoreCache = CareerStatsMatchScoreCache();
 
   List<PeriodicStats> annualStats = [];
   bool get byStage => annualStats.any((e) => e.byStage);
@@ -45,13 +46,18 @@ class CareerStats {
   late PeriodicStats careerStats;
 
   void _calculateAnnualStats() {
+    final totalSw = Stopwatch()..start();
     annualStats = [];
 
-    List<MatchHistoryEntry> matchHistory = rating.careerHistory();
+    final historySw = Stopwatch()..start();
+    List<MatchHistoryEntry> matchHistory = rating.careerHistory(matchScoreCache: matchScoreCache, divisions: rating.group.ipscCompatibleDivisions());
     matchHistory.sort((a, b) => a.match.date.compareTo(b.match.date));
+    historySw.stop();
+    _log.v("careerHistory: ${historySw.elapsedMilliseconds}ms (${matchHistory.length} matches)");
 
     if(matchHistory.isEmpty) {
       careerStats = PeriodicStats.container(career: this, start: DateTime.now(), end: DateTime.now(), isCareer: true);
+      _log.v("_calculateAnnualStats total: ${totalSw.elapsedMilliseconds}ms (empty)");
       return;
     }
 
@@ -63,28 +69,49 @@ class CareerStats {
     years = List.generate(lastYear - firstYear + 1, (index) => firstYear + index);
     careerStats = PeriodicStats.container(career: this, start: earliest, end: latest, isCareer: true);
 
+    final yearsSw = Stopwatch()..start();
+    var filterMs = 0;
+    var scoreMs = 0;
+    var resortMs = 0;
     for(int year in years) {
       DateTime yearStart = DateTime(year);
       // 1 second before the start of the next year
       DateTime yearEnd = DateTime(year + 1).add(Duration(seconds: -1));
 
+      final filterSw = Stopwatch()..start();
       var historyEntries = matchHistory.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();
       var combinedEvents = rating.ratingEvents.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();
+      filterMs += filterSw.elapsedMilliseconds;
+
+      final scoreSw = Stopwatch()..start();
       var stats = PeriodicStats(career: this, combinedEvents: combinedEvents, matchHistory: historyEntries, start: yearStart, end: yearEnd);
+      scoreMs += scoreSw.elapsedMilliseconds;
+
       // Resort here because we're sorting slightly differently than the DB sorts at the moment
+      final resortSw = Stopwatch()..start();
       stats.resort();
+      resortMs += resortSw.elapsedMilliseconds;
       annualStats.add(stats);
       careerStats.addFrom(stats);
     }
+    yearsSw.stop();
+    _log.v("annual PeriodicStats loop: ${yearsSw.elapsedMilliseconds}ms "
+        "(filter ${filterMs}ms, calculateTotalScore ${scoreMs}ms, resort ${resortMs}ms; ${years.length} years)");
 
+    final careerResortSw = Stopwatch()..start();
     careerStats.resort();
+    _log.v("careerStats.resort: ${careerResortSw.elapsedMilliseconds}ms");
+
+    _log.v("Match score cache: $matchScoreCache");
+    _log.v("_calculateAnnualStats total: ${totalSw.elapsedMilliseconds}ms "
+        "(events=${rating.ratingEvents.length}, matches=${matchHistory.length}, years=${years.length})");
   }
 }
 
 class PeriodicStats {
   PeriodicStats({required this.career, required this.combinedEvents, required this.matchHistory, required this.start, required this.end, this.isCareer = false}) {
     this.events = combinedEvents.where((e) => e.ratingChange != 0).toList();
-    calculateTotalScore();
+    calculateTotalScore(career.matchScoreCache);
   }
 
   PeriodicStats.container({required this.career, required this.start, required this.end, this.isCareer = false});
@@ -211,28 +238,48 @@ class PeriodicStats {
   }
 
 
-  void calculateTotalScore() {
+  void calculateTotalScore(CareerStatsMatchScoreCache matchScoreCache) {
     // scoring isn't important; we'll add to targetEvents/penaltyEvents later
     var total = RawScore(scoring: const HitFactorScoring(), targetEvents: {}, penaltyEvents: {});
 
-    Map<ShootingMatch, RelativeMatchScore> matchScores = {};
+    Map<String, bool> countedMatchResults = {};
+
     for(var event in combinedEvents) {
       var match = event.match;
       var divisions = rating.group.ipscCompatibleDivisions();
       RelativeScore eventScore;
+
+      // We need a match score
       RelativeMatchScore? matchScore;
-      if(matchScores.containsKey(match)) {
-        matchScore = matchScores[match]!;
-      }
-      else {
+      RelativeMatchScore? classMatchScore;
+
+      matchScore = matchScoreCache.getScore(match, divisions, null);
+      if(matchScore == null) {
         var scores = match.getScoresFromFilters(FilterSet(sport, divisions: divisions, empty: true, mode: FilterMode.or));
         matchScore = scores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))?.value;
         if(matchScore == null) {
           _log.w("Shooter ${rating.name} doesn't have a score for match ${match.name}");
           continue;
         }
-        matchScores[match] = matchScore;
+        matchScoreCache.setScore(match, divisions, null, matchScore);
       }
+
+      classMatchScore = matchScoreCache.getScore(match, divisions, matchScore.shooter.classification);
+      if(classMatchScore == null) {
+        var stageClassScores = match.getScores(
+          shooters: match.shooters.where((element) =>
+            matchScore!.shooter.division == element.division
+            && matchScore.shooter.classification == element.classification
+          ).toList()
+        );
+        classMatchScore = stageClassScores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))?.value;
+        if(classMatchScore == null) {
+          _log.w("Shooter ${rating.name} doesn't have a score for class ${matchScore.shooter.classification!.name} in match ${match.name}");
+          continue;
+        }
+        matchScoreCache.setScore(match, divisions, matchScore.shooter.classification!, classMatchScore);
+      }
+
       if(byStage) {
         var stage = match.stages.firstWhereOrNull((s) => s.stageId == event.stageNumber);
         if(stage == null) {
@@ -253,17 +300,9 @@ class PeriodicStats {
         stageFinishes.add(eventScore.place);
         stagePercentages.add(eventScore.percentage);
 
-        var stageClassScores = match.getScores(
-          stages: [stage],
-          shooters: match.shooters.where((element) =>
-            eventScore.shooter.division == element.division
-            && eventScore.shooter.classification == element.classification
-          ).toList()
-        );
-        var stageClassScore = stageClassScores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))?.value;
-
+        final stageClassScore = classMatchScore.stageScores[stage];
         if(stageClassScore != null) {
-          classStageFinishes.add(stageClassScore.place);
+        classStageFinishes.add(stageClassScore.place);
           classStagePercentages.add(stageClassScore.percentage);
           if (stageClassScore.place == 1) {
             classStageWins += 1;
@@ -294,58 +333,35 @@ class PeriodicStats {
         matchesByLevel[event.match.level!] = matchesByLevel[event.match.level!]! + 1;
       }
       matches.add(event.match);
-      if(eventScore.shooter.classification != null) {
-        classesByMatch[event.match] = eventScore.shooter.classification!;
-      }
-      if(eventScore.shooter.division != null) {
-        divisionsByMatch[event.match] = eventScore.shooter.division!;
-      }
 
-      // switch(score.shooter.powerFactor) {
-      //   case old.PowerFactor.major:
-      //     majorEntries += 1;
-      //     break;
-      //   case old.PowerFactor.minor:
-      //     minorEntries += 1;
-      //     break;
-      //   default:
-      //     otherEntries += 1;
-      //     break;
-      // }
-    }
+      final matchClassification = eventScore.shooter.classification;
 
-    totalScore = total;
+      if(!countedMatchResults.containsKey(event.match.sourceIds.first)) {
+        countedMatchResults[event.match.sourceIds.first] = true;
 
-    for(var match in matches) {
-      var classification = classesByMatch[match];
-      var division = divisionsByMatch[match]!;
-      var scores = match.getScores(shooters: match.shooters.where((element) => element.division == division).toList());
-      competitorCounts.add(scores.length);
-      var score = scores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))?.value;
+        final divisionEntrants = match.filterShooters(
+          filterMode: FilterMode.or,
+          divisions: divisions,
+        );
+        competitorCounts.add(divisionEntrants.length);
 
-      if(score == null) {
-        throw StateError("Shooter in match doesn't have a score");
-      }
+        matchPlaces.add(matchScore.place);
+        matchPercentages.add(matchScore.percentage);
+        if (matchScore.place == 1) matchWins += 1;
 
-      matchPlaces.add(score.place);
-      matchPercentages.add(score.percentage);
-      if (score.place == 1) matchWins += 1;
-
-      if (classification != null) {
-        var scores = match.getScores(
-            shooters: match.shooters.where((element) => element.division == division && element.classification == classification).toList());
-        var score = scores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))!.value;
-
-        if(!classification.fallback) {
-          classMatchPlaces.add(score.place);
-          classMatchPercentages.add(score.percentage);
-          if (score.place == 1) {
-            classMatchWins += 1;
+        if (matchClassification != null) {
+          if(!matchClassification.fallback) {
+            classMatchPlaces.add(classMatchScore.place);
+            classMatchPercentages.add(classMatchScore.percentage);
+            if (classMatchScore.place == 1) {
+              classMatchWins += 1;
+            }
           }
         }
       }
     }
 
+    totalScore = total;
   }
 }
 
@@ -413,4 +429,51 @@ extension HitPercentagesText on RawScore {
 
     return message.toString();
   }
+}
+
+class CareerStatsMatchScoreCache {
+  int _hits = 0;
+  int _misses = 0;
+  Map<CareerStatsMatchScoreCacheKey, RelativeMatchScore> scores = {};
+
+  RelativeMatchScore? getScore(ShootingMatch match, List<Division> divisions, Classification? classification) {
+    var key = CareerStatsMatchScoreCacheKey(matchId: match.sourceIds.first, divisionIds: divisions.map((e) => e.name).toList(), classification: classification);
+    var score = scores[key];
+    if(score != null) {
+      _hits += 1;
+      return score;
+    }
+    else {
+      _misses += 1;
+      return null;
+    }
+  }
+
+  void setScore(ShootingMatch match, List<Division> divisions, Classification? classification, RelativeMatchScore score) {
+    var key = CareerStatsMatchScoreCacheKey(matchId: match.sourceIds.first, divisionIds: divisions.map((e) => e.name).toList(), classification: classification);
+    scores[key] = score;
+  }
+
+  String toString() => "CareerStatsMatchScoreCache(hits: $_hits, misses: $_misses, scores: ${scores.length})";
+}
+
+class CareerStatsMatchScoreCacheKey {
+  String matchId;
+  List<String> divisionIds;
+  Classification? classification;
+
+  CareerStatsMatchScoreCacheKey({required this.matchId, required this.divisionIds, required this.classification});
+
+  operator ==(Object other) {
+    if(other is CareerStatsMatchScoreCacheKey) {
+      return matchId == other.matchId &&
+        divisionIds.intersection(other.divisionIds).length == divisionIds.length && divisionIds.length == other.divisionIds.length &&
+        classification == other.classification;
+    }
+    return false;
+  }
+
+  int get hashCode => combineHashList64([matchId.hashCode, combineHashList64(divisionIds.sorted().map((e) => e.hashCode).toList()), classification?.hashCode ?? 0]);
+
+  String toString() => "CareerStatsMatchScoreCacheKey(matchId: $matchId, divisionIds: $divisionIds, classification: $classification)";
 }

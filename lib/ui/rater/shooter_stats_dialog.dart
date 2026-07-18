@@ -42,7 +42,6 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-// ignore: unused_element
 final _log = SSALogger("ShooterStatsDialog");
 
 final NumberFormat _separatedNumberFormat = NumberFormat("#,###");
@@ -109,11 +108,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   void initState() {
     super.initState();
 
+    final sw = Stopwatch()..start();
     careerStats = CareerStats(sport, widget.rating);
     displayedStats = careerStats.careerStats;
     _appPrefs = AnalystDatabase().getPreferencesSync();
     showingEvents = _appPrefs.shooterStatsHistoryType == ShooterStatsHistoryType.events;
     reverseHistoryLines = _appPrefs.shooterStatsHistoryDescending;
+    _log.v("initState CareerStats load: ${sw.elapsedMilliseconds}ms "
+        "(${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber})");
   }
 
   String _divisionName(RatingEvent e) {
@@ -309,8 +311,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     // else {
     //   events = rating.ratingEvents.sublist(rating.ratingEvents.length - 30);
     // }
+    final firstPaint = _eventLines == null || _historyLines == null;
+    final buildSw = firstPaint ? (Stopwatch()..start()) : null;
     var eventLines = _eventLines ?? _buildEventLines();
     var historyLines = _historyLines ?? _buildHistoryLines();
+    if(buildSw != null) {
+      _log.v("first build history widgets: ${buildSw.elapsedMilliseconds}ms "
+          "(events=${eventLines.length}, history=${historyLines.length})");
+    }
 
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
@@ -509,6 +517,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var size = MediaQuery.of(context).size;
 
     if(_series == null) {
+      final chartSw = Stopwatch()..start();
 
       final accumulatedResult = accumulateRatingEvents(
         rating: rating,
@@ -687,6 +696,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           ),
         );
       }
+      _log.v("first chart build: ${chartSw.elapsedMilliseconds}ms (${_ratings.length} points)");
     }
 
     double width = max(600, size.width * 0.9);
