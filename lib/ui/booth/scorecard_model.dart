@@ -158,6 +158,9 @@ class ScorecardModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   List<MatchEntry> displayedShooters = [];
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  double completenessFactor = 0.0;
 }
 
 /// Filters for a scorecard, either for scoring or display.

@@ -238,6 +238,34 @@ class _BoothScorecardState extends State<BoothScorecard> {
       ratings: _ratingProjectContext,
     );
 
+    final stageCount = match.stages.where((s) => !(s.scoring is IgnoredScoring)).length;
+    final competitorCount = sc.scores.keys.where((e) => !e.dq).length;
+    int completedStageCount = 0;
+    for(var mapEntry in sc.scores.entries) {
+      final entry = mapEntry.key;
+      if(entry.dq) {
+        continue;
+      }
+      final matchScore = mapEntry.value;
+
+      if(matchScore.isComplete) {
+        completedStageCount += stageCount;
+      }
+      else {
+        completedStageCount += matchScore.stageScores.entries.where((e) {
+          final stage = e.key;
+          final stageScore = e.value;
+
+          if(stage.scoring is IgnoredScoring) {
+            return false;
+          }
+          return !stageScore.isDnf;
+        }).length;
+      }
+    }
+
+    sc.completenessFactor = completedStageCount / (stageCount * competitorCount);
+
     _applyDisplayFilters(match);
 
     if(oldScores.isNotEmpty) {
@@ -363,7 +391,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
 
-    var title = "${widget.scorecard.name} (showing ${sc.displayedShooters.length} competitors of ${sc.scores.length} scored)";
+    var title = "${widget.scorecard.name} (showing ${sc.displayedShooters.length} competitors of ${sc.scores.length} scored, ${sc.completenessFactor.asPercentage(includePercent: true)} complete)";
     if(sc.scoreChanges.isNotEmpty) {
       var scoreWord = sc.scoreChanges.length == 1 ? "score" : "scores";
       title += " (${sc.scoreChanges.length} new ${scoreWord})";
