@@ -765,3 +765,9 @@ final uuidRegex = RegExp(
 double logBase(double x, double base) {
   return log(x) / log(base);
 }
+
+extension MapEntriesToMap<K, V> on Iterable<MapEntry<K, V>> {
+  Map<K, V> toMap() {
+    return Map.fromEntries(this);
+  }
+}

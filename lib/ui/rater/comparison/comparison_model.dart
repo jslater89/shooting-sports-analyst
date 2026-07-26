@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class RatingComparisonModel extends ChangeNotifier {
   ShooterRating _rating1;
@@ -33,6 +34,18 @@ class RatingComparisonModel extends ChangeNotifier {
 
   Map<String, PairedMatchHistory> _pairedMatchResults = {};
   Map<String, PairedMatchHistory> get pairedMatchResults => _pairedMatchResults;
+
+  Map<String, PairedMatchHistory> get matchesWithBothResults => _pairedMatchResults.values
+    .where((e) => e.hasBothResults)
+    .map((e) => MapEntry(e.matchId, e))
+    .toMap();
+
+  bool _showOnlyMatchesWithBothResults = false;
+  bool get showOnlyMatchesWithBothResults => _showOnlyMatchesWithBothResults;
+  set showOnlyMatchesWithBothResults(bool value) {
+    _showOnlyMatchesWithBothResults = value;
+    notifyListeners();
+  }
 
   /// The year to display. 0 for career.
   int year = 0;

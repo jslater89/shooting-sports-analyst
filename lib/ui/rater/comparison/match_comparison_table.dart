@@ -70,8 +70,13 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
   Widget build(BuildContext context) {
     final model = Provider.of<RatingComparisonModel>(context);
 
-
-    final matches = model.pairedMatchResults.values.map((e) => e.match).nonNulls.toList();
+    final List<ShootingMatch> matches;
+    if(model.showOnlyMatchesWithBothResults) {
+      matches = model.matchesWithBothResults.values.map((e) => e.match).nonNulls.toList();
+    }
+    else {
+      matches = model.pairedMatchResults.values.map((e) => e.match).nonNulls.toList();
+    }
 
     _sortedMatches = matches..sort(ShootingMatch.dateComparator);
     final _uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
@@ -148,7 +153,15 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
       return Text("Match Date", style: TextStyle(fontWeight: FontWeight.w500));
     }
     else if(vicinity.column == 2) {
-      return Text("Match Name", style: TextStyle(fontWeight: FontWeight.w500));
+      return Tooltip(
+        message: "Tap to toggle showing only matches with both results",
+        child: GestureDetector(
+          onTap: () {
+            model.showOnlyMatchesWithBothResults = !model.showOnlyMatchesWithBothResults;
+          },
+          child: Text("Match Name", style: TextStyle(fontWeight: FontWeight.w500))
+        ),
+      );
     }
     else {
       return Text("${model.rating2.name}", style: TextStyle(fontWeight: FontWeight.w500));
