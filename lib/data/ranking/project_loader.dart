@@ -560,6 +560,24 @@ class RatingProjectLoader {
       changedRatings.addAll(newChanges);
     }
 
+    if(ratingSystem.hasAgedRatings()) {
+      // 3.3. Age the ratings of all competitors in the group if necessary.
+      if(Timings.enabled) start = DateTime.now();
+      final referenceDate = matches.last.date;
+      await host.progressCallback(
+        progress: _currentMatchStep,
+        total: _totalMatchSteps,
+        state: LoadingState.agingRatings,
+        eventName: "(none)",
+        groupName: group.name,
+        subProgress: subProgress,
+        subTotal: subTotal,
+      );
+      var agedRatings = await ratingSystem.ageRatings(project: project, group: group, referenceDate: referenceDate, loadedRatings: changedRatings);
+      changedRatings.addAll(agedRatings);
+      if(Timings.enabled) timings.add(TimingType.ageRatings, DateTime.now().difference(start).inMicroseconds);
+    }
+
     await host.progressCallback(
         progress: _currentMatchStep,
         total: _totalMatchSteps,
@@ -590,6 +608,7 @@ class RatingProjectLoader {
 
     // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
     // this group.
+    // TODO
 
     return Result.ok(changeCount);
   }
@@ -2350,6 +2369,8 @@ enum LoadingState {
   deduplicatingCompetitors,
   /// Scores are being processed
   processingScores,
+  /// Ratings are being aged
+  agingRatings,
   /// Changes are being persisted
   persistingChanges,
   /// Loading is complete
@@ -2371,6 +2392,8 @@ enum LoadingState {
         return "deduplicating competitors";
       case LoadingState.processingScores:
         return "processing scores";
+      case LoadingState.agingRatings:
+        return "aging ratings";
       case LoadingState.persistingChanges:
         return "persisting changes";
       case LoadingState.done:

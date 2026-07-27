@@ -95,16 +95,27 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
       _cachedAgedRating = rating;
       return rating;
     }
-    final daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
+
+    _cachedAgedRating = calculateStaticAgedRating(rating: rating, asOfDate: asOfDate, settings: settings, lastSeen: lastSeen);
+    return _cachedAgedRating!;
+  }
+
+  static DateTime getLastCommitDate(DbShooterRating rating) {
+    return rating.intData[_IntKeys.lastCommitTimestamp.index].toDateTime();
+  }
+
+  static double calculateStaticAgedRating({
+    required double rating,
+    required DateTime asOfDate,
+    required LatentLogSettings settings,
+    required DateTime lastSeen,
+  }) {
+     final daysSinceLastCommit = asOfDate.difference(lastSeen).inDays;
     final yearsSinceLastCommit = daysSinceLastCommit / 365.0;
     final effectiveYearsSinceLastCommit = max(0, yearsSinceLastCommit - settings.meanReversionGraceYears);
 
     final deviationFromCenter = rating - settings.startingRating;
-    _cachedAgedRating =
-        settings.startingRating +
-        deviationFromCenter *
-            exp(-settings.meanReversionDecayRate * effectiveYearsSinceLastCommit);
-    return _cachedAgedRating!;
+    return settings.startingRating + deviationFromCenter * exp(-settings.meanReversionDecayRate * effectiveYearsSinceLastCommit);
   }
 
   double get ratingToday {
@@ -204,7 +215,13 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
       lengthInStages += e.stages;
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
       lastCommitTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
+      careerMinimumRating = min(careerMinimumRating, rating);
+      careerMaximumRating = max(careerMaximumRating, rating);
     }
+
+    // LLR sets agedRating as a separate pass after calculation, since
+    // it has to happen for every rating, not just the ones that changed
+    // in the current update.
   }
 
   @override

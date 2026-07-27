@@ -88,6 +88,30 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     required NonRatingResultReason reason,
   });
 
+  /// Return true if this rating system can age ratings.
+  bool hasAgedRatings() {
+    return false;
+  }
+
+  /// Age the ratings of all competitors in the given rating group if necessary,
+  /// based on the rating algorithm's aging rules.
+  ///
+  /// [project] is the rating project to age ratings for.
+  /// [group] is the group within project that is under consideration.
+  /// [referenceDate] is the date to use as the reference point for aging.
+  /// [loadedRatings] is an iterable of shooter ratings already in memory,
+  /// which should be used in preference to any ratings loaded from the database.
+  ///
+  /// Return a set of shooter ratings that were aged and should be persisted.
+  Future<Set<DbShooterRating>> ageRatings({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required DateTime referenceDate,
+    Iterable<DbShooterRating> loadedRatings = const {},
+  }) async {
+    return {};
+  }
+
   // ****** Self-describing data classes ******
 
   /// Return a deep copy of the provided shooter rating.

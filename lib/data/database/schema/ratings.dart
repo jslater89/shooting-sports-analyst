@@ -381,6 +381,14 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
+  Future<DataSourceResult<List<DbShooterRating>>> getRatingsLastSeenBefore(RatingGroup group, DateTime date) async {
+    return DataSourceResult.ok(await ratings.filter()
+      .group((q) => q.idEqualTo(group.id))
+      .lastSeenLessThan(date)
+      .findAll());
+  }
+
+  @override
   Future<DataSourceResult<List<DbShooterRating>>> getTopRatings(RatingGroup group, {int limit = 10}) async {
     return DataSourceResult.ok(await ratings.filter()
       .group((q) => q.idEqualTo(group.id))

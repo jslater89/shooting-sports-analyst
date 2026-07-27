@@ -388,6 +388,65 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     );
   }
 
+  @override
+  bool hasAgedRatings() {
+    return settings.meanReversionDecayRate > 0.0;
+  }
+
+  @override
+  Future<Set<DbShooterRating>> ageRatings({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required DateTime referenceDate,
+    Iterable<DbShooterRating> loadedRatings = const {},
+  }) async {
+    final graceDays = (settings.meanReversionGraceYears * 365).round();
+    final graceDate = referenceDate.subtract(Duration(days: graceDays));
+    final ratings = await project.getRatingsLastSeenBefore(group, graceDate);
+
+    if(ratings.isErr()) {
+      _log.e("Error getting ratings to age: ${ratings.unwrapErr()}");
+      return {};
+    }
+
+    Map<int, DbShooterRating> ratingsToConsider = {};
+    for(var rating in loadedRatings) {
+      if(rating.lastSeen.isBefore(graceDate) && LatentLogRating.getLastCommitDate(rating).isBefore(graceDate)) {
+        ratingsToConsider[rating.id] = rating;
+      }
+      else {
+        ratingsToConsider.remove(rating.id);
+      }
+    }
+
+    for(var rating in ratings.unwrap()) {
+      if(ratingsToConsider.containsKey(rating.id)) {
+        continue;
+      }
+
+      // We know that lastSeen is before graceDate because it's coming from a query to that effect.
+      if(LatentLogRating.getLastCommitDate(rating).isBefore(graceDate)) {
+        ratingsToConsider[rating.id] = rating;
+      }
+      else {
+        ratingsToConsider.remove(rating.id);
+      }
+    }
+
+    final agedRatings = ratingsToConsider.values.toSet();
+
+    for(var rating in agedRatings) {
+      rating.agedRating = LatentLogRating.calculateStaticAgedRating(
+        rating: rating.rating,
+        asOfDate: referenceDate,
+        settings: settings,
+        lastSeen: LatentLogRating.getLastCommitDate(rating),
+      );
+    }
+
+    return agedRatings;
+  }
+
   RatingChange? _calculateRatingChangeForShooter({
     /// The match being processed.
     required ShootingMatch match,

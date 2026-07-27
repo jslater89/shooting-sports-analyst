@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -78,7 +80,12 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
       marbles += event.marblesWon;
 
       lastSeen = event.wrappedEvent.date;
+
+      careerMinimumRating = min(careerMinimumRating, rating);
+      careerMaximumRating = max(careerMaximumRating, rating);
     }
+
+    agedRating = rating;
   }
 
   // TODO: support rollback?

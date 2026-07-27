@@ -84,6 +84,9 @@ abstract interface class RatingDataSource {
   /// Get all ratings for a group.
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
 
+  /// Get all ratings for a group that have been seen before a given date.
+  Future<DataSourceResult<List<DbShooterRating>>> getRatingsLastSeenBefore(RatingGroup group, DateTime date);
+
   Future<DataSourceResult<List<RatingReport>>> getAllReports();
   Future<DataSourceResult<List<RatingReport>>> getRecentReports();
 }

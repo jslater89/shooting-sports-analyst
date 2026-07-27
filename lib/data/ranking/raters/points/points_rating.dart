@@ -5,6 +5,8 @@
  */
 
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -63,6 +65,12 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
           .match
           .date;
     }
+
+
+    // These aren't super meaningful for points systems
+    agedRating = rating;
+    careerMinimumRating = min(careerMinimumRating, rating);
+    careerMaximumRating = max(careerMaximumRating, rating);
   }
 
   @override

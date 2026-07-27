@@ -157,8 +157,21 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
   // TODO: move rating events getters from elo_shooter_rating to here
 
+  /// The rating for this competitor. If the system makes a distinction between internal
+  /// and scaled ratings, this will be the internal rating.
   double rating;
+  /// The error for this competitor. If the system makes a distinction between internal
+  /// and scaled ratings, this will be the error for the internal rating.
   double error;
+
+  /// The aged rating for this competitor, for rating algorithms that implement rating
+  /// decay.
+  double agedRating;
+
+  /// The minimum rating attained during this competitor's career.
+  double careerMinimumRating;
+  /// The maximum rating attained during this competitor's career.
+  double careerMaximumRating;
 
   /// Raw connectivity is the score before normalization/scaling.
   double rawConnectivity;
@@ -304,6 +317,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required super.female,
     required this.rating,
     required this.error,
+    required this.agedRating,
+    required this.careerMinimumRating,
+    required this.careerMaximumRating,
     required this.rawConnectivity,
     required this.connectivity,
     required this.firstSeen,
@@ -321,6 +337,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
     super.female = false,
     this.rating = 0.0,
     this.error = 0.0,
+    this.agedRating = 0.0,
+    this.careerMinimumRating = 0.0,
+    this.careerMaximumRating = 0.0,
     this.rawConnectivity = 0.0,
     this.connectivity = 0.0,
     DateTime? firstSeen,
@@ -358,6 +377,10 @@ class DbShooterRating extends Shooter with DbSportEntity {
       other.events.loadSync();
       this.events.addAll(other.events.map((e) => e.copy(newOwner: this)));
     }
+
+    this.agedRating = other.agedRating;
+    this.careerMinimumRating = other.careerMinimumRating;
+    this.careerMaximumRating = other.careerMaximumRating;
   }
 
   @override

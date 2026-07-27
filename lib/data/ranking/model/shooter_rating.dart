@@ -362,6 +362,21 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   @ignore
   int get length => wrappedRating.length;
 
+  /// See [DbShooterRating.agedRating].
+  @ignore
+  double get agedRating => wrappedRating.agedRating;
+  set agedRating(double v) => wrappedRating.agedRating = v;
+
+  /// See [DbShooterRating.careerMinimumRating].
+  @ignore
+  double get careerMinimumRating => wrappedRating.careerMinimumRating;
+  set careerMinimumRating(double v) => wrappedRating.careerMinimumRating = v;
+
+  /// See [DbShooterRating.careerMaximumRating].
+  @ignore
+  double get careerMaximumRating => wrappedRating.careerMaximumRating;
+  set careerMaximumRating(double v) => wrappedRating.careerMaximumRating = v;
+
   /// The number of stages in this shooter's history.
   ///
   /// If the rating system does not track stage count, this

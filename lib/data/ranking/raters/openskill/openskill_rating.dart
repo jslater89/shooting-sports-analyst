@@ -5,6 +5,8 @@
  */
 
 
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -80,7 +82,11 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
 
       mu += event.muChange;
       sigma += event.sigmaChange;
+      careerMinimumRating = min(careerMinimumRating, rating);
+      careerMaximumRating = max(careerMaximumRating, rating);
     }
+
+    agedRating = rating;
   }
 
   @override

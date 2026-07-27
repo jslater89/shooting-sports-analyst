@@ -251,6 +251,10 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     }
 
     standardError = calculateStandardError();
+
+    agedRating = rating;
+    careerMinimumRating = min(careerMinimumRating, rating);
+    careerMaximumRating = max(careerMaximumRating, rating);
   }
 
   void updateTrends(List<RatingEvent> changes) {

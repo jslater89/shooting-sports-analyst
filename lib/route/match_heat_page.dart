@@ -175,25 +175,25 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     var yMinOffset = switch(_settings.yAxis) {
       MatchHeatValue.matchSize => 0,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
-      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0,
     };
     var yMaxOffset = switch(_settings.yAxis) {
       MatchHeatValue.matchSize => 10,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
-      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0.5,
     };
     var xMinOffset = switch(_settings.xAxis) {
       MatchHeatValue.matchSize => 0,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
-      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0,
     };
     var xMaxOffset = switch(_settings.xAxis) {
       MatchHeatValue.matchSize => 10,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
-      MatchHeatValue.medianRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0.5,
     };
 

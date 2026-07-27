@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math' show sqrt, pow, min;
+import 'dart:math' show sqrt, pow, min, max;
 
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -175,6 +175,12 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
 
       // Update display values
       rating = internalRating * settings.scalingFactor + settings.initialRating;
+
+      // Glicko-2 was the first scaling rating system and kind of breaks the rules, so we're
+      // going to handle aged rating and career minimum/maximum ratings here.
+      agedRating = rating;
+      careerMinimumRating = min(careerMinimumRating, rating);
+      careerMaximumRating = max(careerMaximumRating, rating);
     }
   }
 
