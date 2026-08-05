@@ -7,12 +7,16 @@
 import 'dart:convert';
 
 import 'package:shelf_plus/shelf_plus.dart';
+import 'package:shooting_sports_analyst/api/auth/check_auth.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_exporter.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_importer.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+final _log = SSALogger("RegistrationService");
 
 class RegistrationService {
   AnalystDatabase database = AnalystDatabase();
@@ -74,6 +78,10 @@ class RegistrationService {
   ///
   /// Upload a future match in RIFF format.
   Future<Response> uploadFutureMatch(Request request) async {
+    if(!validateAuth(request, ["uploader", "admin"])) {
+      _log.w("unauthorized upload request");
+      return Response.unauthorized(jsonEncode({"error": "Unauthorized"}));
+    }
     var bodyBytes = await request.body.asBinary.reduce((a, b) => a + b);
     var importRes = RiffImporter().importMatch(bodyBytes);
     if(importRes.isErr()) {

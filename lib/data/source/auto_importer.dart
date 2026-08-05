@@ -329,6 +329,7 @@ class AutoImporter {
       return;
     }
 
+    // TODO: figure out how to handle authorization/deduplication server-side before giving anyone else upload roles
     final serverSource = SSAServerFutureMatchSource();
     if(await serverSource.authenticatedCanUpload()) {
       final uploadRes = await serverSource.uploadMatch(futureMatch);

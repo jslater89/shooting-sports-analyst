@@ -55,7 +55,13 @@ class AuthService {
 Middleware createSSAAuthMiddleware(SSAAuthServer authServer) {
   return (Handler innerHandler) {
     return (Request request) {
-      return authServer.handleProtectedApi(request, innerHandler);
+      final strippedRequest = request.change(
+        headers: {
+          "x-identity-name": null,
+          "x-identity-roles": null,
+        },
+      );
+      return authServer.handleProtectedApi(strippedRequest, innerHandler);
     };
   };
 }

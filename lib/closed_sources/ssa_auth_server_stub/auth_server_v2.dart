@@ -61,7 +61,13 @@ Middleware createDispatchingSSAAuthMiddleware({
   assert(identical(authServerV1.knownIdentities, authServerV2.knownIdentities));
   return (Handler innerHandler) {
     return (Request request) {
-      return StubSsaAuthShared.handleProtected(request, innerHandler);
+      final strippedRequest = request.change(
+        headers: {
+          "x-identity-name": null,
+          "x-identity-roles": null,
+        },
+      );
+      return StubSsaAuthShared.handleProtected(strippedRequest, innerHandler);
     };
   };
 }
