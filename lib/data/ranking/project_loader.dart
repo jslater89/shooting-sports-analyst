@@ -827,7 +827,19 @@ class RatingProjectLoader {
           // based on last seen/first seen
 
           targetRating.addKnownMemberNumbers(r.knownMemberNumbers);
-          db.deleteShooterRatingSync(r);
+
+          // Don't delete the keeper. This happens on append when a mapping's target
+          // number has no DbShooterRating yet (new/edited auto-mapping target, or a
+          // never-seen number), but a source number already has history from a prior
+          // calculation (cachedLength > 0). We promote that source to targetRating,
+          // then this loop would delete it. After delete, project was still unloaded,
+          // so project.value auto-loaded against the removed row and returned null at
+          // upsert/cacheRating. Full recalc never promotes: ratings are new with
+          // length 0, so we create an empty target instead. Append sources already
+          // upserted this run usually keep links in memory and mask the bug.
+          if(r.id != targetRating.id) {
+            db.deleteShooterRatingSync(r);
+          }
         }
 
         if(ratingsWithHistory.length > 1) {
@@ -843,6 +855,7 @@ class RatingProjectLoader {
           );
           project.addReport(report);
         }
+
 
         db.upsertDbShooterRatingSync(targetRating, linksChanged: eventsCopied);
 

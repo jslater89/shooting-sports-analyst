@@ -70,7 +70,8 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   double get scaledRating => displayRating;
   double get scaledAgedRating => displayAgedRating;
   String get formattedRating => formatNumericRating(rating);
-  String get formattedAgedRating => formatNumericRating(ratingToday);
+  String get formattedAgedRating => formatNumericRating(agedRating);
+  String get formattedRatingToday => formatNumericRating(ratingToday);
 
   String formatNumericRating(double rating) {
     return settings.formatNumericRating(rating);
@@ -82,29 +83,29 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
   double get currentRating => calculateAgedRating(asOfDate: DateTime.now());
 
-  DateTime? _cachedAgedRatingDate;
-  double? _cachedAgedRating;
+  DateTime? _cachedRatingTodayReferenceDate;
+  double? _cachedRatingToday;
   double calculateAgedRating({DateTime? asOfDate}) {
     asOfDate ??= DateTime.now();
-    if(_cachedAgedRating != null && _cachedAgedRatingDate != null && _cachedAgedRatingDate!.isSameDay(asOfDate)) {
-      return _cachedAgedRating!;
+    if(_cachedRatingToday != null && _cachedRatingTodayReferenceDate != null && _cachedRatingTodayReferenceDate!.isSameDay(asOfDate)) {
+      return _cachedRatingToday!;
     }
 
-    _cachedAgedRatingDate = asOfDate;
+    _cachedRatingTodayReferenceDate = asOfDate;
     if(lastCommitTimestamp == 0 || asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
-      _cachedAgedRating = rating;
+      _cachedRatingToday = rating;
       return rating;
     }
 
-    _cachedAgedRating = calculateStaticAgedRating(rating: rating, asOfDate: asOfDate, settings: settings, lastSeen: lastSeen);
-    return _cachedAgedRating!;
+    _cachedRatingToday = calculateAgedRatingStatic(rating: rating, asOfDate: asOfDate, settings: settings, lastSeen: lastCommitTimestamp.toDateTime());
+    return _cachedRatingToday!;
   }
 
   static DateTime getLastCommitDate(DbShooterRating rating) {
     return rating.intData[_IntKeys.lastCommitTimestamp.index].toDateTime();
   }
 
-  static double calculateStaticAgedRating({
+  static double calculateAgedRatingStatic({
     required double rating,
     required DateTime asOfDate,
     required LatentLogSettings settings,
@@ -221,7 +222,10 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
 
     // LLR sets agedRating as a separate pass after calculation, since
     // it has to happen for every rating, not just the ones that changed
-    // in the current update.
+    // in the current update. That said, we only hit people who are past
+    // the grace period in that step, so we need to assign agedRating = rating here
+    // too.
+    agedRating = rating;
   }
 
   @override

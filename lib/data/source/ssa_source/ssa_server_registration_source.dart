@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:shooting_sports_analyst/api/auth/auth_provider.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_exporter.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_importer.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
@@ -82,6 +83,22 @@ class SSAServerFutureMatchSource extends FutureMatchSource {
     var sessionResult = ssaAuthClient.getCurrentSession();
     if (sessionResult.isErr()) {
       return false;
+    }
+    var session = sessionResult.unwrap();
+    return session.hasAnyRole(["uploader", "admin"]);
+  }
+
+  Future<bool> authenticatedCanUpload() async {
+    var sessionResult = await ssaAuthClient.getSession();
+    if (sessionResult.isErr()) {
+      if (sessionResult.unwrapErr() != AuthError.unauthenticated) {
+        return false;
+      }
+      await ssaAuthClient.authenticate();
+      sessionResult = await ssaAuthClient.getSession();
+      if (sessionResult.isErr()) {
+        return false;
+      }
     }
     var session = sessionResult.unwrap();
     return session.hasAnyRole(["uploader", "admin"]);

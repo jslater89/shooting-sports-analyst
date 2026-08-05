@@ -436,7 +436,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final agedRatings = ratingsToConsider.values.toSet();
 
     for(var rating in agedRatings) {
-      rating.agedRating = LatentLogRating.calculateStaticAgedRating(
+      rating.agedRating = LatentLogRating.calculateAgedRatingStatic(
         rating: rating.rating,
         asOfDate: referenceDate,
         settings: settings,

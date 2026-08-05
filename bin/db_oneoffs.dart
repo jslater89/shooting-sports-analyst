@@ -82,6 +82,8 @@ import "db_oneoff_impl/co_lo_nationals_overlap_command.dart";
 import "db_oneoff_impl/division_handicap_command.dart";
 import "db_oneoff_impl/distinguished_grandmaster_command.dart";
 import "db_oneoff_impl/finish_streaks_command.dart";
+import "db_oneoff_impl/rating_project_correspondence_command.dart";
+import "db_oneoff_impl/elite_head_to_head_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -262,6 +264,8 @@ Future<void> main(List<String> args) async {
     DivisionHandicapCommand(db),
     FinishStreaksCommand(db),
     DistinguishedGrandmasterCommand(db),
+    RatingProjectCorrespondenceCommand(db),
+    EliteHeadToHeadCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {

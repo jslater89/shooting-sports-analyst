@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/registra
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/psc/matchdef/match_info_zip.dart';
 import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_registration_source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
@@ -326,6 +327,16 @@ class AutoImporter {
     if(saveRes.isErr()) {
       _log.e("Error saving future match from path $path: ${saveRes.unwrapErr().message}");
       return;
+    }
+
+    final serverSource = SSAServerFutureMatchSource();
+    if(await serverSource.authenticatedCanUpload()) {
+      final uploadRes = await serverSource.uploadMatch(futureMatch);
+      if(uploadRes != null) {
+        _log.e("Error uploading future match to server: ${uploadRes.message}");
+        return;
+      }
+      _log.i("Uploaded future match to server: ${futureMatch.matchId}");
     }
 
     // We need to re-apply any saved mappings to the new registrations too.

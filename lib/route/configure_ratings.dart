@@ -1536,6 +1536,46 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             _saveProject(_loadedProject!.name);
           }
         }
+        break;
+
+      case _MenuEntry.importMatches:
+        var otherProject = await showDialog<DbRatingProject>(context: context, builder: (context) {
+          return SelectProjectDialog();
+        });
+
+        if(otherProject != null) {
+          if(_loadedProject != null && otherProject.id == _loadedProject!.id) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Cannot import matches from the same project")));
+            return;
+          }
+          if(otherProject.sport != sport) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Cannot import matches from a project with a different sport")));
+            return;
+          }
+
+          var otherMatches = otherProject.matchPointers;
+          var alreadyPresent = otherMatches.where((m) => projectMatches.contains(m)).length;
+          var newCount = otherMatches.length - alreadyPresent;
+
+          var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
+          var confirm = await ConfirmDialog.show(
+            context,
+            title: "Import matches from other project",
+            content: Text("Import matches from ${otherProject.name} into the current project?\n\n"
+            "${otherMatches.length} matches in other project:\n"
+            "- ${newCount} new matches will be added\n"
+            "- ${alreadyPresent} matches are already in this project and will be skipped"),
+            positiveButtonLabel: "IMPORT",
+            negativeButtonLabel: "CANCEL",
+            width: 500 * uiScaleFactor,
+          ) ?? false;
+          if(confirm) {
+            projectMatches.addAllIfMissing(otherMatches);
+            _sortMatches(false);
+          }
+        }
+        break;
     }
   }
 }
@@ -1546,6 +1586,7 @@ enum _MenuEntry {
   hiddenShooters,
   viewReports,
   importDeduplication,
+  importMatches,
   dataEntryErrors,
   numberMappings,
   autoMappings,
@@ -1561,6 +1602,7 @@ enum _MenuEntry {
     hiddenShooters,
     viewReports,
     importDeduplication,
+    importMatches,
     dataEntryErrors,
     numberMappings,
     autoMappings,
@@ -1585,6 +1627,8 @@ enum _MenuEntry {
         return "View reports";
       case _MenuEntry.importDeduplication:
         return "Import deduplication data from other project";
+      case _MenuEntry.importMatches:
+        return "Import matches from other project";
       case _MenuEntry.dataEntryErrors:
         return "Fix data entry errors";
       case _MenuEntry.numberMappings:
