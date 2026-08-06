@@ -42,6 +42,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
   TextEditingController _themeModeController = TextEditingController();
   TextEditingController _uiScaleFactorController = TextEditingController();
   TextEditingController _autoImportDirectoryController = TextEditingController();
+  TextEditingController _researchMcpPortController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -54,6 +55,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
     _themeModeController.text = uiConfig.themeMode.name.toTitleCase();
     _uiScaleFactorController.text = "${(uiConfig.uiScaleFactor * 100).toStringAsFixed(0)}%";
     _autoImportDirectoryController.text = config.autoImportDirectory ?? "(none)";
+    _researchMcpPortController.text = "${config.researchMcpServerPort}";
   }
 
   Future<void> _loadProject() async {
@@ -228,6 +230,33 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text("Research MCP server"),
+                  subtitle: const Text("Host read-only research MCP on localhost while the app is open"),
+                  value: config.researchMcpServerEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      config.researchMcpServerEnabled = value ?? false;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _researchMcpPortController,
+                  enabled: config.researchMcpServerEnabled,
+                  decoration: const InputDecoration(
+                    labelText: "Research MCP port",
+                    helperText: "Bound to 127.0.0.1 only (default 8090); Cursor shim proxies here",
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    final port = int.tryParse(value.trim());
+                    if(port != null && port > 0 && port < 65536) {
+                      config.researchMcpServerPort = port;
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -284,6 +313,10 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                 TextButton(
                   child: const Text("SAVE"),
                   onPressed: () {
+                    final port = int.tryParse(_researchMcpPortController.text.trim());
+                    if(port != null && port > 0 && port < 65536) {
+                      config.researchMcpServerPort = port;
+                    }
                     Navigator.of(context).pop((config, uiConfig));
                   },
                 ),

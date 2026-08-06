@@ -156,6 +156,15 @@ class SerializedConfig {
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? ssaServerStubApiKey;
 
+  /// When true, the Flutter app hosts a localhost-only research MCP server over
+  /// the already-open AnalystDatabase (for Cursor via bin/mcp/ssa_mcp_server.dart proxy).
+  @JsonKey(defaultValue: false)
+  bool researchMcpServerEnabled;
+
+  /// Loopback port for [researchMcpServerEnabled]. Bound to 127.0.0.1 only.
+  @JsonKey(defaultValue: 8090)
+  int researchMcpServerPort;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) =>
       _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
@@ -178,6 +187,8 @@ class SerializedConfig {
     required this.ssaServerAuthIdentityName,
     required this.ssaServerAuthPrivateKeyPath,
     required this.ssaServerStubApiKey,
+    required this.researchMcpServerEnabled,
+    required this.researchMcpServerPort,
   });
 
   @override
@@ -217,6 +228,8 @@ class SerializedConfig {
     builder.writeln(
       "\tssaServerStubApiKey = ${ssaServerStubApiKey == null || ssaServerStubApiKey!.isEmpty ? "(empty)" : "(set)"}",
     );
+    builder.writeln("\tresearchMcpServerEnabled = $researchMcpServerEnabled");
+    builder.writeln("\tresearchMcpServerPort = $researchMcpServerPort");
     return builder.toString();
   }
 
@@ -241,6 +254,8 @@ class SerializedConfig {
       ssaServerAuthIdentityName: ssaServerAuthIdentityName,
       ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
       ssaServerStubApiKey: ssaServerStubApiKey,
+      researchMcpServerEnabled: researchMcpServerEnabled,
+      researchMcpServerPort: researchMcpServerPort,
     );
   }
 }

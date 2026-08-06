@@ -86,6 +86,7 @@ dependencies:
   watcher: ^1.1.4
   csv: ^8.0.0
   path: ^1.9.1
+  dart_mcp: ^0.5.2
 
 dev_dependencies:
   flutter_test:
