@@ -18,6 +18,9 @@ enum ParlayValidity {
   overfilled,
   trivialLeg,
   redundantPredictions,
+  correlatedLegs,
+  correlatedSpreads,
+  duplicateSpread,
   conflictingPredictions;
 
   bool get isValid => this == valid;
@@ -27,6 +30,9 @@ enum ParlayValidity {
     overfilled => "Overfilled",
     trivialLeg => "Trivial leg",
     redundantPredictions => "Redundant predictions",
+    correlatedLegs => "Correlated legs",
+    correlatedSpreads => "Correlated spreads",
+    duplicateSpread => "Duplicate spread",
     conflictingPredictions => "Conflicting predictions",
   };
 
@@ -35,6 +41,9 @@ enum ParlayValidity {
     overfilled => "The parlay is impossible to satisfy: too many shooters are predicted to finish in the same place or range.",
     trivialLeg => "The parlay has a trivial leg: some predictions are necessarily true if the remaining predictions are also true.",
     conflictingPredictions => "The parlay has conflicting predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
+    correlatedLegs => "The parlay has correlated legs: place and percentage predictions for the same shooter.",
+    correlatedSpreads => "The parlay has correlated spread legs: the same shooter is on the covering (or opposing) side of more than one spread.",
+    duplicateSpread => "The parlay has duplicate spread predictions: more than one prediction has been made for the same pair of shooters.",
     redundantPredictions => "The parlay has redundant predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
   };
 }
@@ -212,8 +221,8 @@ class Parlay implements IWager {
     return Parlay.isParlayPossible(legs);
   }
 
-  ParlayValidity checkValidity({int? fieldSize}) {
-    return Parlay.checkParlayValidity(legs, fieldSize: fieldSize);
+  ParlayValidity checkValidity({int? fieldSize, bool? allowCorrelatedParlays}) {
+    return Parlay.checkParlayValidity(legs, fieldSize: fieldSize, allowCorrelatedParlays: allowCorrelatedParlays);
   }
 
   List<PlacePrediction> get placePredictions => legs.map((leg) => leg.prediction).where((prediction) => prediction is PlacePrediction).toList().cast<PlacePrediction>();
@@ -347,7 +356,21 @@ class Parlay implements IWager {
   ///
   /// [fieldSize] is the total number of competitors in the match. If not provided,
   /// trivial leg detection will be skipped (may return false negatives).
-  static ParlayValidity checkParlayValidity(List<Wager> legs, {int? fieldSize}) {
+  static ParlayValidity checkParlayValidity(List<Wager> legs, {int? fieldSize, bool? allowCorrelatedParlays}) {
+    allowCorrelatedParlays ??= false;
+
+    if(!allowCorrelatedParlays && _hasCorrelatedLegs(legs)) {
+      return ParlayValidity.correlatedLegs;
+    }
+
+    if(!allowCorrelatedParlays && _hasDuplicateSpreadPredictions(legs)) {
+      return ParlayValidity.duplicateSpread;
+    }
+
+    if(!allowCorrelatedParlays && _hasCorrelatedSpreadPredictions(legs)) {
+      return ParlayValidity.correlatedSpreads;
+    }
+
     // Check for conflicting predictions first
     if (_hasConflictingPredictions(legs)) {
       return ParlayValidity.conflictingPredictions;
@@ -368,6 +391,88 @@ class Parlay implements IWager {
     }
 
     return ParlayValidity.valid;
+  }
+
+  /// Check if there are correlated legs (more than one place and/or percentage prediction for the same shooter).
+  /// Returns true if there are correlated legs, false otherwise.
+  static bool _hasCorrelatedLegs(List<Wager> legs) {
+    var shooterTotalPredictions = <ShooterRating, int>{};
+
+    for(var leg in legs) {
+      var prediction = leg.prediction;
+      if(prediction is PlacePrediction) {
+        shooterTotalPredictions.increment(prediction.shooter);
+      }
+      else if(prediction is PercentagePrediction) {
+        shooterTotalPredictions.increment(prediction.shooter);
+      }
+    }
+
+    for(var MapEntry(key: _, value: count) in shooterTotalPredictions.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if there are duplicate spread predictions for the same pair of shooters.
+  static bool _hasDuplicateSpreadPredictions(List<Wager> legs) {
+    var spreadPredictions = <String, int>{};
+
+    for(var leg in legs) {
+      var prediction = leg.prediction;
+      if(prediction is PercentageSpreadPrediction) {
+        spreadPredictions.increment(_canonicalSpreadKey(prediction.favorite, prediction.underdog));
+      }
+    }
+
+    for(var MapEntry(key: _, value: count) in spreadPredictions.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if spread legs share correlated long/short exposure on the same shooter.
+  ///
+  /// A shooter may appear on the covering (long) side of at most one spread, and on the
+  /// opposing (short) side of at most one spread. One long and one short for the same
+  /// shooter is allowed, to permit an "A beats B, but C beats A" parlay expressing that
+  /// A finishes between B and C.
+  static bool _hasCorrelatedSpreadPredictions(List<Wager> legs) {
+    var longCounts = <ShooterRating, int>{};
+    var shortCounts = <ShooterRating, int>{};
+
+    for(var leg in legs) {
+      var prediction = leg.prediction;
+      if(prediction is PercentageSpreadPrediction) {
+        if(prediction.favoriteCovers) {
+          longCounts.increment(prediction.favorite);
+          shortCounts.increment(prediction.underdog);
+        }
+        else {
+          longCounts.increment(prediction.underdog);
+          shortCounts.increment(prediction.favorite);
+        }
+      }
+    }
+
+    for(var MapEntry(key: _, value: count) in longCounts.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+    for(var MapEntry(key: _, value: count) in shortCounts.entries) {
+      if(count > 1) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// Check if there are conflicting predictions (multiple predictions for the same shooter(s)).
