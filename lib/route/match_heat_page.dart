@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:color_models/color_models.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -47,7 +48,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   void initState() {
-    _loadMatchHeat();
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    _loadMatchHeat(uiScaleFactor);
     super.initState();
   }
 
@@ -81,7 +83,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   double _top10PercentReference = 1200;
   double _top10PercentReferenceDivisor = 50;
 
-  void _loadMatchHeat() async {
+  void _loadMatchHeat(double uiScaleFactor) async {
     var db = AnalystDatabase();
     var projectId = await widget.dataSource.getProjectId();
     if(projectId.isErr()) {
@@ -107,7 +109,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       _classStrengths[c] = sport.ratingStrengthProvider!.strengthForClass(c);
     }
 
-    _rebuildChart();
+    _rebuildChart(uiScaleFactor);
 
     var precalculatedHeat = await db.getMatchHeatForProject(_project!.id);
     for(var heat in precalculatedHeat) {
@@ -130,7 +132,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       _recalculateSizes();
       setStateIfMounted(() {
         _progress = 1;
-        _rebuildChart();
+        _rebuildChart(uiScaleFactor);
       });
     }
 
@@ -141,7 +143,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         _matchHeat[ptr] = matchHeat;
         db.saveMatchHeat(matchHeat);
         _recalculateSizes();
-        _rebuildChart();
+        _rebuildChart(uiScaleFactor);
         updatedDuringMissingMatches = true;
       }
       setStateIfMounted(() {
@@ -151,7 +153,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     if(!updatedDuringMissingMatches) {
       _recalculateSizes();
       setStateIfMounted(() {
-        _rebuildChart();
+        _rebuildChart(uiScaleFactor);
       });
     }
   }
@@ -236,6 +238,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     String displaySettingsTooltip = "Display settings\nDot size: ${_settings.dotSize.axisLabel.toLowerCase()}\nDot color: ${_settings.dotColor.axisLabel.toLowerCase()}";
     return Scaffold(
       appBar: AppBar(
@@ -243,7 +246,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           child: const Text("Match Heat"),
           onTap: () {
             _recalculateSizes();
-            _rebuildChart();
+            _rebuildChart(uiScaleFactor);
           }
         ),
         actions: [
@@ -277,7 +280,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                 setState(() {
                   _progress = 0;
                 });
-                _loadMatchHeat();
+                _loadMatchHeat(uiScaleFactor);
               }
             },
             icon: Icon(Icons.refresh),
@@ -308,7 +311,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                           _settings = newSettings;
                         });
                         _recalculateSizes();
-                        _rebuildChart();
+                        _rebuildChart(uiScaleFactor);
                       }
                     },
                     icon: Icon(Icons.settings),
@@ -322,7 +325,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                       if(pointers != null) {
                         _highlightedMatches = pointers;
                         setState(() {
-                          _rebuildChart();
+                          _rebuildChart(uiScaleFactor);
                         });
                       }
                     },
@@ -335,7 +338,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                     onPressed: () {
                       _highlightedMatches = [];
                       setState(() {
-                        _rebuildChart();
+                        _rebuildChart(uiScaleFactor);
                       });
                     },
                     icon: Icon(Icons.clear),
@@ -373,7 +376,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   charts.Series<MatchHeat, num>? _series;
   charts.ScatterPlotChart? _chart;
 
-  void _rebuildSeries() {
+  void _rebuildSeries(double uiScaleFactor) {
     _series = charts.Series<MatchHeat, num>(
       id: "matchHeat",
       data: _matchHeat.values.toList(),
@@ -392,41 +395,41 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       radiusPxFn: (MatchHeat heat, _) {
         if(_settings.dotSize == MatchHeatValue.matchSize) {
           if(heat.rawCompetitorCount < 50) {
-            return 1;
+            return 1 * uiScaleFactor;
           }
           else {
-            return 1 + ((heat.rawCompetitorCount - 50) / 50);
+            return 1 * uiScaleFactor + ((heat.rawCompetitorCount - 50) / 50);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating) {
           if(heat.weightedMedianRating < _top10PercentReference) {
-            return 1;
+            return 1 * uiScaleFactor;
           }
           else {
-            return 1 + ((heat.weightedMedianRating - _top10PercentReference) / _top10PercentReferenceDivisor);
+            return 1 * uiScaleFactor + ((heat.weightedMedianRating - _top10PercentReference) / _top10PercentReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.medianRating) {
           if(heat.weightedMedianRating < _medianReference) {
-            return 1;
+            return 1 * uiScaleFactor;
           }
           else {
-            return 1 + ((heat.weightedMedianRating - _medianReference) / _medianReferenceDivisor);
+            return 1 * uiScaleFactor + ((heat.weightedMedianRating - _medianReference) / _medianReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.averageClassification) {
           var range = _maxClassStrength - _minClassStrength;
           // Bottom 10% of the range is 1 pixel
           if(heat.weightedClassificationStrength <= _minClassStrength + (range * 0.1)) {
-            return 1;
+            return 1 * uiScaleFactor;
           }
           else {
             // Scale up from 1 pixel to 10 pixels, with 10 pixels being the strongest classification strength/*  */
-            return 1 + ((heat.weightedClassificationStrength - (_minClassStrength + (range * 0.1))) / (range * 0.8) * 9);
+            return 1 * uiScaleFactor + ((heat.weightedClassificationStrength - (_minClassStrength + (range * 0.1))) / (range * 0.8) * 9);
           }
         }
         else {
-          return 1;
+          return 1 * uiScaleFactor;
         }
       },
       colorFn: (MatchHeat heat, _) {
@@ -473,8 +476,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     );
   }
 
-  void _rebuildChart() {
-    _rebuildSeries();
+  void _rebuildChart(double uiScaleFactor) {
+    _rebuildSeries(uiScaleFactor);
     _chart = charts.ScatterPlotChart(
       [
         _series!
