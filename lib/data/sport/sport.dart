@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/reentry_policy.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
@@ -67,6 +68,12 @@ class Sport {
   /// Sort modes that are meaningful for this sport.
   final List<SortMode> resultSortModes;
 
+  /// This sport's policy for handling reentries in combined-history contexts.
+  ///
+  /// USPSA, for instance, discourages reentries at locals and forbids them at majors,
+  /// but ICORE encourages people to shoot two guns even as high as the IRC.
+  final ReentryPolicy reentryPolicy;
+
   /// Initial ratings for the Elo rating engine.
   Map<Classification, double> initialEloRatings;
 
@@ -123,6 +130,7 @@ class Sport {
     required this.matchScoring,
     required this.defaultStageScoring,
     required this.type,
+    this.reentryPolicy = ReentryPolicy.ignoreReentries,
     this.hasStages = true,
     this.resultSortModes = const [
       SortMode.score,

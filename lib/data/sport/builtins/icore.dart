@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/icore_dedupli
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore_utils/icore_display_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/reentry_policy.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
@@ -150,6 +151,7 @@ final icoreSport = Sport(
     matchScoring: CumulativeScoring(highScoreWins: false),
     defaultStageScoring: const TimePlusScoring(rawZeroWithEventsIsNonDnf: true),
     hasStages: true,
+    reentryPolicy: ReentryPolicy.reentriesAllowed,
     resultSortModes: [
       SortMode.time,
       SortMode.rawTime,
