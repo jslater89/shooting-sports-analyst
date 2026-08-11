@@ -72,9 +72,10 @@ class RegistrationContainer {
   List<MatchRegistration> exportMatchRegistrations() {
     var exported = <MatchRegistration>[];
     for(var entry in registrations.entries) {
+      final stableIshId = "${entry.key.name}-${entry.key.division.name}-${entry.key.classification.name}";
       exported.add(MatchRegistration(
         matchId: matchId,
-        entryId: entry.key.name,
+        entryId: stableIshId,
         shooterName: entry.key.name,
         shooterDivisionName: entry.key.division.name,
         shooterClassificationName: entry.key.classification.name,
@@ -87,9 +88,10 @@ class RegistrationContainer {
       ));
     }
     for(var entry in unmatchedShooters) {
+      final stableIshId = "${entry.name}-${entry.division.name}-${entry.classification.name}";
       exported.add(MatchRegistration(
         matchId: matchId,
-        entryId: entry.name,
+        entryId: stableIshId,
         shooterName: entry.name,
         shooterDivisionName: entry.division.name,
         shooterClassificationName: entry.classification.name,

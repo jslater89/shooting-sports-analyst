@@ -318,8 +318,48 @@ class AutoImporter {
     }
     var (futureMatch, exportedRegistrations) = result.unwrap();
 
-    // This source can't guarantee stable entry IDs, so overwrite all old registrations.
-    // TODO: with match prep, we want to be able to merge
+    final previousFutureMatch = await AnalystDatabase().getFutureMatchByMatchId(futureMatch.matchId);
+    if(previousFutureMatch != null) {
+      await previousFutureMatch.registrations.load();
+
+      Map<String, MatchRegistration> previousRegistrationsById = {};
+      Map<String, MatchRegistration> newRegistrationsById = {};
+      List<MatchRegistration> manualRegistrations = [];
+      for(var registration in previousFutureMatch.registrations) {
+        previousRegistrationsById[registration.entryId] = registration;
+        if(registration.addedManually) {
+          manualRegistrations.add(registration);
+        }
+      }
+
+      for(var newRegistration in exportedRegistrations) {
+        newRegistrationsById[newRegistration.entryId] = newRegistration;
+        final previousRegistration = previousRegistrationsById[newRegistration.entryId];
+        if(previousRegistration != null) {
+          if(!newRegistration.hadMemberNumber && newRegistration.shooterMemberNumbers.isEmpty && previousRegistration.shooterMemberNumbers.isNotEmpty) {
+            newRegistration.shooterMemberNumbers = previousRegistration.shooterMemberNumbers;
+            newRegistration.resolvedAutomatically = previousRegistration.resolvedAutomatically;
+            newRegistration.resolvedFromManualMapping = previousRegistration.resolvedFromManualMapping;
+          }
+        }
+      }
+
+      for(var manualRegistration in manualRegistrations) {
+        final newRegistration = newRegistrationsById[manualRegistration.entryId];
+        if(newRegistration == null) {
+          exportedRegistrations.add(manualRegistration);
+        }
+        else {
+          if(!newRegistration.hadMemberNumber && newRegistration.shooterMemberNumbers.isEmpty && manualRegistration.shooterMemberNumbers.isNotEmpty) {
+            newRegistration.shooterMemberNumbers = manualRegistration.shooterMemberNumbers;
+            newRegistration.resolvedAutomatically = manualRegistration.resolvedAutomatically;
+            newRegistration.resolvedFromManualMapping = manualRegistration.resolvedFromManualMapping;
+          }
+        }
+      }
+    }
+
+    // Exported registrations is now a merged copy of old registrations and new.
     var saveRes = await AnalystDatabase().saveFutureMatch(
       futureMatch,
       newRegistrations: exportedRegistrations,
