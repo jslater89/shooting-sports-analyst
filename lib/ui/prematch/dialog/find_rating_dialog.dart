@@ -99,7 +99,7 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
       project: widget.project,
       group: widget.group,
       name: value,
-      limit: 50,
+      limit: 100,
       searchMode: suffixSearch ? FindShooterSearchMode.endsWith : FindShooterSearchMode.contains,
     );
     results = dbResults.map((e) => widget.project.wrapDbRatingSync(e)).toList();
@@ -140,7 +140,7 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
           spacing: 8 * uiScaleFactor,
           children: [
             if(registrationInfo != null) Text(registrationInfo),
-            Text("Enter a name or part of a name to find a rating. Up to 50 results are shown. For very common "
+            Text("Enter a name or part of a name to find a rating. Up to 100 results are shown. For very common "
             "names, you may need to use a more specific query. Ratings are sorted by "
             "${widget.sortMode == FindRatingSortMode.similarity ? "similarity to the registration name" : "rating"}."),
             Row(
