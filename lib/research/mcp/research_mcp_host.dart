@@ -76,7 +76,7 @@ class ResearchMcpHost {
     try {
       _server = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       _log.i("Research MCP listening on 127.0.0.1:${_server!.port}");
-      _acceptSub = _server!.listen((socket) {
+      _acceptSub = _server!.listen((socket) async {
         _log.i("Research MCP client connected from ${socket.remoteAddress.address}:${socket.remotePort}");
         final channel = stdioChannel(input: socket, output: socket);
         final session = SsaResearchMcpServer(
@@ -84,6 +84,8 @@ class ResearchMcpHost {
           facade: facade,
           defaultProject: kDefaultResearchProjectName,
         );
+        final tools = await session.listTools();
+        _log.i("Available tools: ${tools.tools.map((t) => t.name).join(", ")}");
         _sessions.add(session);
         socket.done.then((_) {
           _sessions.remove(session);

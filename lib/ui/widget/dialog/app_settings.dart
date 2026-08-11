@@ -246,7 +246,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                   enabled: config.researchMcpServerEnabled,
                   decoration: const InputDecoration(
                     labelText: "Research MCP port",
-                    helperText: "Bound to 127.0.0.1 only (default 8090); Cursor shim proxies here",
+                    helperText: "Bound to 127.0.0.1 only",
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {

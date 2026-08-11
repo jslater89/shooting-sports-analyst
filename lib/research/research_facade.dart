@@ -9,6 +9,13 @@ import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
+import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
+import "package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart";
+import "package:shooting_sports_analyst/data/ranking/model/rating_system.dart";
+import "package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart";
+import "package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart";
+import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart";
+import "package:shooting_sports_analyst/data/sport/builtins/registry.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/filter_set.dart";
@@ -36,17 +43,87 @@ class ResearchFacade {
       if (!p.dbGroups.isLoaded) {
         await p.dbGroups.load();
       }
-      out.add(RatingProjectDto(
-        id: p.id,
-        name: p.name,
-        sportName: p.sportName,
-        matchCount: p.matchPointers.length,
-        groups: p.groups
-            .map((g) => RatingGroupDto(uuid: g.uuid, name: g.name))
-            .toList(),
-      ));
+      out.add(_projectDto(p));
     }
     return out;
+  }
+
+  Future<LeaderboardResponse> getLeaderboard({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    String? sort,
+    int limit = 25,
+    int minMatches = 0,
+    DateTime? seenSince,
+    DateTime? changeSince,
+  }) async {
+    if (limit < 1) {
+      throw ResearchException("limit must be >= 1");
+    }
+    if (minMatches < 0) {
+      throw ResearchException("minMatches must be >= 0");
+    }
+
+    final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    if (!project.dbGroups.isLoaded) {
+      await project.dbGroups.load();
+    }
+    final group = _requireSingleGroup(project, groupUuid: groupUuid, groupName: groupName);
+    final algo = project.settings.algorithm;
+    final sortMode = _parseSortMode(sort, algo);
+    final latestMatchDate = _latestMatchDate(project);
+    final effectiveSeenSince = seenSince ?? DateTime(latestMatchDate.year - 1, 1, 1);
+
+    final ratingsRes = await project.getRatings(group);
+    if (ratingsRes.isErr()) {
+      throw ResearchException(
+        "Failed to load ratings for group ${group.name}: ${ratingsRes.unwrapErr()}",
+        statusCode: 500,
+      );
+    }
+
+    final wrapped = <ShooterRating>[];
+    for (final dbRating in ratingsRes.unwrap()) {
+      if (dbRating.lastSeen.isBefore(effectiveSeenSince)) {
+        continue;
+      }
+      final r = project.wrapDbRatingSync(dbRating);
+      final matches = r.matchCount ?? r.length;
+      if (matches < minMatches) {
+        continue;
+      }
+      wrapped.add(r);
+    }
+
+    final comparator = algo.comparatorFor(sortMode, changeSince: changeSince)
+        ?? sortMode.comparator(changeSince: changeSince);
+    wrapped.sort(comparator);
+
+    final entries = <LeaderboardEntryDto>[];
+    final take = wrapped.take(limit).toList();
+    for (var i = 0; i < take.length; i++) {
+      entries.add(_leaderboardEntry(
+        place: i + 1,
+        project: project,
+        rating: take[i],
+        sortMode: sortMode,
+        changeSince: changeSince,
+      ));
+    }
+
+    return LeaderboardResponse(
+      projectName: project.name,
+      groupUuid: group.uuid,
+      groupName: group.name,
+      sort: sortMode.name,
+      sortLabel: algo.nameForSort(sortMode),
+      minMatches: minMatches,
+      seenSince: effectiveSeenSince,
+      latestMatchDate: latestMatchDate,
+      totalAfterFilters: wrapped.length,
+      entries: entries,
+    );
   }
 
   Future<List<MatchSummaryDto>> searchMatches({
@@ -138,70 +215,19 @@ class ResearchFacade {
     int? topN,
     bool overall = false,
   }) async {
-    final dbMatch = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
-    final shootingMatch = await _hydrate(dbMatch);
-    final sport = shootingMatch.sport;
-
-    late final FilterSet filters;
-    late final String pool;
-    late final String kind;
-
-    if (overall) {
-      filters = FilterSet(sport);
-      pool = "overall";
-      kind = "overall";
-    }
-    else if (groupUuid != null || groupName != null) {
-      final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
-      if (!project.dbGroups.isLoaded) {
-        await project.dbGroups.load();
-      }
-      final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
-      if (groups.length != 1) {
-        throw ResearchException(
-          "Specify a single rating group (got ${groups.length}). Pass groupUuid or a unique group name.",
-        );
-      }
-      filters = groups.first.filters;
-      pool = groups.first.name;
-      kind = "ratingGroup";
-    }
-    else if (division != null && division.trim().isNotEmpty) {
-      final div = _lookupDivision(sport, division.trim());
-      filters = FilterSet.forDivision(sport, div);
-      pool = div.displayName;
-      kind = "division";
-    }
-    else {
-      throw ResearchException(
-        "Specify division, group/groupUuid, or overall=true for getMatchResults",
-      );
-    }
-
-    filters.femaleOnly = femaleOnly;
-    final ageFilter = ageCategory?.trim();
-    final categoryFilter = category?.trim();
-    if (ageFilter != null && ageFilter.isNotEmpty) {
-      final age = sport.ageCategories.lookupByName(ageFilter);
-      if (age == null) {
-        throw ResearchException("Unknown age category: $ageFilter", statusCode: 404);
-      }
-      for (final key in filters.ageCategories.keys.toList()) {
-        filters.ageCategories[key] = key == age;
-      }
-    }
-    if (categoryFilter != null && categoryFilter.isNotEmpty) {
-      final cat = sport.categories.lookupByName(categoryFilter);
-      if (cat == null) {
-        throw ResearchException("Unknown competitor category: $categoryFilter", statusCode: 404);
-      }
-      for (final key in filters.categories.keys.toList()) {
-        filters.categories[key] = key == cat;
-      }
-    }
-
-    final scores = shootingMatch.getScoresFromFilters(filters);
-    final scored = scores.entries.toList()
+    final resolved = await _resolveMatchPool(
+      matchId: matchId,
+      matchQuery: matchQuery,
+      projectName: projectName,
+      division: division,
+      groupUuid: groupUuid,
+      groupName: groupName,
+      femaleOnly: femaleOnly,
+      ageCategory: ageCategory,
+      category: category,
+      overall: overall,
+    );
+    final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
     final limit = topN != null && topN > 0 ? topN : scored.length;
     final results = <MatchCompetitorResultDto>[];
@@ -210,14 +236,165 @@ class ResearchFacade {
     }
 
     return MatchResultsResponse(
-      match: _matchSummary(dbMatch),
-      pool: pool,
-      kind: kind,
+      match: _matchSummary(resolved.dbMatch),
+      pool: resolved.pool,
+      kind: resolved.kind,
       femaleOnly: femaleOnly,
-      ageCategory: (ageFilter == null || ageFilter.isEmpty) ? null : ageFilter,
-      category: (categoryFilter == null || categoryFilter.isEmpty) ? null : categoryFilter,
+      ageCategory: resolved.ageCategoryFilter,
+      category: resolved.categoryFilter,
       competitorCount: scored.length,
       results: results,
+    );
+  }
+
+  /// Detailed match scores for one scoring pool, with optional stages and event counts.
+  Future<MatchScoresResponse> getMatchScores({
+    int? matchId,
+    String? matchQuery,
+    String? projectName,
+    String? division,
+    String? groupUuid,
+    String? groupName,
+    bool femaleOnly = false,
+    String? ageCategory,
+    String? category,
+    int? topN,
+    bool overall = false,
+    bool includeStages = false,
+    bool includeScoringEventCounts = false,
+  }) async {
+    final resolved = await _resolveMatchPool(
+      matchId: matchId,
+      matchQuery: matchQuery,
+      projectName: projectName,
+      division: division,
+      groupUuid: groupUuid,
+      groupName: groupName,
+      femaleOnly: femaleOnly,
+      ageCategory: ageCategory,
+      category: category,
+      overall: overall,
+    );
+    final scoringKind = _scoringKind(resolved.shootingMatch.sport);
+    final scored = resolved.scores.entries.toList()
+      ..sort((a, b) => a.value.place.compareTo(b.value.place));
+    final limit = topN != null && topN > 0 ? topN : scored.length;
+    final rows = <MatchScoreRowDto>[];
+    for (final e in scored.take(limit)) {
+      rows.add(_matchScoreRow(
+        e.key,
+        e.value,
+        scoringKind: scoringKind,
+        includeStages: includeStages,
+        includeScoringEventCounts: includeScoringEventCounts,
+      ));
+    }
+
+    return MatchScoresResponse(
+      match: _matchSummary(resolved.dbMatch),
+      pool: resolved.pool,
+      kind: resolved.kind,
+      scoringKind: scoringKind,
+      femaleOnly: femaleOnly,
+      ageCategory: resolved.ageCategoryFilter,
+      category: resolved.categoryFilter,
+      competitorCount: scored.length,
+      includeStages: includeStages,
+      includeScoringEventCounts: includeScoringEventCounts,
+      scores: rows,
+    );
+  }
+
+  /// One competitor's stage scores at a match.
+  ///
+  /// If no pool is specified, defaults to the competitor's entered division.
+  Future<CompetitorStageScoresResponse> getCompetitorStageScores({
+    int? matchId,
+    String? matchQuery,
+    String? projectName,
+    String? memberNumber,
+    int? ratingId,
+    String? division,
+    String? groupUuid,
+    String? groupName,
+    bool overall = false,
+    bool includeScoringEventCounts = false,
+  }) async {
+    final dbMatch = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
+    final shootingMatch = await _hydrate(dbMatch);
+    final sport = shootingMatch.sport;
+
+    final entry = await _resolveMatchEntry(
+      shootingMatch,
+      memberNumber: memberNumber,
+      ratingId: ratingId,
+      projectName: projectName,
+    );
+
+    final hasExplicitPool = overall ||
+        (division != null && division.trim().isNotEmpty) ||
+        (groupUuid != null && groupUuid.isNotEmpty) ||
+        (groupName != null && groupName.isNotEmpty);
+
+    late final _ResolvedMatchPool resolved;
+    if (hasExplicitPool) {
+      resolved = await _resolveMatchPool(
+        matchId: dbMatch.id,
+        projectName: projectName,
+        division: division,
+        groupUuid: groupUuid,
+        groupName: groupName,
+        overall: overall,
+        preloadedDbMatch: dbMatch,
+        preloadedShootingMatch: shootingMatch,
+      );
+    }
+    else {
+      final entered = entry.division;
+      if (entered == null) {
+        throw ResearchException(
+          "Competitor has no entered division; specify division, group/groupUuid, or overall=true",
+        );
+      }
+      resolved = await _resolveMatchPool(
+        matchId: dbMatch.id,
+        projectName: projectName,
+        division: entered.name,
+        preloadedDbMatch: dbMatch,
+        preloadedShootingMatch: shootingMatch,
+      );
+    }
+
+    final score = resolved.scores[entry];
+    if (score == null) {
+      throw ResearchException(
+        "Competitor ${entry.memberNumber} is not in scoring pool '${resolved.pool}'",
+        statusCode: 404,
+      );
+    }
+
+    final scoringKind = _scoringKind(sport);
+    final competitorRow = _matchScoreRow(
+      entry,
+      score,
+      scoringKind: scoringKind,
+      includeStages: false,
+      includeScoringEventCounts: includeScoringEventCounts,
+    );
+    final stages = _stageScoreDtos(
+      score,
+      scoringKind: scoringKind,
+      includeScoringEventCounts: includeScoringEventCounts,
+    );
+
+    return CompetitorStageScoresResponse(
+      match: _matchSummary(dbMatch),
+      pool: resolved.pool,
+      kind: resolved.kind,
+      scoringKind: scoringKind,
+      competitor: competitorRow,
+      stages: stages,
+      includeScoringEventCounts: includeScoringEventCounts,
     );
   }
 
@@ -355,6 +532,7 @@ class ResearchFacade {
       if (m != null) {
         matchName = m.eventName;
       }
+      final entryInfo = await _entryDivisionAndClassification(m, e.entryId);
       final displayOld = algo.scaleRating(e.oldRating);
       final displayNew = algo.scaleRating(e.newRating);
       out.add(RatingEventDto(
@@ -368,6 +546,8 @@ class ResearchFacade {
         matchPlace: e.matchScore.place,
         matchRatio: e.matchScore.ratio,
         matchPercentage: e.matchScore.percentage,
+        division: entryInfo.division,
+        classification: entryInfo.classification,
         internalOldRating: includeInternal ? e.oldRating : null,
         internalNewRating: includeInternal ? e.newRating : null,
         internalRatingChange: includeInternal ? e.ratingChange : null,
@@ -410,6 +590,7 @@ class ResearchFacade {
       if (m != null) {
         matchName = m.eventName;
       }
+      final entryInfo = await _entryDivisionAndClassification(m, e.entryId);
       final displayOld = algo.scaleRating(e.oldRating);
       final displayNew = algo.scaleRating(e.newRating);
       byMatch[e.matchId] = ShooterMatchResultDto(
@@ -419,6 +600,8 @@ class ResearchFacade {
         place: e.matchScore.place,
         ratio: e.matchScore.ratio,
         percentage: e.matchScore.percentage,
+        division: entryInfo.division,
+        classification: entryInfo.classification,
         ratingChange: displayNew - displayOld,
         oldRating: displayOld,
         newRating: displayNew,
@@ -484,6 +667,42 @@ class ResearchFacade {
     return hydrated.unwrap();
   }
 
+  /// Resolve division/classification entered for a rating event via match entryId.
+  Future<({String? division, String? classification})> _entryDivisionAndClassification(
+    DbShootingMatch? match,
+    int entryId,
+  ) async {
+    if (match == null) {
+      return (division: null, classification: null);
+    }
+
+    DbMatchEntryBase? entry;
+    if (match.shootersStoredSeparately) {
+      if (!match.shooterLinks.isLoaded) {
+        await match.shooterLinks.load();
+      }
+      entry = match.shooterLinks.firstWhereOrNull((e) => e.entryId == entryId);
+    }
+    else {
+      entry = match.shooters.firstWhereOrNull((e) => e.entryId == entryId);
+    }
+    if (entry == null) {
+      return (division: null, classification: null);
+    }
+
+    final sport = SportRegistry().lookup(match.sportName);
+    final divisionName = entry.divisionName;
+    final classificationName = entry.classificationName;
+    final division = divisionName == null
+        ? null
+        : (sport?.divisions.lookupByName(divisionName)?.displayName ?? divisionName);
+    final classification = classificationName == null
+        ? null
+        : (sport?.classifications.lookupByName(classificationName)?.displayName
+            ?? classificationName);
+    return (division: division, classification: classification);
+  }
+
   List<MatchWinnerDto> _topFromScores(
     Map<MatchEntry, RelativeMatchScore> scores, {
     required String label,
@@ -539,6 +758,242 @@ class ResearchFacade {
       dq: shooter.dq,
       reentry: shooter.reentry,
       squad: shooter.squad,
+    );
+  }
+
+  Future<_ResolvedMatchPool> _resolveMatchPool({
+    int? matchId,
+    String? matchQuery,
+    String? projectName,
+    String? division,
+    String? groupUuid,
+    String? groupName,
+    bool femaleOnly = false,
+    String? ageCategory,
+    String? category,
+    bool overall = false,
+    DbShootingMatch? preloadedDbMatch,
+    ShootingMatch? preloadedShootingMatch,
+  }) async {
+    final dbMatch = preloadedDbMatch ??
+        await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
+    final shootingMatch = preloadedShootingMatch ?? await _hydrate(dbMatch);
+    final sport = shootingMatch.sport;
+
+    late final FilterSet filters;
+    late final String pool;
+    late final String kind;
+
+    if (overall) {
+      filters = FilterSet(sport);
+      pool = "overall";
+      kind = "overall";
+    }
+    else if (groupUuid != null || groupName != null) {
+      final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+      if (!project.dbGroups.isLoaded) {
+        await project.dbGroups.load();
+      }
+      final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+      if (groups.length != 1) {
+        throw ResearchException(
+          "Specify a single rating group (got ${groups.length}). Pass groupUuid or a unique group name.",
+        );
+      }
+      filters = groups.first.filters;
+      pool = groups.first.name;
+      kind = "ratingGroup";
+    }
+    else if (division != null && division.trim().isNotEmpty) {
+      final div = _lookupDivision(sport, division.trim());
+      filters = FilterSet.forDivision(sport, div);
+      pool = div.displayName;
+      kind = "division";
+    }
+    else {
+      throw ResearchException(
+        "Specify division, group/groupUuid, or overall=true",
+      );
+    }
+
+    filters.femaleOnly = femaleOnly;
+    final ageFilter = ageCategory?.trim();
+    final categoryFilter = category?.trim();
+    if (ageFilter != null && ageFilter.isNotEmpty) {
+      final age = sport.ageCategories.lookupByName(ageFilter);
+      if (age == null) {
+        throw ResearchException("Unknown age category: $ageFilter", statusCode: 404);
+      }
+      for (final key in filters.ageCategories.keys.toList()) {
+        filters.ageCategories[key] = key == age;
+      }
+    }
+    if (categoryFilter != null && categoryFilter.isNotEmpty) {
+      final cat = sport.categories.lookupByName(categoryFilter);
+      if (cat == null) {
+        throw ResearchException("Unknown competitor category: $categoryFilter", statusCode: 404);
+      }
+      for (final key in filters.categories.keys.toList()) {
+        filters.categories[key] = key == cat;
+      }
+    }
+
+    final scores = shootingMatch.getScoresFromFilters(filters);
+    return _ResolvedMatchPool(
+      dbMatch: dbMatch,
+      shootingMatch: shootingMatch,
+      filters: filters,
+      scores: scores,
+      pool: pool,
+      kind: kind,
+      ageCategoryFilter: (ageFilter == null || ageFilter.isEmpty) ? null : ageFilter,
+      categoryFilter: (categoryFilter == null || categoryFilter.isEmpty) ? null : categoryFilter,
+    );
+  }
+
+  Future<MatchEntry> _resolveMatchEntry(
+    ShootingMatch match, {
+    String? memberNumber,
+    int? ratingId,
+    String? projectName,
+  }) async {
+    String? mn = memberNumber?.trim();
+    if ((mn == null || mn.isEmpty) && ratingId != null) {
+      final resolved = await _resolveShooterRating(
+        projectName: projectName,
+        ratingId: ratingId,
+      );
+      mn = resolved.rating.memberNumber;
+    }
+    if (mn == null || mn.isEmpty) {
+      throw ResearchException("memberNumber or ratingId is required");
+    }
+
+    final processor = ShooterDeduplicator.numberProcessor(match.sport);
+    final processed = processor(mn);
+    final matches = match.shooters.where((s) {
+      if (s.memberNumber == mn || s.memberNumber == processed) {
+        return true;
+      }
+      final sProcessed = processor(s.memberNumber);
+      return sProcessed == processed || s.knownMemberNumbers.contains(mn) || s.knownMemberNumbers.contains(processed);
+    }).toList();
+
+    if (matches.isEmpty) {
+      throw ResearchException(
+        "Competitor not found in match: memberNumber=$mn",
+        statusCode: 404,
+      );
+    }
+    // Prefer non-reentry when multiple entries exist.
+    final primary = matches.firstWhereOrNull((s) => !s.reentry) ?? matches.first;
+    return primary;
+  }
+
+  String _scoringKind(Sport sport) {
+    if (sport.type.isHitFactor) {
+      return "hitFactor";
+    }
+    if (sport.type.isTimePlus) {
+      return "timePlus";
+    }
+    if (sport.type.isPoints) {
+      return "points";
+    }
+    return "hitFactor";
+  }
+
+  MatchScoreRowDto _matchScoreRow(
+    MatchEntry shooter,
+    RelativeMatchScore score, {
+    required String scoringKind,
+    required bool includeStages,
+    required bool includeScoringEventCounts,
+  }) {
+    final total = score.total;
+    return MatchScoreRowDto(
+      place: score.place,
+      name: "${shooter.firstName} ${shooter.lastName}".trim(),
+      firstName: shooter.firstName,
+      lastName: shooter.lastName,
+      memberNumber: shooter.memberNumber,
+      classification: shooter.classification?.displayName ?? shooter.classification?.name,
+      division: shooter.division?.displayName ?? shooter.division?.name,
+      powerFactor: shooter.powerFactor.displayName,
+      female: shooter.female,
+      ageCategory: shooter.ageCategory?.displayName ?? shooter.ageCategory?.name,
+      categories: shooter.categories.map((c) => c.displayName).toList(),
+      ratio: score.ratio,
+      percentage: score.percentage,
+      points: score.points,
+      finalTime: total.finalTime,
+      hitFactor: scoringKind == "hitFactor" ? total.hitFactor : null,
+      rawPoints: scoringKind == "hitFactor" || scoringKind == "points"
+          ? total.getTotalPoints().toDouble()
+          : null,
+      dq: shooter.dq,
+      reentry: shooter.reentry,
+      squad: shooter.squad,
+      entryId: shooter.entryId,
+      eventCounts: includeScoringEventCounts ? _eventCountsDto(total) : null,
+      stages: includeStages
+          ? _stageScoreDtos(
+              score,
+              scoringKind: scoringKind,
+              includeScoringEventCounts: includeScoringEventCounts,
+            )
+          : const [],
+    );
+  }
+
+  List<StageScoreDto> _stageScoreDtos(
+    RelativeMatchScore matchScore, {
+    required String scoringKind,
+    required bool includeScoringEventCounts,
+  }) {
+    final stages = matchScore.stageScores.entries.toList()
+      ..sort((a, b) => a.key.stageId.compareTo(b.key.stageId));
+    return stages.map((e) {
+      final stage = e.key;
+      final stageScore = e.value;
+      final raw = stageScore.score;
+      return StageScoreDto(
+        stageNumber: stage.stageId,
+        stageName: stage.name,
+        place: stageScore.place,
+        ratio: stageScore.ratio,
+        percentage: stageScore.percentage,
+        points: stageScore.points,
+        finalTime: raw.finalTime,
+        hitFactor: scoringKind == "hitFactor" ? raw.hitFactor : null,
+        rawPoints: scoringKind == "hitFactor" || scoringKind == "points"
+            ? raw.getTotalPoints().toDouble()
+            : null,
+        dnf: stageScore.isDnf,
+        eventCounts: includeScoringEventCounts ? _eventCountsDto(raw) : null,
+      );
+    }).toList();
+  }
+
+  ScoringEventCountsDto _eventCountsDto(RawScore raw) {
+    final target = <String, int>{};
+    for (final e in raw.targetEvents.entries) {
+      if (e.value != 0) {
+        target[e.key.name] = e.value;
+      }
+    }
+    final penalties = <String, int>{};
+    for (final e in raw.penaltyEvents.entries) {
+      if (e.value != 0) {
+        penalties[e.key.name] = e.value;
+      }
+    }
+    final penaltyCount = penalties.values.fold<int>(0, (a, b) => a + b);
+    return ScoringEventCountsDto(
+      targetEvents: target,
+      penaltyEvents: penalties,
+      penaltyCount: penaltyCount,
+      hasPenalties: penaltyCount > 0,
     );
   }
 
@@ -687,4 +1142,233 @@ class ResearchFacade {
       internalAgedRating: includeInternal ? wrapped.agedRating : null,
     );
   }
+
+  RatingProjectDto _projectDto(DbRatingProject p) {
+    final algo = p.settings.algorithm;
+    final algoId = _algorithmId(p);
+    return RatingProjectDto(
+      id: p.id,
+      name: p.name,
+      sportName: p.sportName,
+      matchCount: p.matchPointers.length,
+      groups: p.groups
+          .map((g) => RatingGroupDto(uuid: g.uuid, name: g.name))
+          .toList(),
+      algorithm: algoId,
+      algorithmLabel: _algorithmLabel(algoId),
+      supportedSorts: algo.supportedSorts
+          .map((m) => RatingSortModeDto(id: m.name, label: algo.nameForSort(m)))
+          .toList(),
+      latestMatchDate: p.matchPointers.isEmpty ? null : _latestMatchDate(p),
+      byStage: algo.byStage,
+    );
+  }
+
+  RatingGroup _requireSingleGroup(
+    DbRatingProject project, {
+    String? groupUuid,
+    String? groupName,
+  }) {
+    final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    if (groups.length == 1) {
+      return groups.first;
+    }
+    if (groups.isEmpty) {
+      throw ResearchException("No rating groups in project ${project.name}", statusCode: 404);
+    }
+    throw ResearchException(
+      "Specify group or groupUuid; project has multiple groups: "
+      "${groups.map((g) => g.name).join(", ")}",
+    );
+  }
+
+  DateTime _latestMatchDate(DbRatingProject project) {
+    final dated = project.matchPointers.where((m) => m.date != null).toList();
+    if (dated.isEmpty) {
+      throw ResearchException(
+        "Project ${project.name} has no dated matches",
+        statusCode: 500,
+      );
+    }
+    dated.sort((a, b) => b.date!.compareTo(a.date!));
+    return dated.first.date!;
+  }
+
+  RatingSortMode _parseSortMode(String? raw, RatingSystem algo) {
+    if (raw == null || raw.trim().isEmpty) {
+      return algo.supportedSorts.first;
+    }
+    final normalized = raw.trim().toLowerCase().replaceAll(RegExp(r"[\s_\-+±]"), "");
+    RatingSortMode? match;
+    for (final mode in RatingSortMode.values) {
+      final name = mode.name.toLowerCase();
+      final label = mode.uiLabel.toLowerCase().replaceAll(RegExp(r"[\s_\-+±]"), "");
+      if (name == normalized || label == normalized) {
+        match = mode;
+        break;
+      }
+    }
+    if (match == null && (normalized == "movers" || normalized == "lastpm")) {
+      match = RatingSortMode.lastChange;
+    }
+    if (match == null) {
+      throw ResearchException(
+        "Unknown sort '$raw'. Supported: "
+        "${algo.supportedSorts.map((m) => m.name).join(", ")}",
+      );
+    }
+    if (!algo.supportedSorts.contains(match)) {
+      throw ResearchException(
+        "Sort '${match.name}' is not supported by this project's algorithm. "
+        "Supported: ${algo.supportedSorts.map((m) => m.name).join(", ")}",
+      );
+    }
+    return match;
+  }
+
+  String _algorithmId(DbRatingProject project) {
+    final json = project.jsonDecodedSettings;
+    return (json[DbRatingProject.algorithmKey] as String?)
+        ?? DbRatingProject.multiplayerEloValue;
+  }
+
+  String _algorithmLabel(String id) {
+    switch (id) {
+      case DbRatingProject.multiplayerEloValue:
+        return "Multiplayer Elo";
+      case DbRatingProject.latentLogValue:
+        return "Latent Log Ratio";
+      case DbRatingProject.openskillValue:
+        return "OpenSkill";
+      case DbRatingProject.pointsValue:
+        return "Points";
+      case DbRatingProject.marbleValue:
+        return "Marbles";
+      case DbRatingProject.glicko2Value:
+        return "Glicko-2";
+      default:
+        return id;
+    }
+  }
+
+  double _scaleChange(RatingSystem algo, double change) {
+    return algo.scaleRating(change) - algo.scaleRating(0);
+  }
+
+  double _sortValue(
+    ShooterRating rating,
+    RatingSystem algo,
+    RatingSortMode sortMode, {
+    DateTime? changeSince,
+  }) {
+    switch (sortMode) {
+      case RatingSortMode.rating:
+        return rating.scaledRating;
+      case RatingSortMode.agedRating:
+        if (rating is LatentLogRating) {
+          return algo.scaleRating(rating.calculateAgedRating());
+        }
+        return algo.scaleRating(rating.agedRating);
+      case RatingSortMode.lastChange:
+        return _scaleChange(algo, rating.lastMatchChange);
+      case RatingSortMode.trend:
+        if (changeSince != null) {
+          return _scaleChange(algo, rating.rating - rating.ratingForDate(changeSince));
+        }
+        return _scaleChange(algo, rating.trend.toDouble());
+      case RatingSortMode.error:
+        if (rating is LatentLogRating) {
+          return rating.variance;
+        }
+        if (rating is EloShooterRating) {
+          return rating.standardError;
+        }
+        return rating.wrappedRating.error;
+      case RatingSortMode.dispersion:
+        if (rating is LatentLogRating) {
+          return rating.dispersion;
+        }
+        return 0;
+      case RatingSortMode.direction:
+        if (rating is EloShooterRating) {
+          return rating.direction;
+        }
+        return rating.trend.toDouble();
+      case RatingSortMode.stages:
+        return rating.length.toDouble();
+      case RatingSortMode.pointsPerMatch:
+        final mc = rating.matchCount ?? rating.length;
+        if (mc == 0) return 0;
+        return rating.scaledRating / mc;
+      case RatingSortMode.classification:
+      case RatingSortMode.firstName:
+      case RatingSortMode.lastName:
+        return rating.scaledRating;
+    }
+  }
+
+  LeaderboardEntryDto _leaderboardEntry({
+    required int place,
+    required DbRatingProject project,
+    required ShooterRating rating,
+    required RatingSortMode sortMode,
+    DateTime? changeSince,
+  }) {
+    final algo = project.settings.algorithm;
+    final db = rating.wrappedRating;
+    final sortValue = _sortValue(rating, algo, sortMode, changeSince: changeSince);
+
+    double? lastChange;
+    try {
+      lastChange = _scaleChange(algo, rating.lastMatchChange);
+    } catch (_) {
+      lastChange = null;
+    }
+
+    return LeaderboardEntryDto(
+      place: place,
+      ratingId: db.id,
+      firstName: rating.firstName,
+      lastName: rating.lastName,
+      name: "${rating.firstName} ${rating.lastName}".trim(),
+      memberNumber: rating.memberNumber,
+      rating: rating.scaledRating,
+      agedRating: algo.scaleRating(rating.agedRating),
+      sortValue: sortValue,
+      lastSeen: rating.lastSeen,
+      classification: db.lastClassificationName,
+      division: db.divisionName,
+      female: rating.female,
+      ageCategory: db.ageCategoryName,
+      categories: [...db.categoryNames],
+      region: rating.region,
+      regionSubdivision: rating.regionSubdivision,
+      rawLocation: rating.rawLocation,
+      matchCount: rating.matchCount,
+      historyLength: rating.length,
+      lastChange: lastChange,
+    );
+  }
+}
+
+class _ResolvedMatchPool {
+  _ResolvedMatchPool({
+    required this.dbMatch,
+    required this.shootingMatch,
+    required this.filters,
+    required this.scores,
+    required this.pool,
+    required this.kind,
+    this.ageCategoryFilter,
+    this.categoryFilter,
+  });
+
+  final DbShootingMatch dbMatch;
+  final ShootingMatch shootingMatch;
+  final FilterSet filters;
+  final Map<MatchEntry, RelativeMatchScore> scores;
+  final String pool;
+  final String kind;
+  final String? ageCategoryFilter;
+  final String? categoryFilter;
 }

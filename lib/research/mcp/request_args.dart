@@ -5,6 +5,8 @@
  */
 
 import "package:json_annotation/json_annotation.dart";
+import "package:shooting_sports_analyst/research/dtos.dart"
+    show researchDateOnlyFromJsonNullable, researchDateOnlyToJson;
 
 part "request_args.g.dart";
 
@@ -167,4 +169,112 @@ class ShooterLookupArgs {
   factory ShooterLookupArgs.fromJson(Map<String, dynamic> json) =>
       _$ShooterLookupArgsFromJson(json);
   Map<String, dynamic> toJson() => _$ShooterLookupArgsToJson(this);
+}
+
+@JsonSerializable()
+class GetLeaderboardArgs {
+  GetLeaderboardArgs({
+    this.project,
+    this.group,
+    this.groupUuid,
+    this.sort,
+    this.limit = 25,
+    this.minMatches = 0,
+    this.seenSince,
+    this.changeSince,
+  });
+
+  final String? project;
+  final String? group;
+  final String? groupUuid;
+  /// RatingSortMode name (e.g. rating, agedRating, lastChange, trend).
+  final String? sort;
+  @JsonKey(defaultValue: 25)
+  final int limit;
+  @JsonKey(defaultValue: 0)
+  final int minMatches;
+  /// YYYY-MM-DD. Default: Jan 1 of the year before the project's latest match.
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? seenSince;
+  /// Optional date for trend-since-date sorting.
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? changeSince;
+
+  factory GetLeaderboardArgs.fromJson(Map<String, dynamic> json) =>
+      _$GetLeaderboardArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$GetLeaderboardArgsToJson(this);
+}
+
+@JsonSerializable()
+class GetMatchScoresArgs {
+  GetMatchScoresArgs({
+    this.matchId,
+    this.matchQuery,
+    this.division,
+    this.group,
+    this.groupUuid,
+    this.project,
+    this.overall = false,
+    this.femaleOnly = false,
+    this.ageCategory,
+    this.category,
+    this.topN,
+    this.includeStages = false,
+    this.includeScoringEventCounts = false,
+  });
+
+  final int? matchId;
+  final String? matchQuery;
+  final String? division;
+  final String? group;
+  final String? groupUuid;
+  final String? project;
+  @JsonKey(defaultValue: false)
+  final bool overall;
+  @JsonKey(defaultValue: false)
+  final bool femaleOnly;
+  final String? ageCategory;
+  final String? category;
+  final int? topN;
+  @JsonKey(defaultValue: false)
+  final bool includeStages;
+  @JsonKey(defaultValue: false)
+  final bool includeScoringEventCounts;
+
+  factory GetMatchScoresArgs.fromJson(Map<String, dynamic> json) =>
+      _$GetMatchScoresArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$GetMatchScoresArgsToJson(this);
+}
+
+@JsonSerializable()
+class GetCompetitorStageScoresArgs {
+  GetCompetitorStageScoresArgs({
+    this.matchId,
+    this.matchQuery,
+    this.memberNumber,
+    this.ratingId,
+    this.division,
+    this.group,
+    this.groupUuid,
+    this.project,
+    this.overall = false,
+    this.includeScoringEventCounts = false,
+  });
+
+  final int? matchId;
+  final String? matchQuery;
+  final String? memberNumber;
+  final int? ratingId;
+  final String? division;
+  final String? group;
+  final String? groupUuid;
+  final String? project;
+  @JsonKey(defaultValue: false)
+  final bool overall;
+  @JsonKey(defaultValue: false)
+  final bool includeScoringEventCounts;
+
+  factory GetCompetitorStageScoresArgs.fromJson(Map<String, dynamic> json) =>
+      _$GetCompetitorStageScoresArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$GetCompetitorStageScoresArgsToJson(this);
 }
