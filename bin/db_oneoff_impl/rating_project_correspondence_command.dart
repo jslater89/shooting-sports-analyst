@@ -22,7 +22,6 @@ import "package:shooting_sports_analyst/console/repl.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
-import "package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart";
 import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rater.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart";
