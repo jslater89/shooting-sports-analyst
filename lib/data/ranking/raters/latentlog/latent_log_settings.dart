@@ -33,7 +33,9 @@ class LatentLogSettings extends RaterSettings {
   static const defaultMomentumAdaptationRate = 0.25;
   static const defaultSurpriseAdaptationRate = 0.15;
   static const defaultPairwiseBlendWeight = 0.2;
-  static const defaultStudentTCutoffZ = 2.0;
+  static const defaultStudentTNu = 4.0;
+  static const defaultStudentTCutoffUpperZ = 2.0;
+  static const defaultStudentTCutoffLowerZ = 1.0;
 
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.40;
@@ -65,7 +67,13 @@ class LatentLogSettings extends RaterSettings {
   static const _surpriseAdaptationRateKey = "latentLogSurpriseAdaptationRate";
   static const _momentumAdaptationRateKey = "latentLogMomentumAdaptationRate";
   static const _pairwiseBlendWeightKey = "latentLogPairwiseBlendWeight";
-  static const _studentTCutoffZKey = "latentLogStudentTCutoffZ";
+
+  static const _studentTNuKey = "latentLogStudentTNu";
+  /// Upper Z key doesn't say "upper" for backward compatibility; it was the original
+  /// setting
+  static const _studentTCutoffUpperZKey = "latentLogStudentTCutoffZ";
+  static const _studentTCutoffLowerZKey = "latentLogStudentTCutoffLowerZ";
+
   static const _baselineRobustnessZKey = "latentLogBaselineRobustnessZ";
   static const _tailNoiseStartPercentKey = "latentLogTailNoiseStartPercent";
   static const _tailNoiseVarianceKey = "latentLogTailNoiseVariance";
@@ -213,7 +221,17 @@ class LatentLogSettings extends RaterSettings {
   /// -> > 1: pairwise residuals applied with additional emphasis.
   double pairwiseBlendWeight = defaultPairwiseBlendWeight;
 
-  /// Student-t full-strength cutoff c_t, in innovation sigmas.
+  /// The Student-t degrees of freedom parameter ν, i.e. ν from the paper.
+  ///
+  /// Interpretation: the degrees of freedom parameter for the Student-t distribution.
+  /// Higher values give more weight to the center of the distribution, lower values
+  /// give more weight to the tails.
+  ///
+  /// Tuning: dimensionless, positive.
+  /// -> 4: default; typical matches pass through largely undamped.
+  double studentTNu = defaultStudentTNu;
+
+  /// Student-t full-strength cutoff c_t for positive innovations, in innovation sigmas.
   ///
   /// Interpretation: the robust mean-update weight is
   /// w_t(z) = min(1, (ν + c_t^2) / (ν + z^2)). Innovations within c_t
@@ -226,7 +244,14 @@ class LatentLogSettings extends RaterSettings {
   /// -> 1.0: legacy behavior; taper begins immediately past 1σ.
   /// -> 2.0: default; typical matches pass through largely undamped.
   /// -> 3.0+: only extreme innovations are downweighted.
-  double studentTCutoffZ = defaultStudentTCutoffZ;
+  double studentTCutoffUpperZ = defaultStudentTCutoffUpperZ;
+
+  /// Student-t full-strength cutoff c_t for negative innovations, in innovation sigmas.
+  /// Positive events are more likely to be skill signals than negative events, in general,
+  /// so the downside cutoff is typically tighter than the upside cutoff.
+  ///
+  /// See [studentTCutoffUpperZ] for more details.
+  double studentTCutoffLowerZ = defaultStudentTCutoffLowerZ;
 
   /// The intraclass correlation coefficient, i.e. ρ from the paper.
   ///
@@ -445,7 +470,9 @@ class LatentLogSettings extends RaterSettings {
     this.momentumAdaptationRate = defaultMomentumAdaptationRate,
     this.surpriseAdaptationRate = defaultSurpriseAdaptationRate,
     this.pairwiseBlendWeight = defaultPairwiseBlendWeight,
-    this.studentTCutoffZ = defaultStudentTCutoffZ,
+    this.studentTNu = defaultStudentTNu,
+    this.studentTCutoffUpperZ = defaultStudentTCutoffUpperZ,
+    this.studentTCutoffLowerZ = defaultStudentTCutoffLowerZ,
     this.baselineRobustnessZ = defaultBaselineRobustnessZ,
     this.intraclassCorrelation = defaultIntraclassCorrelation,
     this.tailNoiseStartPercent = defaultTailNoiseStartPercent,
@@ -479,7 +506,9 @@ class LatentLogSettings extends RaterSettings {
     json[_momentumAdaptationRateKey] = momentumAdaptationRate;
     json[_surpriseAdaptationRateKey] = surpriseAdaptationRate;
     json[_pairwiseBlendWeightKey] = pairwiseBlendWeight;
-    json[_studentTCutoffZKey] = studentTCutoffZ;
+    json[_studentTNuKey] = studentTNu;
+    json[_studentTCutoffUpperZKey] = studentTCutoffUpperZ;
+    json[_studentTCutoffLowerZKey] = studentTCutoffLowerZ;
     json[_baselineRobustnessZKey] = baselineRobustnessZ;
     json[_tailNoiseStartPercentKey] = tailNoiseStartPercent;
     json[_tailNoiseVarianceKey] = tailNoiseVariance;
@@ -532,8 +561,12 @@ class LatentLogSettings extends RaterSettings {
             as double;
     pairwiseBlendWeight =
         (json[_pairwiseBlendWeightKey] ?? defaultPairwiseBlendWeight) as double;
-    studentTCutoffZ =
-        (json[_studentTCutoffZKey] ?? defaultStudentTCutoffZ) as double;
+    studentTNu =
+        (json[_studentTNuKey] ?? defaultStudentTNu) as double;
+    studentTCutoffUpperZ =
+        (json[_studentTCutoffUpperZKey] ?? defaultStudentTCutoffUpperZ) as double;
+    studentTCutoffLowerZ =
+        (json[_studentTCutoffLowerZKey] ?? defaultStudentTCutoffLowerZ) as double;
     baselineRobustnessZ =
         (json[_baselineRobustnessZKey] ?? defaultBaselineRobustnessZ) as double;
     tailNoiseStartPercent =

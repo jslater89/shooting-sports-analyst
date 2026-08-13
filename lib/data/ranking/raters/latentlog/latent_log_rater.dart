@@ -650,10 +650,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final obsQuality = cleanObsNoise / totalObsNoise;
 
     // Student-t robust weight: damp outlier innovations.
-    const nuMin = 2;
-    const nuMax = 30;
-    final nu = (nuMin + 0.5 * scores.length).clamp(nuMin, nuMax);
-    final cT = settings.studentTCutoffZ;
+    final nu = settings.studentTNu;
+
+    // Asymmetric damping: strong positive signals are more likely to be skill signals, strong negative
+    // signals are more likely to be noise.
+    final cT = innovation > 0 ? settings.studentTCutoffUpperZ : settings.studentTCutoffLowerZ;
     final weight = min(1.0, (nu + cT * cT) / (nu + zScore * zScore));
     final dampedInnovation = innovation * weight;
 

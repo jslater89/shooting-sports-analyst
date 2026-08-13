@@ -109,7 +109,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
   final TextEditingController _momentumAdaptController = TextEditingController();
   final TextEditingController _surpriseAdaptController = TextEditingController();
   final TextEditingController _pairwiseBlendController = TextEditingController();
-  final TextEditingController _studentTCutoffZController = TextEditingController();
+  final TextEditingController _studentTNuController = TextEditingController();
+  final TextEditingController _studentTCutoffUpperZController = TextEditingController();
+  final TextEditingController _studentTCutoffLowerZController = TextEditingController();
   final TextEditingController _baselineRobustnessZController = TextEditingController();
   final TextEditingController _tailNoiseStartPercentController = TextEditingController();
   final TextEditingController _tailNoiseVarianceController = TextEditingController();
@@ -221,7 +223,17 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
         _validateText();
       }
     });
-    attachNumericListener(_studentTCutoffZController, () {
+    attachNumericListener(_studentTNuController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
+    attachNumericListener(_studentTCutoffUpperZController, () {
+      if (!widget.controller._restoreDefaults) {
+        _validateText();
+      }
+    });
+    attachNumericListener(_studentTCutoffLowerZController, () {
       if (!widget.controller._restoreDefaults) {
         _validateText();
       }
@@ -292,7 +304,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _momentumAdaptController.dispose();
     _surpriseAdaptController.dispose();
     _pairwiseBlendController.dispose();
-    _studentTCutoffZController.dispose();
+    _studentTNuController.dispose();
+    _studentTCutoffUpperZController.dispose();
+    _studentTCutoffLowerZController.dispose();
     _baselineRobustnessZController.dispose();
     _tailNoiseStartPercentController.dispose();
     _tailNoiseVarianceController.dispose();
@@ -328,7 +342,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
     _intraclassCorrelationController.text = settings.intraclassCorrelation.toStringAsFixed(3);
 
     _pairwiseBlendController.text = settings.pairwiseBlendWeight.toStringAsFixed(4);
-    _studentTCutoffZController.text = settings.studentTCutoffZ.toStringAsFixed(2);
+    _studentTNuController.text = settings.studentTNu.toStringAsFixed(2);
+    _studentTCutoffUpperZController.text = settings.studentTCutoffUpperZ.toStringAsFixed(2);
+    _studentTCutoffLowerZController.text = settings.studentTCutoffLowerZ.toStringAsFixed(2);
     _baselineRobustnessZController.text = settings.baselineRobustnessZ.toStringAsFixed(4);
     _tailNoiseStartPercentController.text = settings.tailNoiseStartPercent.toStringAsFixed(4);
     _tailNoiseVarianceController.text = settings.tailNoiseVariance.toStringAsFixed(4);
@@ -493,12 +509,32 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       return;
     }
 
-    final studentTCutoffZ = double.tryParse(_studentTCutoffZController.text);
-    if (studentTCutoffZ == null) {
+    final studentTNu = double.tryParse(_studentTNuController.text);
+    if (studentTNu == null) {
+      widget.controller.lastError = "Student-t nu formatted incorrectly";
+      return;
+    }
+    if (studentTNu <= 0) {
+      widget.controller.lastError = "Student-t nu must be positive";
+      return;
+    }
+
+    final studentTCutoffUpperZ = double.tryParse(_studentTCutoffUpperZController.text);
+    if (studentTCutoffUpperZ == null) {
       widget.controller.lastError = "Student-t cutoff c_t formatted incorrectly";
       return;
     }
-    if (studentTCutoffZ < 0) {
+    if (studentTCutoffUpperZ < 0) {
+      widget.controller.lastError = "Student-t cutoff c_t must be nonnegative";
+      return;
+    }
+
+    final studentTCutoffLowerZ = double.tryParse(_studentTCutoffLowerZController.text);
+    if (studentTCutoffLowerZ == null) {
+      widget.controller.lastError = "Student-t cutoff c_t formatted incorrectly";
+      return;
+    }
+    if (studentTCutoffLowerZ < 0) {
       widget.controller.lastError = "Student-t cutoff c_t must be nonnegative";
       return;
     }
@@ -687,7 +723,9 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
       settings.momentumAdaptationRate = momentumAdapt;
       settings.surpriseAdaptationRate = surp;
       settings.pairwiseBlendWeight = pairwise;
-      settings.studentTCutoffZ = studentTCutoffZ;
+      settings.studentTNu = studentTNu;
+      settings.studentTCutoffUpperZ = studentTCutoffUpperZ;
+      settings.studentTCutoffLowerZ = studentTCutoffLowerZ;
       settings.baselineRobustnessZ = baselineRobustnessZ;
       settings.tailNoiseStartPercent = tailNoiseStartPercent;
       settings.tailNoiseVariance = tailNoiseVariance;
@@ -924,10 +962,26 @@ class _LatentLogSettingsWidgetState extends State<LatentLogSettingsWidget> {
               trailingSpacerWidth: trailingSpacerWidth,
             ),
             _LatentLogLabeledNumericRow(
-              label: "Student-t cutoff c_t",
+              label: "Student-t ν",
               tooltip:
-                  "Innovation sigmas admitted at full weight before heavy-tailed downweighting begins. c_t = 1 reproduces the previous behavior; larger values trust more of the innovation distribution. 0 damps every nonzero innovation.",
-              controller: _studentTCutoffZController,
+                  "Degrees of freedom parameter for the Student-t downweighting. Lower values damp innovations more aggressively, higher values leave more of the innovation distribution undamped.",
+              controller: _studentTNuController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            _LatentLogLabeledNumericRow(
+              label: "Student-t cutoff c_t (positive)",
+              tooltip:
+                  "Positive innovation sigmas admitted at full weight before heavy-tailed downweighting begins. Larger values trust larger positive innovations. 0 damps every positive innovation.",
+              controller: _studentTCutoffUpperZController,
+              fieldWidth: fieldWidth,
+              trailingSpacerWidth: trailingSpacerWidth,
+            ),
+            _LatentLogLabeledNumericRow(
+              label: "Student-t cutoff c_t (negative)",
+              tooltip:
+                  "Negative innovation sigmas admitted at full weight before heavy-tailed downweighting begins. Larger values trust larger negative innovations. 0 damps every negative innovation.",
+              controller: _studentTCutoffLowerZController,
               fieldWidth: fieldWidth,
               trailingSpacerWidth: trailingSpacerWidth,
             ),
