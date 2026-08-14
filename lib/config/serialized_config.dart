@@ -157,7 +157,8 @@ class SerializedConfig {
   String? ssaServerStubApiKey;
 
   /// When true, the Flutter app hosts a localhost-only research MCP server over
-  /// the already-open AnalystDatabase (for Cursor via bin/mcp/ssa_mcp_server.dart proxy).
+  /// the already-open AnalystDatabase. Agents typically use the headless stdio
+  /// MCP, which opens the DB itself rather than proxying here.
   @JsonKey(defaultValue: false)
   bool researchMcpServerEnabled;
 

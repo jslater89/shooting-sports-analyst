@@ -52,9 +52,9 @@ files after successful imports.
 
 ## Research MCP server
 When enabled, the application hosts a read-only research MCP server on 127.0.0.1
-(default port 8090). The headless shim `bin/mcp/ssa_mcp_server.dart` (what Cursor
-launches) proxies onto that socket so agents can query matches and careers while
-the app owns the database. Disabled by default.
+(default port 8090). Agents typically use the headless stdio binary
+(`./build-mcp.sh` → `dist/ssa_mcp_server`), which opens the database
+itself rather than proxying through this socket. Disabled by default.
 
 ## Ratings context
 The ratings context setting identifies the project that should be used as a ratings

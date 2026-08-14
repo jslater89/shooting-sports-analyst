@@ -4,19 +4,19 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-/// SSA research MCP shim (stdio).
+/// SSA research MCP server (stdio).
 ///
-/// Cursor always launches this process. If the Flutter app has the research MCP
-/// host enabled, this proxies stdio onto that localhost socket (app owns Isar).
-/// Otherwise it opens AnalystDatabase and serves MCP tools directly.
+/// Opens AnalystDatabase in-process. This is the usual agent path: proxying
+/// stdio through the in-app MCP host was stateful and disconnected in practice.
 ///
-/// Obsidian / Cursor mcp.json example:
+/// Build: `./build-mcp.sh` → `dist/ssa_mcp_server`
+///
+/// OpenCode / Cursor mcp example:
 /// ```json
 /// {
 ///   "mcpServers": {
 ///     "ssa-research": {
-///       "command": "dart",
-///       "args": ["run", "bin/mcp/ssa_mcp_server.dart"],
+///       "command": "/path/to/shooting-sports-analyst/dist/ssa_mcp_server",
 ///       "cwd": "/path/to/shooting-sports-analyst",
 ///       "env": {
 ///         "SSA_MCP_DEFAULT_PROJECT": "L2s Main LLR"
@@ -26,9 +26,7 @@
 /// }
 /// ```
 ///
-/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_DB_PATH, SSA_RESEARCH_MCP_PORT (default 8090).
-///
-/// Config.toml (Flutter app): researchMcpServerEnabled, researchMcpServerPort.
+/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_DB_PATH.
 library;
 
 import "dart:async";
@@ -55,16 +53,8 @@ Future<void> main(List<String> args) async {
 
   final defaultProject =
       io.Platform.environment["SSA_MCP_DEFAULT_PROJECT"] ?? kDefaultResearchProjectName;
-  final port = int.tryParse(io.Platform.environment["SSA_RESEARCH_MCP_PORT"] ?? "") ??
-      kDefaultResearchMcpPort;
 
-  if (await _proxyToAppMcp(port)) {
-    return;
-  }
-
-  _log.i("No in-app research MCP on 127.0.0.1:$port; opening AnalystDatabase");
-  FlutterOrNative.debugModeProvider = ServerDebugProvider();
-  FlutterOrNative.isolateModeProvider = ServerDebugProvider(isMultiIsolate: false);
+  _log.i("Opening AnalystDatabase for stdio MCP");
   await ConfigLoader().readyFuture;
 
   final dbPath = io.Platform.environment["SSA_DB_PATH"];
@@ -75,7 +65,13 @@ Future<void> main(List<String> args) async {
   else {
     db = AnalystDatabase();
   }
-  await db.ready;
+  try {
+    await db.ready;
+  } catch (e, st) {
+    _log.e("Failed to open AnalystDatabase", error: e, stackTrace: st);
+    io.stderr.writeln("ssa-research MCP: failed to open database: $e");
+    io.exit(1);
+  }
 
   // Keep the server object alive for the process lifetime.
   // ignore: unused_local_variable
@@ -85,55 +81,4 @@ Future<void> main(List<String> args) async {
     defaultProject: defaultProject,
   );
   await Completer<void>().future;
-}
-
-/// Pipe Cursor stdio to the Flutter app's MCP socket. Returns false if not listening.
-Future<bool> _proxyToAppMcp(int port) async {
-  io.Socket socket;
-  try {
-    socket = await io.Socket.connect(
-      io.InternetAddress.loopbackIPv4,
-      port,
-      timeout: const Duration(milliseconds: 350),
-    );
-  } catch (_) {
-    return false;
-  }
-
-  _log.i("Proxying stdio MCP to in-app research MCP at 127.0.0.1:$port");
-
-  final done = Completer<void>();
-
-  socket.listen(
-    (data) {
-      io.stdout.add(data);
-    },
-    onDone: () {
-      if (!done.isCompleted) done.complete();
-    },
-    onError: (Object e, StackTrace st) {
-      _log.w("App MCP socket error", error: e, stackTrace: st);
-      if (!done.isCompleted) done.complete();
-    },
-    cancelOnError: true,
-  );
-
-  io.stdin.listen(
-    (data) {
-      socket.add(data);
-    },
-    onDone: () {
-      socket.destroy();
-      if (!done.isCompleted) done.complete();
-    },
-    onError: (Object e, StackTrace st) {
-      _log.w("Stdin error while proxying", error: e, stackTrace: st);
-      socket.destroy();
-      if (!done.isCompleted) done.complete();
-    },
-    cancelOnError: true,
-  );
-
-  await done.future;
-  return true;
 }

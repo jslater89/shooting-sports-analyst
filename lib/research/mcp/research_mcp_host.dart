@@ -20,9 +20,9 @@ final _log = SSALogger("ResearchMcpHost");
 
 /// Optional localhost MCP host owned by the Flutter app process.
 ///
-/// Speaks the same newline-delimited MCP JSON-RPC framing as stdio. The
-/// headless [bin/mcp/ssa_mcp_server.dart] proxies Cursor's stdio onto this socket
-/// when it is listening, so the app can own Isar while agents research.
+/// Speaks the same newline-delimited MCP JSON-RPC framing as stdio.
+/// The headless [bin/mcp/ssa_mcp_server.dart] opens the database itself
+/// rather than proxying here; that has been the convenient path in practice.
 class ResearchMcpHost {
   static ResearchMcpHost? _instance;
   factory ResearchMcpHost() {
