@@ -18,8 +18,8 @@ final _log = SSALogger("SsaResearchMcp");
 
 /// Shared MCP tools over [ResearchFacade].
 ///
-/// Hosted by the headless shim ([bin/mcp/ssa_mcp_server.dart]) over stdio, and by
-/// the Flutter app over a localhost TCP socket (same newline JSON-RPC framing).
+/// Hosted by the headless stdio server ([bin/mcp/ssa_mcp_server.dart]), and by
+/// the Flutter app over a localhost TCP socket when research MCP is enabled.
 base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
   SsaResearchMcpServer(
     StreamChannel<String> channel, {
@@ -39,7 +39,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "get_match_winners / get_shooter_summary. Use get_leaderboard for "
               "sorted group rankings (movers = sort=lastChange). Use get_match_scores / "
               "get_competitor_stage_scores for stage results and hit/penalty counts. "
-              "Use get_rating_history to drill into a single competitor's rating career.",
+              "Use get_rating_history for rating trajectory, and "
+              "get_shooter_match_results (bestFirst=true for career highlights) "
+              "for a competitor's match list.",
         ) {
     registerTool(_listProjectsTool, _listProjects);
     registerTool(_searchMatchesTool, _searchMatches);
@@ -212,6 +214,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         ratingId: args.ratingId,
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
+        bestFirst: args.bestFirst,
       );
       return {"results": results.map((r) => r.toJson()).toList()};
     });
@@ -238,7 +241,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     try {
       final data = await body();
       return CallToolResult(
-        content: [TextContent(text: const JsonEncoder.withIndent("  ").convert(data))],
+        content: [TextContent(text: jsonEncode(data))],
       );
     } catch (e, st) {
       _log.w("Tool error", error: e, stackTrace: st);
@@ -310,7 +313,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "femaleOnly": Schema.bool(description: "Restrict pool to female competitors"),
         "ageCategory": Schema.string(description: "Age category name, e.g. 'Senior'"),
         "category": Schema.string(description: "Competitor category name, e.g. 'Law Enforcement'"),
-        "topN": Schema.int(description: "Limit rows (default: all in pool)"),
+        "topN": Schema.int(description: "Limit rows (default 10; 0 = entire pool)"),
       },
     ),
   );
@@ -336,7 +339,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "femaleOnly": Schema.bool(description: "Restrict pool to female competitors"),
         "ageCategory": Schema.string(description: "Age category name, e.g. 'Senior'"),
         "category": Schema.string(description: "Competitor category name"),
-        "topN": Schema.int(description: "Limit rows (default: all in pool)"),
+        "topN": Schema.int(description: "Limit rows (default 10; 0 = entire pool)"),
         "includeStages": Schema.bool(description: "Nest stage score rows (default false)"),
         "includeScoringEventCounts": Schema.bool(
           description: "Include target/penalty event count maps (default false)",
@@ -435,7 +438,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     name: "get_shooter_match_results",
     description:
         "Distinct match finishes for a shooter derived from rating events. "
-        "Includes division and classification entered at each match when available.",
+        "Default order is most recent first. Set bestFirst for career highlights "
+        "(highest percentage, then best place). Includes division and classification "
+        "entered at each match when available.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
@@ -444,6 +449,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "group": Schema.string(),
         "groupUuid": Schema.string(),
         "limit": Schema.int(description: "Max matches (default 50)"),
+        "bestFirst": Schema.bool(
+          description:
+              "If true, return the best finishes first (percentage, then place) "
+              "instead of most recent. Default false.",
+        ),
         "includeInternal": Schema.bool(
           description: "Include raw/internal rating fields (default false)",
         ),

@@ -212,7 +212,7 @@ class ResearchFacade {
     bool femaleOnly = false,
     String? ageCategory,
     String? category,
-    int? topN,
+    int topN = kDefaultMatchPoolTopN,
     bool overall = false,
   }) async {
     final resolved = await _resolveMatchPool(
@@ -229,7 +229,7 @@ class ResearchFacade {
     );
     final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
-    final limit = topN != null && topN > 0 ? topN : scored.length;
+    final limit = topN > 0 ? topN : scored.length;
     final results = <MatchCompetitorResultDto>[];
     for (final e in scored.take(limit)) {
       results.add(_competitorResult(e.key, e.value));
@@ -258,7 +258,7 @@ class ResearchFacade {
     bool femaleOnly = false,
     String? ageCategory,
     String? category,
-    int? topN,
+    int topN = kDefaultMatchPoolTopN,
     bool overall = false,
     bool includeStages = false,
     bool includeScoringEventCounts = false,
@@ -278,7 +278,7 @@ class ResearchFacade {
     final scoringKind = _scoringKind(resolved.shootingMatch.sport);
     final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
-    final limit = topN != null && topN > 0 ? topN : scored.length;
+    final limit = topN > 0 ? topN : scored.length;
     final rows = <MatchScoreRowDto>[];
     for (final e in scored.take(limit)) {
       rows.add(_matchScoreRow(
@@ -567,6 +567,7 @@ class ResearchFacade {
     int? ratingId,
     int limit = 50,
     bool includeInternal = false,
+    bool bestFirst = false,
   }) async {
     final resolved = await _resolveShooterRating(
       projectName: projectName,
@@ -576,7 +577,10 @@ class ResearchFacade {
       ratingId: ratingId,
     );
     final algo = resolved.project.settings.algorithm;
-    final events = await db.getRatingEventsFor(resolved.rating, limit: limit * 8);
+    // Recency mode can stop after [limit] matches. Highlights need the full
+    // match-level history so "best" is career-best, not recent-best.
+    final eventLimit = bestFirst ? 0 : limit * 8;
+    final events = await db.getRatingEventsFor(resolved.rating, limit: eventLimit);
     final byMatch = <String, ShooterMatchResultDto>{};
     for (final e in events) {
       if (e.stageNumber >= 0) {
@@ -609,11 +613,28 @@ class ResearchFacade {
         internalOldRating: includeInternal ? e.oldRating : null,
         internalNewRating: includeInternal ? e.newRating : null,
       );
-      if (byMatch.length >= limit) {
+      if (!bestFirst && byMatch.length >= limit) {
         break;
       }
     }
-    return byMatch.values.toList();
+    var out = byMatch.values.toList();
+    if (bestFirst) {
+      out.sort((a, b) {
+        final byPct = b.percentage.compareTo(a.percentage);
+        if (byPct != 0) {
+          return byPct;
+        }
+        final byPlace = a.place.compareTo(b.place);
+        if (byPlace != 0) {
+          return byPlace;
+        }
+        return b.date.compareTo(a.date);
+      });
+      if (out.length > limit) {
+        out = out.take(limit).toList();
+      }
+    }
+    return out;
   }
 
   MatchSummaryDto _matchSummary(DbShootingMatch m) => MatchSummaryDto(

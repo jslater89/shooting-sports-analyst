@@ -6,7 +6,10 @@
 
 import "package:json_annotation/json_annotation.dart";
 import "package:shooting_sports_analyst/research/dtos.dart"
-    show researchDateOnlyFromJsonNullable, researchDateOnlyToJson;
+    show
+        kDefaultMatchPoolTopN,
+        researchDateOnlyFromJsonNullable,
+        researchDateOnlyToJson;
 
 part "request_args.g.dart";
 
@@ -94,7 +97,7 @@ class GetMatchResultsArgs {
     this.femaleOnly = false,
     this.ageCategory,
     this.category,
-    this.topN,
+    this.topN = kDefaultMatchPoolTopN,
   });
 
   final int? matchId;
@@ -109,7 +112,8 @@ class GetMatchResultsArgs {
   final bool femaleOnly;
   final String? ageCategory;
   final String? category;
-  final int? topN;
+  @JsonKey(defaultValue: kDefaultMatchPoolTopN)
+  final int topN;
 
   factory GetMatchResultsArgs.fromJson(Map<String, dynamic> json) =>
       _$GetMatchResultsArgsFromJson(json);
@@ -155,6 +159,7 @@ class ShooterLookupArgs {
     this.groupUuid,
     this.limit,
     this.includeInternal = false,
+    this.bestFirst = false,
   });
 
   final String? memberNumber;
@@ -165,6 +170,10 @@ class ShooterLookupArgs {
   final int? limit;
   @JsonKey(defaultValue: false)
   final bool includeInternal;
+  /// When true, [get_shooter_match_results] returns best finishes first (by
+  /// percentage, then place) instead of most-recent first. Ignored by other tools.
+  @JsonKey(defaultValue: false)
+  final bool bestFirst;
 
   factory ShooterLookupArgs.fromJson(Map<String, dynamic> json) =>
       _$ShooterLookupArgsFromJson(json);
@@ -218,7 +227,7 @@ class GetMatchScoresArgs {
     this.femaleOnly = false,
     this.ageCategory,
     this.category,
-    this.topN,
+    this.topN = kDefaultMatchPoolTopN,
     this.includeStages = false,
     this.includeScoringEventCounts = false,
   });
@@ -235,7 +244,8 @@ class GetMatchScoresArgs {
   final bool femaleOnly;
   final String? ageCategory;
   final String? category;
-  final int? topN;
+  @JsonKey(defaultValue: kDefaultMatchPoolTopN)
+  final int topN;
   @JsonKey(defaultValue: false)
   final bool includeStages;
   @JsonKey(defaultValue: false)

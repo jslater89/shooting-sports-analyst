@@ -12,6 +12,8 @@ part "dtos.g.dart";
 
 const String kDefaultResearchProjectName = "L2s Main LLR";
 const int kDefaultResearchMcpPort = 8090;
+/// Default [getMatchResults] / [getMatchScores] row cap. Pass topN 0 for the full pool.
+const int kDefaultMatchPoolTopN = 10;
 
 String? researchDateOnlyToJson(DateTime? d) =>
     d?.toIso8601String().split("T").first;
