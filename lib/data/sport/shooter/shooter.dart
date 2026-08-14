@@ -225,6 +225,7 @@ class MatchEntry extends Shooter {
       firstName: firstName,
       lastName: lastName,
       memberNumber: memberNumber,
+      email: email,
       region: region,
       regionSubdivision: regionSubdivision,
       rawLocation: rawLocation,

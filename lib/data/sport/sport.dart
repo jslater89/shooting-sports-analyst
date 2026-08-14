@@ -414,6 +414,7 @@ extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
 }
 
 class Classification extends NameLookupEntity {
+  /// The sort index of the classification. Best classifications should have the lowest indices.
   final int index;
   String get longName => name;
   final String name;

@@ -1291,11 +1291,23 @@ class RatingProjectLoader {
           rating.memberNumber = s.memberNumber;
           rating.addKnownMemberNumbers(s.knownMemberNumbers);
 
-          // TODO: only if better than last classification
-          // may require some help from [sport]
-          rating.lastClassification = s.classification;
+          if(s.classification != null) {
+            if(rating.lastClassification == null || s.classification!.index < rating.lastClassification!.index) {
+              rating.lastClassification = s.classification!;
+            }
+          }
+
           rating.division = s.division;
           rating.ageCategory = s.ageCategory;
+          if(s.female) {
+            rating.female = true;
+          }
+
+          rating.categories = [...s.categories];
+
+          if(s.hasEmail || !rating.hasEmail) {
+            rating.email = s.email;
+          }
 
           if(s.region != null && s.region!.isNotEmpty && s.region != rating.region) {
             rating.region = s.region;
