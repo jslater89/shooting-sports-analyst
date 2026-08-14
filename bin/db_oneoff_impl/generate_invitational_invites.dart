@@ -10,7 +10,6 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:toml/toml.dart';
@@ -62,7 +61,7 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
       return;
     }
 
-    final allGroups = uspsaSport.builtinRatingGroupsProvider!.divisionRatingGroups;
+    final allGroups = project.dbGroups.toList();
     final List<dynamic>? configGroupKeys = config["groups"] as List<dynamic>?;
     if(configGroupKeys == null || configGroupKeys.isEmpty) {
       console.print("Config must define a non-empty \"groups\" array.");
@@ -390,7 +389,8 @@ class GenerateInvitationalInvitesCommand extends DbOneoffCommand {
       int firstCutIndex = min(firstCutSlots - 1, sortedInvitations.length - 1);
 
       double cutoffRating = sortedInvitations[firstCutIndex].rating.rating;
-      console.print("Cutoff rating: $cutoffRating\n");
+      double scaledCutoff = sortedInvitations[firstCutIndex].rating.scaledRating;
+      console.print("Cutoff rating: $cutoffRating, scaled cutoff: $scaledCutoff\n");
 
       // If we're reserving lady slots, they're always non-fallback slots.
       List<Invitation> reservedLadyInvitations = [];
