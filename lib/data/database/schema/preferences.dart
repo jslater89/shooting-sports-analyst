@@ -78,6 +78,9 @@ class ApplicationPreferences {
   /// The last source code used in the future match source chooser dialog.
   String? lastUsedFutureMatchSourceCode;
 
+  /// The ID of the last invitational-invite config that was opened or saved.
+  int? lastInvitationalInviteConfigId;
+
   /// The list of recent prediction URLs from match predictions, used
   /// for typeahead support.
   List<RecentPredictionUrl> recentPredictionUrls = [];

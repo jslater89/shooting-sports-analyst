@@ -31,6 +31,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
+import 'package:shooting_sports_analyst/route/invitational_invites_page.dart';
 import 'package:shooting_sports_analyst/route/ratings_map.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
@@ -688,6 +689,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }));
         break;
 
+      case _MenuEntry.invitationalInvites:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+          return InvitationalInvitesPage(dataSource: widget.dataSource);
+        }));
+        break;
+
       case _MenuEntry.viewRatingsMap:
         Navigator.of(context).push(MaterialPageRoute(builder: (context) {
           return RatingsMap(dataSource: widget.dataSource);
@@ -799,6 +806,7 @@ enum _MenuEntry {
   dataErrors,
   viewResults,
   viewMatchHeat,
+  invitationalInvites,
   viewRatingsMap,
   chooseRatingSets,
   otherSettings;
@@ -817,6 +825,8 @@ enum _MenuEntry {
         return "View match results";
       case _MenuEntry.viewMatchHeat:
         return "View match heat";
+      case _MenuEntry.invitationalInvites:
+        return "Generate invitational invites";
       case _MenuEntry.viewRatingsMap:
         return "View ratings map";
       case _MenuEntry.chooseRatingSets:

@@ -549,6 +549,9 @@ class AgeCategory extends NameLookupEntity {
   final String name;
   final List<String> alternateNames;
 
+  final int? minimumAge;
+  final int? maximumAge;
+
   @override
   bool get fallback => false;
 
@@ -560,7 +563,15 @@ class AgeCategory extends NameLookupEntity {
 
   const AgeCategory({
     required this.name, this.alternateNames = const [],
+    this.minimumAge = null,
+    this.maximumAge = null,
   });
+
+  /// True if this category only includes competitors 21 or under.
+  bool get isJunior => (maximumAge ?? 999) <= 21;
+
+  /// True if this category only includes competitors 50 or older.
+  bool get isSenior => (minimumAge ?? 0) >= 50;
 
   @override
   String toString() {

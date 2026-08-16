@@ -79,9 +79,12 @@ final ipscSport = Sport(
   ],
   divisions: ipscDivisions,
   ageCategories: [
-    const AgeCategory(name: "Junior"),
-    const AgeCategory(name: "Senior"),
-    const AgeCategory(name: "Super Senior"),
+    const AgeCategory(name: "Grand Junior", maximumAge: 14),
+    const AgeCategory(name: "Super Junior", minimumAge: 15, maximumAge: 17),
+    const AgeCategory(name: "Junior", minimumAge: 18, maximumAge: 20),
+    const AgeCategory(name: "Senior", minimumAge: 55, maximumAge: 64),
+    const AgeCategory(name: "Super Senior", minimumAge: 65, maximumAge: 69),
+    const AgeCategory(name: "Grand Senior", minimumAge: 70),
   ],
   powerFactors: [
     PowerFactor("Major",

@@ -111,10 +111,10 @@ final uspsaSport = Sport(
     uspsaLimited10,
   ],
   ageCategories: [
-    const AgeCategory(name: "Junior"),
-    const AgeCategory(name: "Senior"),
-    const AgeCategory(name: "Super Senior"),
-    const AgeCategory(name: "Distinguished Senior")
+    const AgeCategory(name: "Junior", maximumAge: 17),
+    const AgeCategory(name: "Senior", minimumAge: 55, maximumAge: 64),
+    const AgeCategory(name: "Super Senior", minimumAge: 65, maximumAge: 69),
+    const AgeCategory(name: "Distinguished Senior", minimumAge: 70),
   ],
   categories: [
     const CompetitorCategory(name: "Law Enforcement", alternateNames: ["LE", "Law"]),

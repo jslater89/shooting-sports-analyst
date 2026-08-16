@@ -22,6 +22,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/invitational_invite_config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
@@ -118,6 +119,7 @@ class AnalystDatabase {
           DbShooterRatingSchema,
           MatchHeatSchema,
           ApplicationPreferencesSchema,
+          DbInvitationalInviteConfigSchema,
 
           // Match prep-related collections
           FutureMatchSchema,

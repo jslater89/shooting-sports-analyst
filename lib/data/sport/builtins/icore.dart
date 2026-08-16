@@ -174,10 +174,10 @@ final icoreSport = Sport(
       icoreBig6PowerFactor,
     ],
     ageCategories: [
-      const AgeCategory(name: "Junior"),
-      const AgeCategory(name: "Senior"),
-      const AgeCategory(name: "Super Senior"),
-      const AgeCategory(name: "Grand Senior"),
+      const AgeCategory(name: "Junior", maximumAge: 17),
+      const AgeCategory(name: "Senior", minimumAge: 55, maximumAge: 64),
+      const AgeCategory(name: "Super Senior", minimumAge: 65, maximumAge: 69),
+      const AgeCategory(name: "Grand Senior", minimumAge: 70),
     ],
     connectivityCalculator: SqrtTotalUniqueProductCalculator(),
     initialEloRatings: {
