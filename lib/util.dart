@@ -435,29 +435,39 @@ String yMdHm(DateTime date) {
 }
 
 extension ListOverlap<T> on Iterable<T> {
+  /// Return a list of all elements in this iterable that are also in [other].
   Iterable<T> intersection(Iterable<T> other) {
     return this.where((e) => other.contains(e));
   }
 
+  /// Return true if this iterable has any elements in common with [other].
   bool intersects(Iterable<T> other) {
     return this.any((e) => other.contains(e));
   }
 
+  /// Return true if this iterable contains all elements of [other].
   bool containsAll(Iterable<T> other) {
     return other.every((e) => this.contains(e));
   }
 
+  /// Return true if the intersection of this iterable and [other] is the same length as both
+  /// input iterables. Put another way, a check if two iterables are unordered-equals.
   bool containsOnly(Iterable<T> other) {
     var intersectionLength = this.intersection(other).length;
     return intersectionLength == this.length && intersectionLength == other.length;
   }
 
+  /// Return a new iterable that contains all elements of this iterable and [other], with no
+  /// duplicates.
   Iterable<T> union(Iterable<T> other) {
     return {...this, ...other};
   }
 }
 
 extension Interleave<T> on List<T> {
+  /// Interleave the elements of this list with the elements of [other], returning a new list
+  /// that has alternating elements from this list and [other]. The first element will come
+  /// from this list.
   List<T> interleave(List<T> other) {
     if(other.length != length && other.length != length - 1) {
       throw ArgumentError("other must have the same length as this, or one less");

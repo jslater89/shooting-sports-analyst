@@ -538,6 +538,11 @@ class PredictionGameManager {
         // Rating groups and prediction sets both implement DB equality.
         // For groups, we want the scoring group, so we ask the wager directly.
         matchesToGroups.addToSet(match, wager.scoringGroup.value!);
+
+        if(wager.predictionSet.value == null) {
+          _log.w("Wager ${wager.id} has no prediction set");
+          continue;
+        }
         matchesToPredictionSets.addToSet(match, wager.predictionSet.value!);
       }
     }
@@ -581,7 +586,13 @@ class PredictionGameManager {
         groupScores[match]![group] = overallByNumber;
 
         setScores[match]![group] = {};
-        for(var predictionSet in matchesToPredictionSets[match]!) {
+        var predictionSets = matchesToPredictionSets[match];
+
+        if(predictionSets == null) {
+          _log.w("No prediction sets found for match ${match.name} ${match.sourceIds.first}");
+          predictionSets = {};
+        }
+        for(var predictionSet in predictionSets) {
           var shootersInSet = predictionSetShooters[predictionSet]!;
           var filteredShooters = overallShooters.where((s) =>
             shootersInSet.any((p) => p.equalsShooter(s, allPossibleMemberNumbers: true))
@@ -609,13 +620,16 @@ class PredictionGameManager {
     Map<DbWager, WagerScores> relevantScores = {};
     for(var wager in wagers) {
       var match = matches[wager];
-      if(match != null) {
-        var group = wager.scoringGroup.value!;
-        var predictionSet = wager.predictionSet.value!;
+      var group = wager.scoringGroup.value;
+      var predictionSet = wager.predictionSet.value;
+      if(match != null && group != null && predictionSet != null) {
         var scores = WagerScores(wager: wager);
         scores.scores = groupScores[match]![group]!;
         scores.predictionSetScores = setScores[match]![group]![predictionSet]!;
         relevantScores[wager] = scores;
+      }
+      else {
+        _log.w("Missing data: match=${match != null}, group=${group != null}, predictionSet=${predictionSet != null}");
       }
     }
 

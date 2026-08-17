@@ -25,6 +25,9 @@ class ApplicationPreferences {
   /// Whether the welcome dialog for 8.0-beta has been shown.
   bool welcome80BetaShown = false;
 
+  /// Whether the welcome dialog for 10.0 has been shown.
+  bool welcome100Shown = false;
+
   /// The ID of the last project that was loaded.
   int? lastProjectId;
 

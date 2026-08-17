@@ -11,7 +11,8 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
-import 'package:shooting_sports_analyst/data/help/entries/welcome_80_help.dart';
+import 'package:shooting_sports_analyst/data/help/help_registry.dart';
+import 'package:shooting_sports_analyst/data/help/welcome_dialogs.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/future_match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -57,20 +58,29 @@ class _HomePageState extends State<HomePage> {
     }
 
     Future.delayed(Duration.zero, () {
-      var prefs = AnalystDatabase().getPreferencesSync();
-      if(!prefs.welcome80BetaShown) {
-        _log.i("Showing 8.0 beta welcome dialog");
-        prefs.welcome80BetaShown = true;
-        AnalystDatabase().savePreferencesSync(prefs);
-        HelpDialog.show(context, initialTopic: welcome80HelpId);
-      }
-      else if(!prefs.welcome80Shown) {
-        _log.i("Showing 8.0 welcome dialog");
-        prefs.welcome80Shown = true;
-        AnalystDatabase().savePreferencesSync(prefs);
-        HelpDialog.show(context, initialTopic: welcome80HelpId);
-      }
+      _showWelcomeDialog();
     });
+  }
+
+  void _showWelcomeDialog() {
+    var prefs = AnalystDatabase().getPreferencesSync();
+    final resolvedWelcomeDialog = WelcomeDialogEntry.resolve(
+      welcome80: prefs.welcome80Shown,
+      welcome80Beta: prefs.welcome80BetaShown,
+      welcome100: prefs.welcome100Shown,
+    );
+
+    if(resolvedWelcomeDialog != null) {
+      final hasHelpTopic = HelpTopicRegistry().getTopic(resolvedWelcomeDialog.helpId) != null;
+      if(!hasHelpTopic) {
+        _log.w("No help topic found for welcome dialog ${resolvedWelcomeDialog.humanVersion}, skipping");
+        return;
+      }
+      _log.i("Showing ${resolvedWelcomeDialog.humanVersion} welcome dialog");
+      WelcomeDialogEntry.markShown(prefs, resolvedWelcomeDialog);
+      AnalystDatabase().savePreferencesSync(prefs);
+      HelpDialog.show(context, initialTopic: resolvedWelcomeDialog.helpId);
+    }
   }
 
   void _launchPresetPractiscore({String? url}) async {

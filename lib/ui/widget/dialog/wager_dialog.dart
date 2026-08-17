@@ -273,6 +273,7 @@ class _WagerDialogState extends State<WagerDialog> {
         spreadFavoriteMonteCarlo: favoriteMonteCarlo,
         spreadUnderdogMonteCarlo: underdogMonteCarlo,
         cache: WagerDialog.lruCache,
+        trials: trials,
       );
     }
 

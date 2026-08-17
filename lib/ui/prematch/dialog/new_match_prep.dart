@@ -17,15 +17,16 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/future_match_database_c
 
 /// A dialog to create a new match prep. Checks to see if a match prep already exists for the given project and match.
 class NewMatchPrepDialog extends StatefulWidget {
-  const NewMatchPrepDialog({super.key, this.saveOnPop = false});
+  const NewMatchPrepDialog({super.key, this.saveOnPop = false, this.singleProject});
 
   final bool saveOnPop;
+  final DbRatingProject? singleProject;
 
   @override
   State<NewMatchPrepDialog> createState() => _NewMatchPrepDialogState();
 
-  static Future<MatchPrep?> show(BuildContext context, {bool saveOnPop = false}) async {
-    return showDialog<MatchPrep>(context: context, builder: (context) => NewMatchPrepDialog(saveOnPop: saveOnPop));
+  static Future<MatchPrep?> show(BuildContext context, {bool saveOnPop = false, DbRatingProject? singleProject}) async {
+    return showDialog<MatchPrep>(context: context, builder: (context) => NewMatchPrepDialog(saveOnPop: saveOnPop, singleProject: singleProject));
   }
 }
 
@@ -45,13 +46,20 @@ class _NewMatchPrepDialogState extends State<NewMatchPrepDialog> {
   }
 
   Future<void> _loadInitialProject() async {
-    var project = await AnalystDatabase().getRatingProjectById(ChangeNotifierConfigLoader().config.ratingsContextProjectId ?? -1);
+    DbRatingProject? project;
+    if(widget.singleProject != null) {
+      project = widget.singleProject;
+    }
+    else {
+      project = await AnalystDatabase().getRatingProjectById(ChangeNotifierConfigLoader().config.ratingsContextProjectId ?? -1);
+    }
     if(project == null) {
       return;
     }
+
     setState(() {
       this.project = project;
-      _projectController.text = project.name;
+      _projectController.text = project?.name ?? "";
     });
   }
 
@@ -120,7 +128,7 @@ class _NewMatchPrepDialogState extends State<NewMatchPrepDialog> {
               controller: _projectController,
               decoration: InputDecoration(
                 labelText: "Project",
-                suffixIcon: IconButton(icon: Icon(Icons.edit), onPressed: () => _selectProject()),
+                suffixIcon: widget.singleProject == null ? IconButton(icon: Icon(Icons.edit), onPressed: () => _selectProject()) : null,
               ),
               readOnly: true,
             ),

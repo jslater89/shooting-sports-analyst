@@ -42,11 +42,11 @@ class MatchPrepCompetitorRow {
   bool get hasPrediction => dbPrediction != null || algorithmPrediction != null;
 
   /// Hydrated prediction when [algorithmPrediction] is set; otherwise hydrates [dbPrediction] if present.
-  AlgorithmPrediction? hydratePrediction({RatingSystem? algorithm}) {
+  AlgorithmPrediction? hydratePrediction({RatingSystem? algorithm, bool useRatingCache = false}) {
     if(algorithmPrediction != null) {
       return algorithmPrediction;
     }
-    return dbPrediction?.hydrate(preloadedAlgorithm: algorithm);
+    return dbPrediction?.hydrate(preloadedAlgorithm: algorithm, useRatingCache: useRatingCache);
   }
 }
 
@@ -70,7 +70,8 @@ bool predictionMatchesRegistration(
   MatchRegistration registration,
   RatingGroup scoringGroup,
 ) {
-  if(prediction.effectiveScoringGroup != scoringGroup) {
+  final effectiveScoringGroupUuid = prediction.scoringGroupUuid ?? prediction.groupUuid!;
+  if(effectiveScoringGroupUuid != scoringGroup.uuid) {
     return false;
   }
   final registrationNumbers = registrationMemberNumbers(registration);
@@ -155,6 +156,57 @@ DbAlgorithmPrediction? findDbPredictionForRegistration(
     predictionMatchesRegistration(prediction, registration, scoringGroup));
 }
 
+String effectiveScoringGroupUuid(DbAlgorithmPrediction prediction) {
+  return prediction.scoringGroupUuid ?? prediction.groupUuid!;
+}
+
+bool dbPredictionMatchesMemberNumber(DbAlgorithmPrediction prediction, String memberNumber) {
+  if(memberNumber.isEmpty) {
+    return false;
+  }
+  if(prediction.memberNumber == memberNumber) {
+    return true;
+  }
+  final known = prediction.rating.value?.allPossibleMemberNumbers;
+  return known != null && known.contains(memberNumber);
+}
+
+Iterable<DbAlgorithmPrediction> dbPredictionsForScoringGroup(
+  Iterable<DbAlgorithmPrediction> predictions,
+  String scoringGroupUuid,
+) {
+  return predictions.where((prediction) => effectiveScoringGroupUuid(prediction) == scoringGroupUuid);
+}
+
+DbAlgorithmPrediction? findDbPredictionByMemberNumber(
+  Iterable<DbAlgorithmPrediction> predictions,
+  String memberNumber, {
+  String? scoringGroupUuid,
+}) {
+  return predictions.firstWhereOrNull((prediction) {
+    if(scoringGroupUuid != null && effectiveScoringGroupUuid(prediction) != scoringGroupUuid) {
+      return false;
+    }
+    return dbPredictionMatchesMemberNumber(prediction, memberNumber);
+  });
+}
+
+Map<ShooterRating, AlgorithmPrediction> hydratePredictionsForScoringGroup({
+  required Iterable<DbAlgorithmPrediction> predictions,
+  required String scoringGroupUuid,
+  required RatingSystem algorithm,
+  bool useRatingCache = false,
+}) {
+  final result = <ShooterRating, AlgorithmPrediction>{};
+  for(final prediction in dbPredictionsForScoringGroup(predictions, scoringGroupUuid)) {
+    final hydrated = prediction.hydrate(preloadedAlgorithm: algorithm, useRatingCache: useRatingCache);
+    if(hydrated != null) {
+      result[hydrated.shooter] = hydrated;
+    }
+  }
+  return result;
+}
+
 /// Display rating from [linkedRatings] or the prediction's linked DB rating (sync paths only).
 ShooterRating? resolveDisplayRatingFromCache({
   required MatchPrep matchPrep,
@@ -194,6 +246,18 @@ List<MatchPrepCompetitorRow> buildCompetitorRows({
   final sport = project.sport;
   final predictions = predictionSet.algorithmPredictions.toList();
   final rows = <MatchPrepCompetitorRow>[];
+  Map<_RegistrationKey, DbAlgorithmPrediction> dbPredictions = {};
+
+  for(var prediction in predictions) {
+    var allMemberNumbers = prediction.rating.value?.allPossibleMemberNumbers;
+    if(allMemberNumbers == null) {
+      allMemberNumbers = {prediction.memberNumber};
+    }
+    for(var memberNumber in allMemberNumbers) {
+      final key = _RegistrationKey(groupUuid: prediction.scoringGroupUuid ?? prediction.groupUuid!, memberNumber: memberNumber);
+      dbPredictions[key] = prediction;
+    }
+  }
 
   for(var scoringGroup in scoringGroupsForCompetitorRows(
     project: project,
@@ -202,8 +266,23 @@ List<MatchPrepCompetitorRow> buildCompetitorRows({
     game: game,
   )) {
     final registrations = futureMatch.getRegistrationsFor(sport, group: scoringGroup);
+
     for(var registration in registrations) {
-      final dbPrediction = findDbPredictionForRegistration(predictions, registration, scoringGroup);
+      DbAlgorithmPrediction? dbPrediction;
+      for(var number in registrationMemberNumbers(registration)) {
+        final key = _RegistrationKey(groupUuid: scoringGroup.uuid, memberNumber: number);
+        dbPrediction = dbPredictions[key];
+        if(dbPrediction != null) {
+          break;
+        }
+      }
+      if(dbPrediction == null) {
+        rows.add(MatchPrepCompetitorRow(
+          registration: registration,
+          scoringGroup: scoringGroup,
+        ));
+        continue;
+      }
       final displayRating = resolveDisplayRatingFromCache(
         matchPrep: matchPrep,
         project: project,
@@ -303,4 +382,25 @@ Future<ShooterRating?> lookupDisplayRating({
     }
   }
   return null;
+}
+
+/// A key for a registration in a scoring group, keyed on group UUID and member number.
+class _RegistrationKey {
+  final String groupUuid;
+  final String memberNumber;
+
+  const _RegistrationKey({
+    required this.groupUuid,
+    required this.memberNumber,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+    identical(this, other) ||
+    other is _RegistrationKey &&
+    groupUuid == other.groupUuid &&
+    memberNumber == other.memberNumber;
+
+  @override
+  int get hashCode => combineHashes64(groupUuid.hashCode, memberNumber.hashCode);
 }

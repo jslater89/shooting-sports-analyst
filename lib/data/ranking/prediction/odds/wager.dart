@@ -41,7 +41,7 @@ enum ParlayValidity {
     overfilled => "The parlay is impossible to satisfy: too many shooters are predicted to finish in the same place or range.",
     trivialLeg => "The parlay has a trivial leg: some predictions are necessarily true if the remaining predictions are also true.",
     conflictingPredictions => "The parlay has conflicting predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
-    correlatedLegs => "The parlay has correlated legs: place and percentage predictions for the same shooter.",
+    correlatedLegs => "The parlay has correlated legs: place, percentage, or cover-the-spread predictions for the same shooter.",
     correlatedSpreads => "The parlay has correlated spread legs: the same shooter is on the covering (or opposing) side of more than one spread.",
     duplicateSpread => "The parlay has duplicate spread predictions: more than one prediction has been made for the same pair of shooters.",
     redundantPredictions => "The parlay has redundant predictions: more than one prediction has been made for the same shooter (or pair of shooters, for spread predictions).",
@@ -393,18 +393,31 @@ class Parlay implements IWager {
     return ParlayValidity.valid;
   }
 
-  /// Check if there are correlated legs (more than one place and/or percentage prediction for the same shooter).
+  /// Check if there are correlated legs: more than one of the following per shooter.
+  /// 1. Place prediction
+  /// 2. Percentage prediction
+  /// 3. Long-side spread prediction.
+  ///
   /// Returns true if there are correlated legs, false otherwise.
   static bool _hasCorrelatedLegs(List<Wager> legs) {
-    var shooterTotalPredictions = <ShooterRating, int>{};
+    var shooterTotalPredictions = <int, int>{};
 
     for(var leg in legs) {
       var prediction = leg.prediction;
       if(prediction is PlacePrediction) {
-        shooterTotalPredictions.increment(prediction.shooter);
+        shooterTotalPredictions.increment(prediction.shooter.wrappedRating.id);
       }
       else if(prediction is PercentagePrediction) {
-        shooterTotalPredictions.increment(prediction.shooter);
+        shooterTotalPredictions.increment(prediction.shooter.wrappedRating.id);
+      }
+      else if(prediction is PercentageSpreadPrediction) {
+        // The covering side is the long side.
+        if(prediction.favoriteCovers) {
+          shooterTotalPredictions.increment(prediction.favorite.wrappedRating.id);
+        }
+        else {
+          shooterTotalPredictions.increment(prediction.underdog.wrappedRating.id);
+        }
       }
     }
 

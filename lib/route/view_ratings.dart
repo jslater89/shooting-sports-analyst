@@ -16,7 +16,7 @@ import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
@@ -32,12 +32,12 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
 import 'package:shooting_sports_analyst/route/invitational_invites_page.dart';
+import 'package:shooting_sports_analyst/route/match_prep_list_page.dart';
 import 'package:shooting_sports_analyst/route/ratings_map.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
-import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
@@ -47,8 +47,6 @@ import 'package:shooting_sports_analyst/ui/rater/rating_set_manager.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/future_match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -485,13 +483,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<Widget> _generateActions(BuildContext context) {
     if(!initialized) return [];
     return [
+      // TODO: some kind of isLocal check
+      // Although maybe we should abandon the datasource conceit and build out different client
+      // code if we're going to support remote viewing as a desktop feature vs. a website feature.
       if(_settings.algorithm.supportsPrediction) Tooltip(
-        message: "Predict the outcome of a match based on ratings.",
+        message: "View and create future match predictions for this project.",
         child: IconButton(
           icon: Icon(RpgAwesome.crystal_ball),
-          onPressed: () {
-            var group = activeTabs[_tabController.index];
-            _startPredictionView(widget.dataSource, group);
+          onPressed: () async {
+            final projectId = await widget.dataSource.getProjectId();
+            if(projectId.isOk()) {
+              final project = await AnalystDatabase().getRatingProjectById(projectId.unwrap());
+              if(project != null) {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                  return MatchPrepListPage(singleProject: project);
+                }));
+              }
+            }
           },
         ),
       ), // end if: supports ratings
@@ -719,84 +727,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   String? lastMatchIdPredicted;
-  Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
-    var options = _ratings.toSet().toList();
-    options.sort((a, b) => b.rating.compareTo(a.rating));
-    Map<String, ShooterRating> shootersByMemberNumber = {};
-    for(var rating in options) {
-      for(var n in rating.knownMemberNumbers) {
-        shootersByMemberNumber[n] = rating;
-      }
-    }
-    List<ShooterRating>? shooters = [];
-
-    // select a FutureMatch from the database to predict
-    var futureMatch = await FutureMatchDatabaseChooserDialog.showSingle(context: context);
-
-    if(futureMatch == null) {
-      _log.d("No future match selected");
-      return;
-    }
-
-    lastMatchIdPredicted = futureMatch.matchId;
-
-    await futureMatch.matchRegistrationsToRatings(_sport, options, group: tab);
-    var registrationsForDivision = futureMatch.getRegistrationsFor(_sport, group: tab);
-
-    List<MatchRegistration> unmatchedRegistrations = [];
-    for(var registration in registrationsForDivision) {
-      if(registration.shooterMemberNumbers.isEmpty) {
-        unmatchedRegistrations.add(registration);
-      }
-      else {
-        var shooter = shootersByMemberNumber[registration.shooterMemberNumbers.first];
-        if(shooter != null) {
-          shooters.add(shooter);
-        }
-      }
-    }
-
-    if(unmatchedRegistrations.isNotEmpty) {
-      var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
-        return AssociateRegistrationsDialog(
-          sport: _sport,
-          futureMatch: futureMatch,
-          unmatchedRegistrations: unmatchedRegistrations,
-          possibleMappings: options.where((element) => !shooters.contains(element)).toList(),
-        );
-      }, barrierDismissible: false);
-
-      if(newRegistrations != null) {
-        shooters.addAll(newRegistrations);
-      }
-      else {
-        return;
-      }
-    }
-
-    // No predictions for created shooters who no-showed their first
-    // match, or who have faced zero competition so far.
-    shooters.retainWhere((element) => element.length > 0);
-
-    if(shooters.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Minimum of two shooters required for predictions."))
-      );
-      return;
-    }
-
-    int seed = _selectedMatch.date.millisecondsSinceEpoch;
-    var predictions = _settings.algorithm.predict(shooters, seed: seed, matchDate: futureMatch.date);
-    if(predictions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Prediction calculation returned no results."))
-      );
-      return;
-    }
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionListViewScreen(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, group: tab);
-    }));
-  }
 }
 
 enum _MenuEntry {

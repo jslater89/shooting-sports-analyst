@@ -33,7 +33,7 @@ mixin DbShooterRatingEntity {
   /// The shooter rating of interest.
   IsarLink<DbShooterRating> get rating;
 
-  DbShooterRating? getShooterRatingSync(AnalystDatabase db, {bool save = false}) {
+  DbShooterRating? getShooterRatingSync(AnalystDatabase db, {bool save = false, bool useCache = false}) {
     if(rating.value != null) {
       return rating.value!;
     }
@@ -45,7 +45,7 @@ mixin DbShooterRatingEntity {
       return null;
     }
 
-    var ratingValue = db.maybeKnownShooterSync(project: projectValue, group: groupValue, memberNumber: memberNumber);
+    var ratingValue = db.maybeKnownShooterSync(project: projectValue, group: groupValue, memberNumber: memberNumber, useCache: useCache);
     if(ratingValue == null) {
       return null;
     }

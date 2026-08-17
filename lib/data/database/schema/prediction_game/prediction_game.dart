@@ -5,11 +5,13 @@
  */
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -139,6 +141,36 @@ class PredictionGame {
     var ratingStageCount = prediction.shooter.stageCount;
     var ratingMatchCount = prediction.shooter.matchCount;
     var lastActivity = prediction.shooter.lastSeen;
+    var daysSinceLastActivity = DateTime.now().difference(lastActivity).inDays;
+
+    if(minimumWagerableCompetitorFinishRatio != null && prediction.hasRatioPredictions && prediction.ratioCenter! < minimumWagerableCompetitorFinishRatio!) {
+      return WagerIneligibilityReason.insufficientFinishRatio;
+    }
+    if(minimumWagerableStageCount != null && ratingStageCount != null && ratingStageCount < minimumWagerableStageCount!) {
+      return WagerIneligibilityReason.insufficientStageCount;
+    }
+    if(minimumWagerableMatchCount != null && ratingMatchCount != null && ratingMatchCount < minimumWagerableMatchCount!) {
+      return WagerIneligibilityReason.insufficientMatchCount;
+    }
+    if(maximumWagerableRatingAgeDays != null && daysSinceLastActivity > maximumWagerableRatingAgeDays!) {
+      return WagerIneligibilityReason.staleRating;
+    }
+    if(competitorCount < minimumCompetitorsRequired) {
+      return WagerIneligibilityReason.insufficientCompetitorsInGroup;
+    }
+
+    return null;
+  }
+
+  /// Check if a competitor is eligible for a wager.
+  WagerIneligibilityReason? checkDbValidity(RatingSystem algorithm, DbAlgorithmPrediction prediction, {required int competitorCount}) {
+    if(prediction.rating.value == null) {
+      return WagerIneligibilityReason.staleRating;
+    }
+    final wrappedRating = algorithm.wrapDbRating(prediction.rating.value!);
+    var ratingStageCount = wrappedRating.stageCount;
+    var ratingMatchCount = wrappedRating.matchCount;
+    var lastActivity = wrappedRating.lastSeen;
     var daysSinceLastActivity = DateTime.now().difference(lastActivity).inDays;
 
     if(minimumWagerableCompetitorFinishRatio != null && prediction.hasRatioPredictions && prediction.ratioCenter! < minimumWagerableCompetitorFinishRatio!) {

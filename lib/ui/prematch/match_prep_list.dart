@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/route/match_prep_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -19,6 +20,7 @@ import 'package:shooting_sports_analyst/util.dart';
 class MatchPrepList extends StatefulWidget {
   MatchPrepList({super.key, this.onMatchPrepSelected});
 
+  /// A callback to be called when a match prep row is clicked.
   final void Function(MatchPrep)? onMatchPrepSelected;
 
   @override
@@ -33,7 +35,6 @@ class _MatchPrepListState extends State<MatchPrepList> {
 
   static const _nameFlex = 3;
   static const _dateFlex = 1;
-
 
   @override
   Widget build(BuildContext context) {
@@ -83,11 +84,14 @@ class _MatchPrepListState extends State<MatchPrepList> {
 
 
 class MatchPrepListModel extends ChangeNotifier {
+  MatchPrepListModel({this.singleProject});
+
+  final DbRatingProject? singleProject;
   final db = AnalystDatabase();
   List<MatchPrep> matchPreps = [];
 
   Future<void> load() async {
-    matchPreps = await db.getMatchPreps();
+    matchPreps = await db.getMatchPreps(singleProject: singleProject);
     notifyListeners();
   }
 

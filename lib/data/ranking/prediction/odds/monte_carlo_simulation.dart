@@ -7,11 +7,34 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+/// Scalar inputs for one competitor in an odds Monte Carlo trial loop.
+class _OddsSimCompetitor {
+  final double displayCenter;
+  final double oneSigma;
+  final double ciOffset;
+  final bool isLogNormal;
+  final double? logMean;
+  final double? logSigma;
+  final double rating;
+
+  const _OddsSimCompetitor({
+    required this.displayCenter,
+    required this.oneSigma,
+    required this.ciOffset,
+    required this.isLogNormal,
+    required this.logMean,
+    required this.logSigma,
+    required this.rating,
+  });
+}
 
 /// Run a Monte Carlo simulation to generate a [MonteCarloSimulationResult] for a given target shooter within a
 /// field specified by [shootersToPredictions].
@@ -32,7 +55,6 @@ MonteCarloSimulationResult runOddsSimulation({
   Random? random,
   double disasterChance = 0.01,
 }) {
-  final actualRandom = random ?? Random();
   var shooterPrediction = shootersToPredictions[target];
   if(shooterPrediction == null) {
     // fall back to equalsShooter search
@@ -46,22 +68,118 @@ MonteCarloSimulationResult runOddsSimulation({
     throw ArgumentError("Shooter prediction not found for ${target.name}");
   }
 
+  final others = <_OddsSimCompetitor>[];
+  for(var prediction in shootersToPredictions.values) {
+    if(prediction == shooterPrediction) {
+      continue;
+    }
+    others.add(_competitorFromAlgorithmPrediction(prediction));
+  }
+
+  return _runOddsSimulationLoop(
+    target: _competitorFromAlgorithmPrediction(shooterPrediction),
+    others: others,
+    algorithm: shooterPrediction.algorithm,
+    trials: trials,
+    random: random ?? Random(),
+    disasterChance: disasterChance,
+  );
+}
+
+/// Run a Monte Carlo simulation from dehydrated [DbAlgorithmPrediction] rows.
+///
+/// Does not wrap ratings. [target.project] and each prediction's [DbAlgorithmPrediction.rating]
+/// link must resolve (Isar loads on first access if not preloaded).
+///
+/// [field] is the scoring-group field. If [target] is present in [field], it is excluded from
+/// the opposing set; otherwise [field] is treated as everyone except [target].
+MonteCarloSimulationResult runDbOddsSimulation({
+  required DbAlgorithmPrediction target,
+  required Iterable<DbAlgorithmPrediction> field,
+  required int trials,
+  Random? random,
+  double disasterChance = 0.01,
+}) {
+  final project = target.project.value;
+  if(project == null) {
+    throw ArgumentError("Target prediction for ${target.memberNumber} has no linked project");
+  }
+
+  final others = <_OddsSimCompetitor>[];
+  for(var prediction in field) {
+    if(prediction.id == target.id) {
+      continue;
+    }
+    others.add(_competitorFromDbPrediction(prediction));
+  }
+
+  return _runOddsSimulationLoop(
+    target: _competitorFromDbPrediction(target),
+    others: others,
+    algorithm: project.settings.algorithm,
+    trials: trials,
+    random: random ?? Random(),
+    disasterChance: disasterChance,
+  );
+}
+
+_OddsSimCompetitor _competitorFromAlgorithmPrediction(AlgorithmPrediction prediction) {
+  return _OddsSimCompetitor(
+    displayCenter: prediction.displayCenter,
+    oneSigma: prediction.oneSigma,
+    ciOffset: prediction.ciOffset,
+    isLogNormal: prediction.isLogNormal,
+    logMean: prediction.logMean,
+    logSigma: prediction.logSigma,
+    rating: prediction.shooter.rating,
+  );
+}
+
+_OddsSimCompetitor _competitorFromDbPrediction(DbAlgorithmPrediction prediction) {
+  final dbRating = prediction.rating.value;
+  if(dbRating == null) {
+    throw ArgumentError("DbAlgorithmPrediction for ${prediction.memberNumber} has no linked rating");
+  }
+  return _OddsSimCompetitor(
+    displayCenter: prediction.displayCenter,
+    oneSigma: prediction.oneSigma,
+    ciOffset: prediction.ciOffset,
+    isLogNormal: prediction.isLogNormal,
+    logMean: prediction.logMean,
+    logSigma: prediction.logSigma,
+    rating: dbRating.agedRating,
+  );
+}
+
+/// Core odds Monte Carlo loop. [target] is simulated against [others].
+MonteCarloSimulationResult _runOddsSimulationLoop({
+  required _OddsSimCompetitor target,
+  required List<_OddsSimCompetitor> others,
+  required RatingSystem algorithm,
+  required int trials,
+  required Random random,
+  required double disasterChance,
+}) {
   List<double> percentages = [];
   List<int> places = [];
-  bool logNormalMode = shooterPrediction.isLogNormal;
+  bool logNormalMode = target.isLogNormal;
+  final placeSigmaMultiplier = algorithm.predictionSettings.placeSigmaMultiplier;
+  final predictionsOutputRatios = algorithm.predictionsOutputRatios;
+  final supportsRatioFloor = algorithm.supportsRatioFloor;
+  final settings = algorithm.settings;
 
   for(var i = 0; i < trials; i++) {
     // A multiplier for expected score to account for a disaster (DQ, gun breaking, squib stage, etc.).
     // Random number between 0 and 0.5, used to multiply the output expected score.
     var disasterMagnitude = 1.0;
-    if(actualRandom.nextDouble() < disasterChance) {
-      var coinFlip = actualRandom.nextDouble();
+    if(random.nextDouble() < disasterChance) {
+      var coinFlip = random.nextDouble();
       // Half the time it's a DQ or match DNF.
       if(coinFlip < 0.5) {
         disasterMagnitude = 0.0;
       }
       else {
-        disasterMagnitude = actualRandom.nextDouble() * 0.50;
+        disasterMagnitude = random.nextDouble() * 0.50;
       }
     }
 
@@ -69,16 +187,15 @@ MonteCarloSimulationResult runOddsSimulation({
 
     // Adjust mean by up to 10% based on trend.
     double shooterExpectedScore;
-    final placeSigmaMultiplier = shooterPrediction.algorithm.predictionSettings.placeSigmaMultiplier;
     if(logNormalMode) {
-      final finalLogSigma = shooterPrediction.logSigma! * placeSigmaMultiplier;
-      final finalLogMean = shooterPrediction.logMean! + finalLogSigma * shooterPrediction.ciOffset;
-      shooterExpectedScore = _logNormalDraw(random: actualRandom, logMean: finalLogMean, logSigma: finalLogSigma) * disasterMagnitude;
+      final finalLogSigma = target.logSigma! * placeSigmaMultiplier;
+      final finalLogMean = target.logMean! + finalLogSigma * target.ciOffset;
+      shooterExpectedScore = _logNormalDraw(random: random, logMean: finalLogMean, logSigma: finalLogSigma) * disasterMagnitude;
     }
     else {
-      final finalSigma = shooterPrediction.oneSigma * placeSigmaMultiplier;
-      final actualMean = shooterPrediction.displayCenter + finalSigma * shooterPrediction.ciOffset;
-      shooterExpectedScore = _normalDraw(random: actualRandom, mean: actualMean, sigma: finalSigma) * disasterMagnitude;
+      final finalSigma = target.oneSigma * placeSigmaMultiplier;
+      final actualMean = target.displayCenter + finalSigma * target.ciOffset;
+      shooterExpectedScore = _normalDraw(random: random, mean: actualMean, sigma: finalSigma) * disasterMagnitude;
     }
 
     // Generate random expected scores for all other shooters
@@ -88,18 +205,16 @@ MonteCarloSimulationResult runOddsSimulation({
     var bestRating = double.negativeInfinity;
     var worstRating = double.infinity;
 
-    for (var otherPred in shootersToPredictions.values) {
-      if (otherPred == shooterPrediction) continue;
-
+    for(var otherPred in others) {
       var otherDisasterMagnitude = 1.0;
-      if(actualRandom.nextDouble() < disasterChance) {
-        var coinFlip = actualRandom.nextDouble();
+      if(random.nextDouble() < disasterChance) {
+        var coinFlip = random.nextDouble();
         // Half the time it's a DQ or match DNF.
         if(coinFlip < 0.5) {
           otherDisasterMagnitude = 0.0;
         }
         else {
-          otherDisasterMagnitude = actualRandom.nextDouble() * 0.50;
+          otherDisasterMagnitude = random.nextDouble() * 0.50;
         }
       }
 
@@ -107,23 +222,23 @@ MonteCarloSimulationResult runOddsSimulation({
       if(logNormalMode) {
         final otherFinalLogSigma = otherPred.logSigma! * placeSigmaMultiplier;
         final otherFinalLogMean = otherPred.logMean! + otherFinalLogSigma * otherPred.ciOffset;
-        otherExpectedScore = _logNormalDraw(random: actualRandom, logMean: otherFinalLogMean, logSigma: otherFinalLogSigma) * otherDisasterMagnitude;
+        otherExpectedScore = _logNormalDraw(random: random, logMean: otherFinalLogMean, logSigma: otherFinalLogSigma) * otherDisasterMagnitude;
       }
       else {
         final otherFinalSigma = otherPred.oneSigma * placeSigmaMultiplier;
         final otherMean = otherPred.displayCenter + otherFinalSigma * otherPred.ciOffset;
-        otherExpectedScore = _normalDraw(random: actualRandom, mean: otherMean, sigma: otherFinalSigma) * otherDisasterMagnitude;
+        otherExpectedScore = _normalDraw(random: random, mean: otherMean, sigma: otherFinalSigma) * otherDisasterMagnitude;
       }
 
       otherExpectedScores.add(otherExpectedScore);
       if(otherExpectedScore > bestExpectedScore) {
         bestExpectedScore = otherExpectedScore;
       }
-      if(otherPred.shooter.rating > bestRating) {
-        bestRating = otherPred.shooter.rating;
+      if(otherPred.rating > bestRating) {
+        bestRating = otherPred.rating;
       }
-      if(otherPred.shooter.rating < worstRating) {
-        worstRating = otherPred.shooter.rating;
+      if(otherPred.rating < worstRating) {
+        worstRating = otherPred.rating;
         minimumRatingScore = otherExpectedScore;
       }
     }
@@ -134,23 +249,23 @@ MonteCarloSimulationResult runOddsSimulation({
 
     // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0;
     // multiple people may have expected scores above 1.0 based on their rating ranges.
-    if(shooterPrediction.algorithm.predictionsOutputRatios) {
+    if(predictionsOutputRatios) {
       shooterExpectedScore = shooterExpectedScore / bestExpectedScore;
       minimumRatingScore = minimumRatingScore / bestExpectedScore;
       bestExpectedScore = 1.0;
     }
 
-    if(shooterPrediction.algorithm.supportsRatioFloor) {
+    if(supportsRatioFloor) {
       var ratingDelta = bestRating - worstRating;
-      var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
+      var ratioFloor = algorithm.estimateRatioFloor(ratingDelta, settings: settings);
       var ratioMultiplier = 1.0 - ratioFloor;
       shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
     }
-    else if(shooterPrediction.algorithm.predictionsOutputRatios) {
+    else if(predictionsOutputRatios) {
       shooterRatio = shooterExpectedScore;
     }
     else {
-      throw UnsupportedError("Rating system ${shooterPrediction.algorithm} cannot generate percentage predictions");
+      throw UnsupportedError("Rating system ${algorithm} cannot generate percentage predictions");
     }
     percentages.add(shooterRatio);
 

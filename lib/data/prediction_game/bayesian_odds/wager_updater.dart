@@ -12,12 +12,14 @@ import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_cache.d
 import 'package:shooting_sports_analyst/data/cache/montecarlo/montecarlo_lru_key.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/bayesian_delta.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/bayesian_delta.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/match_prep/match_prep_competitor_rows.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/calculator.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/config.dart';
 import 'package:shooting_sports_analyst/data/prediction_game/bayesian_odds/wager_data.dart';
@@ -85,21 +87,34 @@ class BayesianWagerUpdater {
   /// respectively. If not present, the default values of 1.0001 and 10000.0 will be used.
   ///
   /// [houseEdge] is a house edge to apply to the wager. If not present, the default value of 0.05 will be used.
+  ///
+  /// Provide either [shootersToPredictions] (hydrated field) or [dbPredictions] (dehydrated
+  /// scoring-group field). [dbPredictions] is used only on Monte Carlo cache miss when
+  /// decomposing prior spread legs.
   Future<double> updateWagerWithBayesianOddsShift({
     required PredictionGameManager gm,
     required PredictionGamePlayer bettor,
     required Wager wager,
     required MatchPrep matchPrep,
     required PredictionSet predictionSet,
-    required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
+    List<DbAlgorithmPrediction>? dbPredictions,
     required MonteCarloSimulationResult subjectMonteCarlo,
     MonteCarloSimulationResult? spreadFavoriteMonteCarlo,
     MonteCarloSimulationResult? spreadUnderdogMonteCarlo,
     double? bestPossibleOdds,
     double? worstPossibleOdds,
     double? houseEdge,
+    required int trials,
     IMonteCarloCache? cache,
   }) async {
+    if(shootersToPredictions != null && dbPredictions != null) {
+      throw ArgumentError("Only one of shootersToPredictions or dbPredictions can be provided");
+    }
+    if(shootersToPredictions == null && dbPredictions == null) {
+      throw ArgumentError("One of shootersToPredictions or dbPredictions must be provided");
+    }
+
     final start = DateTime.now();
     final project = await matchPrep.ratingProject.value!;
     final algorithm = project.settings.algorithm;
@@ -150,7 +165,9 @@ class BayesianWagerUpdater {
       subjectMonteCarlo: subjectMonteCarlo,
       cache: cache,
       shootersToPredictions: shootersToPredictions,
+      dbPredictions: dbPredictions,
       subjectStageHistoryLength: lengthInStages,
+      trials: trials,
     );
     subjectDelta = subjectDeltaResult.delta;
     subjectBetWeights = subjectDeltaResult.betWeights;
@@ -171,7 +188,9 @@ class BayesianWagerUpdater {
         subjectMonteCarlo: spreadUnderdogMonteCarlo!,
         cache: cache,
         shootersToPredictions: shootersToPredictions,
+        dbPredictions: dbPredictions,
         subjectStageHistoryLength: lengthInStages,
+        trials: trials,
       );
       underdogDelta = underdogDeltaResult.delta;
       underdogBetWeights = underdogDeltaResult.betWeights;
@@ -304,8 +323,10 @@ class BayesianWagerUpdater {
     required ShooterRating subjectRating,
     required MonteCarloSimulationResult subjectMonteCarlo,
     required IMonteCarloCache? cache,
-    required Map<ShooterRating, AlgorithmPrediction> shootersToPredictions,
+    required Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
+    required List<DbAlgorithmPrediction>? dbPredictions,
     required int subjectStageHistoryLength,
+    required int trials,
   }) async {
     final incomingScoringGroup = incomingWager.prediction.effectiveScoringGroup;
     var wagersForSubject = wagersForMatch.where((w) =>
@@ -383,6 +404,8 @@ class BayesianWagerUpdater {
       subjectMonteCarlo: subjectMonteCarlo,
       cache: cache,
       shootersToPredictions: shootersToPredictions,
+      dbPredictions: dbPredictions,
+      trials: trials,
     );
 
     _log.v("${priorSubjectWagers.length} prior wagers for subject ${subjectRating.name}");
@@ -439,8 +462,10 @@ class BayesianWagerUpdater {
     required ShooterRating subjectRating,
     required RatingGroup subjectScoringGroup,
     required MonteCarloSimulationResult subjectMonteCarlo,
+    required int trials,
     IMonteCarloCache? cache,
     Map<ShooterRating, AlgorithmPrediction>? shootersToPredictions,
+    List<DbAlgorithmPrediction>? dbPredictions,
   }) async {
     List<BayesianOddsWager> priorWagers = [];
     final subject = DbPredictionTarget.fromShooterRating(subjectRating);
@@ -478,7 +503,7 @@ class BayesianWagerUpdater {
           final neededSubjectKey = MonteCarloSimulationLruKey(
             predictionSetId: predictionSetId,
             memberNumber: neededSubject.memberNumber,
-            trials: 12500,
+            trials: trials,
             scoringGroupUuid: subjectScoringGroup.uuid,
           );
           MonteCarloSimulationResult? neededSubjectMonteCarlo;
@@ -488,25 +513,38 @@ class BayesianWagerUpdater {
 
           if(neededSubjectMonteCarlo == null) {
             _log.v("Cache miss for spread leg ${leg.descriptiveString} target ${neededSubject.name}");
-            final neededSubjectRating = await neededSubject.getShooterRating(db);
-            if(neededSubjectRating == null) {
-              _log.w("Subject ${neededSubject.name} not found in database");
-              continue;
+
+            MonteCarloSimulationResult result;
+            if(dbPredictions != null) {
+              final dbTarget = _dbPredictionForTarget(dbPredictions, neededSubject);
+              if(dbTarget == null) {
+                _log.w("Subject ${neededSubject.name} not found in dbPredictions for scoring group ${subjectScoringGroup.name}");
+                continue;
+              }
+              result = runDbOddsSimulation(
+                target: dbTarget,
+                field: dbPredictions,
+                trials: trials,
+                random: Random(matchId.stableHash),
+              );
             }
-            final prediction = shootersToPredictions![neededSubjectRating];
-            if(prediction == null) {
-              _log.w("Subject ${neededSubject.name} not found in shootersToPredictions for scoring group ${subjectScoringGroup.name}");
-              continue;
+            else {
+              final neededSubjectRating = await neededSubject.getShooterRating(db);
+              if(neededSubjectRating == null) {
+                _log.w("Subject ${neededSubject.name} not found in database");
+                continue;
+              }
+              result = runOddsSimulation(
+                shootersToPredictions: shootersToPredictions!,
+                target: project.wrapDbRatingSync(neededSubjectRating),
+                trials: trials,
+                random: Random(matchId.stableHash),
+              );
             }
-            var result = runOddsSimulation(
-              shootersToPredictions: shootersToPredictions,
-              target: project.wrapDbRatingSync(neededSubjectRating),
-              trials: 12500,
-              random: Random(matchId.stableHash),
-            );
             if(cache != null) {
               cache.cache(neededSubjectKey, result);
             }
+
             neededSubjectMonteCarlo = result;
           }
 
@@ -640,6 +678,22 @@ class BayesianWagerUpdater {
       }
     }
     return isSimilar;
+  }
+
+  DbAlgorithmPrediction? _dbPredictionForTarget(
+    List<DbAlgorithmPrediction> dbPredictions,
+    DbPredictionTarget target,
+  ) {
+    for(final number in [target.memberNumber, ...target.knownMemberNumbers]) {
+      if(number.isEmpty) {
+        continue;
+      }
+      final match = findDbPredictionByMemberNumber(dbPredictions, number);
+      if(match != null) {
+        return match;
+      }
+    }
+    return null;
   }
 }
 

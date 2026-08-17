@@ -166,6 +166,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
   /// The aged rating for this competitor, for rating algorithms that implement rating
   /// decay.
+  ///
+  /// Rating algorithms that do not implement rating decay must set this to the same value as [rating].
   double agedRating;
 
   /// The minimum rating attained during this competitor's career.

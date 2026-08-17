@@ -25,13 +25,23 @@ final _log = SSALogger("MatchPrepDatabase");
 
 extension MatchPrepDatabase on AnalystDatabase {
   /// Get all match preps.
-  Future<List<MatchPrep>> getMatchPreps() async {
-    return isar.matchPreps.where().sortByMatchDateDesc().findAll();
+  Future<List<MatchPrep>> getMatchPreps({DbRatingProject? singleProject}) async {
+    if(singleProject != null) {
+      return isar.matchPreps.filter().projectIdEqualTo(singleProject.id.stableHash).sortByMatchDateDesc().findAll();
+    }
+    else {
+      return isar.matchPreps.where().sortByMatchDateDesc().findAll();
+    }
   }
 
   /// Get all match preps synchronously.
-  List<MatchPrep> getMatchPrepsSync() {
-    return isar.matchPreps.where().sortByMatchDateDesc().findAllSync();
+  List<MatchPrep> getMatchPrepsSync({DbRatingProject? singleProject}) {
+    if(singleProject != null) {
+      return isar.matchPreps.filter().projectIdEqualTo(singleProject.id.stableHash).sortByMatchDateDesc().findAllSync();
+    }
+    else {
+      return isar.matchPreps.where().sortByMatchDateDesc().findAllSync();
+    }
   }
 
   Future<List<MatchPrep>> queryMatchPreps({
