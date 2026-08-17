@@ -359,16 +359,16 @@ class Parlay implements IWager {
   static ParlayValidity checkParlayValidity(List<Wager> legs, {int? fieldSize, bool? allowCorrelatedParlays}) {
     allowCorrelatedParlays ??= false;
 
-    if(!allowCorrelatedParlays && _hasCorrelatedLegs(legs)) {
-      return ParlayValidity.correlatedLegs;
-    }
-
     if(!allowCorrelatedParlays && _hasDuplicateSpreadPredictions(legs)) {
       return ParlayValidity.duplicateSpread;
     }
 
     if(!allowCorrelatedParlays && _hasCorrelatedSpreadPredictions(legs)) {
       return ParlayValidity.correlatedSpreads;
+    }
+
+    if(!allowCorrelatedParlays && _hasCorrelatedLegs(legs)) {
+      return ParlayValidity.correlatedLegs;
     }
 
     // Check for conflicting predictions first
@@ -432,7 +432,7 @@ class Parlay implements IWager {
 
   /// Check if there are duplicate spread predictions for the same pair of shooters.
   static bool _hasDuplicateSpreadPredictions(List<Wager> legs) {
-    var spreadPredictions = <String, int>{};
+    var spreadPredictions = <int, int>{};
 
     for(var leg in legs) {
       var prediction = leg.prediction;
@@ -457,19 +457,19 @@ class Parlay implements IWager {
   /// shooter is allowed, to permit an "A beats B, but C beats A" parlay expressing that
   /// A finishes between B and C.
   static bool _hasCorrelatedSpreadPredictions(List<Wager> legs) {
-    var longCounts = <ShooterRating, int>{};
-    var shortCounts = <ShooterRating, int>{};
+    var longCounts = <int, int>{};
+    var shortCounts = <int, int>{};
 
     for(var leg in legs) {
       var prediction = leg.prediction;
       if(prediction is PercentageSpreadPrediction) {
         if(prediction.favoriteCovers) {
-          longCounts.increment(prediction.favorite);
-          shortCounts.increment(prediction.underdog);
+          longCounts.increment(prediction.favorite.wrappedRating.id);
+          shortCounts.increment(prediction.underdog.wrappedRating.id);
         }
         else {
-          longCounts.increment(prediction.underdog);
-          shortCounts.increment(prediction.favorite);
+          longCounts.increment(prediction.underdog.wrappedRating.id);
+          shortCounts.increment(prediction.favorite.wrappedRating.id);
         }
       }
     }
@@ -490,19 +490,19 @@ class Parlay implements IWager {
 
   /// Check if there are conflicting predictions (multiple predictions for the same shooter(s)).
   static bool _hasConflictingPredictions(List<Wager> legs) {
-    var shooterPlacePredictions = <ShooterRating, int>{};
-    var shooterPercentagePredictions = <ShooterRating, int>{};
-    var spreadPredictions = <String, int>{};
+    var shooterPlacePredictions = <int, int>{};
+    var shooterPercentagePredictions = <int, int>{};
+    var spreadPredictions = <int, int>{};
 
     for (var leg in legs) {
       var prediction = leg.prediction;
 
       if (prediction is PlacePrediction) {
-        shooterPlacePredictions[prediction.shooter] =
+        shooterPlacePredictions[prediction.shooter.wrappedRating.id] =
             (shooterPlacePredictions[prediction.shooter] ?? 0) + 1;
       }
       else if (prediction is PercentagePrediction) {
-        shooterPercentagePredictions[prediction.shooter] =
+        shooterPercentagePredictions[prediction.shooter.wrappedRating.id] =
             (shooterPercentagePredictions[prediction.shooter] ?? 0) + 1;
       }
       else if (prediction is PercentageSpreadPrediction) {
@@ -534,17 +534,10 @@ class Parlay implements IWager {
   }
 
   /// Create a canonical key for a spread prediction pair (order-independent).
-  static String _canonicalSpreadKey(ShooterRating shooter1, ShooterRating shooter2) {
-    // Use a consistent ordering based on shooter name
-    // Compare names lexicographically to create a canonical order
-    var name1 = shooter1.name;
-    var name2 = shooter2.name;
-    if (name1.compareTo(name2) < 0) {
-      return "$name1|$name2";
-    }
-    else {
-      return "$name2|$name1";
-    }
+  static int _canonicalSpreadKey(ShooterRating shooter1, ShooterRating shooter2) {
+    // Use a consistent key based on the hash of two DB IDs (which won't change
+    // in the space of one odds calculation).
+    return combineHashes64(shooter1.wrappedRating.id, shooter2.wrappedRating.id);
   }
 
   /// Check if a parlay has redundant predictions. Two cases are checked:

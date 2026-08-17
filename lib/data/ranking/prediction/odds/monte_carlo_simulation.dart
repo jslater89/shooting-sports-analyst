@@ -7,13 +7,17 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/monte_carlo_simulation_result.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MonteCarloSimulation");
 
 /// Scalar inputs for one competitor in an odds Monte Carlo trial loop.
 class _OddsSimCompetitor {
@@ -105,16 +109,24 @@ MonteCarloSimulationResult runDbOddsSimulation({
     throw ArgumentError("Target prediction for ${target.memberNumber} has no linked project");
   }
 
+  final db = AnalystDatabase();
   final others = <_OddsSimCompetitor>[];
   for(var prediction in field) {
     if(prediction.id == target.id) {
       continue;
     }
-    others.add(_competitorFromDbPrediction(prediction));
+    final competitor = _competitorFromDbPrediction(prediction, db: db);
+    if(competitor != null) {
+      others.add(competitor);
+    }
   }
 
+  final targetCompetitor = _competitorFromDbPrediction(target, db: db);
+  if(targetCompetitor == null) {
+    throw ArgumentError("Target prediction for ${target.memberNumber} has no linked rating");
+  }
   return _runOddsSimulationLoop(
-    target: _competitorFromDbPrediction(target),
+    target: targetCompetitor,
     others: others,
     algorithm: project.settings.algorithm,
     trials: trials,
@@ -135,10 +147,16 @@ _OddsSimCompetitor _competitorFromAlgorithmPrediction(AlgorithmPrediction predic
   );
 }
 
-_OddsSimCompetitor _competitorFromDbPrediction(DbAlgorithmPrediction prediction) {
-  final dbRating = prediction.rating.value;
+_OddsSimCompetitor? _competitorFromDbPrediction(DbAlgorithmPrediction prediction, {AnalystDatabase? db}) {
+  db ??= AnalystDatabase();
+  var dbRating = prediction.rating.value;
   if(dbRating == null) {
-    throw ArgumentError("DbAlgorithmPrediction for ${prediction.memberNumber} has no linked rating");
+    prediction.getShooterRatingSync(db, save: true, useCache: true);
+  }
+
+  if(dbRating == null) {
+    _log.w("DbAlgorithmPrediction for ${prediction.memberNumber} has no linked rating");
+    return null;
   }
   return _OddsSimCompetitor(
     displayCenter: prediction.displayCenter,
