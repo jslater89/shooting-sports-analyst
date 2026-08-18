@@ -562,7 +562,8 @@ class RatingProjectLoader {
 
     if(ratingSystem.hasAgedRatings()) {
       // 3.3. Age the ratings of all competitors in the group if necessary.
-      if(Timings.enabled) start = DateTime.now();
+      late DateTime ageStart;
+      if(Timings.enabled) ageStart = DateTime.now();
       final referenceDate = matches.last.date;
       await host.progressCallback(
         progress: _currentMatchStep,
@@ -575,7 +576,7 @@ class RatingProjectLoader {
       );
       var agedRatings = await ratingSystem.ageRatings(project: project, group: group, referenceDate: referenceDate, loadedRatings: changedRatings);
       changedRatings.addAll(agedRatings);
-      if(Timings.enabled) timings.add(TimingType.ageRatings, DateTime.now().difference(start).inMicroseconds);
+      if(Timings.enabled) timings.add(TimingType.ageRatings, DateTime.now().difference(ageStart).inMicroseconds);
     }
 
     await host.progressCallback(
@@ -2009,6 +2010,8 @@ class RatingProjectLoader {
     Map<String, ShooterRating> wrappedRatings = {};
 
     if(stage != null) {
+      late DateTime start;
+      if(Timings.enabled) start = DateTime.now();
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
       for(var s in scores) {
@@ -2025,14 +2028,18 @@ class RatingProjectLoader {
         changes[rating.wrappedRating] ??= {};
         wrappedRatings[num] = rating;
       }
+      if(Timings.enabled) timings.add(TimingType.scoreMap, DateTime.now().difference(start).inMicroseconds);
 
       // Check for pubstomp
+      if(Timings.enabled) start = DateTime.now();
       var pubstompMod = 1.0;
       if (_pubstomp(wrappedRatings, scores)) {
         pubstompMod = 0.33;
       }
       matchStrength *= pubstompMod;
+      if(Timings.enabled) timings.add(TimingType.pubstomp, DateTime.now().difference(start).inMicroseconds);
 
+      if(Timings.enabled) start = DateTime.now();
       var update = ratingSystem.updateShooterRatings(
         match: match,
         shooters: scoreMap.keys.toList(),
@@ -2042,7 +2049,9 @@ class RatingProjectLoader {
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
       );
+      if(Timings.enabled) timings.add(TimingType.update, DateTime.now().difference(start).inMicroseconds);
 
+      if(Timings.enabled) start = DateTime.now();
       for(var rating in scoreMap.keys) {
         if(update[rating] == null) {
           // This can happen if the rating system declines to
@@ -2067,8 +2076,11 @@ class RatingProjectLoader {
           changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
         }
       }
+      if(Timings.enabled) timings.add(TimingType.changeMap, DateTime.now().difference(start).inMicroseconds);
     }
     else { // by match
+      late DateTime start;
+      if(Timings.enabled) start = DateTime.now();
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
       for(var s in scores) {
@@ -2083,14 +2095,18 @@ class RatingProjectLoader {
         changes[rating.wrappedRating] ??= {};
         wrappedRatings[num] = rating;
       }
+      if(Timings.enabled) timings.add(TimingType.scoreMap, DateTime.now().difference(start).inMicroseconds);
 
       // Check for pubstomp
+      if(Timings.enabled) start = DateTime.now();
       var pubstompMod = 1.0;
       if(_pubstomp(wrappedRatings, scores)) {
         pubstompMod = 0.33;
       }
       matchStrength *= pubstompMod;
+      if(Timings.enabled) timings.add(TimingType.pubstomp, DateTime.now().difference(start).inMicroseconds);
 
+      if(Timings.enabled) start = DateTime.now();
       var update = ratingSystem.updateShooterRatings(
         match: match,
         shooters: scoreMap.keys.toList(),
@@ -2099,7 +2115,9 @@ class RatingProjectLoader {
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
       );
+      if(Timings.enabled) timings.add(TimingType.update, DateTime.now().difference(start).inMicroseconds);
 
+      if(Timings.enabled) start = DateTime.now();
       for(var rating in scoreMap.keys) {
         if(update[rating] == null) {
           // This can happen if the rating system declines to
@@ -2121,6 +2139,7 @@ class RatingProjectLoader {
           changes[rating.wrappedRating]![score]!.apply(update[rating]!);
         }
       }
+      if(Timings.enabled) timings.add(TimingType.changeMap, DateTime.now().difference(start).inMicroseconds);
     }
   }
 

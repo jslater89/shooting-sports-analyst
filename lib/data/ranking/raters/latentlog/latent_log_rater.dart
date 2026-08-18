@@ -22,6 +22,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -243,7 +244,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     double squaredWeightedVarianceSum = 0.0;
     Map<ShooterRating, double> competitorScoreEvidence = {};
     Map<ShooterRating, double> competitorTailNoise = {};
+    Map<ShooterRating, double> competitorAgedRatings = {};
     Map<ShooterRating, double> competitorVariances = {};
+
+    late DateTime start;
+    if (Timings.enabled) {
+      start = DateTime.now();
+    }
 
     // First pass: gather data and calculate the baseline.
     List<ShooterRating> validShooters = [];
@@ -264,6 +271,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final shooterVariance = shooter.calculateCurrentVariance(
         asOfDate: match.date,
       );
+      competitorAgedRatings[shooter] = agedRating;
       competitorVariances[shooter] = shooterVariance;
       final weight =
           1.0 /
@@ -284,6 +292,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       competitorBaselineResiduals[shooter] = residual;
       baselineResidual += weight * residual;
     }
+
+    // Null assertions are safe because validShooters filters out shooters with no score.
+    final competitorsByFinish = validShooters.sorted((a, b) => scores[a]!.place.compareTo(scores[b]!.place));
+    final competitorsByRating = validShooters.sorted((a, b) => competitorAgedRatings[b]!.compareTo(competitorAgedRatings[a]!));
+    final top10PctCompetitors = _selectTop10PctOpponents(competitorsByFinish, competitorsByRating);
 
     // If baseline robustness is enabled, apply a Huber-style taper to
     // the baseline weights to downweight extreme outliers.
@@ -339,6 +352,12 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final fieldMaturity =
         totalWeight > 0 ? (weightedMaturitySum / totalWeight).clamp(0.0, 1.0) : 0.0;
     final newFieldVariance = settings.noveltyVariance * (1.0 - fieldMaturity);
+
+    if (Timings.enabled) {
+      Timings().add(TimingType.calcExpected, DateTime.now().difference(start).inMicroseconds);
+      start = DateTime.now();
+    }
+
     for (var shooter in validShooters) {
       shooter as LatentLogRating;
       final shooterVariance = competitorVariances[shooter];
@@ -349,7 +368,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         match: match,
         shooter: shooter,
         shooterVariance: competitorVariances[shooter]!,
-        matchDate: match.date,
+        shooterAgedRating: competitorAgedRatings[shooter]!,
         baselineResidualSum: baselineResidual,
         weightedSquareRootVarianceSum: weightedSquareRootVarianceSum,
         squaredWeightedVarianceSum: squaredWeightedVarianceSum,
@@ -362,11 +381,19 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         competitorScoreEvidence: competitorScoreEvidence,
         competitorTailNoise: competitorTailNoise,
         competitorWeights: competitorWeights,
+        competitorAgedRatings: competitorAgedRatings,
+        competitorVariances: competitorVariances,
+        top10PctCompetitors: top10PctCompetitors,
+        competitorsByRating: competitorsByRating,
       );
       if (change == null) {
         continue;
       }
       changes[shooter] = change;
+    }
+
+    if (Timings.enabled) {
+      Timings().add(TimingType.updateRatings, DateTime.now().difference(start).inMicroseconds);
     }
 
     return changes;
@@ -467,11 +494,11 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     /// The shooter being processed.
     required ShooterRating shooter,
 
+    /// The aged rating of the shooter.
+    required double shooterAgedRating,
+
     /// The aged variance of the shooter, accounting for time since the last update.
     required double shooterVariance,
-
-    /// The date of the match being processed.
-    required DateTime matchDate,
 
     /// The sum of the baseline residuals.
     required double baselineResidualSum,
@@ -508,9 +535,21 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     /// The weights of the competitors.
     required Map<ShooterRating, double> competitorWeights,
+
+    /// The aged ratings of the competitors.
+    required Map<ShooterRating, double> competitorAgedRatings,
+
+    /// The variances of the competitors.
+    required Map<ShooterRating, double> competitorVariances,
+
+    /// The top 10% of competitors by rating and finish, for pairwise blending.
+    required List<ShooterRating> top10PctCompetitors,
+
+    /// The list of competitor ratings sorted by rating.
+    required List<ShooterRating> competitorsByRating,
   }) {
     shooter as LatentLogRating;
-    final agedRating = shooter.calculateAgedRating(asOfDate: matchDate);
+    final agedRating = shooterAgedRating;
     final shooterScore = scores[shooter];
     final shooterScoreEvidence = competitorScoreEvidence[shooter];
     final shooterTailNoise = competitorTailNoise[shooter];
@@ -557,7 +596,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // Pairwise blending, conditioned on at least [weak field max size] opponents.
     if (settings.pairwiseBlendWeight > 0 && validScoresCount >= settings.weakFieldMaxSize) {
-      final pairwiseOpponents = _selectOpponents(shooter, scores, shooterRatio);
+      final pairwiseOpponents = _selectOpponents(shooter, scores, top10PctCompetitors, competitorsByRating, shooterRatio);
       pairwiseOpponentCount = pairwiseOpponents.length;
 
       for (var opponent in pairwiseOpponents) {
@@ -566,9 +605,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         final opponentScoreEvidence = competitorScoreEvidence[opponent];
         final opponentTailNoise = competitorTailNoise[opponent];
         final opponentWeight = competitorWeights[opponent];
-        final opponentAgedRating = opponent.calculateAgedRating(asOfDate: matchDate);
-        final opponentAgedVariance = opponent.calculateCurrentVariance(asOfDate: matchDate);
-        if (opponentScoreEvidence == null || opponentTailNoise == null || opponentWeight == null) {
+        final opponentAgedRating = competitorAgedRatings[opponent];
+        final opponentAgedVariance = competitorVariances[opponent];
+        if (opponentScoreEvidence == null || opponentTailNoise == null || opponentWeight == null || opponentAgedRating == null || opponentAgedVariance == null) {
           //_log.e("Missing parameter for pairwise blending: $shooter vs $opponent");
           continue;
         }
@@ -1091,22 +1130,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   List<ShooterRating> _selectOpponents(
     LatentLogRating shooter,
     Map<ShooterRating, RelativeScore> scores,
+    List<ShooterRating> top10PctCompetitors,
+    List<ShooterRating> competitorsByRating,
     double shooterRatio,
   ) {
-    // I can tolerate unaged ratings here because it mostly means people who have decayed ratings
-    // get a harder set of opponents.
-    var opponentsByFinish = scores.keys.toList();
-    var opponentsByRating = opponentsByFinish
-        .sorted((a, b) => b.rating.compareTo(a.rating))
-        .toList();
-
     // For now, Latent Log Ratio only does top-and-nearby.
     Set<ShooterRating> selected = {};
     selected.addAll(
-      _selectTop10PctOpponents(opponentsByFinish, opponentsByRating),
+      top10PctCompetitors,
     );
     selected.addAll(
-      _selectNearbyOpponents(shooter, scores, opponentsByRating, shooterRatio),
+      _selectNearbyOpponents(shooter, scores, competitorsByRating, shooterRatio),
     );
     return selected.toList();
   }
@@ -1123,11 +1157,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     if(opponentsToTake < 3) {
       opponentsToTake = 3;
     }
-    var top10Pct = (opponentsByFinish.length * percentToTake).ceil();
-    var top10PctByMatchFinish = opponentsByFinish.take(top10Pct).toSet();
 
-    var sortedByRating = (opponentsByRating.length * percentToTake).ceil();
-    var top10PctByRating = opponentsByRating.take(sortedByRating).toSet();
+    var top10PctByMatchFinish = opponentsByFinish.take(opponentsToTake).toSet();
+    var top10PctByRating = opponentsByRating.take(opponentsToTake).toSet();
 
     top10PctByMatchFinish.addAll(top10PctByRating);
     return top10PctByMatchFinish.toList();
