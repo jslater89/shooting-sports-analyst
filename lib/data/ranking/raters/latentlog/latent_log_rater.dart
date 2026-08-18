@@ -629,11 +629,14 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     // Effective observation noise propagates uncertainty from the baseline
     // estimate and pairwise estimate into the Kalman filter, rather than
     // treating them as known quantities.
+    final blendedBaselineVariance =
+      (1 - pairwiseBlendWeightSquared) * looBaselineVariance
+      + pairwiseBlendWeightSquared * localBaselineVariance;
+    final effectiveDispersion = dispersionCertainty * shooter.dispersion;
     final cleanObsNoise =
       settings.sportVariance
-      + dispersionCertainty * shooter.dispersion
-      + (1 - pairwiseBlendWeightSquared) * looBaselineVariance
-      + pairwiseBlendWeightSquared * localBaselineVariance;
+      + effectiveDispersion
+      + blendedBaselineVariance;
 
     final totalObsNoise =
       cleanObsNoise
@@ -762,24 +765,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         LatentLogRater.stagesKey: stagesForEvent,
       },
       infoLines: [
-        "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
-        "Rating ± Change: {{rating}}/{{change}}",
-        "Momentum ± Change: {{momentum}}/{{momentumChange}}",
-        "Trend vMod, λ_eff/c_i: {{momentumCorrection}}, {{lambdaEff}}/{{certainty}}",
-        "Variance ± Change: {{variance}}/{{varianceChange}}",
-        "Shock vMod, e_phys²/T_i: {{surpriseCorrection}}, {{ePhysSquared}}/{{totalNoise}} SV",
-        "Dispersion ± Change: {{dispersion}}/{{dispersionChange}}",
-        "Considered {{opponents}} opponents",
-        "Global/local baseline: {{globalBaseline}}/{{localBaseline}}",
-        "Own variance (time drift): {{ownVariance}} ({{timeVariance}}) SV",
-        "Own dispersion: {{ownDispersion}} SV",
-        "Tail/weak field noise: {{tailNoise}}/{{weakField}} SV",
-        "Novelty noise/μ̄: {{noveltyNoise}} SV, μ̄ = {{fieldMaturity}}",
-        "Global/local noise: {{globalBaselineNoise}}/{{localBaselineNoise}} SV",
-        "Observation/total noise: {{observationNoise}}/{{totalNoise}} SV",
-        "z-score/damping/Kalman gain: {{innovationZScore}}/{{weight}}x/{{kalmanGain}}",
-        "Raw/damped innovation: {{innovation}}/{{dampedInnovation}}",
-        "Baseline residual/total weight: {{baselineResidual}}/{{totalWeight}}",
+        "@tpl:llrV1",
       ],
       infoData: [
         RatingEventInfoElement.double(
@@ -848,6 +834,41 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
           name: "observationNoise",
           doubleValue: totalObsNoise / settings.sportVariance,
           numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "priorVariance",
+          doubleValue: priorVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "trendInjection",
+          doubleValue: trendInjection / settings.sportVariance,
+          numberFormat: "%00.3f",
+        ),
+        RatingEventInfoElement.double(
+          name: "cleanObsNoise",
+          doubleValue: cleanObsNoise / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "effectiveDispersion",
+          doubleValue: effectiveDispersion / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "baselineVar",
+          doubleValue: blendedBaselineVariance / settings.sportVariance,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "pairwiseAlpha",
+          doubleValue: pairwiseBlendWeight,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "obsQuality",
+          doubleValue: obsQuality,
+          numberFormat: "%00.3f",
         ),
         RatingEventInfoElement.double(
           name: "totalNoise",

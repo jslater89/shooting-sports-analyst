@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/info_lines_templates.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
@@ -125,48 +126,51 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget> _buildEventLines() {
     final rating = widget.rating;
     _eventLines = displayedStats.events
-      .map((e) => Tooltip(
-      waitDuration: Duration(milliseconds: 500),
-      message: e.infoLines.map((line) => line.apply(e.infoData)).join("\n"),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClickableLink(
-              onTap: () {
-                _launchScoreView(e.entry.division, e.match, stage: e.stage);
-              },
-              child: _StatefulContainer(
-                key: GlobalObjectKey(e.hashCode),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      flex: 10,
-                      child: Text("${e.eventName}${widget.showDivisions ? " (${_divisionName(e)})" : ""}",
-                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text("${rating.formatNumericRatingChange(e.ratingChange)}",
-                              style:
-                              Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
-                    )
-                  ],
+      .map((e) {
+        final infoLinesText = e.getInfoLinesText();
+        return Tooltip(
+        waitDuration: Duration(milliseconds: 500),
+        message: infoLinesText,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClickableLink(
+                onTap: () {
+                  _launchScoreView(e.entry.division, e.match, stage: e.stage);
+                },
+                child: _StatefulContainer(
+                  key: GlobalObjectKey(e.hashCode),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        flex: 10,
+                        child: Text("${e.eventName}${widget.showDivisions ? " (${_divisionName(e)})" : ""}",
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text("${rating.formatNumericRatingChange(e.ratingChange)}",
+                                style:
+                                Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Divider(
-              height: 2,
-              thickness: 1,
-            )
-          ],
-        ),
-      ),
-    )).toList();
+              Divider(
+                height: 2,
+                thickness: 1,
+              )
+            ],
+          ),
+        )
+      );
+    }).toList();
     return _eventLines!;
   }
 

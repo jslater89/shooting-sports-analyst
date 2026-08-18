@@ -365,11 +365,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     List<String> infoLines = [
-      "Actual/expected percent: {{pcActual}}/{{pcExpected}} on {{stage}}",
-      "Actual/expected place: {{placeActual}}/{{placeExpected}}",
-      "Rating ± Change: {{rating}}/{{change}} ({{eloFromPct}} from pct, {{eloFromPlace}} from place)",
-      "eff. K, multipliers: {{effK}}, SoS {{sos}}, IP {{ip}}, Zero {{zero}}",
-      "Conn {{conn}}, EW {{ew}}, Err {{err}}, Dir {{dir}}, Bomb {{bomb}}",
+      "@tpl:eloV1",
     ];
     List<RatingEventInfoElement> infoData = [
       RatingEventInfoElement.string(name: "stage", stringValue: rawScore.displayString),

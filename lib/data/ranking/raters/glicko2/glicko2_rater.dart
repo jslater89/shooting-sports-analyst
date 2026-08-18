@@ -301,11 +301,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           if(byStage) Glicko2Rater.stagesKey: 1,
         },
         infoLines: [
-          "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
-          "Rating ± Change: {{rating}}/{{change}}",
-          "RD ± Change: {{rd}}/{{rdChange}}",
-          "Volatility ± Change: {{volatility}}/{{volatilityChange}}",
-          "Considered {{opponents}} opponents",
+          "@tpl:glickoV1",
         ],
         infoData: [
           RatingEventInfoElement.int(name: "finish", intValue: shooterScore.place),

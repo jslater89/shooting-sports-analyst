@@ -8,9 +8,13 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/info_lines_templates.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+final _log = SSALogger("RatingChange");
 
 class RatingChange {
   final Map<String, double> change;
@@ -61,6 +65,21 @@ abstract class RatingEvent implements IRatingEvent, IConnectivityEvent {
   Map<String, dynamic> get extraData => wrappedEvent.extraData;
   set extraData(Map<String, dynamic> v) => wrappedEvent.extraData = v;
   DbRatingEvent wrappedEvent;
+
+  String getInfoLinesText() {
+    var resolvedInfoLines = infoLines;
+    if(resolvedInfoLines.length == 1 && resolvedInfoLines.first.startsWith(InfoLinesTemplates.templatePrefix)) {
+      final templateName = resolvedInfoLines.first.substring(InfoLinesTemplates.templatePrefix.length);
+      final templateLines = InfoLinesTemplates().getTemplateLines(templateName);
+      if(templateLines != null) {
+        resolvedInfoLines = templateLines;
+      }
+      else {
+        _log.w("Unknown info lines template: $templateName");
+      }
+    }
+    return resolvedInfoLines.map((line) => line.apply(infoData)).join("\n");
+  }
 
   // The following properties ([match] through [scoreForMatch]) are used for calculating
   // shooter stats in individual dialogs, and can be slow.
