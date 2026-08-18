@@ -145,9 +145,17 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   /// The default implementation calls [formatNumericRating] on the current rating.
   String get formattedCurrentRating => formatNumericRating(currentRating);
 
+  double scaleRating(double rating) {
+    return rating;
+  }
+
   /// Format a numeric rating for display.
   String formatNumericRating(double rating) {
     return rating.round().toString();
+  }
+
+  double scaleRatingChange(double ratingChange) {
+    return ratingChange;
   }
 
   /// Format a numeric rating change for display.

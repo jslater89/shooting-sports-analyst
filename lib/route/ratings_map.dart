@@ -14,7 +14,6 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
-import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/color_legend.dart';
@@ -25,9 +24,10 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("RatingsMap");
 
 class RatingsMap extends StatefulWidget {
-  const RatingsMap({super.key, required this.dataSource});
+  const RatingsMap({super.key, required this.dataSource, this.launchGroup});
 
   final RatingDataSource dataSource;
+  final RatingGroup? launchGroup;
 
   @override
   State<RatingsMap> createState() => _RatingsMapState();
@@ -37,17 +37,28 @@ class _RatingsMapState extends State<RatingsMap> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(allGroups: true, useStandardScaler: true);
   }
 
-  Map<String, double> _ratingsByState = {};
-  Map<String, int> _totalCompetitorsByState = {};
-  Map<String, int> _gmCountByState = {};
-  Map<String, double> _classificationStrengthByState = {};
-  int _totalLocatedRatings = 0;
   ColorMode _colorMode = ColorMode.ratings;
+  bool allGroups = true;
+  _RatingsMapData get data => allGroups ? _allGroupsData : _launchGroupData;
+  _RatingsMapData _allGroupsData = _RatingsMapData();
+  bool loadedAllGroups = false;
 
-  Future<void> _loadData() async {
+  _RatingsMapData _launchGroupData = _RatingsMapData();
+  bool loadedLaunchGroup = false;
+
+  Future<void> _loadData({bool allGroups = true, bool useStandardScaler = true}) async {
+    if(allGroups && loadedAllGroups) {
+      return;
+    }
+    if(!allGroups && loadedLaunchGroup) {
+      return;
+    }
+
+    final wipData = _RatingsMapData();
+
     var dataSource = widget.dataSource;
 
     var sportRes = await dataSource.getSport();
@@ -57,12 +68,19 @@ class _RatingsMapState extends State<RatingsMap> {
     }
     var sport = sportRes.unwrap();
 
-    var groupsRes = await dataSource.getGroups();
-    if(groupsRes.isErr()) {
-      _log.w("Error getting groups: ${groupsRes.unwrapErr()}");
-      return;
+    List<RatingGroup> groups = [];
+    if(allGroups) {
+      var groupsRes = await dataSource.getGroups();
+      if(groupsRes.isErr()) {
+        _log.w("Error getting groups: ${groupsRes.unwrapErr()}");
+        return;
+      }
+      groups = groupsRes.unwrap();
     }
-    var groups = groupsRes.unwrap();
+    else {
+      groups = [widget.launchGroup!];
+    }
+
     /// For each group, a map of location to a list of ratings at that location.
     Map<RatingGroup, Map<String, List<double>>> ratingsByLocationByGroup = {};
     /// For each group, the total number of ratings in the group across all locations.
@@ -83,33 +101,42 @@ class _RatingsMapState extends State<RatingsMap> {
       }
       var ratings = ratingsRes.unwrap();
       int totalRatings = 0;
-      for(var rating in ratings) {
-        ratingScalerMin = min(ratingScalerMin, rating.rating);
-        ratingScalerMax = max(ratingScalerMax, rating.rating);
-      }
-      var scaler = StandardizedMaximumScaler(
-        scaleMax: 2000,
-        info: RatingScalerInfo(
+
+      RatingScaler? scaler;
+      if(useStandardScaler) {
+        for(var rating in ratings) {
+          ratingScalerMin = min(ratingScalerMin, rating.rating);
+          ratingScalerMax = max(ratingScalerMax, rating.rating);
+        }
+        var scalerRes = await dataSource.getStandardScaler();
+        if(scalerRes.isErr()) {
+          _log.w("Error getting standard scaler: ${scalerRes.unwrapErr()}");
+          continue;
+        }
+        scaler = scalerRes.unwrap();
+
+        scaler.info = RatingScalerInfo(
           minRating: ratingScalerMin,
           maxRating: ratingScalerMax,
           top2PercentAverage: 0,
           ratingDistribution: WeibullDistribution(1, 1),
           ratingMean: 0,
           ratingStdDev: 1,
-        ),
-      );
+        );
+      }
+
       for(var rating in ratings) {
         if(rating.lastSeen.isBefore(DateTime(2024, 1, 1))) {
           continue;
         }
         totalRatings++;
         if(rating.regionSubdivision != null) {
-          ratingsByLocation.addToList(rating.regionSubdivision!, scaler.scaleRating(rating.rating));
+          ratingsByLocation.addToList(rating.regionSubdivision!, scaler?.scaleRating(rating.rating) ?? rating.rating);
           knownLocations.add(rating.regionSubdivision!);
           classificationStrengthsByLocation.addToList(rating.regionSubdivision!, sport.ratingStrengthProvider?.strengthForClass(rating.lastClassification) ?? 1.0);
 
           if(rating.lastClassificationName != null && rating.lastClassificationName! == "Grandmaster") {
-            _gmCountByState.increment(rating.regionSubdivision!);
+            wipData.gmCountByState.increment(rating.regionSubdivision!);
           }
         }
 
@@ -144,15 +171,24 @@ class _RatingsMapState extends State<RatingsMap> {
           classificationStrengths.add(averageClassificationStrengthAtLocation);
         }
       }
-      _ratingsByState[location] = ratings.weightedAverage(weights);
-      _totalCompetitorsByState[location] = totalRatingCountAtLocation;
-      _classificationStrengthByState[location] = classificationStrengths.average;
-      _totalLocatedRatings += totalRatingCountAtLocation;
+      wipData.ratingsByState[location] = ratings.weightedAverage(weights);
+      wipData.totalCompetitorsByState[location] = totalRatingCountAtLocation;
+      wipData.classificationStrengthByState[location] = classificationStrengths.average;
+      wipData.totalLocatedRatings += totalRatingCountAtLocation;
     }
 
-    _log.i("Total located ratings: $_totalLocatedRatings");
+    if(allGroups) {
+      _allGroupsData = wipData;
+      loadedAllGroups = true;
+    }
+    else {
+      _launchGroupData = wipData;
+      loadedLaunchGroup = true;
+    }
+
+    _log.i("Total located ratings: ${wipData.totalLocatedRatings}");
     _log.i("Total ratings: $totalRatingCount");
-    _log.i("Total located ratings: ${(_totalLocatedRatings / totalRatingCount).asPercentage(decimals: 1, includePercent: true)}");
+    _log.i("Total located ratings: ${(wipData.totalLocatedRatings / totalRatingCount).asPercentage(decimals: 1, includePercent: true)}");
     _rebuildMap();
   }
 
@@ -170,50 +206,50 @@ class _RatingsMapState extends State<RatingsMap> {
   @override
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    Map<String, double> data = {};
+    Map<String, double> colorData = {};
     double maxValue = 1;
     double minValue = 0;
     if(_colorMode == ColorMode.ratings) {
-      data = _ratingsByState;
+      colorData = data.ratingsByState;
     }
     else if(_colorMode == ColorMode.competitorCount) {
-      data = _totalCompetitorsByState.map((key, value) => MapEntry(key, value.toDouble()));
+      colorData = data.totalCompetitorsByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
     else if(_colorMode == ColorMode.classificationStrength) {
-      data = _classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
+      colorData = data.classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
     else if(_colorMode == ColorMode.gmCount) {
-      data = _gmCountByState.map((key, value) => MapEntry(key, value.toDouble()));
+      colorData = data.gmCountByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
     else if(_colorMode == ColorMode.classificationStrength) {
-      data = _classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
+      colorData = data.classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
     else if(_colorMode == ColorMode.gmRatio) {
-      data = _gmCountByState.map((key, value) => MapEntry(key, value.toDouble() / _totalCompetitorsByState[key]!.toDouble() * 100));
+      colorData = data.gmCountByState.map((key, value) => MapEntry(key, value.toDouble() / data.totalCompetitorsByState[key]!.toDouble() * 100));
     }
-    if(data.isNotEmpty) {
-      maxValue = data.values.max;
-      minValue = data.values.min;
+    if(colorData.isNotEmpty) {
+      maxValue = colorData.values.max;
+      minValue = colorData.values.min;
     }
     if(_svgWidget == null) {
       _svgWidget = USDataMap(
-        data: data,
+        data: colorData,
         rgbColors: _referenceColors,
         tooltipTextBuilder: (state) {
           if(_colorMode == ColorMode.ratings) {
-            return "${state} average rating: ${_ratingsByState[state]?.toStringAsFixed(1)}";
+            return "${state} average rating: ${data.ratingsByState[state]?.toStringAsFixed(1) ?? "n/a"}";
           }
           else if(_colorMode == ColorMode.competitorCount) {
-            return "${state}: ${_totalCompetitorsByState[state]?.toString()} competitors";
+            return "${state}: ${data.totalCompetitorsByState[state]?.toString() ?? "0"} competitors";
           }
           else if(_colorMode == ColorMode.classificationStrength) {
-            return "${state}: ${_classificationStrengthByState[state]?.toStringAsFixed(1)} classification strength";
+            return "${state}: ${data.classificationStrengthByState[state]?.toStringAsFixed(1) ?? "n/a"} classification strength";
           }
           else if(_colorMode == ColorMode.gmCount) {
-            return "${state}: ${(_gmCountByState[state] ?? 0).toString()} GMs";
+            return "${state}: ${(data.gmCountByState[state] ?? 0).toString()} GMs";
           }
           else if(_colorMode == ColorMode.gmRatio) {
-            return "${state}: ${((_gmCountByState[state] ?? 0).toDouble() / _totalCompetitorsByState[state]!).asPercentage(decimals: 1, includePercent: true)} GMs";
+            return "${state}: ${((data.gmCountByState[state] ?? 0).toDouble() / (data.totalCompetitorsByState[state] ?? 0)).asPercentage(decimals: 1, includePercent: true)} GMs";
           }
           return "$state";
         },
@@ -228,6 +264,17 @@ class _RatingsMapState extends State<RatingsMap> {
             _rebuildMap();
           },
         ),
+        Tooltip(
+          message: "Toggle between weighted average over all groups and raw data from the launched group",
+          child: IconButton(
+            icon: Icon(Icons.swap_horiz),
+            onPressed: () {
+              allGroups = !allGroups;
+              _loadData(allGroups: allGroups, useStandardScaler: true);
+              // loadData rebuilds the map after loading.
+            },
+          ),
+        )
       ],
       child: Padding(
         padding: EdgeInsets.all(8 * uiScaleFactor),
@@ -263,7 +310,7 @@ class _RatingsMapState extends State<RatingsMap> {
                 )
               ],
             ),
-            if(data.isNotEmpty) ColorLegend(
+            if(colorData.isNotEmpty) ColorLegend(
               legendEntries: 10,
               minValue: minValue,
               maxValue: maxValue,
@@ -294,4 +341,12 @@ enum ColorMode {
     gmCount => "GM count",
     gmRatio => "GM ratio",
   };
+}
+
+class _RatingsMapData {
+  Map<String, double> ratingsByState = {};
+  Map<String, int> totalCompetitorsByState = {};
+  Map<String, int> gmCountByState = {};
+  Map<String, double> classificationStrengthByState = {};
+  int totalLocatedRatings = 0;
 }

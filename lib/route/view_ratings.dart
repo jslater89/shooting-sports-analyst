@@ -705,7 +705,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
       case _MenuEntry.viewRatingsMap:
         Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-          return RatingsMap(dataSource: widget.dataSource);
+          return RatingsMap(dataSource: widget.dataSource, launchGroup: activeTabs[_tabController.index]);
         }));
         break;
 

@@ -231,13 +231,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchName += " (DQ)";
       }
 
-      if(widget.rating is LatentLogRating) {
-        final sf = (widget.rating as LatentLogRating).settings.scaleFactor;
-        entry.scaledRatingChange = entry.ratingChange * sf;
-      }
-      else {
-        entry.scaledRatingChange = entry.ratingChange;
-      }
+      entry.scaledRatingChange = widget.rating.scaleRatingChange(entry.ratingChange);
 
       widgets.add(ClickableLink(
         onTap: () {
@@ -256,7 +250,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: textWidget),
-              Expanded(flex: 1, child: Text("${entry.scaledRatingChange?.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
+              Expanded(flex: 1, child: Text("${widget.rating.formatNumericRatingChange(entry.scaledRatingChange ?? 0)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
             ],
           ),
         ),
@@ -549,40 +543,44 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           }
         },
         measureFn: (AccumulatedRatingEvent e, _) {
-          return chartMeasureForShooterEvent(rating, e.baseEvent);
+          return widget.rating.scaleRating(e.baseEvent.newRating);
         },
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
+          // TODO: "hasError" for algorithms?
           if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
-            return chartMeasureForShooterEvent(rating, e.baseEvent) - e.errorAt;
+            return widget.rating.scaleRating(e.baseEvent.newRating - e.errorAt);
           }
           return null;
         },
         measureUpperBoundFn: (e, i) {
+          // TODO: "hasError" for algorithms?
           if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating || rating is LatentLogRating) {
-            return chartMeasureForShooterEvent(rating, e.baseEvent) + e.errorAt;
+            return widget.rating.scaleRating(e.baseEvent.newRating + e.errorAt);
           }
           return null;
         },
         data: _ratings,
       );
 
-
       double chartMinimum;
       double chartMaximum;
 
+      double scaledMinWithError = widget.rating.scaleRating(accumulatedResult.minWithError);
+      double scaledMaxWithError = widget.rating.scaleRating(accumulatedResult.maxWithError);
+
       if(accumulatedResult.maximumMinimum != null) {
-        chartMinimum = min(accumulatedResult.maximumMinimum!, accumulatedResult.minWithError * 0.95);
+        chartMinimum = min(accumulatedResult.maximumMinimum!, scaledMinWithError * 0.95);
       }
       else {
-        chartMinimum = accumulatedResult.minWithError * 0.95;
+        chartMinimum = scaledMinWithError * 0.95;
       }
 
       if(accumulatedResult.minimumMaximum != null) {
-        chartMaximum = max(accumulatedResult.minimumMaximum!, accumulatedResult.maxWithError * 1.05);
+        chartMaximum = max(accumulatedResult.minimumMaximum!, scaledMaxWithError * 1.05);
       }
       else {
-        chartMaximum = accumulatedResult.maxWithError * 1.05;
+        chartMaximum = scaledMaxWithError * 1.05;
       }
 
       List<charts.LineAnnotationSegment<Object>> yearAnnotations = [];
@@ -646,7 +644,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   _EloTooltipRenderer.context = context;
                   _EloTooltipRenderer.index = model.selectedDatum[0].index!;
                   _EloTooltipRenderer.indexTotal = _ratings.length;
-                  _EloTooltipRenderer.rating = chartMeasureForShooterEvent(rating, picked.baseEvent);
+                  _EloTooltipRenderer.ratingFormatter = widget.rating.formatNumericRating;
+                  _EloTooltipRenderer.ratingChangeFormatter = widget.rating.formatNumericRatingChange;
+                  _EloTooltipRenderer.rating = picked.baseEvent.newRating;
                   _EloTooltipRenderer.error = picked.errorAt;
                   _highlight(picked);
                 }
@@ -1001,6 +1001,8 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
   static late double error;
   static late int index;
   static late int indexTotal;
+  static late String Function(double) ratingFormatter;
+  static late String Function(double) ratingChangeFormatter;
 
   @override
   void paint(charts.ChartCanvas canvas, Rectangle<num> bounds, {List<int>? dashPattern, charts.Color? fillColor, charts.FillPatternType? fillPattern, charts.Color? strokeColor, double? strokeWidthPx}) {
@@ -1017,9 +1019,9 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
       return;
     }
 
-    var ratingText = "${rating.round()}";
+    var ratingText = ratingFormatter(rating);
     if(error != 0 && !error.isNaN && !error.isInfinite) {
-      ratingText += "±${error.round()}";
+      ratingText += "±${ratingChangeFormatter(error)}";
     }
 
     canvas.drawRect(

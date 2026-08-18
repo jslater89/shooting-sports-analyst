@@ -89,6 +89,16 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
+  String formatNumericRating(double rating) {
+    return rating.round().toString();
+  }
+
+  @override
+  String formatNumericRatingChange(double ratingChange) {
+    return ratingChange.toStringAsFixed(1);
+  }
+
+  @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
     required ShootingMatch match,
     bool isMatchOngoing = false,
@@ -716,7 +726,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       RatingRowData(data: rating.getName(suffixes: false), flex: _nameFlex),
       RatingRowData(data: "$ratingNumber", alignment: AbstractAlignment.end, flex: _ratingFlex),
       RatingRowData(data: "${error.toStringAsFixed(1)}", alignment: AbstractAlignment.end, flex: _errorFlex),
-      RatingRowData(data: "${lastMatchChange.round()}", alignment: AbstractAlignment.end, flex: _matchChangeFlex),
+      RatingRowData(data: "${lastMatchChange.toStringAsFixed(1)}", alignment: AbstractAlignment.end, flex: _matchChangeFlex),
       RatingRowData(data: "$trend", alignment: AbstractAlignment.end, flex: _trendFlex),
       RatingRowData(data: "$positivity", alignment: AbstractAlignment.end, flex: _directionFlex),
       RatingRowData(data: "${(rating.connectivity).toStringAsFixed(1)}", alignment: AbstractAlignment.end, flex: _connectednessFlex),

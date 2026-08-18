@@ -60,7 +60,7 @@ AccumulatedRatingResult accumulateRatingEvents({
       yearIndices[e.wrappedEvent.date.year] = i;
     }
 
-    final measureRating = chartMeasureForShooterEvent(rating, e);
+    final measureRating = e.newRating;
     if(measureRating < minRating) minRating = measureRating;
     if(measureRating > maxRating) maxRating = measureRating;
 
@@ -79,7 +79,7 @@ AccumulatedRatingResult accumulateRatingEvents({
     }
     else if(rating is LatentLogRating) {
       e as LatentLogRatingEvent;
-      error = sqrt(e.newVariance) * e.settings.scaleFactor / 2;
+      error = sqrt(e.newVariance) / 2;
     }
 
     var plusError = measureRating + error;
@@ -87,7 +87,7 @@ AccumulatedRatingResult accumulateRatingEvents({
     if(plusError > maxWithError) maxWithError = plusError;
     if(minusError < minWithError) minWithError = minusError;
 
-    return AccumulatedRatingEvent(e, accumulator += _chartRatingChangeForShooter(rating, e), error);
+    return AccumulatedRatingEvent(e, accumulator += e.ratingChange, error);
   }).toList();
 
 
@@ -111,16 +111,16 @@ class AccumulatedRatingResult {
 
   double get minimumChartValue {
     if(maximumMinimum != null) {
-      return min(maximumMinimum!, minWithError * 0.95);
+      return min(maximumMinimum!, rating.scaleRating(minWithError * 0.95));
     }
-    return minWithError * 0.95;
+    return rating.scaleRating(minWithError * 0.95);
   }
 
   double get maximumChartValue {
     if(minimumMaximum != null) {
-      return max(minimumMaximum!, maxWithError * 1.05);
+      return max(minimumMaximum!, rating.scaleRating(maxWithError * 1.05));
     }
-    return maxWithError * 1.05;
+    return rating.scaleRating(maxWithError * 1.05);
   }
 
   Map<int, int> yearIndices;
@@ -144,19 +144,4 @@ class AccumulatedRatingEvent {
   DateTime get date => baseEvent.date;
 
   AccumulatedRatingEvent(this.baseEvent, this.accumulated, this.errorAt);
-}
-
-
-double _chartRatingChangeForShooter(ShooterRating shooterRating, RatingEvent e) {
-  if(shooterRating is LatentLogRating) {
-    return e.ratingChange * shooterRating.settings.scaleFactor;
-  }
-  return e.ratingChange;
-}
-
-double chartMeasureForShooterEvent(ShooterRating shooterRating, RatingEvent e) {
-  if(shooterRating is LatentLogRating) {
-    return (e as LatentLogRatingEvent).newDisplayRating;
-  }
-  return e.newRating;
 }

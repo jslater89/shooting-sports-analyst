@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/latentlog/latent_log_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -90,8 +91,17 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return rating * settings.scaleFactor + settings.scaleOffset;
   }
 
+  @override
+  double scaleNumber(double number) {
+    return number * settings.scaleFactor;
+  }
+
   double unscaleRating(double rating) {
     return (rating - settings.scaleOffset) / settings.scaleFactor;
+  }
+
+  double unscaleNumber(double number) {
+    return number / settings.scaleFactor;
   }
 
   @override
@@ -101,7 +111,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
   @override
   String formatNumericRatingChange(double ratingChange) {
-    return settings.formatNumericRating(ratingChange);
+    return settings.formatNumericRatingChange(ratingChange);
   }
 
   @override
@@ -392,6 +402,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   bool hasAgedRatings() {
     return settings.meanReversionDecayRate > 0.0;
   }
+
+  /// The standard scaler for the latent log rater.
+  RatingScaler get standardScaler => StandardizedMaximumScaler(info: null, scaleMin: 0, scaleMax: 150.0);
 
   @override
   Future<Set<DbShooterRating>> ageRatings({
@@ -795,7 +808,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         RatingEventInfoElement.double(
           name: "rating",
           doubleValue: (newRating * settings.scaleFactor) + settings.scaleOffset,
-          numberFormat: "%00.0f",
+          numberFormat: "%00.1f",
         ),
         RatingEventInfoElement.double(
           name: "change",

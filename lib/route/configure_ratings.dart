@@ -28,6 +28,7 @@ import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/points_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/recalculation_help.dart';
+import 'package:shooting_sports_analyst/data/ranking/match_pointer_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
@@ -220,7 +221,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Future<void> _loadProject(DbRatingProject project) async {
     _loadedProject = project;
     sport = project.sport;
-    projectMatches = [...project.matchPointers];
+    projectMatches = deduplicateMatchPointers([...project.matchPointers]);
     lastUsedMatches = [...project.lastUsedMatches];
     // groups getter loads dbGroups if not loaded
     _groups = [...project.groups];
@@ -1000,7 +1001,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     project.sport = sport;
     project.settings = settings;
-    project.matchPointers = projectMatches;
+    project.matchPointers = deduplicateMatchPointers(projectMatches);
     if(filteredMatches != null && filteredMatches!.isNotEmpty) {
       project.matchPointers = filteredMatches!;
     }

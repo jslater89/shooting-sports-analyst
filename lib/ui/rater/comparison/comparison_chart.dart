@@ -84,10 +84,10 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
       );
     }
     if(_series1 == null) {
-      _series1 = _buildSeries(_accumulatedResult1!, charts.MaterialPalette.blue.shadeDefault);
+      _series1 = _buildSeries(_accumulatedResult1!, widget.rating1, charts.MaterialPalette.blue.shadeDefault);
     }
     if(_series2 == null) {
-      _series2 = _buildSeries(_accumulatedResult2!, charts.MaterialPalette.green.shadeDefault);
+      _series2 = _buildSeries(_accumulatedResult2!, widget.rating2, charts.MaterialPalette.green.shadeDefault);
     }
 
     if(_chart == null) {
@@ -275,20 +275,20 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
     );
   }
 
-  charts.Series<AccumulatedRatingEvent, int> _buildSeries(AccumulatedRatingResult accumulatedResult, charts.Color color) {
+  charts.Series<AccumulatedRatingEvent, int> _buildSeries(AccumulatedRatingResult accumulatedResult, ShooterRating rating, charts.Color color) {
     return charts.Series<AccumulatedRatingEvent, int>(
       id: accumulatedResult.rating.name,
       data: accumulatedResult.events,
       colorFn: (e, __) => color,
       measureFn: (AccumulatedRatingEvent e, _) {
-        return chartMeasureForShooterEvent(accumulatedResult.rating, e.baseEvent);
+        return rating.scaleRating(e.baseEvent.newRating);
       },
       domainFn: (e, __) => e.date.millisecondsSinceEpoch ~/ 1000,
       measureLowerBoundFn: (e, __) {
-        return chartMeasureForShooterEvent(accumulatedResult.rating, e.baseEvent) - e.errorAt;
+        return rating.scaleRating(e.baseEvent.newRating - e.errorAt);
       },
       measureUpperBoundFn: (e, __) {
-        return chartMeasureForShooterEvent(accumulatedResult.rating, e.baseEvent) + e.errorAt;
+        return rating.scaleRating(e.baseEvent.newRating + e.errorAt);
       },
     );
   }
@@ -354,11 +354,11 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
 
     // Build tooltip text (same as before, but cleaner)
     final rating1Value = event1 != null
-        ? chartMeasureForShooterEvent(rating1!, event1!.baseEvent)
+        ? event1!.baseEvent.newRating
         : null;
 
     final rating2Value = event2 != null
-        ? chartMeasureForShooterEvent(rating2!, event2!.baseEvent)
+        ? event2!.baseEvent.newRating
         : null;
 
     final lines = <String>[];
@@ -371,10 +371,10 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
     String? rating1Line;
     String? rating2Line;
     if (rating1Value != null) {
-      rating1Line = "${rating1!.name}: ${rating1Value.toStringWithSignificantDigits(4)}±${event1!.errorAt.toStringWithSignificantDigits(3)}";
+      rating1Line = "${rating1!.name}: ${rating1!.formatNumericRating(rating1Value)}±${rating1!.formatNumericRatingChange(event1!.errorAt)}";
     }
     if (rating2Value != null) {
-      rating2Line = "${rating2!.name}: ${rating2Value.toStringWithSignificantDigits(4)}±${event2!.errorAt.toStringWithSignificantDigits(3)}";
+      rating2Line = "${rating2!.name}: ${rating2!.formatNumericRating(rating2Value)}±${rating2!.formatNumericRatingChange(event2!.errorAt)}";
     }
 
     if(rating1Value != null && rating2Value != null) {

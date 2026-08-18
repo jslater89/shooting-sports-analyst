@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -89,6 +90,9 @@ abstract interface class RatingDataSource {
 
   Future<DataSourceResult<List<RatingReport>>> getAllReports();
   Future<DataSourceResult<List<RatingReport>>> getRecentReports();
+
+  /// Get the standard rating scaler for the rating system.
+  Future<DataSourceResult<RatingScaler>> getStandardScaler();
 }
 
 /// A PreloadedRatingDataSource is a rating data source that has precached its data locally.

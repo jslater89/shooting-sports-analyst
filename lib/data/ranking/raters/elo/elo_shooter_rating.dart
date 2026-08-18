@@ -311,6 +311,11 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
   }
 
   @override
+  String formatNumericRatingChange(double ratingChange) {
+    return ratingChange.toStringAsFixed(1);
+  }
+
+  @override
   String toString() {
     return "${getName(suffixes: false)} $memberNumber ${rating.round()} ($hashCode)";
   }

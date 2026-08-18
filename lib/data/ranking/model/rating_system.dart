@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_system_ui_data.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -199,6 +200,19 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   double scaleRating(double rating) {
     return rating;
   }
+
+  /// Scale a number to a new range, if the rating system has a scaling
+  /// factor or offset. This is used to scale e.g. ratings changes, where
+  /// applying a scale factor is necessary but an offset would be incorrect.
+  ///
+  /// The default implementation returns the number unchanged.
+  double scaleNumber(double number) {
+    return number;
+  }
+
+  /// Return a standard scaler for this rating system for combining ratings across multiple groups. The default implementation
+  /// returns an Elo-like scaler that maps the minimum rating to 0 and the maximum rating to 2000.
+  RatingScaler get standardScaler => StandardizedMaximumScaler(info: null, scaleMin: 0, scaleMax: 2000);
 
   /// Return a representation of a numeric rating suitable for display in e.g.
   /// a table.

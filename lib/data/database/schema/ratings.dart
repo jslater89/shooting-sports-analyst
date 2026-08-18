@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -177,6 +178,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   List<RatingReport> recentReports = [];
   Future<DataSourceResult<List<RatingReport>>> getRecentReports() {
     return Future.value(DataSourceResult.ok(recentReports));
+  }
+
+  @override
+  Future<DataSourceResult<RatingScaler>> getStandardScaler() async {
+    return DataSourceResult.ok(settings.algorithm.standardScaler);
   }
 
   void addReport(RatingReport report) {

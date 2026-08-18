@@ -73,6 +73,14 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   String get formattedAgedRating => formatNumericRating(agedRating);
   String get formattedRatingToday => formatNumericRating(ratingToday);
 
+  double scaleRating(double rating) {
+    return (rating * settings.scaleFactor) + settings.scaleOffset;
+  }
+
+  double scaleRatingChange(double ratingChange) {
+    return ratingChange * settings.scaleFactor;
+  }
+
   String formatNumericRating(double rating) {
     return settings.formatNumericRating(rating);
   }
