@@ -33,6 +33,12 @@ mixin DbShooterRatingEntity {
   /// The shooter rating of interest.
   IsarLink<DbShooterRating> get rating;
 
+  /// Gets the shooter rating of interest for the given project and group.
+  ///
+  /// If [save] is true and the rating link is broken (i.e. a full recalc dropped and recreated the
+  /// rating for this identity), the rating link will be updated to the new rating after it is re-resolved.
+  ///
+  /// If [useCache] is true, rating lookups for broken links will leverage in-memory caches if available.
   DbShooterRating? getShooterRatingSync(AnalystDatabase db, {bool save = false, bool useCache = false}) {
     if(rating.value != null) {
       return rating.value!;
@@ -53,6 +59,40 @@ mixin DbShooterRatingEntity {
     if(save) {
       db.writeTxnSync(() {
         rating.saveSync();
+      });
+    }
+    return ratingValue;
+  }
+
+  /// Gets the shooter rating of interest for the given project and group, asynchronously.
+  ///
+  /// If [save] is true and the rating link is broken (i.e. a full recalc dropped and recreated the
+  /// rating for this identity), the rating link will be updated to the new rating after it is re-resolved.
+  ///
+  /// If [useCache] is true, rating lookups for broken links will leverage in-memory caches if available.
+  Future<DbShooterRating?> getShooterRating(AnalystDatabase db, {bool save = false, bool useCache = false}) async {
+    await rating.load();
+    if(rating.value != null) {
+      return rating.value!;
+    }
+
+    await project.load();
+    await group.load();
+    var projectValue = project.value;
+    var groupValue = group.value;
+    if(projectValue == null || groupValue == null) {
+      _log.w("Project or group not set when looking up shooter rating for $memberNumber");
+      return null;
+    }
+
+    var ratingValue = await db.maybeKnownShooter(project: projectValue, group: groupValue, memberNumber: memberNumber, useCache: useCache);
+    if(ratingValue == null) {
+      return null;
+    }
+    rating.value = ratingValue;
+    if(save) {
+      await db.writeTxn(() async {
+        rating.save();
       });
     }
     return ratingValue;

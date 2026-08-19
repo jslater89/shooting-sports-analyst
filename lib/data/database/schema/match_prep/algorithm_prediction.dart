@@ -226,6 +226,36 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     return prediction;
   }
 
+    Future<AlgorithmPrediction?> hydrateAsync({RatingSystem? preloadedAlgorithm, RaterSettings? preloadedSettings, ShooterRating? preloadedRating, bool useRatingCache = false}) async {
+    preloadedAlgorithm ??= algorithm;
+    if(preloadedRating == null) {
+      var dbRating = await getShooterRating(AnalystDatabase(), useCache: useRatingCache, save: true);
+      if(dbRating == null) {
+        return null;
+      }
+      preloadedRating = preloadedAlgorithm.wrapDbRating(dbRating);
+    }
+    var prediction = AlgorithmPrediction(
+      shooter: preloadedRating,
+      displayCenter: mean,
+      sigma: oneSigma,
+      ciOffset: ciOffset,
+      settings: preloadedSettings ?? settings,
+      algorithm: preloadedAlgorithm,
+      expectedRatio: meanRatio,
+      oneSigmaRatio: oneSigmaRatio,
+      shiftRatio: shiftRatio,
+      isLogNormal: isLogNormal,
+      logMean: logMean,
+      logSigma: logSigma,
+      scoringGroup: scoringGroup.value,
+    );
+    prediction.lowPlace = lowPlace;
+    prediction.highPlace = highPlace;
+    prediction.medianPlace = medianPlace;
+    return prediction;
+  }
+
   /// Convert this [DbAlgorithmPrediction] to a minimal [Shooter] object
   /// that can be used to compare to a [ShootingMatch] entry.
   ///

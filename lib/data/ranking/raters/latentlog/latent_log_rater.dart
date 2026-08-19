@@ -610,7 +610,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         shooterWeight == null) {
       return null;
     }
-    final shooterRatio = shooterScore.ratio;
 
     // Leave-one-out baseline: remove this competitor's own contribution
     // to avoid circularity. B_{-i} = (Σ w_j (R_j - L_j) - w_i (R_i - L_i)) / (Σ w_j - w_i).

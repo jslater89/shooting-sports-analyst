@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:async';
+
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -40,9 +42,10 @@ class MatchPrepPredictions extends StatefulWidget {
   State<MatchPrepPredictions> createState() => _MatchPrepPredictionsState();
 }
 
-class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with AutomaticKeepAliveClientMixin{
+class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   late MatchPrepPageModel mainModel;
   late _MatchPrepPredictionsModel localModel;
+  late TabController tabController;
 
   @override
   void initState() {
@@ -52,11 +55,14 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with Automa
     localModel = _MatchPrepPredictionsModel(matchPrepModel: mainModel);
     localModel.init();
     mainModel.addListener(localModel.reloadPredictionSets);
+    final groups = mainModel.getNonexcludedRatingGroups();
+    tabController = TabController(length: groups.length, vsync: this, animationDuration: Duration.zero);
   }
 
   @override
   void dispose() {
     mainModel.removeListener(localModel.reloadPredictionSets);
+    tabController.dispose();
     super.dispose();
   }
 
@@ -73,9 +79,9 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with Automa
         length: groups.length,
         child: Column(
           children: [
-            _PredictionsHeader(),
+            _PredictionsHeader(tabController: tabController),
             Expanded(
-              child: _PredictionBody(groups: groups),
+              child: _PredictionBody(groups: groups, tabController: tabController),
             )
           ]
         ),
@@ -88,15 +94,16 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with Automa
 }
 
 class _PredictionsHeader extends StatefulWidget {
+  const _PredictionsHeader({required this.tabController});
+  final TabController tabController;
+
   @override
   State<_PredictionsHeader> createState() => _PredictionsHeaderState();
 }
 
-class _PredictionsHeaderState extends State<_PredictionsHeader> {
+class _PredictionsHeaderState extends State<_PredictionsHeader> with TickerProviderStateMixin {
   late TextEditingController nameController;
   late _MatchPrepPredictionsModel model;
-
-  Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
 
   @override
   void initState() {
@@ -118,10 +125,6 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
     }
     else if(nameController.text != model.selectedPredictionSet?.name) {
       nameController.text = model.selectedPredictionSet?.name ?? "";
-
-      for(var group in model.matchPrepModel.getNonexcludedRatingGroups()) {
-        predictions[group] = model.getPredictionsForGroup(group);
-      }
     }
   }
 
@@ -232,6 +235,7 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
         ),
         if(model.selectedPredictionSet != null) TabBar(
           tabs: model.matchPrepModel.getNonexcludedRatingGroups().map((g) => Tab(text: g.uiLabel)).toList(),
+          controller: widget.tabController,
         ),
       ],
     );
@@ -239,8 +243,9 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
 }
 
 class _PredictionBody extends StatelessWidget {
-  const _PredictionBody({required this.groups});
+  const _PredictionBody({required this.groups, required this.tabController});
   final List<RatingGroup> groups;
+  final TabController tabController;
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +254,10 @@ class _PredictionBody extends StatelessWidget {
       return Center(child: Text("No prediction set selected"));
     }
     else {
-      return TabBarView(children: groups.map((g) => _PredictionSetTab(group: g)).toList());
+      return TabBarView(
+        children: groups.map((g) => _PredictionSetTab(group: g)).toList(),
+        controller: tabController,
+      );
     }
   }
 }
@@ -262,11 +270,14 @@ class _PredictionSetTab extends StatefulWidget {
   State<_PredictionSetTab> createState() => _PredictionSetTabState();
 }
 
-class _PredictionSetTabState extends State<_PredictionSetTab> {
-  late PredictionViewModel model;
+class _PredictionSetTabState extends State<_PredictionSetTab> with AutomaticKeepAliveClientMixin {
+  PredictionViewModel? model;
   late int lastPredictionSetId;
   late String lastRatingGroupUuid;
-  late bool lastHadOutcomes;
+  bool lastHadOutcomes = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -274,12 +285,19 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
     final outerModel = Provider.of<_MatchPrepPredictionsModel>(context, listen: false);
     lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
     lastRatingGroupUuid = widget.group.uuid;
-    model = outerModel.tabModels[widget.group]!;
-    _updateOutcomes(outerModel);
-    lastHadOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
+    outerModel.ensureTabModelLoaded(widget.group).then((model) {
+      setState(() {
+        this.model = model;
+      });
+      updatePredictionViewModel(outerModel);
+    });
   }
 
   Future<void> _updateOutcomes(_MatchPrepPredictionsModel outerModel) async {
+    if(model == null) {
+      return;
+    }
+
     if(outerModel.matchPrepModel.futureMatch.dbMatch.value != null) {
       var matchRes = HydratedMatchCache().get(outerModel.matchPrepModel.futureMatch.dbMatch.value!);
       if(matchRes.isOk()) {
@@ -295,7 +313,7 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
           shooters: shooters,
           scoreDQ: false,
         );
-        for(var prediction in model.predictions) {
+        for(var prediction in model!.predictions) {
           var score = scores.entries
             .firstWhereOrNull((element) => element.key.equalsShooter(prediction.shooter))?.value;
           if(score != null) {
@@ -303,7 +321,7 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
           }
         }
         lastHadOutcomes = true;
-        model.setOutcomes(outcomes);
+        model!.setOutcomes(outcomes);
         if (kDebugMode && outcomes.isNotEmpty) {
           final stats = RatioForecastStatsAccumulator();
           for (final entry in outcomes.entries) {
@@ -325,21 +343,25 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
       }
       else {
         lastHadOutcomes = false;
-        model.setOutcomes({});
+        model!.setOutcomes({});
       }
     }
     else {
       lastHadOutcomes = false;
-      model.setOutcomes({});
+      model!.setOutcomes({});
     }
   }
 
-  void updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) {
+  Future<void> updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) async {
+    if(model == null) {
+      return;
+    }
+
     if(outerModel.selectedPredictionSet?.id != lastPredictionSetId || widget.group.uuid != lastRatingGroupUuid) {
       lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
       lastRatingGroupUuid = widget.group.uuid;
-      var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
-      model.setPredictions(groupPredictions, notify: false);
+      var groupPredictions = await outerModel.getPredictionsForGroup(widget.group);
+      model!.setPredictions(groupPredictions, notify: false);
     }
 
     bool outerModelHasOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
@@ -350,8 +372,18 @@ class _PredictionSetTabState extends State<_PredictionSetTab> {
 
   @override
   Widget build(BuildContext context) {
-    var outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
-    updatePredictionViewModel(outerModel);
+    super.build(context);
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    if(model == null) {
+      return Center(child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("Loading predictions..."),
+          CircularProgressIndicator(),
+        ],
+        spacing: 8 * uiScaleFactor,
+      ));
+    }
     return ChangeNotifierProvider.value(
       value: model,
       child: PredictionListView(),
@@ -364,6 +396,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   final MatchPrepPageModel matchPrepModel;
 
   Map<RatingGroup, PredictionViewModel> tabModels = {};
+  Map<RatingGroup, bool> isLoading = {};
 
   _MatchPrepPredictionsModel({required this.matchPrepModel});
 
@@ -372,26 +405,49 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
 
   Map<RatingGroup, List<AlgorithmPrediction>> _algorithmPredictionCache = {};
 
-  List<AlgorithmPrediction> getPredictionsForGroup(RatingGroup group) {
+  Future<List<AlgorithmPrediction>> getPredictionsForGroup(RatingGroup group) async {
     if(_algorithmPredictionCache.containsKey(group)) {
       return _algorithmPredictionCache[group]!;
     }
 
     var predictions = selectedPredictionSet?.algorithmPredictions.where((p) => p.effectiveScoringGroup == group).toList();
-    _algorithmPredictionCache[group] = predictions?.map((p) => p.hydrate()).nonNulls.toList() ?? [];
+    _algorithmPredictionCache[group] = (await predictions?.mapAsync((p) async => p.hydrateAsync()))?.nonNulls.toList() ?? [];
     return _algorithmPredictionCache[group]!;
+  }
+
+  Future<PredictionViewModel?> ensureTabModelLoaded(RatingGroup group) async {
+    if(tabModels.containsKey(group)) {
+      return tabModels[group];
+    }
+
+    if(isLoading[group] == true) {
+      return null;
+    }
+
+    isLoading[group] = true;
+
+    var predictions = await getPredictionsForGroup(group);
+    tabModels[group] = PredictionViewModel(
+      dataSource: matchPrepModel.ratingProject,
+      matchId: matchPrepModel.futureMatch.matchId,
+      initialPredictions: predictions,
+      showWager: true,
+      showExport: false,
+    );
+
+    isLoading[group] = false;
+    notifyListeners();
+    return tabModels[group];
   }
 
   Future<void> reloadPredictionSets() async {
     await matchPrepModel.prep.predictionSets.load();
-    _initTabModels();
     notifyListeners();
   }
 
   void setSelectedPredictionSet(PredictionSet value) {
     selectedPredictionSet = value;
     _algorithmPredictionCache.clear();
-    _initTabModels();
     notifyListeners();
   }
 
@@ -406,7 +462,6 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       selectedPredictionSet = null;
       _algorithmPredictionCache.clear();
     }
-    _initTabModels();
     notifyListeners();
   }
 
@@ -414,22 +469,6 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     if(predictionSets.isNotEmpty) {
       predictionSets.sort((a, b) => b.created.compareTo(a.created));
       selectedPredictionSet = predictionSets.first;
-    }
-
-    _initTabModels();
-  }
-
-  void _initTabModels() {
-    tabModels = {};
-    for(var group in matchPrepModel.getNonexcludedRatingGroups()) {
-      var groupPredictions = getPredictionsForGroup(group);
-      tabModels[group] = PredictionViewModel(
-        dataSource: matchPrepModel.ratingProject,
-        matchId: matchPrepModel.futureMatch.matchId,
-        initialPredictions: groupPredictions,
-        showWager: true,
-        showExport: false,
-      );
     }
   }
 

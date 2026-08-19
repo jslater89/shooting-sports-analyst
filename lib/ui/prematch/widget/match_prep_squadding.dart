@@ -52,7 +52,7 @@ class _Schedule {
   }
 }
 
-class _MatchPrepSquaddingState extends State<MatchPrepSquadding> with AutomaticKeepAliveClientMixin{
+class _MatchPrepSquaddingState extends State<MatchPrepSquadding> with AutomaticKeepAliveClientMixin {
   @override
   Widget build(BuildContext context) {
     super.build(context);

@@ -25,15 +25,29 @@ class MatchPrepDivisions extends StatefulWidget {
   State<MatchPrepDivisions> createState() => _MatchPrepDivisionsState();
 }
 
-class _MatchPrepDivisionsState extends State<MatchPrepDivisions> with AutomaticKeepAliveClientMixin{
+class _MatchPrepDivisionsState extends State<MatchPrepDivisions> with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+  late TabController tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    tabController = TabController(length: widget.groups.length, vsync: this, animationDuration: Duration.zero);
+  }
+
+  @override
+  void dispose() {
+    tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return ChangeNotifierProvider(create: (context) => _DivisionModel(), child: DefaultTabController(length: widget.groups.length,
       child: Column(
         children: [
-          TabBar(tabs: widget.groups.map((d) => Tab(text: d.name)).toList()),
-          Expanded(child: TabBarView(children: widget.groups.map((g) => _MatchPrepGroupTab(group: g)).toList())),
+          TabBar(controller: tabController, tabs: widget.groups.map((d) => Tab(text: d.name)).toList()),
+          Expanded(child: TabBarView(controller: tabController, children: widget.groups.map((g) => _MatchPrepGroupTab(group: g)).toList())),
         ],
       ),
     ));

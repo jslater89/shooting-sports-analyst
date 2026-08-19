@@ -201,6 +201,11 @@ class AnalystDatabase {
     return isar.writeTxnSync(txn, silent: silent);
   }
 
+  /// Perform an asynchronous write transaction.
+  Future<T> writeTxn<T>(Future<T> Function() txn, {bool silent = false}) {
+    return isar.writeTxn(txn, silent: silent);
+  }
+
   Future<void> saveBackup(Directory path, {String? filename}) async {
     filename = filename ??"${DateTime.now().toIso8601String()}.backup.isar";
     var fullPath = path.absolute.path + Platform.pathSeparator + filename;

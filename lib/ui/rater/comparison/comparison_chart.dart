@@ -19,7 +19,6 @@ import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/chart/rating_accumulator.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 final NumberFormat _nf = NumberFormat("####");
 

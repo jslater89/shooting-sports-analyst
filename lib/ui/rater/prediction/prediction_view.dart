@@ -628,7 +628,7 @@ class PredictionListRow extends StatelessWidget {
                       "Mid: ${meanPercent.toStringAsFixed(1)}%\n"
                       "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
                       outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
-                  child: BoxAndWhiskerPlot(
+                  child: RepaintBoundary(child: BoxAndWhiskerPlot(
                     minimum: whiskerLowPercent,
                     lowerQuartile: boxLowPercent,
                     median: meanPercent,
@@ -646,7 +646,7 @@ class PredictionListRow extends StatelessWidget {
                     referenceLines: referenceLines,
                     referenceLineColors: referenceLineColors,
                     referenceLineColor: ThemeColors.equalContrastGreen(context),
-                  ),
+                  )),
                 )
               ),
               SizedBox(width: PredictionListViewScreen._whiskerPlotPadding),
@@ -682,10 +682,10 @@ class PredictionListView extends StatelessWidget {
           ),
           Expanded(
             child: ListView.builder(
-                itemCount: model.searchedPredictions.length,
-                itemBuilder: (context, i) {
-                  return PredictionListRow(prediction: model.searchedPredictions[i], index: i);
-                },
+              itemCount: model.searchedPredictions.length,
+              itemBuilder: (context, i) {
+                return PredictionListRow(prediction: model.searchedPredictions[i], index: i);
+              },
             ),
           )
         ],

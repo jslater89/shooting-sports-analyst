@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class BoxAndWhiskerPlot extends StatelessWidget {
   const BoxAndWhiskerPlot({
@@ -61,15 +62,13 @@ class BoxAndWhiskerPlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var ownSize = MediaQuery.of(context).size;
-
     var finalWhiskerColor = whiskerColor ?? ThemeColors.onBackgroundColor(context);
     var finalLowerBoxColor = lowerBoxColor ?? ThemeColors.onBackgroundColor(context);
     var finalUpperBoxColor = upperBoxColor ?? ThemeColors.onBackgroundColor(context);
     var finalMedianStrokeColor = medianStrokeColor ?? ThemeColors.backgroundColor(context);
 
-    var height = boxSize ?? ownSize.height;
-    var width = ownSize.width;
+    var height = boxSize ?? double.infinity;
+    var width = boxSize ?? double.infinity;
     return SizedBox(
       width: width,
       height: height,
@@ -147,48 +146,64 @@ class _BoxPlotPainter extends CustomPainter {
   double height = 0.0;
   double width = 0.0;
 
+  Paint? linePaint;
+  Paint? contrastingLinePaint;
+  Paint? lowerBoxPaint;
+  Paint? upperBoxPaint;
+  List<Paint>? referenceLinePaints;
+
   @override
   void paint(Canvas canvas, Size size) {
     height = size.height;
     width = size.width;
 
-    Paint linePaint = Paint();
-    linePaint.strokeWidth = strokeWidth;
-    linePaint.color = whiskerColor;
-    linePaint.strokeCap = StrokeCap.butt;
+    linePaint ??= Paint();
+    linePaint!.strokeWidth = strokeWidth;
+    linePaint!.color = whiskerColor;
+    linePaint!.strokeCap = StrokeCap.butt;
 
-    Paint contrastingLinePaint = Paint();
-    contrastingLinePaint.strokeWidth = strokeWidth;
-    contrastingLinePaint.color = whiskerColor;
-    contrastingLinePaint.strokeCap = StrokeCap.butt;
+    contrastingLinePaint ??= Paint();
+    contrastingLinePaint!.strokeWidth = strokeWidth;
+    contrastingLinePaint!.color = whiskerColor;
+    contrastingLinePaint!.strokeCap = StrokeCap.butt;
     if(fillBox && (whiskerColor == upperBoxColor || whiskerColor == lowerBoxColor)) {
-      contrastingLinePaint.color = medianStrokeColor;
+      contrastingLinePaint!.color = medianStrokeColor;
     }
 
-    Paint lowerBoxPaint = Paint();
-    lowerBoxPaint.strokeWidth = strokeWidth;
-    lowerBoxPaint.strokeCap = StrokeCap.butt;
-    lowerBoxPaint.color = lowerBoxColor;
-    lowerBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
+    lowerBoxPaint ??= Paint();
+    lowerBoxPaint!.strokeWidth = strokeWidth;
+    lowerBoxPaint!.strokeCap = StrokeCap.butt;
+    lowerBoxPaint!.color = lowerBoxColor;
+    lowerBoxPaint!.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
 
-    Paint upperBoxPaint = Paint();
-    upperBoxPaint.strokeWidth = strokeWidth;
-    lowerBoxPaint.strokeCap = StrokeCap.butt;
-    upperBoxPaint.color = upperBoxColor;
-    upperBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
+    upperBoxPaint ??= Paint();
+    upperBoxPaint!.strokeWidth = strokeWidth;
+    upperBoxPaint!.strokeCap = StrokeCap.butt;
+    upperBoxPaint!.color = upperBoxColor;
+    upperBoxPaint!.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
 
     // We'll draw the whiskers at this height
     var crossDimension = (direction == PlotDirection.horizontal ? size.height : size.width);
     var mainDimension = (direction == PlotDirection.horizontal ? size.width : size.height);
     double halfHeight = (crossDimension / 2).roundToDouble();
 
-    List<Paint> referenceLinePaints = [];
+    referenceLinePaints ??= [];
     for(var i = 0; i < referenceLines.length; i++) {
-      Paint referenceLinePaint = Paint();
+      Paint referenceLinePaint;
+      bool addedPaint = false;
+      if(referenceLinePaints!.length > i) {
+        referenceLinePaint = referenceLinePaints![i];
+      }
+      else {
+        addedPaint = true;
+        referenceLinePaint = Paint();
+      }
       referenceLinePaint.strokeWidth = strokeWidth;
       referenceLinePaint.color = referenceLineColors.length > i ? referenceLineColors[i] : referenceLineColor;
       referenceLinePaint.strokeCap = StrokeCap.butt;
-      referenceLinePaints.add(referenceLinePaint);
+      if(addedPaint) {
+        referenceLinePaints!.add(referenceLinePaint);
+      }
     }
 
     // The ratio of values to pixels
@@ -235,33 +250,33 @@ class _BoxPlotPainter extends CustomPainter {
     double crossStart = 0.0;
     double crossEnd = crossDimension;
 
-    canvas.drawLine(_offsetFor(lowerWhiskerStart, crossStart), _offsetFor(lowerWhiskerStart, crossEnd), linePaint);
-    canvas.drawLine(_offsetFor(lowerWhiskerStart, halfHeight), _offsetFor(lowerWhiskerEnd, halfHeight), linePaint);
+    canvas.drawLine(_offsetFor(lowerWhiskerStart, crossStart), _offsetFor(lowerWhiskerStart, crossEnd), linePaint!);
+    canvas.drawLine(_offsetFor(lowerWhiskerStart, halfHeight), _offsetFor(lowerWhiskerEnd, halfHeight), linePaint!);
 
     if(fillBox) {
-      canvas.drawRect(Rect.fromPoints(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(center, crossEnd)), lowerBoxPaint);
-      canvas.drawRect(Rect.fromPoints(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart, crossEnd)), upperBoxPaint);
+      canvas.drawRect(Rect.fromPoints(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(center, crossEnd)), lowerBoxPaint!);
+      canvas.drawRect(Rect.fromPoints(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart, crossEnd)), upperBoxPaint!);
     }
     else {
       // crosspiece
-      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(lowerWhiskerEnd, crossEnd), lowerBoxPaint);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(lowerWhiskerEnd, crossEnd), lowerBoxPaint!);
       // box sides
-      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossStart), _offsetFor(center, crossStart), lowerBoxPaint);
-      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossEnd), _offsetFor(center, crossEnd), lowerBoxPaint);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossStart), _offsetFor(center, crossStart), lowerBoxPaint!);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossEnd), _offsetFor(center, crossEnd), lowerBoxPaint!);
 
-      canvas.drawLine(_offsetFor(upperWhiskerStart, crossStart), _offsetFor(upperWhiskerStart, crossEnd), upperBoxPaint);
-      canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossStart), upperBoxPaint);
-      canvas.drawLine(_offsetFor(center, crossEnd), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossEnd), upperBoxPaint);
+      canvas.drawLine(_offsetFor(upperWhiskerStart, crossStart), _offsetFor(upperWhiskerStart, crossEnd), upperBoxPaint!);
+      canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossStart), upperBoxPaint!);
+      canvas.drawLine(_offsetFor(center, crossEnd), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossEnd), upperBoxPaint!);
     }
 
-    canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(center, crossEnd), contrastingLinePaint);
+    canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(center, crossEnd), contrastingLinePaint!);
 
-    canvas.drawLine(_offsetFor(upperWhiskerEnd, crossStart), _offsetFor(upperWhiskerEnd, crossEnd), linePaint);
-    canvas.drawLine(_offsetFor(upperWhiskerStart, halfHeight), _offsetFor(upperWhiskerEnd, halfHeight), linePaint);
+    canvas.drawLine(_offsetFor(upperWhiskerEnd, crossStart), _offsetFor(upperWhiskerEnd, crossEnd), linePaint!);
+    canvas.drawLine(_offsetFor(upperWhiskerStart, halfHeight), _offsetFor(upperWhiskerEnd, halfHeight), linePaint!);
 
     for(var i = 0; i < lines.length; i++) {
       var line = lines[i];
-      var referenceLinePaint = referenceLinePaints[i];
+      var referenceLinePaint = referenceLinePaints![i];
       canvas.drawLine(_offsetFor(line, crossStart), _offsetFor(line, crossEnd), referenceLinePaint);
     }
   }
@@ -291,13 +306,12 @@ class _BoxPlotPainter extends CustomPainter {
       || o.whiskerColor != whiskerColor
       || o.rangeMin != rangeMin
       || o.rangeMax != rangeMax
-      || strokeWidth != strokeWidth
-      || o.referenceLines != referenceLines
-      || o.referenceLineColors != referenceLineColors
+      || o.strokeWidth != strokeWidth
+      || o.referenceLines.containsOnly(referenceLines)
+      || o.referenceLineColors.containsOnly(referenceLineColors)
       || o.referenceLineColor != referenceLineColor
     ;
   }
-
 }
 
 enum PlotDirection {

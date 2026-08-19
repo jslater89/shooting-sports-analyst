@@ -781,3 +781,13 @@ extension MapEntriesToMap<K, V> on Iterable<MapEntry<K, V>> {
     return Map.fromEntries(this);
   }
 }
+
+extension AsyncMap<T> on Iterable<T> {
+  Future<List<R>> mapAsync<R>(Future<R> Function(T) mapper) async {
+    List<R> result = [];
+    for(var i in this) {
+      result.add(await mapper(i));
+    }
+    return result;
+  }
+}
