@@ -157,7 +157,7 @@ class AnalystDatabase {
           PredictionGameTransactionSchema,
           BayesianDeltaSchema,
         ],
-        maxSizeMiB: 1024 * 32,
+        maxSizeMiB: 1024 * 64,
         directory: db.path,
         name: test ? "test-database" : "database",
         // compactOnLaunch: CompactCondition(minRatio: 1.25),
