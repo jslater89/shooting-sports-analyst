@@ -590,7 +590,7 @@ class RatingProjectLoader {
       );
 
     var persistStart = DateTime.now();
-    await db.updateChangedRatingsSemiSync(changedRatings, onPersisted: ({required int progress, required int total, String? message}) async {
+    await db.updateChangedRatingsSemiSync(changedRatings, group: group, project: project, onPersisted: ({required int progress, required int total, String? message}) async {
       await host.progressCallback(
         progress: _currentMatchStep,
         total: _totalMatchSteps,

@@ -470,7 +470,11 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
-  Future<List<DbShooterRating>> upsertDbShooterRatings(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) async {
+  Future<List<DbShooterRating>> upsertDbShooterRatings(List<DbShooterRating> ratings, {
+    bool linksChanged = true, bool useCache = true,
+    DbRatingProject? project,
+    RatingGroup? group,
+  }) async {
     if(useCache) {
       for(var r in ratings) {
         cacheRating(r.project.value!, r.group.value!, r);
@@ -516,7 +520,12 @@ extension RatingProjectDatabase on AnalystDatabase {
     }
   }
 
-  List<DbShooterRating> upsertDbShooterRatingsSync(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) {
+
+  List<DbShooterRating> upsertDbShooterRatingsSync(List<DbShooterRating> ratings, {
+    bool linksChanged = true, bool useCache = true,
+    DbRatingProject? project,
+    RatingGroup? group,
+  }) {
     if(useCache) {
       for(var r in ratings) {
         cacheRating(r.project.value!, r.group.value!, r);
@@ -550,7 +559,19 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  Future<void> updateChangedRatings(Iterable<DbShooterRating> ratings, {bool useCache = true}) async {
+  Future<void> updateChangedRatings(Iterable<DbShooterRating> ratings, {
+    bool useCache = true,
+    DbRatingProject? project,
+    RatingGroup? group,
+  }) async {
+
+    Map<String, RatingGroup> projectGroups = {};
+    if(project != null) {
+      for(var g in project.groups) {
+        projectGroups[g.uuid] = g;
+      }
+    }
+
     await isar.writeTxn(() async {
       late DateTime start;
 
@@ -609,6 +630,10 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     if(useCache) {
       for(var r in ratings) {
+        final cacheProject = project ?? r.project.value!;
+        final cacheGroupKey = group ?? r.group.value!;
+        final cacheGroup = projectGroups[cacheGroupKey.uuid] ?? r.group.value!;
+        cacheRating(cacheProject, cacheGroup, r);
         cacheRating(r.project.value!, r.group.value!, r);
       }
     }
@@ -619,7 +644,15 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// This is a hybrid sync-async operation. Database operations are synchronous for speed,
   /// but batched into between 10 and 100 transctions with an async callback between for the
   /// progress UI.
-  Future<void> updateChangedRatingsSemiSync(Iterable<DbShooterRating> ratings, {bool useCache = true, ChangedRatingPersistedCallback? onPersisted}) async {
+  ///
+  /// Callers should provide [project] (and [group], if all ratings in [ratings] belong to the
+  /// same group) to avoid unnecessary database lookups and to avoid loading ratings.length
+  /// instances of project and group objects.
+  Future<void> updateChangedRatingsSemiSync(Iterable<DbShooterRating> ratings, {
+    bool useCache = true, ChangedRatingPersistedCallback? onPersisted,
+    DbRatingProject? project,
+    RatingGroup? group,
+  }) async {
     var ratingsList = ratings.toList();
     Map<String, DbShootingMatch> matches = {};
 
@@ -627,7 +660,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     // For more than 500 ratings, do 100 transactions total. For less than 50, just
     // call the sync version directly.
     if(ratingsList.length < 50) {
-      await updateChangedRatingsSync(ratings, useCache: useCache, matches: matches);
+      await updateChangedRatingsSync(ratings, useCache: useCache, matches: matches, project: project, group: group);
       return;
     }
 
@@ -649,7 +682,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         endIndex = ratingsList.length;
       }
       var batch = ratingsList.sublist(startIndex, endIndex);
-      await updateChangedRatingsSync(batch, useCache: useCache, matches: matches);
+      await updateChangedRatingsSync(batch, useCache: useCache, matches: matches, project: project, group: group);
 
       totalProcessed = endIndex;
       if(onPersisted != null) {
@@ -669,7 +702,22 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// for a hybrid sync-async operation that supports progress callbacks without the loss of speed of the fully async version.
   ///
   /// Takes and returns a map of match IDs to DbShootingMatch objects as an internal optimization.
-  Future<Map<String, DbShootingMatch>> updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, Map<String, DbShootingMatch>? matches}) async {
+  ///
+  /// Callers should provide [project] (and [group], if all ratings in [ratings] belong to the
+  /// same group) to avoid unnecessary database lookups and to avoid loading ratings.length
+  /// instances of project and group objects.
+  Future<Map<String, DbShootingMatch>> updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {
+    bool useCache = true, Map<String, DbShootingMatch>? matches,
+    DbRatingProject? project,
+    RatingGroup? group,
+  }) async {
+    Map<String, RatingGroup> projectGroups = {};
+    if(project != null) {
+      for(var g in project.groups) {
+        projectGroups[g.uuid] = g;
+      }
+    }
+
     late DateTime outerStart;
     if(Timings.enabled) outerStart = DateTime.now();
     matches ??= {};
@@ -737,7 +785,10 @@ extension RatingProjectDatabase on AnalystDatabase {
     if(Timings.enabled) outerStart = DateTime.now();
     if(useCache) {
       for(var r in ratings) {
-        cacheRating(r.project.value!, r.group.value!, r);
+        final cacheProject = project ?? r.project.value!;
+        final cacheGroupKey = group ?? r.group.value!;
+        final cacheGroup = projectGroups[cacheGroupKey.uuid] ?? r.group.value!;
+        cacheRating(cacheProject, cacheGroup, r);
       }
     }
     if(Timings.enabled) Timings().add(TimingType.cacheUpdatedRatings, DateTime.now().difference(outerStart).inMicroseconds);
