@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:html/parser.dart' hide ParseError;
 import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
@@ -22,6 +21,7 @@ import 'package:shooting_sports_analyst/data/source/psc/matchdef/match_info_zip.
 import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_registration_source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -243,32 +243,33 @@ class AutoImporter {
     }
   }
 
-  static Future<Result<(FutureMatch, List<MatchRegistration>), MatchSourceError>> getFutureMatchFromHtml(String registrationHtml) async {
-    var document = HtmlParser(registrationHtml).parse();
+  static Future<Result<(FutureMatch, List<MatchRegistration>), MatchSourceError>> getFutureMatchFromHtml(
+    String registrationHtml, {
+    Sport? sportOverride,
+    DateTime? dateOverride,
+  }) async {
+    var metadata = extractRegistrationHtmlMetadata(registrationHtml);
 
-    var sportName = "unknown";
-    var metaSportName = document.querySelector("meta[name='sport-name']");
-    if(metaSportName != null) {
-      sportName = metaSportName.attributes["content"]!;
-      _log.d("Sport name: $sportName");
-    }
-    if(sportName == "unknown") {
-      _log.e("Sport name is unknown, cannot import registrations");
-      return Result.err(MatchSourceError.unsupportedMatchType);
-    }
-
-    var metaMatchId = document.querySelector("meta[name='match-id']");
-    if(metaMatchId == null) {
+    var matchId = metadata.matchId;
+    if(matchId == null || matchId.isEmpty) {
       _log.e("Match ID is unknown, cannot import registrations");
       return Result.err(ParseError("Missing match ID"));
     }
-    var matchId = metaMatchId.attributes["content"]!;
     _log.d("Match ID: $matchId");
 
-    var sport = SportRegistry().lookup(sportName, caseSensitive: false);
+    Sport? sport = sportOverride;
+    if(sport == null && metadata.sportName != null && metadata.sportName != "unknown") {
+      sport = SportRegistry().lookup(metadata.sportName!, caseSensitive: false);
+    }
     if(sport == null) {
-      _log.e("Sport not found: $sportName");
+      _log.e("Sport is unknown, cannot import registrations");
       return Result.err(MatchSourceError.unsupportedMatchType);
+    }
+
+    DateTime? date = dateOverride ?? metadata.date;
+    if(date == null) {
+      _log.e("Match date is unknown, cannot import registrations");
+      return Result.err(ParseError("Missing match date"));
     }
 
     // Pass to parser to get old-style registrations
@@ -288,6 +289,8 @@ class AutoImporter {
 
     var exportedRegistrations = registrations.exportMatchRegistrations();
     var futureMatch = registrations.exportFutureMatch();
+    futureMatch.sportName = sport.name;
+    futureMatch.date = date;
 
     return Result.ok((futureMatch, exportedRegistrations));
   }

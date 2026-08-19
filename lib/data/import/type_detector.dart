@@ -8,12 +8,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 
 /// File formats offered for match import (labels match product wording).
 enum FileImportFormat {
   practiscoreReportTxt,
   practiscorePsc,
   practiscoreRegistrationZip,
+  practiscoreRegistrationHtml,
   miff,
   riff,
   autoDetect;
@@ -26,6 +28,8 @@ enum FileImportFormat {
         return "Practiscore .psc";
       case FileImportFormat.practiscoreRegistrationZip:
         return "Practiscore registration page source zip";
+      case FileImportFormat.practiscoreRegistrationHtml:
+        return "Practiscore registration page source (HTML)";
       case FileImportFormat.miff:
         return "MIFF";
       case FileImportFormat.riff:
@@ -58,7 +62,8 @@ final _riffRegex = RegExp(r'"format":\s*"riff"');
 
 Future<FileImportFormat?> detectFormat(File file) async {
   List<int> bytes = await file.readAsBytes();
-  final header = bytes.sublist(0, 1024);
+  final headerLength = bytes.length < 1024 ? bytes.length : 1024;
+  final header = bytes.sublist(0, headerLength);
 
   if(_arrayStartsWith(header, _gzipHeader)) {
     return _processGzip(bytes);
@@ -111,12 +116,16 @@ Future<FileImportFormat?> _processPlainText(List<int> bytes) async {
     return FileImportFormat.practiscoreReportTxt;
   }
   final text = utf8.decode(bytes);
-  final header = text.substring(0, 1024);
+  final headerTextLength = text.length < 1024 ? text.length : 1024;
+  final header = text.substring(0, headerTextLength);
   if(_miffRegex.hasMatch(header)) {
     return FileImportFormat.miff;
   }
   else if(_riffRegex.hasMatch(header)) {
     return FileImportFormat.riff;
+  }
+  else if(isPractiscoreRegistrationHtml(text)) {
+    return FileImportFormat.practiscoreRegistrationHtml;
   }
   return null;
 }

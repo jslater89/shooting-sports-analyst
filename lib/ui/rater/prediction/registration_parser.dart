@@ -136,11 +136,94 @@ class Registration {
   int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
-// TODO: the registration parser is doing two things here instead of just one
-// 1. Parsing out registrations from page source
-// 2. Matching registrations to shooters in a rating project
-// We should prefer to just parse out registrations, and build a second step
-// that matches registrations to ratings.
+class RegistrationHtmlMetadata {
+  final String? matchName;
+  final String? matchId;
+  final String? sportName;
+  final DateTime? date;
+
+  const RegistrationHtmlMetadata({
+    this.matchName,
+    this.matchId,
+    this.sportName,
+    this.date,
+  });
+}
+
+final _shooterTitleRegex = RegExp(r'title="[^"]+\([^"]+\)"');
+final _squaddingUrlRegex = RegExp(
+  r'https?://(?:www\.)?practiscore\.com/([^/\s"#]+)/squadding',
+  caseSensitive: false,
+);
+
+bool isPractiscoreRegistrationHtml(String text) {
+  final lower = text.toLowerCase();
+  if(!lower.contains("practiscore")) {
+    return false;
+  }
+  if(!lower.contains("squadbox")) {
+    return false;
+  }
+  if(!lower.contains("clearable")) {
+    return false;
+  }
+  if(!_shooterTitleRegex.hasMatch(text)) {
+    return false;
+  }
+  return true;
+}
+
+RegistrationHtmlMetadata extractRegistrationHtmlMetadata(String html) {
+  var document = HtmlParser(html).parse();
+
+  String? matchName;
+  var metaTitle = document.querySelector("meta[property='og:title']");
+  if(metaTitle != null) {
+    matchName = metaTitle.attributes["content"];
+  }
+
+  String? matchId;
+  var metaMatchId = document.querySelector("meta[name='match-id']");
+  if(metaMatchId != null) {
+    matchId = metaMatchId.attributes["content"];
+  }
+  if(matchId == null || matchId.isEmpty) {
+    var metaOgUrl = document.querySelector("meta[property='og:url']");
+    if(metaOgUrl != null) {
+      matchId = extractMatchIdFromUrl(metaOgUrl.attributes["content"] ?? "");
+    }
+  }
+  if(matchId == null || matchId.isEmpty) {
+    var urlMatch = _squaddingUrlRegex.firstMatch(html);
+    if(urlMatch != null) {
+      matchId = urlMatch.group(1);
+    }
+  }
+
+  String? sportName;
+  var metaSportName = document.querySelector("meta[name='sport-name']");
+  if(metaSportName != null) {
+    sportName = metaSportName.attributes["content"];
+  }
+
+  DateTime? date;
+  var metaMatchDate = document.querySelector("meta[name='match-date']");
+  if(metaMatchDate != null) {
+    try {
+      date = programmerYmdFormat.parse(metaMatchDate.attributes["content"]!);
+    }
+    catch(e) {
+      _log.w("Unable to parse match date: ${metaMatchDate.attributes["content"]}", error: e);
+    }
+  }
+
+  return RegistrationHtmlMetadata(
+    matchName: matchName,
+    matchId: matchId,
+    sportName: sportName,
+    date: date,
+  );
+}
 
 String extractMatchIdFromUrl(String url) {
   var urlParts = url.split("/");
@@ -262,32 +345,10 @@ RegistrationContainer _parseRegistrations(
 
   var document = HtmlParser(registrationHtml).parse();
 
-  var matchName = "unnamed match";
-  var matchDate = practicalShootingZeroDate;
-  var sportName = "unknown";
-
-  // Match a line
-  var metaTitle = document.querySelector("meta[property='og:title']");
-  if(metaTitle != null) {
-    matchName = metaTitle.attributes["content"]!;
-    _log.d("Match name: $matchName");
-  }
-
-  var metaMatchDate = document.querySelector("meta[name='match-date']");
-  if(metaMatchDate != null) {
-    try {
-      matchDate = programmerYmdFormat.parse(metaMatchDate.attributes["content"]!);
-    }
-    catch(e) {
-      _log.w("Unable to parse match date: ${metaMatchDate.attributes["content"]}", error: e);
-    }
-  }
-
-  var metaSportName = document.querySelector("meta[name='sport-name']");
-  if(metaSportName != null) {
-    sportName = metaSportName.attributes["content"]!;
-    _log.d("Sport name: $sportName");
-  }
+  var metadata = extractRegistrationHtmlMetadata(registrationHtml);
+  var matchName = metadata.matchName ?? "unnamed match";
+  var matchDate = metadata.date ?? practicalShootingZeroDate;
+  var sportName = metadata.sportName ?? "unknown";
 
   var shooterRegex = RegExp(r'(?<name>.*?)\s+\((?<division>[\w\s]+?)(\s+\/\s+(?<class>\w+?))?\)');
   // var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');

@@ -21,10 +21,14 @@ import "package:shooting_sports_analyst/data/import/type_detector.dart";
 import "package:shooting_sports_analyst/data/source/auto_importer.dart";
 import "package:shooting_sports_analyst/data/source/practiscore_report.dart";
 import "package:shooting_sports_analyst/data/source/psc/matchdef/match_info_zip.dart";
+import "package:shooting_sports_analyst/data/sport/builtins/registry.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/uspsa.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
+import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/logger.dart";
+import "package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart";
 import "package:shooting_sports_analyst/ui/result_page.dart";
+import "package:shooting_sports_analyst/util.dart";
 
 final _log = SSALogger("MatchFileImportDialog");
 
@@ -52,6 +56,7 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
   PlatformFile? _pickedFile;
   FileImportFormat _format = FileImportFormat.autoDetect;
   final List<String> _feedbackLines = [];
+  final TextEditingController _dateController = TextEditingController();
 
   /// True once the import process has completed successfully; replaces
   /// the 'import' button with a 'reset' button.
@@ -59,8 +64,14 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
   ShootingMatch? _processedMatch;
   FutureMatch? _processedFutureMatch;
 
-  /// Stub: true once a file is chosen. Replace with "parse completed successfully" when processing exists.
+  String? _pendingRegistrationHtml;
+  Sport? _selectedSport;
+  DateTime? _selectedDate;
+
   bool get _hasProcessedData => _processedMatch != null || _processedFutureMatch != null;
+
+  bool get _awaitingRegistrationMetadata =>
+      _pendingRegistrationHtml != null && !_hasProcessedData;
 
   String get _fileDisplayLabel {
     final f = _pickedFile;
@@ -68,6 +79,19 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
       return "No file selected";
     }
     return f.path?.isNotEmpty == true ? f.path! : f.name;
+  }
+
+  @override
+  void dispose() {
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  void _clearRegistrationPendingState() {
+    _pendingRegistrationHtml = null;
+    _selectedSport = null;
+    _selectedDate = null;
+    _dateController.clear();
   }
 
   Future<void> _pickFile() async {
@@ -83,13 +107,24 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
       final format = await detectFormat(file);
       if (format == null) {
         setState(() {
-          _feedbackLines.add("Failed to detect file format");
+          var feedback = "Failed to detect file format";
+          if(_pickedFile != null) {
+            feedback += " (leaving existing file in place)";
+          }
+          _feedbackLines.add(feedback);
         });
         return;
       }
-      _feedbackLines.add("File format detected: ${format.label}, processing...");
       setState(() {
         _pickedFile = result.files.first;
+        _format = format;
+        _imported = false;
+        _processedMatch = null;
+        _processedFutureMatch = null;
+        _clearRegistrationPendingState();
+        _feedbackLines
+          ..clear()
+          ..add("File format detected: ${format.label}");
       });
 
       await _processFile(file, format);
@@ -97,9 +132,123 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
       _log.e("File pick failed", error: e, stackTrace: st);
       if (mounted) {
         setState(() {
+          _clearRegistrationPendingState();
           _feedbackLines.add("Failed to pick file: $e");
         });
       }
+    }
+  }
+
+  Future<void> _handleRegistrationImport(String registrationHtml) async {
+    final metadata = extractRegistrationHtmlMetadata(registrationHtml);
+
+    setState(() {
+      _pendingRegistrationHtml = registrationHtml;
+      if(metadata.matchName != null) {
+        _feedbackLines.add("Match: ${metadata.matchName}");
+      }
+      if(metadata.matchId != null) {
+        _feedbackLines.add("Match ID: ${metadata.matchId}");
+      }
+    });
+
+    Sport? sport;
+    if(metadata.sportName != null && metadata.sportName != "unknown") {
+      sport = SportRegistry().lookup(metadata.sportName!, caseSensitive: false);
+    }
+
+    if(sport != null && metadata.date != null) {
+      setState(() {
+        _selectedSport = sport;
+        _selectedDate = metadata.date;
+        _dateController.text = programmerYmdFormat.format(metadata.date!);
+      });
+      await _processRegistrationHtml();
+      return;
+    }
+
+    setState(() {
+      _selectedSport = sport;
+      _selectedDate = metadata.date;
+      _dateController.text = metadata.date != null ? programmerYmdFormat.format(metadata.date!) : "";
+      _feedbackLines.add("Select sport and date to continue");
+    });
+  }
+
+  Future<void> _processRegistrationHtml() async {
+    final sport = _selectedSport;
+    final date = _selectedDate;
+    final html = _pendingRegistrationHtml;
+    if(sport == null || date == null || html == null) {
+      return;
+    }
+
+    var result = await AutoImporter.getFutureMatchFromHtml(
+      html,
+      sportOverride: sport,
+      dateOverride: date,
+    );
+    if(!mounted) {
+      return;
+    }
+    if(result.isErr()) {
+      setState(() {
+        _feedbackLines.add("Failed to process match: ${result.unwrapErr().message}");
+      });
+      return;
+    }
+    final (futureMatch, registrations) = result.unwrap();
+    setState(() {
+      _processedFutureMatch = futureMatch;
+      _processedFutureMatch!.newRegistrations = registrations;
+      _feedbackLines.add("Match processed successfully (${_processedFutureMatch!.newRegistrations.length} registrations)");
+    });
+  }
+
+  void _onSportSelected(String? sportName) {
+    if(sportName == null) {
+      return;
+    }
+    setState(() {
+      _selectedSport = SportRegistry().lookup(sportName, caseSensitive: false);
+    });
+    _processRegistrationHtml();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: practicalShootingZeroDate,
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+    if(picked == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _selectedDate = picked;
+      _dateController.text = programmerYmdFormat.format(picked);
+    });
+    await _processRegistrationHtml();
+  }
+
+  void _onDateSubmitted(String text) {
+    if(text.isEmpty) {
+      setState(() {
+        _selectedDate = null;
+      });
+      return;
+    }
+    try {
+      final date = programmerYmdFormat.parseLoose(text);
+      setState(() {
+        _selectedDate = date;
+        _dateController.text = programmerYmdFormat.format(date);
+      });
+      _processRegistrationHtml();
+    }
+    on FormatException catch (e) {
+      _log.w("Format error", error: e);
     }
   }
 
@@ -162,18 +311,10 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
         final zipFile = ZipDecoder().decodeBytes(file.readAsBytesSync());
         final archiveFile = zipFile.files.firstWhere((entry) => entry.name == "squadding.html");
         final registrationHtml = utf8.decode(archiveFile.content);
-        var result = await AutoImporter.getFutureMatchFromHtml(registrationHtml);
-        if(result.isErr()) {
-          setState(() {
-            _feedbackLines.add("Failed to process match: ${result.unwrapErr().message}");
-          });
-          return;
-        }
-        setState(() {
-          _processedFutureMatch = result.unwrap().$1;
-          _processedFutureMatch!.newRegistrations = result.unwrap().$2;
-          _feedbackLines.add("Match processed successfully (${_processedFutureMatch!.newRegistrations.length} registrations)");
-        });
+        await _handleRegistrationImport(registrationHtml);
+      case FileImportFormat.practiscoreRegistrationHtml:
+        final registrationHtml = file.readAsStringSync();
+        await _handleRegistrationImport(registrationHtml);
       default:
         _log.w("Unhandled file format: $format");
     }
@@ -190,6 +331,7 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
       _imported = false;
       _processedMatch = null;
       _processedFutureMatch = null;
+      _clearRegistrationPendingState();
       _feedbackLines.clear();
     });
   }
@@ -239,6 +381,22 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
     }
   }
 
+  void _onDateChanged(String text) {
+    if(text.isEmpty) {
+      setState(() {
+        _selectedDate = null;
+      });
+    }
+    else {
+      final date = programmerYmdFormat.tryParseLoose(text);
+      if(date != null) {
+        setState(() {
+          _selectedDate = date;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scale = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
@@ -262,7 +420,7 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
       title: const Text("Import Match File"),
       content: SizedBox(
         width: 520 * scale,
-        height: 420 * scale,
+        height: 480 * scale,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -311,6 +469,46 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
                 ),
               ),
             ),
+            if(_awaitingRegistrationMetadata) ...[
+              SizedBox(height: 12 * scale),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownMenu<String>(
+                      label: const Text("Sport"),
+                      initialSelection: _selectedSport?.name,
+                      dropdownMenuEntries: SportRegistry().availableSports
+                          .map((s) => DropdownMenuEntry(value: s.name, label: s.name))
+                          .toList(),
+                      onSelected: _onSportSelected,
+                    ),
+                  ),
+                  SizedBox(width: 12 * scale),
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: "Date",
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if(_selectedDate != null)
+                              Icon(Icons.check),
+                            IconButton(
+                              icon: const Icon(Icons.calendar_month),
+                              onPressed: _pickDate,
+                            ),
+                          ],
+                        ),
+                      ),
+                      controller: _dateController,
+                      onSubmitted: _onDateSubmitted,
+                      onChanged: _onDateChanged,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             SizedBox(height: 12 * scale),
             Text("Feedback", style: Theme.of(context).textTheme.titleSmall),
             SizedBox(height: 6 * scale),

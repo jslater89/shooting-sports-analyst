@@ -84,6 +84,7 @@ dist/**
 backtesting/*.png
 backtesting/**/*.png
 token.toml
+tmp/**
 
 # Things shared with me under NDA that I can't put on Git
 private/
