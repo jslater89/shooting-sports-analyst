@@ -27,9 +27,9 @@ enum FileImportFormat {
       case FileImportFormat.practiscorePsc:
         return "Practiscore .psc";
       case FileImportFormat.practiscoreRegistrationZip:
-        return "Practiscore registration page source zip";
+        return "Practiscore squadding page source .zip";
       case FileImportFormat.practiscoreRegistrationHtml:
-        return "Practiscore registration page source (HTML)";
+        return "Practiscore squadding page source (HTML)";
       case FileImportFormat.miff:
         return "MIFF";
       case FileImportFormat.riff:
