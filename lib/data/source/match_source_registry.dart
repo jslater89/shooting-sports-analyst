@@ -37,8 +37,8 @@ class MatchSourceRegistry {
   }
 
   List<MatchSource> _sources = [
-    HitfactoRsMatchSource(),
     SSAServerMatchSource(),
+    HitfactoRsMatchSource(),
     PSv2MatchSource(),
     // PractiscoreHitFactorReportParser(uspsaSport),
     // PractiscoreHitFactorReportParser(ipscSport),

@@ -34,6 +34,12 @@ class HitfactoRsMatchSource
   String get name => "Hitfacto.rs";
 
   @override
+  bool get degraded => true;
+
+  @override
+  String? get degradedReason => "Hitfacto.rs is not currently publicly available.";
+
+  @override
   List<SportType> get supportedSports => [SportType.uspsa];
 
   @override
