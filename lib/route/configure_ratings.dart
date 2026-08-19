@@ -70,7 +70,6 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
-import 'package:shooting_sports_analyst/ui/rater/rollback_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';

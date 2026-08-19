@@ -43,7 +43,7 @@ class LatentLogSettings extends RaterSettings {
   static const defaultWeakFieldVariance = 0.25;
   static const defaultWeakFieldMaxSize = 10.0;
   static const defaultWeakFieldWeakFinishThreshold = 0.60;
-  static const defaultWeakFieldWeakFractionThreshold = 0.40;
+  static const defaultWeakFieldWeakFractionThreshold = 0.60;
   static const defaultGraphMaturityThreshold = 4.0;
   static const defaultNoveltyVariance = 0.0048;
 

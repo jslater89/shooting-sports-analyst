@@ -246,6 +246,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     Map<ShooterRating, double> competitorTailNoise = {};
     Map<ShooterRating, double> competitorAgedRatings = {};
     Map<ShooterRating, double> competitorVariances = {};
+    Map<ShooterRating, Set<ShooterRating>> pairwiseOpponents = {};
 
     late DateTime start;
     if (Timings.enabled) {
@@ -297,6 +298,51 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     final competitorsByFinish = validShooters.sorted((a, b) => scores[a]!.place.compareTo(scores[b]!.place));
     final competitorsByRating = validShooters.sorted((a, b) => competitorAgedRatings[b]!.compareTo(competitorAgedRatings[a]!));
     final top10PctCompetitors = _selectTop10PctOpponents(competitorsByFinish, competitorsByRating);
+
+    int lowIndex = 0;
+    int highIndex = 0;
+    if(settings.pairwiseBlendWeight > 0) {
+      final finishAsc = competitorsByFinish.reversed.toList();
+      final finishN = finishAsc.length;
+      final ratingAsc = competitorsByRating.reversed.toList();
+      final ratingN = ratingAsc.length;
+      final targetRatioMargin = competitorsByFinish.length >= 10 ? 0.1 : 0.25;
+
+      for(int i = 0; i < competitorsByFinish.length; i++) {
+        final competitorRatio = scores[finishAsc[i]]!.ratio;
+        final windowBottom = competitorRatio * (1 - targetRatioMargin);
+        final windowTop = competitorRatio * (1 + targetRatioMargin);
+
+        while(lowIndex < finishN && scores[finishAsc[lowIndex]]!.ratio < windowBottom) {
+          lowIndex++;
+        }
+        while(highIndex < finishN && scores[finishAsc[highIndex]]!.ratio <= windowTop) {
+          highIndex++;
+        }
+
+        pairwiseOpponents[finishAsc[i]] = {
+          ...top10PctCompetitors,
+          ...finishAsc.sublist(lowIndex, highIndex),
+        };
+      }
+
+      lowIndex = 0;
+      highIndex = 0;
+      for(int i = 0; i < competitorsByRating.length; i++) {
+        final competitorRating = competitorAgedRatings[ratingAsc[i]]!;
+        final windowBottom = competitorRating - 2 * sqrt(settings.sportVariance);
+        final windowTop = competitorRating + 2 * sqrt(settings.sportVariance);
+
+        while(lowIndex < ratingN && competitorAgedRatings[ratingAsc[lowIndex]]! < windowBottom) {
+          lowIndex++;
+        }
+        while(highIndex < ratingN && competitorAgedRatings[ratingAsc[highIndex]]! <= windowTop) {
+          highIndex++;
+        }
+
+        pairwiseOpponents[ratingAsc[i]]!.addAll(ratingAsc.sublist(lowIndex, highIndex));
+      }
+    }
 
     // If baseline robustness is enabled, apply a Huber-style taper to
     // the baseline weights to downweight extreme outliers.
@@ -385,6 +431,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         competitorVariances: competitorVariances,
         top10PctCompetitors: top10PctCompetitors,
         competitorsByRating: competitorsByRating,
+        pairwiseOpponents: pairwiseOpponents[shooter] ?? {},
       );
       if (change == null) {
         continue;
@@ -547,6 +594,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     /// The list of competitor ratings sorted by rating.
     required List<ShooterRating> competitorsByRating,
+
+    /// The pairwise opponents of the shooter.
+    required Set<ShooterRating> pairwiseOpponents,
   }) {
     shooter as LatentLogRating;
     final agedRating = shooterAgedRating;
@@ -596,7 +646,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // Pairwise blending, conditioned on at least [weak field max size] opponents.
     if (settings.pairwiseBlendWeight > 0 && validScoresCount >= settings.weakFieldMaxSize) {
-      final pairwiseOpponents = _selectOpponents(shooter, scores, top10PctCompetitors, competitorsByRating, shooterRatio);
       pairwiseOpponentCount = pairwiseOpponents.length;
 
       for (var opponent in pairwiseOpponents) {
@@ -1127,24 +1176,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     return threshold / absZ;
   }
 
-  List<ShooterRating> _selectOpponents(
-    LatentLogRating shooter,
-    Map<ShooterRating, RelativeScore> scores,
-    List<ShooterRating> top10PctCompetitors,
-    List<ShooterRating> competitorsByRating,
-    double shooterRatio,
-  ) {
-    // For now, Latent Log Ratio only does top-and-nearby.
-    Set<ShooterRating> selected = {};
-    selected.addAll(
-      top10PctCompetitors,
-    );
-    selected.addAll(
-      _selectNearbyOpponents(shooter, scores, competitorsByRating, shooterRatio),
-    );
-    return selected.toList();
-  }
-
   List<ShooterRating> _selectTop10PctOpponents(
     List<ShooterRating> opponentsByFinish,
     List<ShooterRating> opponentsByRating,
@@ -1163,46 +1194,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     top10PctByMatchFinish.addAll(top10PctByRating);
     return top10PctByMatchFinish.toList();
-  }
-
-  List<ShooterRating> _selectNearbyOpponents(
-    LatentLogRating shooter,
-    Map<ShooterRating, RelativeScore> scores,
-    List<ShooterRating> opponentsByRating,
-    double competitorRatio,
-  ) {
-    double margin = 0.1;
-    if (opponentsByRating.length < 10) {
-      margin = 0.25;
-    }
-
-    Set<ShooterRating> nearbyOpponents = {};
-    final topRatio = competitorRatio * (1 + margin);
-    final bottomRatio = competitorRatio * (1 - margin);
-    for (var opponent in scores.keys) {
-      // Players with no rating history don't have a valid rating yet, so 'nearby' in rating terms
-      // isn't meaningful yet.
-      if (opponent.length == 0) {
-        continue;
-      }
-
-      if ((opponent.rating - shooter.rating).abs() <=
-          settings.startingVariance) {
-        nearbyOpponents.add(opponent);
-        continue;
-      }
-
-      var opponentScore = scores[opponent];
-      if (opponentScore == null) {
-        continue;
-      }
-      var opponentRatio = opponentScore.ratio;
-      if (opponentRatio >= bottomRatio && opponentRatio <= topRatio) {
-        nearbyOpponents.add(opponent);
-      }
-    }
-
-    return nearbyOpponents.toList();
   }
 
   // Below: predictions
