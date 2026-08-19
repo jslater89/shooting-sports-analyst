@@ -138,6 +138,19 @@ class InvitationMatch {
     }
   }
 
+  String get ruleSummary {
+    switch(type) {
+      case InvitationMatchType.topN:
+        return "Top ${topN ?? "?"}";
+      case InvitationMatchType.aboveNPercent:
+        return "Above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+      case InvitationMatchType.either:
+        return "Top ${topN ?? "?"} or above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+      case InvitationMatchType.both:
+        return "Top ${topN ?? "?"} and above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+    }
+  }
+
   List<RegExp> get includePatterns => [
     if(namePattern != null) namePattern!,
     ...additionalPatterns,
@@ -259,9 +272,10 @@ class InvitationMatch {
 
   List<RelativeMatchScore> getRelativeMatchScores(
     ShootingMatch match,
-    RatingGroup group, {
-    bool lady = false,
-    List<AgeCategory>? ageCategories,
+    {
+      required List<Division> divisions,
+      bool lady = false,
+      List<AgeCategory>? ageCategories,
   }) {
     if(!matchEligible(match)) {
       return [];
@@ -271,7 +285,6 @@ class InvitationMatch {
       return [];
     }
 
-    var divisions = group.divisions;
     var shooters = match.filterShooters(
       divisions: divisions,
       ladyOnly: lady,

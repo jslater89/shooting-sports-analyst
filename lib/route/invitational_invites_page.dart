@@ -287,7 +287,7 @@ class _InvitationalInvitesPageState extends State<InvitationalInvitesPage> with 
               _ConfigEditor(model: model),
               model.result == null
                   ? const Center(child: Text("Generate invitations to see results."))
-                  : InviteResultsTable(result: model.result!),
+                  : InviteResultsTable(result: model.result!, dataSource: widget.dataSource),
             ],
           ),
         ),
@@ -349,6 +349,16 @@ class _ConfigEditor extends StatelessWidget {
               value: config.multipleDivisionRatingQualification,
               onChanged: (value) {
                 config.multipleDivisionRatingQualification = value ?? false;
+                model.notifyConfigChanged();
+              },
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            CheckboxListTile(
+              title: const Text("Combined Scoring For Multi-Division Groups"),
+              subtitle: const Text("If checked, invitations for multi-division groups will use combined scoring, not per-division scoring."),
+              value: config.combinedScoringForMultiDivisionGroups,
+              onChanged: (value) {
+                config.combinedScoringForMultiDivisionGroups = value ?? false;
                 model.notifyConfigChanged();
               },
               controlAffinity: ListTileControlAffinity.leading,

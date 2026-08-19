@@ -28,6 +28,7 @@ class InvitationalInviteConfig {
   Map<String, int> reservedSeniorSlotsByGroup;
   Map<String, int> reservedJuniorSeniorSlotsByGroup;
   bool multipleDivisionRatingQualification;
+  bool combinedScoringForMultiDivisionGroups;
   bool includeEmails;
   double takeRate;
   DateTime? activeSince;
@@ -47,6 +48,7 @@ class InvitationalInviteConfig {
     Map<String, int>? reservedSeniorSlotsByGroup,
     Map<String, int>? reservedJuniorSeniorSlotsByGroup,
     this.multipleDivisionRatingQualification = false,
+    this.combinedScoringForMultiDivisionGroups = false,
     this.includeEmails = false,
     this.takeRate = 0.6,
     this.activeSince,
@@ -108,6 +110,7 @@ class InvitationalInviteConfig {
     config.seniorSlots = (raw["seniorSlots"] as bool?) ?? false;
     config.combineJuniorSeniorSlots = (raw["combineJuniorSeniorSlots"] as bool?) ?? false;
     config.multipleDivisionRatingQualification = (raw["multipleDivisionRatingQualification"] as bool?) ?? false;
+    config.combinedScoringForMultiDivisionGroups = (raw["combinedScoringForMultiDivisionGroups"] as bool?) ?? false;
     config.includeEmails = (raw["includeEmails"] as bool?) ?? false;
     config.takeRate = (raw["takeRate"] as num?)?.toDouble() ?? 0.6;
 
@@ -181,6 +184,7 @@ class InvitationalInviteConfig {
       "seniorSlots": seniorSlots,
       "combineJuniorSeniorSlots": combineJuniorSeniorSlots,
       "multipleDivisionRatingQualification": multipleDivisionRatingQualification,
+      "combinedScoringForMultiDivisionGroups": combinedScoringForMultiDivisionGroups,
       "includeEmails": includeEmails,
       "takeRate": takeRate,
       "groups": [...groupKeys],

@@ -7,16 +7,19 @@
 import "package:collection/collection.dart";
 import "package:flutter/material.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
+import "package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart";
 import "package:shooting_sports_analyst/data/ranking/invitational/invitation.dart";
 import "package:shooting_sports_analyst/data/ranking/invitational/invitational_invite_engine.dart";
 import "package:shooting_sports_analyst/ui/colors.dart";
+import "package:shooting_sports_analyst/ui/rater/invitational/invitation_detail_dialog.dart";
 import "package:shooting_sports_analyst/ui/widget/score_row.dart";
 import "package:shooting_sports_analyst/util.dart";
 
 class InviteResultsTable extends StatefulWidget {
-  const InviteResultsTable({super.key, required this.result});
+  const InviteResultsTable({super.key, required this.result, required this.dataSource});
 
   final InvitationalInviteResult result;
+  final RatingDataSource dataSource;
 
   @override
   State<InviteResultsTable> createState() => _InviteResultsTableState();
@@ -238,30 +241,41 @@ class _InviteResultsTableState extends State<InviteResultsTable> {
 
   Widget _invitationRow(BuildContext context, Invitation invitation, int index) {
     final match = invitation.earnedAtMatches.firstOrNull;
-    return ScoreRow(
-      index: index,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text(invitation.fallbackSlot ? "Y" : "N")),
-            if(result.ladySlots) Expanded(flex: 1, child: Text(invitation.rating.female ? "Y" : "N")),
-            if(result.juniorSlots) Expanded(flex: 1, child: Text(invitation.rating.ageCategory?.isJunior == true ? "Y" : "N")),
-            if(result.seniorSlots) Expanded(flex: 1, child: Text(invitation.rating.ageCategory?.isSenior == true ? "Y" : "N")),
-            if(result.anyReservedSlots) Expanded(flex: 1, child: Text(invitation.reservedSlot ? "Y" : "N")),
-            Expanded(flex: 2, child: Text(invitation.rating.memberNumber)),
-            Expanded(flex: 4, child: Text(invitation.rating.name, overflow: TextOverflow.ellipsis)),
-            if(result.includeEmails) Expanded(flex: 3, child: Text(invitation.rating.email ?? "", overflow: TextOverflow.ellipsis)),
-            Expanded(flex: 2, child: Text(invitation.groups.map((g) => g.uiLabel).sorted().join("|"), overflow: TextOverflow.ellipsis)),
-            Expanded(
-              flex: 2,
-              child: Text(invitation.earnedAtMatches.isNotEmpty ? "Match slot" : invitation.rating.formattedRating),
-            ),
-            Expanded(flex: 4, child: Text(match?.name ?? "Elo slot", overflow: TextOverflow.ellipsis)),
-            Expanded(flex: 2, child: Text(match != null ? programmerYmdFormat.format(match.date) : "Elo slot")),
-            Expanded(flex: 1, child: Text("${invitation.relativeMatchScores.firstOrNull?.place ?? "Elo slot"}")),
-            Expanded(flex: 1, child: Text(invitation.relativeMatchScores.firstOrNull?.ratio.asPercentage() ?? "Elo slot")),
-          ],
+    return GestureDetector(
+      onTap: () {
+        InvitationDetailDialog.show(
+          context,
+          invitation: invitation,
+          combinedScoring: widget.result.config.combinedScoringForMultiDivisionGroups,
+          result: result,
+          dataSource: widget.dataSource,
+        );
+      },
+      child: ScoreRow(
+        index: index,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Expanded(flex: 1, child: Text(invitation.fallbackSlot ? "Y" : "N")),
+              if(result.ladySlots) Expanded(flex: 1, child: Text(invitation.rating.female ? "Y" : "N")),
+              if(result.juniorSlots) Expanded(flex: 1, child: Text(invitation.rating.ageCategory?.isJunior == true ? "Y" : "N")),
+              if(result.seniorSlots) Expanded(flex: 1, child: Text(invitation.rating.ageCategory?.isSenior == true ? "Y" : "N")),
+              if(result.anyReservedSlots) Expanded(flex: 1, child: Text(invitation.reservedSlot ? "Y" : "N")),
+              Expanded(flex: 2, child: Text(invitation.rating.memberNumber)),
+              Expanded(flex: 4, child: Text(invitation.rating.name, overflow: TextOverflow.ellipsis)),
+              if(result.includeEmails) Expanded(flex: 3, child: Text(invitation.rating.email ?? "", overflow: TextOverflow.ellipsis)),
+              Expanded(flex: 2, child: Text(invitation.groups.map((g) => g.uiLabel).sorted().join("|"), overflow: TextOverflow.ellipsis)),
+              Expanded(
+                flex: 2,
+                child: Text(invitation.earnedAtMatches.isNotEmpty ? "Match slot" : invitation.rating.formattedRating),
+              ),
+              Expanded(flex: 4, child: Text(match?.name ?? "Elo slot", overflow: TextOverflow.ellipsis)),
+              Expanded(flex: 2, child: Text(match != null ? programmerYmdFormat.format(match.date) : "Elo slot")),
+              Expanded(flex: 1, child: Text("${invitation.relativeMatchScores.firstOrNull?.place ?? "Elo slot"}")),
+              Expanded(flex: 1, child: Text(invitation.relativeMatchScores.firstOrNull?.ratio.asPercentage() ?? "Elo slot")),
+            ],
+          ),
         ),
       ),
     );

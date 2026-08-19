@@ -24,6 +24,7 @@ final _log = SSALogger("InvitationalInviteEngine");
 typedef InvitationalInviteProgressCallback = void Function(int current, int total);
 
 class InvitationalInviteResult {
+  final InvitationalInviteConfig config;
   final List<Invitation> invitations;
   final Map<RatingGroup, List<Invitation>> invitationsByGroup;
   final Map<RatingGroup, List<Invitation>> ladyInvitationsByGroup;
@@ -41,6 +42,7 @@ class InvitationalInviteResult {
   final List<String> warnings;
 
   InvitationalInviteResult({
+    required this.config,
     required this.invitations,
     required this.invitationsByGroup,
     required this.ladyInvitationsByGroup,
@@ -288,6 +290,7 @@ class InvitationalInviteEngine {
       required _ReservedPass pass,
     }) async {
       await _getMatchInvitations(
+        combinedScoringForMultiDivisionGroups: config.combinedScoringForMultiDivisionGroups,
         matchesAtPriority: matchesAtPriority,
         pointer: pointer,
         db: db,
@@ -543,6 +546,7 @@ class InvitationalInviteEngine {
     _log.i("Total invitations after rating slots: ${invitations.length}");
 
     return Result.ok(InvitationalInviteResult(
+      config: config,
       invitations: invitations,
       invitationsByGroup: invitationsByGroup,
       ladyInvitationsByGroup: ladyInvitations,
@@ -634,6 +638,7 @@ class InvitationalInviteEngine {
   }
 
   Future<int> _getMatchInvitations({
+    required bool combinedScoringForMultiDivisionGroups,
     required List<InvitationMatch> matchesAtPriority,
     required MatchPointer pointer,
     required AnalystDatabase db,
@@ -686,58 +691,71 @@ class InvitationalInviteEngine {
           continue;
         }
 
-        var relativeMatchScores = invitationMatch.getRelativeMatchScores(
-          match,
-          group,
-          lady: pass.lady,
-          ageCategories: pass.ageCategories,
-        );
-        if(relativeMatchScores.isNotEmpty) {
-          for(var relativeMatchScore in relativeMatchScores) {
-            var rating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: relativeMatchScore.shooter.memberNumber);
-            if(rating == null) {
-              continue;
-            }
-
-            bool foundExistingInvitation = false;
-            for(var number in rating.allPossibleMemberNumbers) {
-              final existingInvitation = invitationsByMemberNumber[number];
-              if(existingInvitation != null) {
-                existingInvitation.groups.addIfMissing(group);
-                existingInvitation.relativeMatchScores.add(relativeMatchScore);
-                existingInvitation.earnedAtMatches.add(match);
-                existingInvitation.matchCriteria.add(invitationMatch);
-                foundExistingInvitation = true;
-                break;
+        List<List<Division>> divisionGroups = [];
+        if(combinedScoringForMultiDivisionGroups) {
+          divisionGroups = [[...group.divisions]];
+        }
+        else {
+          for(var d in group.divisions) {
+            divisionGroups.add([d]);
+          }
+        }
+        for(var divisionGroup in divisionGroups) {
+          var relativeMatchScores = invitationMatch.getRelativeMatchScores(
+            match,
+            divisions: divisionGroup,
+            lady: pass.lady,
+            ageCategories: pass.ageCategories,
+          );
+          if(relativeMatchScores.isNotEmpty) {
+            for(var relativeMatchScore in relativeMatchScores) {
+              var rating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: relativeMatchScore.shooter.memberNumber);
+              if(rating == null) {
+                continue;
               }
-            }
-            if(foundExistingInvitation) {
-              continue;
-            }
 
-            var invitation = Invitation(
-              groups: [group],
-              rating: ratingSystem.wrapDbRating(rating),
-              relativeMatchScores: [relativeMatchScore],
-              earnedAtMatches: [match],
-              matchCriteria: [invitationMatch],
-              fallbackSlot: false,
-              reservedSlot: pass.reserved,
-            );
-            invitations.add(invitation);
-            invitationsByGroup.addToList(group, invitation);
-            _recordCategoryInvitations(
-              group: group,
-              rating: rating,
-              invitation: invitation,
-              ladyInvitationsByGroup: ladyInvitationsByGroup,
-              juniorInvitationsByGroup: juniorInvitationsByGroup,
-              seniorInvitationsByGroup: seniorInvitationsByGroup,
-            );
-            invitationsFromMatch++;
-            filledSlotsByGroup.increment(group);
-            for(var number in rating.allPossibleMemberNumbers) {
-              invitationsByMemberNumber[number] = invitation;
+              bool foundExistingInvitation = false;
+              for(var number in rating.allPossibleMemberNumbers) {
+                final existingInvitation = invitationsByMemberNumber[number];
+                if(existingInvitation != null) {
+                  existingInvitation.groups.addIfMissing(group);
+                  existingInvitation.relativeMatchScores.add(relativeMatchScore);
+                  existingInvitation.earnedAtMatches.add(match);
+                  existingInvitation.earnedMatchGroups.add(group);
+                  existingInvitation.matchCriteria.add(invitationMatch);
+                  foundExistingInvitation = true;
+                  break;
+                }
+              }
+              if(foundExistingInvitation) {
+                continue;
+              }
+
+              var invitation = Invitation(
+                groups: [group],
+                rating: ratingSystem.wrapDbRating(rating),
+                relativeMatchScores: [relativeMatchScore],
+                earnedAtMatches: [match],
+                earnedMatchGroups: [group],
+                matchCriteria: [invitationMatch],
+                fallbackSlot: false,
+                reservedSlot: pass.reserved,
+              );
+              invitations.add(invitation);
+              invitationsByGroup.addToList(group, invitation);
+              _recordCategoryInvitations(
+                group: group,
+                rating: rating,
+                invitation: invitation,
+                ladyInvitationsByGroup: ladyInvitationsByGroup,
+                juniorInvitationsByGroup: juniorInvitationsByGroup,
+                seniorInvitationsByGroup: seniorInvitationsByGroup,
+              );
+              invitationsFromMatch++;
+              filledSlotsByGroup.increment(group);
+              for(var number in rating.allPossibleMemberNumbers) {
+                invitationsByMemberNumber[number] = invitation;
+              }
             }
           }
         }

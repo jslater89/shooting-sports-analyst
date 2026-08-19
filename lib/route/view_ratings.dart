@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
+import 'package:shooting_sports_analyst/data/help/entries/ratings/ratings_view_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
@@ -47,6 +48,7 @@ import 'package:shooting_sports_analyst/ui/rater/rating_set_manager.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -339,27 +341,27 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 spacing: 20.0,
                 runSpacing: 10.0,
                 children: [
-                  // TODO: replace with display only
-                  // at least until we support using the database to go back
-                  // in time more easily
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 600 * uiScaleFactor),
-                    child: DropdownButton<ShootingMatch>(
-                      isExpanded: true,
-                      underline: Container(
-                        height: 1,
-                        color: ThemeColors.onBackgroundColor(context),
-                      ),
-                      items: [
-                        DropdownMenuItem<ShootingMatch>(
-                          child: Text(_selectedMatch.name, overflow: TextOverflow.ellipsis),
-                          value: _selectedMatch,
-                        )
-                      ],
-                      value: _selectedMatch,
-                      onChanged: null,
-                    ),
-                  ),
+                  // // TODO: replace with display only
+                  // // at least until we support using the database to go back
+                  // // in time more easily
+                  // ConstrainedBox(
+                  //   constraints: BoxConstraints(maxWidth: 600 * uiScaleFactor),
+                  //   child: DropdownButton<ShootingMatch>(
+                  //     isExpanded: true,
+                  //     underline: Container(
+                  //       height: 1,
+                  //       color: ThemeColors.onBackgroundColor(context),
+                  //     ),
+                  //     items: [
+                  //       DropdownMenuItem<ShootingMatch>(
+                  //         child: Text(_selectedMatch.name, overflow: TextOverflow.ellipsis),
+                  //         value: _selectedMatch,
+                  //       )
+                  //     ],
+                  //     value: _selectedMatch,
+                  //     onChanged: null,
+                  //   ),
+                  // ),
                   Tooltip(
                     message: "Sort rows by this field.",
                     child: DropdownButton<RatingSortMode>(
@@ -551,6 +553,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             });
           },
         )
+      ),
+      HelpButton(
+        helpTopicId: ratingsViewHelpId,
       ),
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleClick(item, context),
