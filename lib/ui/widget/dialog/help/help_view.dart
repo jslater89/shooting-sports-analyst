@@ -255,6 +255,9 @@ class _HelpIndexState extends State<HelpIndex> {
   }
 
   void _scrollToTopic(HelpRegistryEntry topic) {
+    // Never scroll to a hidden dir or topic
+    if(topic.hidden) return;
+
     // If scrolling to a directory, set the current directory to the target directory
     // and scroll to the first topic in the directory.
     if(topic is HelpDirectory) {
@@ -334,7 +337,7 @@ class _HelpIndexState extends State<HelpIndex> {
           child: ListView.builder(
             controller: _scrollController,
             itemBuilder: (context, index) {
-              final topic = _currentDirectory.alphabetical(index);
+              final topic = _currentDirectory.visibleAlphabetical(index);
               return SizedBox(
                 height: _indexTileExtent,
                 child: ListTile(
@@ -346,7 +349,7 @@ class _HelpIndexState extends State<HelpIndex> {
                 ),
               );
             },
-            itemCount: _currentDirectory.length,
+            itemCount: _currentDirectory.visibleLength,
           ),
         ),
       ],

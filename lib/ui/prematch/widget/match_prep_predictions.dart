@@ -26,6 +26,7 @@ import 'package:shooting_sports_analyst/ui/prematch/dialog/match_prep_prediction
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("MatchPrepPredictions");
@@ -196,7 +197,10 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> with TickerProvi
                 onPressed: () async {
                   var confirm = await ConfirmDialog.show(context, content: Text("Delete prediction set?"));
                   if(confirm ?? false) {
-                    model.deletePredictionSet(model.selectedPredictionSet!);
+                    final result = await model.deletePredictionSet(model.selectedPredictionSet!);
+                    if(!result.isOk() && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to delete: ${result.unwrapErr().message}")));
+                    }
                   }
                 },
               ),
@@ -207,8 +211,12 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> with TickerProvi
                     Text("EXPORT"),
                   ],
                 ),
-                onPressed: () async {
-                  model.exportPredictionsCsv();
+                onPressed: model.selectedPredictionSet == null ? null : () async {
+                  await LoadingDialog.show(
+                    context: context,
+                    waitOn: model.exportPredictionsCsv(),
+                    title: "Exporting predictions...",
+                  );
                 },
               ),
               if(MatchPrepUspsaPredictionSettings.isSupportedSport(model.matchPrepModel.sport)) TextButton(
@@ -298,58 +306,8 @@ class _PredictionSetTabState extends State<_PredictionSetTab> with AutomaticKeep
       return;
     }
 
-    if(outerModel.matchPrepModel.futureMatch.dbMatch.value != null) {
-      var matchRes = HydratedMatchCache().get(outerModel.matchPrepModel.futureMatch.dbMatch.value!);
-      if(matchRes.isOk()) {
-        Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
-        var match = matchRes.unwrap();
-        var filters = widget.group.filters;
-        var shooters = match.filterShooters(
-          filterMode: FilterMode.and,
-          divisions: filters.activeDivisions.toList(),
-          allowReentries: false,
-        );
-        var scores = match.getScores(
-          shooters: shooters,
-          scoreDQ: false,
-        );
-        for(var prediction in model!.predictions) {
-          var score = scores.entries
-            .firstWhereOrNull((element) => element.key.equalsShooter(prediction.shooter))?.value;
-          if(score != null) {
-            outcomes[prediction] = SimpleMatchResult(raterScore: prediction.displayCenter, percent: score.ratio, place: score.place);
-          }
-        }
-        lastHadOutcomes = true;
-        model!.setOutcomes(outcomes);
-        if (kDebugMode && outcomes.isNotEmpty) {
-          final stats = RatioForecastStatsAccumulator();
-          for (final entry in outcomes.entries) {
-            stats.tryAddPrediction(
-              entry.key,
-              actualRatio: entry.value.percent,
-              actualPlace: entry.value.place,
-            );
-          }
-          if (stats.n > 0) {
-            _log.d(
-              stats.debugSummary(
-                prefix:
-                    "Prediction vs outcome [${widget.group.uiLabel}]: ",
-              ),
-            );
-          }
-        }
-      }
-      else {
-        lastHadOutcomes = false;
-        model!.setOutcomes({});
-      }
-    }
-    else {
-      lastHadOutcomes = false;
-      model!.setOutcomes({});
-    }
+    await outerModel.ensureOutcomesLoaded(widget.group);
+    lastHadOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
   }
 
   Future<void> updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) async {
@@ -396,7 +354,8 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   final MatchPrepPageModel matchPrepModel;
 
   Map<RatingGroup, PredictionViewModel> tabModels = {};
-  Map<RatingGroup, bool> isLoading = {};
+  Map<RatingGroup, Future<PredictionViewModel?>> tabModelLoadingFutures = {};
+  Set<RatingGroup> outcomesLoadedGroups = {};
 
   _MatchPrepPredictionsModel({required this.matchPrepModel});
 
@@ -420,12 +379,22 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       return tabModels[group];
     }
 
-    if(isLoading[group] == true) {
-      return null;
+    final existingFuture = tabModelLoadingFutures[group];
+    if(existingFuture != null) {
+      return existingFuture;
     }
 
-    isLoading[group] = true;
+    final future = _loadTabModel(group);
+    tabModelLoadingFutures[group] = future;
+    try {
+      return await future;
+    }
+    finally {
+      tabModelLoadingFutures.remove(group);
+    }
+  }
 
+  Future<PredictionViewModel?> _loadTabModel(RatingGroup group) async {
     var predictions = await getPredictionsForGroup(group);
     tabModels[group] = PredictionViewModel(
       dataSource: matchPrepModel.ratingProject,
@@ -435,9 +404,81 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       showExport: false,
     );
 
-    isLoading[group] = false;
     notifyListeners();
     return tabModels[group];
+  }
+
+  Future<void> ensureOutcomesLoaded(RatingGroup group, {bool notify = true}) async {
+    var tabModel = tabModels[group] ?? await ensureTabModelLoaded(group);
+    if(tabModel == null) {
+      return;
+    }
+
+    final matchLinked = matchPrepModel.futureMatch.sourceCode != null;
+    if(!matchLinked) {
+      if(outcomesLoadedGroups.contains(group)) {
+        tabModel.setOutcomes({}, notify: notify);
+        outcomesLoadedGroups.remove(group);
+      }
+      return;
+    }
+
+    if(outcomesLoadedGroups.contains(group)) {
+      return;
+    }
+
+    if(matchPrepModel.futureMatch.dbMatch.value != null) {
+      var matchRes = HydratedMatchCache().get(matchPrepModel.futureMatch.dbMatch.value!);
+      if(matchRes.isOk()) {
+        Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
+        var match = matchRes.unwrap();
+        var filters = group.filters;
+        var shooters = match.filterShooters(
+          filterMode: FilterMode.and,
+          divisions: filters.activeDivisions.toList(),
+          allowReentries: false,
+        );
+        var scores = match.getScores(
+          shooters: shooters,
+          scoreDQ: false,
+        );
+        for(var prediction in tabModel.predictions) {
+          var score = scores.entries
+            .firstWhereOrNull((element) => element.key.equalsShooter(prediction.shooter))?.value;
+          if(score != null) {
+            outcomes[prediction] = SimpleMatchResult(raterScore: prediction.displayCenter, percent: score.ratio, place: score.place);
+          }
+        }
+        tabModel.setOutcomes(outcomes, notify: notify);
+        outcomesLoadedGroups.add(group);
+        if (kDebugMode && outcomes.isNotEmpty) {
+          final stats = RatioForecastStatsAccumulator();
+          for (final entry in outcomes.entries) {
+            stats.tryAddPrediction(
+              entry.key,
+              actualRatio: entry.value.percent,
+              actualPlace: entry.value.place,
+            );
+          }
+          if (stats.n > 0) {
+            _log.d(
+              stats.debugSummary(
+                prefix:
+                    "Prediction vs outcome [${group.uiLabel}]: ",
+              ),
+            );
+          }
+        }
+      }
+      else {
+        tabModel.setOutcomes({}, notify: notify);
+        outcomesLoadedGroups.add(group);
+      }
+    }
+    else {
+      tabModel.setOutcomes({}, notify: notify);
+      outcomesLoadedGroups.add(group);
+    }
   }
 
   Future<void> reloadPredictionSets() async {
@@ -448,6 +489,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   void setSelectedPredictionSet(PredictionSet value) {
     selectedPredictionSet = value;
     _algorithmPredictionCache.clear();
+    outcomesLoadedGroups.clear();
     notifyListeners();
   }
 
@@ -456,13 +498,14 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     setSelectedPredictionSet(predictionSet);
   }
 
-  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
-    await matchPrepModel.deletePredictionSet(predictionSet);
-    if(selectedPredictionSet == predictionSet) {
+  Future<Result<void, ResultErr>> deletePredictionSet(PredictionSet predictionSet) async {
+    final result = await matchPrepModel.deletePredictionSet(predictionSet);
+    if(result.isOk() && selectedPredictionSet == predictionSet) {
       selectedPredictionSet = null;
       _algorithmPredictionCache.clear();
+      notifyListeners();
     }
-    notifyListeners();
+    return result;
   }
 
   void init() {
@@ -472,16 +515,32 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     }
   }
 
-  void exportPredictionsCsv() {
-    // A map of rating group name to csv file contents.
-    Map<String, String> csvFiles = {};
-
-    for(var group in tabModels.keys) {
-      var csv = tabModels[group]!.exportPredictionsCsv();
-      csvFiles[group.name] = csv;
+  Future<void> exportPredictionsCsv() async {
+    if(selectedPredictionSet == null) {
+      return;
     }
 
-    // Create a zip file with the csv file contents.
+    final groups = matchPrepModel.getNonexcludedRatingGroups();
+    final matchLinked = matchPrepModel.futureMatch.sourceCode != null;
+    Map<String, String> csvFiles = {};
+
+    for(var group in groups) {
+      var tabModel = await ensureTabModelLoaded(group);
+      if(tabModel == null) {
+        continue;
+      }
+
+      var groupPredictions = await getPredictionsForGroup(group);
+      tabModel.setPredictions(groupPredictions, notify: false);
+      outcomesLoadedGroups.remove(group);
+
+      if(matchLinked) {
+        await ensureOutcomesLoaded(group, notify: false);
+      }
+
+      csvFiles[group.name] = tabModel.exportPredictionsCsv();
+    }
+
     final archive = Archive();
     for(var entry in csvFiles.entries) {
       archive.add(ArchiveFile.string(entry.key + ".csv", entry.value));

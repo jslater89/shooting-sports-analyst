@@ -16,6 +16,7 @@ final helpWelcome80 = HelpTopic(
   id: welcome80HelpId,
   name: "Welcome to 8.0",
   content: _content,
+  hidden: true,
 );
 
 const _content =

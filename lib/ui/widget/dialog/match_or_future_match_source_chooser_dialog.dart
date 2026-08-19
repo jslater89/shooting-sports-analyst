@@ -8,10 +8,12 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/help/entries/match_source_chooser_help.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/future_match_source_chooser.dart';
 import 'package:shooting_sports_analyst/ui/widget/keepalive_tab.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_source_chooser.dart';
@@ -95,7 +97,12 @@ class _MatchOrFutureMatchSourceChooserDialogState extends State<MatchOrFutureMat
   Widget build(BuildContext context) {
     var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
-      title: Text(widget.title ?? "Find a match or future match"),
+      title: Row(
+        children: [
+          Expanded(child: Text(widget.title ?? "Find a match or future match")),
+          HelpButton(helpTopicId: matchSourceChooserHelpId),
+        ],
+      ),
       content: SizedBox(
         width: 900 * scaleFactor,
         height: 800 * scaleFactor,

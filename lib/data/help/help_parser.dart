@@ -155,7 +155,7 @@ class HelpParser {
   // static final _singleNewlinePattern = RegExp(r'^(.)\n(?![\n#*]|\d+\.)');
   static final _headerPattern = RegExp(r'^#+\s');
   static final _linkPattern = RegExp(r'\[(.*?)\]\((.*?)\)');
-  static final _emphasisPattern = RegExp(r'_(.*?)_|\*\*(.*?)\*\*');
+  static final _emphasisPattern = RegExp(r'_(.*?)_|\*\*?(.*?)\*?\*|`(.*?)`');
   static final _listPattern = RegExp(r'^(\s*)(\*|\d+\.)\s');
   static final _emptyLinePattern = RegExp(r'^(\s*)\n');
 
@@ -273,15 +273,21 @@ class HelpParser {
       var part = parts[i];
       var lineStart = i == 0;
       var lineEnd = i == parts.length - 1;
-      if(part.startsWith('_')) {
+      if(part.startsWith('**')) {
+        var token = Emphasis(type: EmphasisType.bold, token: PlaceholderToken(), parent: parent);
+        var text = PlainText(part.substring(2, part.length - 2), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
+        token.token = text;
+        tokens.add(token);
+      }
+      else if(part.startsWith('_') || part.startsWith('*')) {
         var token = Emphasis(type: EmphasisType.italic, token: PlaceholderToken(), parent: parent);
         var text = PlainText(part.substring(1, part.length - 1), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
         token.token = text;
         tokens.add(token);
       }
-      else if(part.startsWith('**')) {
-        var token = Emphasis(type: EmphasisType.bold, token: PlaceholderToken(), parent: parent);
-        var text = PlainText(part.substring(2, part.length - 2), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
+      else if(part.startsWith('`')) {
+        var token = Emphasis(type: EmphasisType.monospace, token: PlaceholderToken(), parent: parent);
+        var text = PlainText(part.substring(1, part.length - 1), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
         token.token = text;
         tokens.add(token);
       }

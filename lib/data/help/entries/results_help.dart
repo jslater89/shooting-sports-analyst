@@ -73,4 +73,56 @@ group.
 
 For example, ?"slater" OR open AND b will show everyone whose name contains 'slater',
 as well as all Open B-class competitors.
+
+## Ratings Context
+If an application-wide ratings context has been selected in application settings, or if
+you are viewing the match result from within a rating project, the result page will
+be enhanced with rating information. A 'Rating' column in the scores list will show
+each competitor's prematch rating, rating change, or postmatch rating. (Change modes
+by clicking the 'rating' header.)
+
+## Match Breakdown and Competitor Locations
+The data table icon in the app bar will display a breakdown of the match, showing total
+competitor counts by classification, division, and power factor.
+
+The 'Competitor map' option in the three-dot menu at the far right of the app bar will
+display a map of competitor locations based on either registration information (if available),
+or from a ratings context if registrations do not have location information but a ratings
+context is available.
+
+## What-If Mode
+The pencil icon in the app bar enters what-if mode, allowing you to edit competitor
+information (name, division, and power factor, where relevant) when viewing overall
+match results, and to edit stage scores when viewing stage results.
+
+## Display Settings
+The gear icon in the app bar shows display settings, some of which control scoring settings
+and others of which determine which information is displayed in the table.
+
+* **Available points count penalties** adjusts the points/total column so that penalties
+  count for their penalty value against your points-on-target total.
+* For USPSA and other fixed-time sports, **Improved fixed time available points** uses
+  the highest score achieved on a stage as the 100% value, rather than the maximum number
+  of points available on the stage.
+* **Fantasy points mode** controls display of the fantasy points column. Fantasy points
+  are assigned based on overall score, stage wins, raw time wins, and accuracy wins.
+  'By division' calculates fantasy points for each division. 'Current filters' calculates
+  fantasy points for all competitors currently displayed on the table.
+* If a ratings context is available, **Rating display mode** changes the state of the
+  Rating column on the table.
+* **Match prediction mode** controls how scores are displayed for competitors who haven't
+  finished the match.
+    * **None** makes no changes to the recorded scores.
+    * **High available** gives competitors 100% of the winner's score on unfinished stages.
+      (For hit factor, 100% of the match points. For time plus, the current winner's time.
+      For points scoring, the current winner's points.)
+    * **Average stage finish** takes the average of a competitor's current stage percentages
+      and gives them that percentage of the leader's score on each stage.
+    * **Average finish in ratings** takes the average of a competitor's historical stage finishes
+    and gives them that percentage of the leader's score on each stage, available only if a
+    ratings context is present.
+    * **Rating-aware**, when the ratings context supports predictions, uses a competitor's
+    expected ratio against the field based on rating algorithm predictions to generate stage
+    percentages. As more of the match is completed, up to 75% of the competitor's average
+    stage finish is blended into the result.
 """;

@@ -25,9 +25,11 @@ import "package:shooting_sports_analyst/data/sport/builtins/registry.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/uspsa.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/sport.dart";
+import "package:shooting_sports_analyst/data/help/entries/match_file_import_help.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart";
 import "package:shooting_sports_analyst/ui/result_page.dart";
+import "package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart";
 import "package:shooting_sports_analyst/util.dart";
 
 final _log = SSALogger("MatchFileImportDialog");
@@ -417,7 +419,12 @@ class _MatchFileImportDialogState extends State<MatchFileImportDialog> {
     }
 
     return AlertDialog(
-      title: const Text("Import Match File"),
+      title: Row(
+        children: [
+          const Expanded(child: Text("Import Match File")),
+          HelpButton(helpTopicId: matchFileImportHelpId),
+        ],
+      ),
       content: SizedBox(
         width: 520 * scale,
         height: 480 * scale,

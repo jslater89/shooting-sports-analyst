@@ -547,6 +547,20 @@ extension PredictionGameExtension on AnalystDatabase {
     }
   }
 
+  Future<bool> hasWagersForPredictionSet(PredictionSet predictionSet) async {
+    final count = await isar.dbWagers.filter()
+      .predictionSet((q) => q.idEqualTo(predictionSet.id))
+      .count();
+    return count > 0;
+  }
+
+  bool hasWagersForPredictionSetSync(PredictionSet predictionSet) {
+    final count = isar.dbWagers.filter()
+      .predictionSet((q) => q.idEqualTo(predictionSet.id))
+      .countSync();
+    return count > 0;
+  }
+
   /// Get the transactions for a prediction game with various filters.
   Future<List<PredictionGameTransaction>> getTransactions({
     required PredictionGame game,

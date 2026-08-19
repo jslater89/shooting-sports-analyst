@@ -7,9 +7,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/help/entries/match_source_chooser_help.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_source_chooser.dart';
 
 class MatchSourceChooserDialog extends StatelessWidget {
@@ -42,7 +44,12 @@ class MatchSourceChooserDialog extends StatelessWidget {
     var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var defaultSource = sources.firstWhereOrNull((e) => e.code == SSAServerMatchSource.ssaServerCode);
     return AlertDialog(
-      title: Text(title ?? "Find a match"),
+      title: Row(
+        children: [
+          Expanded(child: Text(title ?? "Find a match")),
+          HelpButton(helpTopicId: matchSourceChooserHelpId),
+        ],
+      ),
       content: SizedBox(
         width: 900 * scaleFactor,
         height: 600 * scaleFactor,

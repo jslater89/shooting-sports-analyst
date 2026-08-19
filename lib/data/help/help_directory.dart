@@ -13,6 +13,7 @@ class HelpDirectory extends HelpRegistryEntry {
   final String id;
   final String name;
   final String? defaultTopicId;
+  final bool hidden;
   HelpDirectory? parent;
   List<HelpRegistryEntry> _children = [];
   List<HelpRegistryEntry> _alphabetizedChildren = [];
@@ -46,6 +47,8 @@ class HelpDirectory extends HelpRegistryEntry {
 
   int get length => _children.length;
 
+  int get visibleLength => _children.where((c) => !c.hidden).length;
+
   List<HelpRegistryEntry> get topics => _alphabetizedChildren;
 
   HelpRegistryEntry alphabetical(int index) {
@@ -54,6 +57,16 @@ class HelpDirectory extends HelpRegistryEntry {
 
   int alphabeticalIndex(HelpRegistryEntry entry) {
     return _alphabeticalIndexes[entry]!;
+  }
+
+  HelpRegistryEntry visibleAlphabetical(int index) {
+    return _alphabetizedChildren.where((c) => !c.hidden).toList()[index];
+  }
+
+  int visibleAlphabeticalIndex(HelpRegistryEntry entry) {
+    return _alphabetizedChildren.where((c) => !c.hidden)
+      .toList()
+      .indexOf(entry);
   }
 
    void initialize() {
@@ -75,7 +88,7 @@ class HelpDirectory extends HelpRegistryEntry {
     return "(${_children.length} topics)";
   }
 
-  HelpDirectory({required this.id, required this.name, this.parent, this.defaultTopicId});
+  HelpDirectory({required this.id, required this.name, this.parent, this.defaultTopicId, this.hidden = false});
 
   bool get hasContent => false;
 }

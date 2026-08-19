@@ -34,6 +34,7 @@ class HelpTopicRegistry {
 abstract class HelpRegistryEntry {
   String get id;
   String get name;
+  bool get hidden;
   HelpDirectory? get parent;
   set parent(HelpDirectory? value);
 

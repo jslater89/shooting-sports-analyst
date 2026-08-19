@@ -6,8 +6,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/help/entries/match_source_chooser_help.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/future_match_source_chooser.dart';
 
 class FutureMatchSourceChooserDialog extends StatelessWidget {
@@ -39,7 +41,12 @@ class FutureMatchSourceChooserDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
-      title: Text(title ?? "Find a future match"),
+      title: Row(
+        children: [
+          Expanded(child: Text(title ?? "Find a future match")),
+          HelpButton(helpTopicId: matchSourceChooserHelpId),
+        ],
+      ),
       content: SizedBox(
         width: 800 * scaleFactor,
         height: 500 * scaleFactor,

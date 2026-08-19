@@ -199,20 +199,30 @@ extension MatchPrepDatabase on AnalystDatabase {
     return Result.ok(null);
   }
 
-  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
+  Future<Result<void, ResultErr>> deletePredictionSet(PredictionSet predictionSet, {bool force = false}) async {
+    if(!force && await hasWagersForPredictionSet(predictionSet)) {
+      return Result.err(StringError("Prediction set used in prediction game wagers"));
+    }
+
     await isar.writeTxn(() async {
       await predictionSet.algorithmPredictions.filter().deleteAll();
       await isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAll();
     });
     await notifyEntityChange(EntityType.matchPrep, predictionSet.matchPrepId);
+    return Result.ok(null);
   }
 
-  void deletePredictionSetSync(PredictionSet predictionSet) {
+  Result<void, ResultErr> deletePredictionSetSync(PredictionSet predictionSet, {bool force = false}) {
+    if(!force && hasWagersForPredictionSetSync(predictionSet)) {
+      return Result.err(StringError("Prediction set used in prediction game wagers"));
+    }
+
     isar.writeTxnSync(() {
       predictionSet.algorithmPredictions.filter().deleteAllSync();
       isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAllSync();
     });
     notifyEntityChangeSync(EntityType.matchPrep, predictionSet.matchPrepId);
+    return Result.ok(null);
   }
 
   Future<void> saveAlgorithmPrediction(DbAlgorithmPrediction prediction, {bool saveLinks = true}) async {

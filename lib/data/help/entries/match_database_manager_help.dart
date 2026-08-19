@@ -20,9 +20,9 @@ const _content =
 
 This screen lists all matches currently in the database, and allows filtering based on name and date.
 Name-based filtering operates as a prefix match on each word: 'ate' will not match 'State', but 'cha'
-will match 'Championship'. Additional filter options are planned.
+will match 'Championship'. Matches may also be filtered by sport and date, and sorted by name or date.
 
-This screen will eventually be enhanced to allow deleting matches, and eventually to allow editing of
+This screen will eventually be enhanced to allow deleting matches, and to allow editing of
 both match details and match scores.
 
 ## Match Migration
@@ -42,5 +42,5 @@ event contains more data than a points rating event, and has a correspondingly l
 but both are treated the same by the approximation.
 
 The 'total size' line at the bottom of the dialog shows the total size of the database, and the
-amount of space used as a percentage of the maximum allowed size (currently 32 gigabytes).
+amount of space used as a percentage of the maximum allowed size (currently 64 gigabytes).
 """;

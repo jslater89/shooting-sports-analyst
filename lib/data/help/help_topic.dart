@@ -23,12 +23,15 @@ class HelpTopic extends HelpRegistryEntry {
   final String name;
   final String content;
   @override
+  final bool hidden;
+  @override
   HelpDirectory? parent;
 
   HelpTopic({
     required this.id,
     required this.name,
     required this.content,
+    this.hidden = false,
   });
 
   @override

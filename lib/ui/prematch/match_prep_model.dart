@@ -57,11 +57,14 @@ class MatchPrepPageModel extends ChangeNotifier {
     return set;
   }
 
-  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
-    prep.predictionSets.remove(predictionSet);
-    await db.saveMatchPrep(prep, savePredictionSetLinks: false);
-    await db.deletePredictionSet(predictionSet);
-    notifyListeners();
+  Future<Result<void, ResultErr>> deletePredictionSet(PredictionSet predictionSet) async {
+    final result = await db.deletePredictionSet(predictionSet);
+    if(result.isOk()) {
+      prep.predictionSets.remove(predictionSet);
+      await db.saveMatchPrep(prep, savePredictionSetLinks: false);
+      notifyListeners();
+    }
+    return result;
   }
 
   List<RatingGroup> getNonexcludedRatingGroups() {

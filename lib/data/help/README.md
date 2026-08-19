@@ -13,6 +13,8 @@ string is formatted using a limited set of Markdown:
     * Text decorations:
         * Bold: `**Bold text**`
         * Italics: `_Italic text_`
+        * Monospace: (surrounded by literal backticks)
+            * Note that triple backtick code blocks are NOT currently supported.
     * Line breaks with either two trailing spaces or a backslash (`\`)
         * In limited contexts only: in plain running text and in list items.
         * They probably don't work in the middle of other elements like links,

@@ -240,6 +240,7 @@ class Link extends LinkableHelpToken {
 enum EmphasisType {
   italic,
   bold,
+  monospace,
 }
 
 /// A list item is an element in an ordered or unordered list.
@@ -347,8 +348,14 @@ class Emphasis extends LinkableHelpToken {
     if(type == EmphasisType.italic) {
       style = baseStyle.copyWith(fontStyle: FontStyle.italic);
     }
-    else {
+    else if(type == EmphasisType.bold) {
       style = baseStyle.copyWith(fontWeight: FontWeight.w500);
+    }
+    else if(type == EmphasisType.monospace) {
+      style = baseStyle.copyWith(fontFamily: "monospace");
+    }
+    else {
+      throw ArgumentError("unrecognized emphasis: $type");
     }
 
     return token.intoSpans(context, style, onLinkTapped: onLinkTapped);
