@@ -85,6 +85,7 @@ import "db_oneoff_impl/finish_streaks_command.dart";
 import "db_oneoff_impl/rating_project_correspondence_command.dart";
 import "db_oneoff_impl/loco_correspondence_command.dart";
 import "db_oneoff_impl/elite_head_to_head_command.dart";
+import "db_oneoff_impl/shot_both_years_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -140,6 +141,9 @@ Future<void> main(List<String> args) async {
     }
     else if(command == "BR") {
       await BacktestRatersCommand(db).executor(console, []);
+    }
+    else if(command == "SBY") {
+      await ShotBothYearsCommand(db).executor(console, []);
     }
     else if(command == "AMR") {
       if(args.length < 3) {
@@ -268,6 +272,7 @@ Future<void> main(List<String> args) async {
     RatingProjectCorrespondenceCommand(db),
     EliteHeadToHeadCommand(db),
     LocoCorrespondenceCommand(db),
+    ShotBothYearsCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
