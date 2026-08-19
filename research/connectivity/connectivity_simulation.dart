@@ -6,204 +6,411 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math';
-import 'package:collection/collection.dart';
+/// Comparative connectivity research.
+///
+/// Builds a clustered match graph (club locals, an isolated mega-series,
+/// area matches, nationals, and travelers) and scores every participant with
+/// several candidate measures after each match.
+///
+/// Run with:
+///   dart run research/connectivity/connectivity_simulation.dart
+///   dart run research/connectivity/connectivity_simulation.dart --isolated-sweep
+///
+/// Competitor methods:
+///   sqrt      geometric mean of unique 1-hop neighbors and encounters
+///   carriers  field-size moments (production RatingCarrier formula)
+///   effective geometric mean of effective degree and encounters
+///   credit    recency-weighted mean of recent coverage credits
+///
+/// Match-level coverage is calculated directly from pre-match neighborhoods.
 
-void main() {
-  print("Generating entities...");
-  // Testing some ideas about connectivity in a DB-friendly way.
-  var (competitors, matches) = generateEntities();
+import "dart:math";
 
-  // Calculate connectivity scores over time
-  var connectivityTracker = ConnectivityTracker();
+import "package:collection/collection.dart";
 
-  print("Processing matches...");
-  // Process matches in chronological order
-  int i = 0;
-  List<Match> matchWindow = [];
-  int matchWindowSize = 100;
-  for (var match in matches.values.sorted((a, b) => a.start.compareTo(b.start))) {
-    var matchCompetitors = Map.fromEntries(competitors.entries.where((e) => match.competitorIds.contains(e.key)));
-    connectivityTracker.processMatch(match, matchWindow, matchCompetitors, competitors);
-    i++;
+const int kSeed = 42;
+const int kRegionCount = 8;
+const int kIsolatedRegion = 0;
+const int kClubsPerRegion = 5;
+const int kMatchCount = 1800;
+const int kWindowSize = 5;
+const int kLocalHighPerRegion = 220;
+const int kTravelerCount = 350;
+const int kIsolatedHighCount = 280;
+const int kInitialLowPerRegion = 280;
 
-    // Maintain a window of the last matchWindowSize matches
-    while(matchWindow.length >= matchWindowSize) {
-      matchWindow.removeAt(0);
-    }
-    matchWindow.add(match);
-    if(i % 25 == 0) {
-      print("Processed $i matches");
-    }
-  }
-
-  print("Analyzing results...");
-  // Analyze results
-  analyzeConnectivity(connectivityTracker, competitors, matches);
+enum CompetitorKind {
+  localHigh,
+  localLow,
+  traveler,
+  isolatedHigh,
 }
 
-const int highActivityCount = 2500;
+enum MatchKind {
+  club,
+  isolatedMega,
+  area,
+  national,
+}
 
-(Map<int, Competitor> competitors, Map<int, Match> matches) generateEntities() {
-  var random = Random();
-  Map<int, Competitor> lowActivityCompetitors = {};
-  Map<int, Competitor> highActivityCompetitors = {};
-  Map<int, Match> matches = {};
-
-  int initialLowActivityCount = 2500;
-
-  double lowActivityCompetitorRetirementBaseRate = 0.20;
-  double lowActivityCompetitorRetirementVariance = 0.05;
-
-  double lowActivityCompetitorGrowthBaseRate = 0.24;
-  double lowActivityCompetitorGrowthVariance = 0.03;
-
-  double highActivityCompetitorRetirementBaseRate = 0.03;
-  double highActivityCompetitorRetirementVariance = 0.01;
-
-  double highActivityCompetitorGrowthBaseRate = 0.03;
-  double highActivityCompetitorGrowthVariance = 0.01;
-
-  // Fixed pool of high-activity competitors
-  for(int i = 0; i < highActivityCount; i++) {
-    highActivityCompetitors[i] = Competitor(i);
+void main(List<String> args) {
+  _runMetricSelfTests();
+  if (args.contains("--isolated-sweep")) {
+    runIsolatedPopulationSweep();
+    return;
   }
 
-  // Initial smaller pool of low-activity competitors
-  int nextCompetitorId = highActivityCount;
-  for(int i = nextCompetitorId; i < nextCompetitorId + initialLowActivityCount; i++) {
-    lowActivityCompetitors[i] = Competitor(i);
+  print("Generating clustered match graph (seed $kSeed)...");
+  var world = generateEntities();
+  var competitors = world.competitors;
+  var matches = world.matches;
+
+  print("Processing ${matches.length} matches...");
+  var tracker = ConnectivityTracker();
+  var processed = 0;
+  for (var match in matches.values) {
+    var matchCompetitors = <int, Competitor>{
+      for (var id in match.competitorIds) id: competitors[id]!,
+    };
+    tracker.processMatch(match, matchCompetitors);
+    processed++;
+    if (processed % 100 == 0) {
+      print("  Processed $processed/${matches.length}");
+    }
   }
-  nextCompetitorId += initialLowActivityCount;
 
-  print("Generated ${highActivityCompetitors.length} high activity competitors");
-  print("Generated ${lowActivityCompetitors.length} initial low activity competitors");
+  print("Analyzing...");
+  analyzeConnectivity(tracker, competitors, matches);
+}
 
-  int totalSize = 0;
-  DateTime start = DateTime(2018, 1, 1);
-  int currentYear = 2018;
-  int minimumLowActivityId = highActivityCount;  // Initial minimum ID for selection
-  int minimumHighActivityId = 0;
+void runIsolatedPopulationSweep() {
+  const populationSizes = [280, 500, 1000, 2000, 4000];
+  const fieldSize = 188;
+  const targetMatchesPerCompetitor = 100;
+  const warmupMatchesPerCompetitor = 20;
+  var rows = <List<String>>[];
 
-  int annualLowActivityNewCompetitorCount = 0;
-  int annualLowActivityRetirementCount = 0;
-  int annualHighActivityRetirementCount = 0;
-  int annualHighActivityNewCompetitorCount = 0;
-  for(int i = 0; i < 520; i++) {
-    matches[i] = Match(i, start);
+  print("Running isolated-component population sweep...");
+  print("Field size: $fieldSize");
+  print("Target matches per competitor: $targetMatchesPerCompetitor");
 
-    var activeLowActivityIds = lowActivityCompetitors.keys
-      .where((id) => !lowActivityCompetitors[id]!.retired)
-      .toList();
+  for (var populationSize in populationSizes) {
+    var random = Random(kSeed + populationSize);
+    var competitors = <int, Competitor>{
+      for (var id = 0; id < populationSize; id++)
+        id: Competitor(id, CompetitorKind.isolatedHigh, kIsolatedRegion, 0),
+    };
+    var competitorList = competitors.values.toList();
+    var matchCount = (populationSize * targetMatchesPerCompetitor / fieldSize).ceil();
+    var warmupCount = (populationSize * warmupMatchesPerCompetitor / fieldSize).ceil();
+    var tracker = ConnectivityTracker();
+    var measuredMatches = <Match>[];
+    var date = DateTime(2018, 1, 1);
 
-    var activeHighActivityIds = highActivityCompetitors.keys
-      .where((id) => !highActivityCompetitors[id]!.retired)
-      .toList();
+    for (var matchId = 0; matchId < matchCount; matchId++) {
+      var match = Match(
+        matchId,
+        date,
+        MatchKind.isolatedMega,
+        const [kIsolatedRegion],
+      );
+      var selected = competitorList.sample(fieldSize, random);
+      for (var competitor in selected) {
+        match.competitorIds.add(competitor.shooterId);
+        competitor.matchIds.add(matchId);
+      }
+      tracker.processMatch(
+        match,
+        {for (var competitor in selected) competitor.shooterId: competitor},
+      );
+      if (matchId >= warmupCount) {
+        measuredMatches.add(match);
+      }
+      date = date.add(const Duration(days: 1));
+    }
 
-    // Year boundary check
+    var maxExternal = populationSize - fieldSize;
+    var coverageMean = measuredMatches.map((m) => m.externalCoverage).average;
+    var active = competitorList.where((c) => c.matchCount > 0).toList();
+    var projected200kMs = tracker.mathWatch.elapsedMilliseconds /
+        tracker.scoredEntries *
+        200000;
+    rows.add([
+      "$populationSize",
+      "$matchCount",
+      competitorList.map((c) => c.matchIds.length).average.toStringAsFixed(1),
+      coverageMean.toStringAsFixed(1),
+      (coverageMean / maxExternal).toStringAsFixed(3),
+      measuredMatches.map((m) => m.coverageEfficiency).average.toStringAsFixed(3),
+      measuredMatches.map((m) => m.effectiveCarrierCount).average.toStringAsFixed(1),
+      measuredMatches.map((m) => m.matchScores.credit).average.toStringAsFixed(1),
+      active.map((c) => c.recentCoverageCredit).average.toStringAsFixed(1),
+      active.map((c) => c.uniqueOpponentCount).average.toStringAsFixed(0),
+      active.map((c) => c.effectiveDegree).average.toStringAsFixed(1),
+      projected200kMs.toStringAsFixed(0),
+    ]);
+    print("  Completed population $populationSize "
+        "($matchCount matches, ${tracker.mathWatch.elapsedMilliseconds}ms math)");
+  }
+
+  print("\n========== Equal-Activity Isolated Population Sweep ==========");
+  _printTable(
+    [
+      "population",
+      "matches",
+      "matches/c",
+      "coverage",
+      "coverage/max",
+      "efficiency",
+      "carriers",
+      "match Q",
+      "shooter Q",
+      "U",
+      "D_eff",
+      "200k ms",
+    ],
+    rows,
+  );
+  print("\nEvery population above is completely disconnected. Growth in coverage or credit "
+      "therefore reflects component population size, not attachment to a global component.");
+}
+
+World generateEntities() {
+  var random = Random(kSeed);
+  var competitors = <int, Competitor>{};
+  var matches = <int, Match>{};
+  var nextId = 0;
+
+  Competitor addCompetitor(CompetitorKind kind, int homeRegion) {
+    var homeClub = switch (kind) {
+      CompetitorKind.traveler => -1,
+      CompetitorKind.isolatedHigh => 0,
+      _ => random.nextInt(kClubsPerRegion),
+    };
+    var c = Competitor(nextId, kind, homeRegion, homeClub);
+    competitors[nextId] = c;
+    nextId++;
+    return c;
+  }
+
+  // Region 0 is a deliberately isolated population. Ordinary locals live in
+  // regions 1 through 7 so that the simulation has a clean isolated control.
+  for (var region = 1; region < kRegionCount; region++) {
+    for (var i = 0; i < kLocalHighPerRegion; i++) {
+      addCompetitor(CompetitorKind.localHigh, region);
+    }
+    for (var i = 0; i < kInitialLowPerRegion; i++) {
+      addCompetitor(CompetitorKind.localLow, region);
+    }
+  }
+  for (var i = 0; i < kTravelerCount; i++) {
+    addCompetitor(CompetitorKind.traveler, 1 + random.nextInt(kRegionCount - 1));
+  }
+  for (var i = 0; i < kIsolatedHighCount; i++) {
+    addCompetitor(CompetitorKind.isolatedHigh, kIsolatedRegion);
+  }
+
+  print("  Competitors: ${competitors.length} "
+      "(${kLocalHighPerRegion * (kRegionCount - 1)} local-high, "
+      "$kTravelerCount travelers, "
+      "$kIsolatedHighCount isolated-high, "
+      "${kInitialLowPerRegion * (kRegionCount - 1)} local-low)");
+
+  var start = DateTime(2018, 1, 1);
+  var currentYear = 2018;
+  var totalEntries = 0;
+
+  double lowRetireRate = 0.20;
+  double lowGrowRate = 0.24;
+  double highRetireRate = 0.03;
+  double highGrowRate = 0.03;
+
+  List<Competitor> activeOf(CompetitorKind kind, {int? region}) {
+    return competitors.values.where((c) {
+      if (c.retired || c.kind != kind) {
+        return false;
+      }
+      if (region != null && c.homeRegion != region) {
+        return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  List<Competitor> activeHome(int region) {
+    return competitors.values.where((c) {
+      if (c.retired || c.homeRegion != region) {
+        return false;
+      }
+      return c.kind != CompetitorKind.traveler;
+    }).toList();
+  }
+
+  List<Competitor> activeClub(int region, int club) {
+    return competitors.values.where((c) {
+      return !c.retired &&
+          c.homeRegion == region &&
+          c.homeClub == club &&
+          c.kind != CompetitorKind.traveler;
+    }).toList();
+  }
+
+  for (var matchId = 0; matchId < kMatchCount; matchId++) {
     if (start.year > currentYear) {
-      // Retire some existing low-activity competitors, and create new ones.
-      annualLowActivityRetirementCount = (activeLowActivityIds.length * (random.nextDouble() * lowActivityCompetitorRetirementVariance + lowActivityCompetitorRetirementBaseRate)).round();
-      annualLowActivityNewCompetitorCount = (activeLowActivityIds.length * (random.nextDouble() * lowActivityCompetitorGrowthVariance + lowActivityCompetitorGrowthBaseRate)).round();
-
-      annualHighActivityRetirementCount = (activeHighActivityIds.length * (random.nextDouble() * highActivityCompetitorRetirementVariance + highActivityCompetitorRetirementBaseRate)).round();
-      annualHighActivityNewCompetitorCount = (activeHighActivityIds.length * (random.nextDouble() * highActivityCompetitorGrowthVariance + highActivityCompetitorGrowthBaseRate)).round();
-      print("Year ${start.year}: Retiring $annualLowActivityRetirementCount low-activity competitors, adding $annualLowActivityNewCompetitorCount new competitors over the year");
-      print("Year ${start.year}: Retiring $annualHighActivityRetirementCount high-activity competitors, adding $annualHighActivityNewCompetitorCount new competitors over the year");
       currentYear = start.year;
+      var low = competitors.values.where((c) => !c.retired && c.kind == CompetitorKind.localLow).toList();
+      var high = competitors.values.where((c) => !c.retired && c.kind != CompetitorKind.localLow).toList();
+      var lowRetire = (low.length * (lowRetireRate + random.nextDouble() * 0.05 - 0.025)).round();
+      var highRetire = (high.length * (highRetireRate + random.nextDouble() * 0.01 - 0.005)).round();
+      var lowAdd = (low.length * (lowGrowRate + random.nextDouble() * 0.03 - 0.015)).round();
+      var highAdd = (high.length * (highGrowRate + random.nextDouble() * 0.01 - 0.005)).round();
+      print("  Year $currentYear: retire $lowRetire low / $highRetire high, add $lowAdd low / $highAdd high");
 
-      var lowActivityRetirements = activeLowActivityIds.sample(annualLowActivityRetirementCount, random);
-      for(var id in lowActivityRetirements) {
-        lowActivityCompetitors[id]!.retired = true;
-        activeLowActivityIds.remove(id);
+      for (var c in low.sample(min(lowRetire, low.length), random)) {
+        c.retired = true;
       }
-
-      var highActivityRetirements = activeHighActivityIds.sample(annualHighActivityRetirementCount, random);
-      for(var id in highActivityRetirements) {
-        highActivityCompetitors[id]!.retired = true;
-        activeHighActivityIds.remove(id);
+      for (var c in high.sample(min(highRetire, high.length), random)) {
+        c.retired = true;
+      }
+      for (var i = 0; i < lowAdd; i++) {
+        addCompetitor(CompetitorKind.localLow, 1 + random.nextInt(kRegionCount - 1));
+      }
+      for (var i = 0; i < highAdd; i++) {
+        var roll = random.nextDouble();
+        if (roll < 0.12) {
+          addCompetitor(CompetitorKind.traveler, 1 + random.nextInt(kRegionCount - 1));
+        }
+        else if (roll < 0.22) {
+          addCompetitor(CompetitorKind.isolatedHigh, kIsolatedRegion);
+        }
+        else {
+          addCompetitor(CompetitorKind.localHigh, 1 + random.nextInt(kRegionCount - 1));
+        }
       }
     }
 
-    // Log-normal distribution for match size
-    var mu = log(150);
-    var sigma = 0.5;
-    var u1 = random.nextDouble();
-    var u2 = random.nextDouble();
-    var z = sqrt(-2 * log(u1)) * cos(2 * pi * u2);
-    var size = exp(mu + sigma * z).round().clamp(50, 500);
-    totalSize += size;
-
-    // High activity competitors (40-60% of match)
-    var highActivitySize = 0.4 + 0.2 * random.nextDouble();
-    var lowActivitySize = 1 - highActivitySize;
-    var lowActivityCount = (size * lowActivitySize).round();
-    var highActivityCount = size - lowActivityCount;
-
-    List<Competitor> newLowActivityCompetitors = [];
-    List<Competitor> newHighActivityCompetitors = [];
-
-    // Add new competitors from the new pool
-    var newLowActivityCompetitorCount = (annualLowActivityNewCompetitorCount / 52).round();
-    for(int j = 0; j < newLowActivityCompetitorCount; j++) {
-      var c = Competitor(nextCompetitorId);
-      lowActivityCompetitors[nextCompetitorId] = c;
-      newLowActivityCompetitors.add(c);
-      nextCompetitorId++;
+    var roll = random.nextDouble();
+    MatchKind kind;
+    var regions = <int>[];
+    int size;
+    if (roll < 0.10) {
+      kind = MatchKind.isolatedMega;
+      regions = [kIsolatedRegion];
+      size = _logNormalSize(random, median: 180, sigma: 0.25, min: 120, max: 280);
+    }
+    else if (roll < 0.18) {
+      kind = MatchKind.national;
+      regions = [for (var r = 0; r < kRegionCount; r++) r];
+      size = _logNormalSize(random, median: 220, sigma: 0.25, min: 140, max: 400);
+    }
+    else if (roll < 0.38) {
+      kind = MatchKind.area;
+      var startRegion = 1 + random.nextInt(kRegionCount - 1);
+      regions = [
+        startRegion,
+        1 + (startRegion % (kRegionCount - 1)),
+        1 + ((startRegion + 1) % (kRegionCount - 1)),
+      ];
+      size = _logNormalSize(random, median: 120, sigma: 0.3, min: 70, max: 200);
+    }
+    else {
+      kind = MatchKind.club;
+      var region = 1 + random.nextInt(kRegionCount - 1);
+      regions = [region];
+      size = _logNormalSize(random, median: 50, sigma: 0.35, min: 25, max: 90);
     }
 
-    // Add new competitors from the high activity pool
-    var newHighActivityCompetitorCount = (annualHighActivityNewCompetitorCount / 52).round();
-    for(int j = 0; j < newHighActivityCompetitorCount; j++) {
-      var c = Competitor(nextCompetitorId);
-      highActivityCompetitors[nextCompetitorId] = c;
-      newHighActivityCompetitors.add(c);
-      nextCompetitorId++;
+    var match = Match(matchId, start, kind, regions);
+    var selected = <int>{};
+
+    void take(List<Competitor> pool, int n) {
+      var remainingSlots = size - selected.length;
+      if (n <= 0 || remainingSlots <= 0) {
+        return;
+      }
+      var available = pool.where((c) => !selected.contains(c.shooterId)).toList();
+      var takeN = min(min(n, remainingSlots), available.length);
+      if (takeN <= 0) {
+        return;
+      }
+      for (var c in available.sample(takeN, random)) {
+        selected.add(c.shooterId);
+        match.competitorIds.add(c.shooterId);
+        c.matchIds.add(matchId);
+      }
     }
 
-    // Select competitors for this match
-    var activeLowActivityCompetitors = lowActivityCompetitors.values
-        .where((e) => !e.retired)
-        .toList();
-
-    var activeHighActivityCompetitors = highActivityCompetitors.values
-        .where((e) => !e.retired)
-        .toList();
-
-    var highActivitySampleSize = highActivityCount - newHighActivityCompetitors.length;
-    var lowActivitySampleSize = lowActivityCount - newLowActivityCompetitors.length;
-    List<Competitor> lowActivitySample = [];
-    if(lowActivitySampleSize > 0) {
-      lowActivitySample = activeLowActivityCompetitors.sample(lowActivitySampleSize, random);
+    var travelers = activeOf(CompetitorKind.traveler);
+    if (kind == MatchKind.club) {
+      var region = regions.first;
+      var club = random.nextInt(kClubsPerRegion);
+      take(travelers, max(1, (size * 0.06).round()));
+      var clubPool = activeClub(region, club);
+      take(
+        clubPool.where((c) => c.kind == CompetitorKind.localHigh).toList(),
+        (size * 0.30).round(),
+      );
+      take(
+        clubPool.where((c) => c.kind == CompetitorKind.localLow).toList(),
+        size - selected.length,
+      );
+      take(clubPool, size - selected.length);
+      take(activeHome(region), size - selected.length);
+    }
+    else if (kind == MatchKind.isolatedMega) {
+      // No travelers or national competitors: this is the intentionally
+      // isolated high-volume control population.
+      take(activeOf(CompetitorKind.isolatedHigh), size);
+    }
+    else if (kind == MatchKind.area) {
+      take(travelers, (size * 0.20).round());
+      var remaining = size - selected.length;
+      var perRegion = (remaining / regions.length).ceil();
+      for (var region in regions) {
+        take(activeOf(CompetitorKind.localHigh, region: region), (perRegion * 0.65).round());
+        take(activeOf(CompetitorKind.localLow, region: region), perRegion);
+      }
+      if (selected.length < size) {
+        take(travelers, size - selected.length);
+      }
+    }
+    else {
+      take(travelers, (size * 0.70).round());
+      take(activeOf(CompetitorKind.localHigh), (size * 0.15).round());
+      take(activeOf(CompetitorKind.localLow), (size * 0.15).round());
+      if (selected.length < size) {
+        take(travelers, size - selected.length);
+      }
+      if (selected.length < size) {
+        take(activeOf(CompetitorKind.localHigh), size - selected.length);
+      }
     }
 
-    List<Competitor> highActivitySample = [];
-    if(highActivitySampleSize > 0) {
-      highActivitySample = activeHighActivityCompetitors.sample(highActivitySampleSize, random);
+    if (match.competitorIds.length >= 8) {
+      matches[matchId] = match;
+      totalEntries += match.competitorIds.length;
     }
 
-    var c = highActivitySample
-      ..addAll(newHighActivityCompetitors)
-      ..addAll(lowActivitySample)
-      ..addAll(newLowActivityCompetitors);
-
-    for(var competitor in c) {
-      competitor.matchIds.add(i);
-      matches[i]!.competitorIds.add(competitor.shooterId);
-    }
-
-    start = start.add(Duration(days: 7));
+    start = start.add(const Duration(hours: 18));
   }
 
-  var competitors = {...lowActivityCompetitors, ...highActivityCompetitors};
-  print("\nFinal Statistics:");
-  print("Total matches: ${matches.length}");
-  print("Total competitors ever: ${competitors.length}");
-  print("Active low-activity competitors: ${lowActivityCompetitors.values.where((c) => !c.retired).length}");
-  print("Active high-activity competitors: ${highActivityCompetitors.values.where((c) => !c.retired).length}");
-  print("Total entries: $totalSize");
+  print("  Matches kept: ${matches.length}");
+  print("  Total entries: $totalEntries");
+  print("  Final competitors: ${competitors.length} "
+      "(${competitors.values.where((c) => !c.retired).length} active)");
+  return World(competitors: competitors, matches: matches, totalEntries: totalEntries);
+}
 
-  return (competitors, matches);
+class World {
+  final Map<int, Competitor> competitors;
+  final Map<int, Match> matches;
+  final int totalEntries;
+
+  World({
+    required this.competitors,
+    required this.matches,
+    required this.totalEntries,
+  });
 }
 
 class MatchWindow {
@@ -211,226 +418,328 @@ class MatchWindow {
   final DateTime date;
   final Set<int> uniqueOpponents;
   final int totalOpponents;
+  final int fieldSize;
+  final Set<int> regions;
+  final MatchKind kind;
+  final int externalCoverage;
+  final double coverageCredit;
+  final double coverageShare;
 
   MatchWindow({
     required this.matchId,
     required this.date,
     required this.uniqueOpponents,
     required this.totalOpponents,
+    required this.fieldSize,
+    required this.regions,
+    required this.kind,
+    required this.externalCoverage,
+    required this.coverageCredit,
+    required this.coverageShare,
   });
+}
+
+class ScoreSet {
+  double sqrt = 0;
+  double carriers = 0;
+  double effective = 0;
+  double credit = 0;
+
+  double operator [](String name) {
+    return switch (name) {
+      "sqrt" => sqrt,
+      "carriers" => carriers,
+      "effective" => effective,
+      "credit" => credit,
+      _ => throw ArgumentError.value(name),
+    };
+  }
+}
+
+const methodNames = ["sqrt", "carriers", "effective", "credit"];
+
+class CoverageCreditResult {
+  final int externalCoverage;
+  final int externalEdgeMass;
+  final double coverageEfficiency;
+  final double effectiveCarrierCount;
+  final Map<int, double> credits;
+
+  const CoverageCreditResult({
+    required this.externalCoverage,
+    required this.externalEdgeMass,
+    required this.coverageEfficiency,
+    required this.effectiveCarrierCount,
+    required this.credits,
+  });
+}
+
+CoverageCreditResult calculateCoverageCredit({
+  required Set<int> field,
+  required Map<int, Set<int>> neighborhoods,
+}) {
+  var externalByShooter = <int, Set<int>>{};
+  var externalMultiplicity = <int, int>{};
+  for (var entry in neighborhoods.entries) {
+    var external = entry.value.difference(field);
+    externalByShooter[entry.key] = external;
+    for (var id in external) {
+      externalMultiplicity[id] = (externalMultiplicity[id] ?? 0) + 1;
+    }
+  }
+
+  var externalCoverage = externalMultiplicity.length;
+  var externalEdgeMass = externalByShooter.values.map((ids) => ids.length).sum;
+  var credits = <int, double>{};
+  for (var entry in externalByShooter.entries) {
+    var credit = 0.0;
+    for (var id in entry.value) {
+      credit += 1.0 / externalMultiplicity[id]!;
+    }
+    credits[entry.key] = credit;
+  }
+
+  var creditSum = credits.values.sum;
+  var creditSumSquared = credits.values.map((credit) => credit * credit).sum;
+  return CoverageCreditResult(
+    externalCoverage: externalCoverage,
+    externalEdgeMass: externalEdgeMass,
+    coverageEfficiency: externalEdgeMass == 0 ? 0 : externalCoverage / externalEdgeMass,
+    effectiveCarrierCount: creditSumSquared == 0
+        ? 0
+        : creditSum * creditSum / creditSumSquared,
+    credits: credits,
+  );
 }
 
 class Competitor {
-  Competitor(this.shooterId);
+  Competitor(this.shooterId, this.kind, this.homeRegion, this.homeClub);
 
   final int shooterId;
+  final CompetitorKind kind;
+  final int homeRegion;
+  final int homeClub;
   final List<int> matchIds = [];
-  static const int windowSize = 5;  // Keep last 5 matches
-  static const double lowConnectivityLinkWeight = 0.5;
-  static const double lowConnectivityLinkScore = 0;
-  static const double mediumConnectivityLinkWeight = 1.0;
-  static const double mediumConnectivityLinkScore = 40;
-  static const double highConnectivityLinkWeight = 2.0;
-  static const double highConnectivityLinkScore = 100;
-
-  // Store windows in chronological order
-  List<MatchWindow> get windows => allWindows.getTailWindow(windowSize);
-  List<MatchWindow> allWindows = [];
-  double connectivityScore = 0.0;
-  double rawConnectivityScore = 0.0;
-
+  final List<MatchWindow> allWindows = [];
+  final ScoreSet scores = ScoreSet();
   bool retired = false;
 
-  void addMatch(int matchId, DateTime date, Iterable<int> opponents) {
-    // Create new window for this match
-    var newOpponents = opponents.where((id) => id != shooterId && windows.map((w) => w.uniqueOpponents).none((o) => o.contains(id))).toSet();
-    var window = MatchWindow(
+  List<MatchWindow> get windows => allWindows.getTailWindow(kWindowSize);
+
+  void addMatch({
+    required int matchId,
+    required DateTime date,
+    required Iterable<int> opponents,
+    required Set<int> regions,
+    required MatchKind kind,
+    required int externalCoverage,
+    required double coverageCredit,
+    required double coverageShare,
+  }) {
+    var ids = opponents.where((id) => id != shooterId).toSet();
+    allWindows.add(MatchWindow(
       matchId: matchId,
       date: date,
-      uniqueOpponents: newOpponents,
-      totalOpponents: opponents.length - 1, // exclude self
-    );
-
-    // Add window; size is now managed through the windows getter.
-    allWindows.add(window);
+      uniqueOpponents: ids,
+      totalOpponents: ids.length,
+      fieldSize: opponents.length,
+      regions: {...regions},
+      kind: kind,
+      externalCoverage: externalCoverage,
+      coverageCredit: coverageCredit,
+      coverageShare: coverageShare,
+    ));
   }
 
-  // Calculated properties
   int get matchCount => windows.length;
-  Set<int> get uniqueOpponents => windows
-    .expand((w) => w.uniqueOpponents)
-    .toSet();
+
+  Set<int> get uniqueOpponents => windows.expand((w) => w.uniqueOpponents).toSet();
+
   int get uniqueOpponentCount => uniqueOpponents.length;
-  double uniqueOpponentsScore(Map<int, Competitor> allCompetitors) {
-    double score = 0;
-    for(var connectionId in uniqueOpponents) {
-      var connectionConnectivity = allCompetitors[connectionId]!.connectivityScore;
-      if(connectionConnectivity < mediumConnectivityLinkScore) {
-        // lerp from lowConnectivityLinkWeight to mediumConnectivityLinkWeight based on
-        // lowConnectivityLinkScore to mediumConnectivityLinkScore
-        var lerp = (connectionConnectivity - lowConnectivityLinkScore) / (mediumConnectivityLinkScore - lowConnectivityLinkScore);
-        var linkWeight = lerp * (mediumConnectivityLinkWeight - lowConnectivityLinkWeight) + lowConnectivityLinkWeight;
-        score += linkWeight;
-      }
-      else if(connectionConnectivity > mediumConnectivityLinkScore) {
-        // lerp from mediumConnectivityLinkWeight to highConnectivityLinkWeight based on
-        // mediumConnectivityLinkScore to highConnectivityLinkScore
-        var lerp = (connectionConnectivity - mediumConnectivityLinkScore) / (highConnectivityLinkScore - mediumConnectivityLinkScore);
-        var linkWeight = lerp * (highConnectivityLinkWeight - mediumConnectivityLinkWeight) + mediumConnectivityLinkWeight;
-        score += linkWeight;
-      }
-      else {
-        score += mediumConnectivityLinkWeight;
+
+  int get totalOpponentCount => windows.map((w) => w.totalOpponents).sum;
+
+  int get regionDiversity => windows.expand((w) => w.regions).toSet().length;
+
+  double get effectiveDegree {
+    var counts = <int, double>{};
+    for (var window in windows) {
+      for (var id in window.uniqueOpponents) {
+        counts[id] = (counts[id] ?? 0) + 1;
       }
     }
-    return score;
+    return _effectiveDegreeFromCounts(counts.values);
   }
-  int get totalOpponentCount => windows
-    .map((w) => w.totalOpponents)
-    .sum;
-  double get averageMatchSize =>
-    windows.isEmpty ? 0 : totalOpponentCount / matchCount;
+
+  double get recentCoverageCredit => _recencyWeightedMean(
+    windows.map((w) => w.coverageCredit).toList(),
+  );
+
+  double get recentCoverageShare => _recencyWeightedMean(
+    windows.map((w) => w.coverageShare).toList(),
+  );
+
+  double get meanFieldSize {
+    if (windows.isEmpty) {
+      return 0;
+    }
+    return windows.map((w) => w.fieldSize).average;
+  }
+
+  int get lastExternalCoverage => windows.isEmpty ? 0 : windows.last.externalCoverage;
 }
 
-
 class Match {
-  Match(this.matchId, this.start);
+  Match(this.matchId, this.start, this.kind, this.regions);
 
   final int matchId;
   final DateTime start;
+  final MatchKind kind;
+  final List<int> regions;
+  final List<int> competitorIds = [];
 
-  double averageConnectivityScore = 0;
-  double medianConnectivityScore = 0;
-  double competitorGlobalAverageConnectivityScore = 0;
-  double competitorGlobalMedianConnectivityScore = 0;
-  double matchGlobalAverageConnectivityScore = 0;
-  double matchGlobalMedianConnectivityScore = 0;
-
-  double maxConnectivityScore = 0;
-  double weightedMatchConnectivity = 0;
-  double competitorGlobal75thPercentileScore = 0;
-  double weightedGlobalConnectivity = 0;
-
-  List<int> competitorIds = [];
+  int externalCoverage = 0;
+  int externalEdgeMass = 0;
+  double coverageEfficiency = 0;
+  double effectiveCarrierCount = 0;
+  int creditedCarrierCount = 0;
+  final ScoreSet matchScores = ScoreSet();
 }
 
 class ConnectivityTracker {
-  void processMatch(Match match, List<Match> matchWindow, Map<int, Competitor> matchCompetitors, Map<int, Competitor> allCompetitors) {
-    var shooters = match.competitorIds;
+  final Stopwatch mathWatch = Stopwatch();
+  int scoredEntries = 0;
 
-    // Update each competitor's windows
-    for (var shooterId in shooters) {
-      matchCompetitors[shooterId]!.addMatch(
-        match.matchId,
-        match.start,
-        shooters,
+  void processMatch(
+    Match match,
+    Map<int, Competitor> matchCompetitors,
+  ) {
+    var field = match.competitorIds.toSet();
+    var fieldSize = field.length;
+    if (fieldSize < 2) {
+      return;
+    }
+
+    mathWatch.start();
+
+    // Match connectivity is causal: snapshot and aggregate participant scores
+    // before adding the current match to anyone's windows.
+    _fillMatchScores(match, matchCompetitors.values.map((c) => c.scores).toList());
+
+    var coverage = calculateCoverageCredit(
+      field: field,
+      neighborhoods: {
+        for (var competitor in matchCompetitors.values)
+          competitor.shooterId: competitor.uniqueOpponents,
+      },
+    );
+    match.externalCoverage = coverage.externalCoverage;
+    match.externalEdgeMass = coverage.externalEdgeMass;
+    match.coverageEfficiency = coverage.coverageEfficiency;
+    match.effectiveCarrierCount = coverage.effectiveCarrierCount;
+    match.creditedCarrierCount = coverage.credits.values.where((credit) => credit > 0).length;
+
+    for (var competitor in matchCompetitors.values) {
+      var credit = coverage.credits[competitor.shooterId]!;
+      competitor.addMatch(
+        matchId: match.matchId,
+        date: match.start,
+        opponents: match.competitorIds,
+        regions: match.regions.toSet(),
+        kind: match.kind,
+        externalCoverage: match.externalCoverage,
+        coverageCredit: credit,
+        coverageShare: match.externalCoverage == 0 ? 0 : credit / match.externalCoverage,
       );
     }
 
-    match.averageConnectivityScore = matchCompetitors.values.map((c) => c.connectivityScore).average;
-    match.medianConnectivityScore = (matchCompetitors.values.map((c) => c.connectivityScore).toList()..sort()).elementAt(matchCompetitors.values.length ~/ 2);
+    for (var competitor in matchCompetitors.values) {
+      var unique = competitor.uniqueOpponentCount;
+      var total = competitor.totalOpponentCount;
+      var ownSqrt = unique == 0 || total == 0 ? 0.0 : sqrt(unique * total);
+      var carriers = _carriersScore(competitor);
+      var effective = competitor.effectiveDegree;
+      var effectiveScore = effective == 0 || total == 0
+          ? 0.0
+          : sqrt(effective * total);
 
-    List<double> scores = [];
-    double maxRawConnectivity = 0.0;
-    for(var competitor in allCompetitors.values) {
-      if(competitor.windows.isNotEmpty && competitor.windows.last.date.isAfter(match.start.subtract(Duration(days: 730)))) {
-        scores.add(competitor.connectivityScore);
-        if(competitor.rawConnectivityScore > maxRawConnectivity) {
-          maxRawConnectivity = competitor.rawConnectivityScore;
-        }
-      }
+      competitor.scores.sqrt = ownSqrt;
+      competitor.scores.carriers = carriers;
+      competitor.scores.effective = effectiveScore;
+      competitor.scores.credit = competitor.recentCoverageCredit;
+      scoredEntries++;
     }
 
-    match.competitorGlobalAverageConnectivityScore = scores.average;
-    match.competitorGlobalMedianConnectivityScore = (scores..sort()).elementAt(scores.length ~/ 2);
-
-    var matchWindowAverages = matchWindow.map((m) => m.averageConnectivityScore).toList();
-    var matchWindowMedians = matchWindow.map((m) => m.medianConnectivityScore).toList();
-    // default to 1 instead of 0 for 'identity' instead of 'crash'
-    match.matchGlobalAverageConnectivityScore = matchWindow.isNotEmpty ? matchWindowAverages.average : 1;
-    match.matchGlobalMedianConnectivityScore = matchWindow.isNotEmpty ? (matchWindowMedians..sort()).elementAt(matchWindowMedians.length ~/ 2) : 1;
-
-    // Recalculate scores for all participants
-    _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxRawConnectivity);
-
-    // Calculate match statistics
-    var competitorScores = matchCompetitors.values.map((c) => c.connectivityScore).toList()..sort();
-    match.medianConnectivityScore = competitorScores[competitorScores.length ~/ 2];
-    match.maxConnectivityScore = competitorScores.last;
-
-    // Weighted average of median and max (e.g., 0.7 * median + 0.3 * max)
-    match.weightedMatchConnectivity = (match.medianConnectivityScore * 0.7) +
-                                    (match.maxConnectivityScore * 0.3);
-
-    // Calculate global statistics from active competitors
-    List<double> globalScores = [];
-    for(var competitor in allCompetitors.values) {
-      if(competitor.windows.isNotEmpty &&
-         competitor.windows.last.date.isAfter(match.start.subtract(Duration(days: 730)))) {
-        globalScores.add(competitor.connectivityScore);
-      }
-    }
-    globalScores.sort();
-
-    // Calculate median and 75th percentile
-    match.competitorGlobalMedianConnectivityScore = globalScores[globalScores.length ~/ 2];
-    match.competitorGlobal75thPercentileScore = globalScores[(globalScores.length * 3) ~/ 4];
-
-    // Weighted average of median and 75th percentile (e.g., 0.6 * median + 0.4 * 75th)
-    match.weightedGlobalConnectivity = (match.competitorGlobalMedianConnectivityScore * 0.6) +
-                                     (match.competitorGlobal75thPercentileScore * 0.4);
+    mathWatch.stop();
   }
 
-  void _updateScores(Iterable<Competitor> activeCompetitors, Map<int, Competitor> allCompetitors, double maxExistingConnectivity) {
-    if (activeCompetitors.isEmpty) return;
-
-    double maxScore = maxExistingConnectivity;
-    // Calculate raw scores using the (unique * total) / (unique + total) formula
-    for (var competitor in activeCompetitors) {
-      var uniqueScore = competitor.uniqueOpponentsScore(allCompetitors);
-      var totalScore = competitor.totalOpponentCount;
-
-      if (uniqueScore == 0 || totalScore == 0) {
-        competitor.rawConnectivityScore = 0.0;
-        competitor.connectivityScore = 0.0;
-        continue;
-      }
-
-      competitor.rawConnectivityScore = (uniqueScore * totalScore) / (uniqueScore + totalScore);
-      if(competitor.rawConnectivityScore > maxScore) {
-        maxScore = competitor.rawConnectivityScore;
-      }
-
-      competitor.connectivityScore = sqrt(competitor.rawConnectivityScore + 1) * 24.5;
+  void _fillMatchScores(Match match, List<ScoreSet> participantScores) {
+    if (participantScores.isEmpty) {
+      return;
     }
-
-    // if (maxScore > 0) {
-    //   for (var competitor in activeCompetitors) {
-    //     competitor.connectivityScore = (competitor.rawConnectivityScore / maxScore) * 100;
-    //   }
-    // }
-  }
-
-  // Helper method for analysis
-  List<Competitor> getTopCompetitors(Map<int, Competitor> competitors, int count) {
-    return competitors.values
-      .where((c) => c.matchCount > 0)
-      .sorted((a, b) => b.connectivityScore.compareTo(a.connectivityScore))
-      .take(count)
-      .toList();
+    for (var name in methodNames) {
+      var values = participantScores.map((s) => s[name]).toList()..sort();
+      // Mirror the production aggregators where they exist. Effective degree
+      // and credit use the sqrt calculator's robust match aggregator.
+      var matchScore = name == "carriers"
+          ? values.average
+          : _medianSorted(values) * 0.7 + values.last * 0.3;
+      switch (name) {
+        case "sqrt":
+          match.matchScores.sqrt = matchScore;
+        case "carriers":
+          match.matchScores.carriers = matchScore;
+        case "effective":
+          match.matchScores.effective = matchScore;
+        case "credit":
+          match.matchScores.credit = matchScore;
+      }
+    }
   }
 }
 
-class Connection {
-  final int opponentId;
-  DateTime lastSeen;
-  int matchCount;
+double _carriersScore(Competitor competitor) {
+  var recent = competitor.windows.map((w) => w.fieldSize).toList();
+  if (recent.isEmpty) {
+    return 0.0;
+  }
 
-  Connection({
-    required this.opponentId,
-    required this.lastSeen,
-    required this.matchCount,
-  });
+  var weightedSum = 0.0;
+  var totalWeight = 0.0;
+  for (var i = 0; i < recent.length; i++) {
+    var weight = 1.0 + (i * 0.2);
+    weightedSum += recent[i] * weight;
+    totalWeight += weight;
+  }
+  var fieldQuality = sqrt(weightedSum / totalWeight) * 25;
+
+  if (recent.length <= 1) {
+    return fieldQuality;
+  }
+
+  var mean = recent.average;
+  var sumSquared = recent.map((s) => s * s).sum.toDouble();
+  var variance = (sumSquared / recent.length) - (mean * mean);
+  if (variance < 0) {
+    variance = 0;
+  }
+  var range = (recent.max - recent.min).toDouble();
+  var diversity = (1.0 + log(sqrt(variance) + 1) * 0.05) * (1.0 + log(range + 1) * 0.03);
+
+  var skewSource = competitor.allWindows.map((w) => w.fieldSize).toList();
+  if (skewSource.length > 12) {
+    skewSource = skewSource.sublist(skewSource.length - 12);
+  }
+  var skewness = _skewness(skewSource);
+  double bridge;
+  if (skewness > 0) {
+    bridge = 1.0 + (skewness * 0.1).clamp(0.0, 0.2);
+  }
+  else {
+    bridge = 1.0 + (skewness * 0.05).clamp(-0.1, 0.0);
+  }
+
+  return fieldQuality * diversity * bridge;
 }
 
 void analyzeConnectivity(
@@ -438,823 +747,532 @@ void analyzeConnectivity(
   Map<int, Competitor> competitors,
   Map<int, Match> matches,
 ) {
-  var activeCompetitors = competitors.values
-    .where((c) => c.matchCount > 0)
-    .sorted((a, b) => b.connectivityScore.compareTo(a.connectivityScore))
-    .toList();
+  var active = competitors.values.where((c) => !c.retired && c.matchCount > 0).toList();
+  var stale = competitors.values.where((c) => c.retired && c.matchCount > 0).toList();
+  var matchList = matches.values.toList();
+  var mathMs = tracker.mathWatch.elapsedMilliseconds;
+  var entries = tracker.scoredEntries;
 
-  var allScores = activeCompetitors.map((c) => c.connectivityScore).toList();
-  var allRawScores = activeCompetitors.map((c) => c.rawConnectivityScore).toList();
+  print("\n========== Timing ==========");
+  print("Scored entries: $entries");
+  print("Math time: ${mathMs}ms (${entries == 0 ? 0 : mathMs / entries * 1000} µs/entry)");
+  print("Extrapolated 200k entries: ${entries == 0 ? 0 : (mathMs / entries * 200000).toStringAsFixed(0)}ms");
 
-  // Match Size Distribution Analysis
-  // print("\nMatch Size Distribution:");
-  // var matchSizes = matches.values
-  //   .map((m) => m.competitorIds.length.toDouble())
-  //   .toList();
-
-  // print("Mean Size: ${matchSizes.average.toStringAsFixed(1)}");
-  // print("Median Size: ${_calculateMedian(matchSizes).toStringAsFixed(1)}");
-  // print("Std Dev: ${_calculateStdDev(matchSizes).toStringAsFixed(1)}");
-
-  // var sizeQuartiles = _calculateQuartiles(matchSizes);
-  // print("\nMatch Size Quartiles:");
-  // print("Q1 (25th): ${sizeQuartiles.q1.toStringAsFixed(1)}");
-  // print("Q2 (50th): ${sizeQuartiles.q2.toStringAsFixed(1)}");
-  // print("Q3 (75th): ${sizeQuartiles.q3.toStringAsFixed(1)}");
-  // print("IQR: ${(sizeQuartiles.q3 - sizeQuartiles.q1).toStringAsFixed(1)}");
-
-  // print("\nMatch Size Percentiles:");
-  // print("10th: ${_calculatePercentile(matchSizes, 0.1).toStringAsFixed(1)}");
-  // print("90th: ${_calculatePercentile(matchSizes, 0.9).toStringAsFixed(1)}");
-  // print("95th: ${_calculatePercentile(matchSizes, 0.95).toStringAsFixed(1)}");
-  // print("99th: ${_calculatePercentile(matchSizes, 0.99).toStringAsFixed(1)}");
-
-  // print("\nMatch Size Range:");
-  // print("Smallest: ${matchSizes.min.toStringAsFixed(1)}");
-  // print("Largest: ${matchSizes.max.toStringAsFixed(1)}");
-
-  // print("\nMatch Size Distribution:");
-  // print(_createHistogram(matchSizes, buckets: 20, width: 60));
-
-  // print("\nDetailed Analysis of Outliers:");
-  // print("\nTop 5 Most Connected:");
-  // for (var competitor in activeCompetitors.take(5)) {
-  //   _printCompetitorDetail(competitor, matches);
-  // }
-
-  // print("\nBottom 5 Connected (excluding inactive):");
-  // for (var competitor in activeCompetitors.reversed.take(5)) {
-  //   _printCompetitorDetail(competitor, matches);
-  // }
-
-  // Basic statistics
-  print("\nConnectivity Analysis:");
-  print("Active Competitors: ${activeCompetitors.length}");
-  print("\nScore Distribution:");
-  print("Mean: ${allScores.average.toStringAsFixed(1)}");
-  print("Median: ${_calculateMedian(allScores).toStringAsFixed(1)}");
-  print("Std Dev: ${_calculateStdDev(allScores).toStringAsFixed(1)}");
-
-  print("\nRaw Score Distribution:");
-  print("Mean: ${allRawScores.average.toStringAsFixed(1)}");
-  print("Median: ${_calculateMedian(allRawScores).toStringAsFixed(1)}");
-  print("Std Dev: ${_calculateStdDev(allRawScores).toStringAsFixed(1)}");
-
-  // Quartiles and IQR
-  var quartiles = _calculateQuartiles(allScores);
-  print("\nQuartiles:");
-  print("Q1 (25th): ${quartiles.q1.toStringAsFixed(1)}");
-  print("Q2 (50th): ${quartiles.q2.toStringAsFixed(1)}");
-  print("Q3 (75th): ${quartiles.q3.toStringAsFixed(1)}");
-  print("IQR: ${(quartiles.q3 - quartiles.q1).toStringAsFixed(1)}");
-
-  // Percentiles
-  print("\nPercentiles:");
-  print("10th: ${_calculatePercentile(allScores, 0.1).toStringAsFixed(1)}");
-  print("90th: ${_calculatePercentile(allScores, 0.9).toStringAsFixed(1)}");
-  print("95th: ${_calculatePercentile(allScores, 0.95).toStringAsFixed(1)}");
-  print("99th: ${_calculatePercentile(allScores, 0.99).toStringAsFixed(1)}");
-
-  // Range
-  print("\nRange:");
-  print("Min: ${allScores.min.toStringAsFixed(1)}");
-  print("Max: ${allScores.max.toStringAsFixed(1)}");
-  print("Range: ${(allScores.max - allScores.min).toStringAsFixed(1)}");
-
-  // Histogram
-  print("\nConnectivity Score Distribution:");
-  print(_createHistogram(allScores, buckets: 20, width: 60));
-
-  print("\nCompetitor Activity Distribution (matches per competitor):");
-  print(_createHistogram(
-    competitors.values.map((c) => c.matchIds.length.toDouble()).toList(),
-    buckets: 20,
-    width: 60
-  ));
-
-  print("\nMatch vs Global Connectivity Analysis:");
-  var matchDiffs = matches.values.map((m) => {
-    "avgConnectivity": m.averageConnectivityScore,
-    "medianConnectivity": m.medianConnectivityScore,
-    "avgDiff": m.averageConnectivityScore - m.competitorGlobalAverageConnectivityScore,
-    "medianDiff": m.medianConnectivityScore - m.competitorGlobalMedianConnectivityScore,
-    "avgDiffMatch": m.averageConnectivityScore - m.matchGlobalAverageConnectivityScore,
-    "medianDiffMatch": m.medianConnectivityScore - m.matchGlobalMedianConnectivityScore,
-    "date": m.start,
-    "size": m.competitorIds.length,
-  }).toList();
-
-
-  print("\nMatch Average Connectivity Distribution:");
-  print(_createHistogram(
-    matchDiffs.map((d) => d["avgConnectivity"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-
-  print("\nMatch Median Connectivity Distribution:");
-  print(_createHistogram(
-    matchDiffs.map((d) => d["medianConnectivity"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-
-  print("\nConnectivity Differences (Match - CompetitorGlobal):");
-  print("Average Difference: ${matchDiffs.map((d) => d["avgDiff"]).cast<double>().average.toStringAsFixed(1)}");
-  print("Median Difference: ${matchDiffs.map((d) => d["medianDiff"]).cast<double>().average.toStringAsFixed(1)}");
-
-  var avgDiffs = matchDiffs.map((d) => d["avgDiff"] as double).toList();
-  var medianDiffs = matchDiffs.map((d) => d["medianDiff"] as double).toList();
-
-  print("\nAverage Difference Distribution:");
-  print("Std Dev: ${_calculateStdDev(avgDiffs).toStringAsFixed(1)}");
-  var diffQuartiles = _calculateQuartiles(avgDiffs);
-  print("Q1: ${diffQuartiles.q1.toStringAsFixed(1)}");
-  print("Q3: ${diffQuartiles.q3.toStringAsFixed(1)}");
-
-  print("\nMatch Average Connectivity Score Distribution:");
-  print(_createHistogram(avgDiffs, buckets: 40, width: 60, entityName: "matches"));
-
-  print("\nMedian Difference Distribution:");
-  print("Std Dev: ${_calculateStdDev(medianDiffs).toStringAsFixed(1)}");
-  var medianQuartiles = _calculateQuartiles(medianDiffs);
-  print("Q1: ${medianQuartiles.q1.toStringAsFixed(1)}");
-  print("Q3: ${medianQuartiles.q3.toStringAsFixed(1)}");
-
-  print("\nMatch Median Connectivity Score Distribution:");
-  print(_createHistogram(medianDiffs, buckets: 40, width: 60, entityName: "matches"));
-
-  // Correlation with match size
-  var correlation = _calculateCorrelation(
-    matchDiffs.map((d) => d["size"] as int).toList(),
-    avgDiffs
-  );
-  print("\nCorrelation with Match Size: ");
-  print("    Averages: ${correlation.toStringAsFixed(3)}");
-  print("    Medians: ${_calculateCorrelation(
-    matchDiffs.map((d) => d["size"] as int).toList(),
-    medianDiffs
-  ).toStringAsFixed(3)}");
-
-  print("\nConnectivity Differences (Match vs MatchGlobal):");
-
-  print("\nMatchGlobal Median Connectivity Score Distribution:");
-  print(_createHistogram(
-    matchDiffs.map((d) => d["medianDiffMatch"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-  print("Median Difference: ${matchDiffs.map((d) => d["medianDiffMatch"]).cast<double>().average.toStringAsFixed(1)}");
-  print("Median Difference Std Dev: ${_calculateStdDev(matchDiffs.map((d) => d["medianDiffMatch"] as double).toList()).toStringAsFixed(1)}");
-
-  print("\nMatchGlobal Average Connectivity Score Distribution:");
-  print(_createHistogram(
-    matchDiffs.sublist(200).map((d) => d["avgDiffMatch"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-  print("Average Difference: ${matchDiffs.sublist(200).map((d) => d["avgDiffMatch"]).cast<double>().average.toStringAsFixed(1)}");
-  print("Average Difference Std Dev: ${_calculateStdDev(matchDiffs.sublist(200).map((d) => d["avgDiffMatch"] as double).toList()).toStringAsFixed(1)}");
-
-  print("\nConnectivity Difference Time Series:");
-  var matchCompetitorGlobalMedians = matches.values.map((m) => m.medianConnectivityScore).toList();
-  var matchCompetitorGlobalAverages = matches.values.map((m) => m.averageConnectivityScore).toList();
-  var matchMatchGlobalAverages = matches.values.map((m) => m.matchGlobalAverageConnectivityScore).toList();
-  var matchMatchGlobalMedians = matches.values.map((m) => m.matchGlobalMedianConnectivityScore).toList();
-
-  var medianMean = matchCompetitorGlobalMedians.average;
-  var medianStdDev = _calculateStdDev(matchCompetitorGlobalMedians);
-  var avgMean = matchCompetitorGlobalAverages.average;
-  var avgStdDev = _calculateStdDev(matchCompetitorGlobalAverages);
-
-  var matchAvgMean = matchMatchGlobalAverages.average;
-  var matchAvgStdDev = _calculateStdDev(matchMatchGlobalAverages);
-  var sortedMatches = matches.values
-    .sorted((a, b) => a.start.compareTo(b.start))
-    .toList();
-
-  // Group by month for readability
-  var monthlyDiffs = <DateTime, List<Map<String, dynamic>>>{};
-  for (var match in sortedMatches) {
-    var monthKey = DateTime(match.start.year, match.start.month);
-    List<double> globalAveragesToDate = [];
-    List<double> matchAveragesToDate = [];
-    for(var match in sortedMatches.where((value) => value.start.isBefore(match.start))) {
-      globalAveragesToDate.add(match.competitorGlobalAverageConnectivityScore);
-      matchAveragesToDate.add(match.matchGlobalAverageConnectivityScore);
-    }
-    var avgToDate = globalAveragesToDate.isNotEmpty ? globalAveragesToDate.average : avgMean;
-    var stdDevToDate = avgStdDev;
-    var matchAvgToDate = matchAveragesToDate.isNotEmpty ? matchAveragesToDate.average : matchAvgMean;
-    var matchStdDevToDate = matchAvgStdDev;
-
-    if(stdDevToDate == 0.0) {
-      stdDevToDate = avgStdDev;
-      avgToDate = avgMean;
-    }
-    if(matchStdDevToDate == 0.0) {
-      matchStdDevToDate = matchAvgStdDev;
-      matchAvgToDate = matchAvgMean;
-    }
-    monthlyDiffs.putIfAbsent(monthKey, () => []).add({
-      "avgDiff": match.averageConnectivityScore - match.competitorGlobalAverageConnectivityScore,
-      "medianDiff": match.medianConnectivityScore - match.competitorGlobalMedianConnectivityScore,
-      "avgDiffMatch": match.averageConnectivityScore - match.matchGlobalAverageConnectivityScore,
-      "medianDiffMatch": match.medianConnectivityScore - match.matchGlobalMedianConnectivityScore,
-      "matchAvgZScore": (match.averageConnectivityScore - matchAvgToDate) / matchStdDevToDate,
-      "avgZScore": (match.averageConnectivityScore - avgToDate) / stdDevToDate,
-      "refAvg": avgToDate,
-      "refStdDev": stdDevToDate,
-      "size": match.competitorIds.length,
-    });
-  }
-
-  // Print monthly averages with simple ASCII chart
-  print("\nMonthly Trends (■ = z-score):");
-  var maxZ = monthlyDiffs.values
-    .expand((m) => [m.map((d) => d["avgZScore"] as double).average])
-    .map((d) => d.abs())
-    .max;
-  var scale = 30 / 2;  // Scale to fit in 60 chars (-30 to +30), in this case +2/-2SD
-
-  for (var entry in monthlyDiffs.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
-    var month = entry.key;
-    var diffs = entry.value;
-    var avgZ = diffs.map((d) => d["avgZScore"] as double).average;
-    var avgSize = diffs.map((d) => d["size"] as int).average;
-    var refAvg = diffs.map((d) => d["refAvg"] as double).average;
-    var refStdDev = diffs.map((d) => d["refStdDev"] as double).average;
-    var matchAvgZScore = diffs.map((d) => d["matchAvgZScore"] as double).average;
-    var centerPos = 30;
-    var rawZPos = centerPos + (avgZ * scale).round();
-    var zPos = rawZPos.clamp(0, 59);
-    var matchZPos = (centerPos + (matchAvgZScore * scale).round()).clamp(0, 59);
-
-
-    var line = List.filled(60, ' ');
-    line[centerPos] = '|';
-    line[zPos] = '■';
-    line[matchZPos] = '□';
-
-
-    // Add indicators for clamped values
-    var clampIndicator = '';
-    if (rawZPos != zPos) {
-      clampIndicator = ' [!]';
-    }
-
-    print("${month.toString().substring(0, 7)}: "
-          "${line.join('')}$clampIndicator "
-          "z_cmp_avg: ${avgZ.toStringAsFixed(2).padLeft(5)}, "
-          "z_mch_avg: ${matchAvgZScore.toStringAsFixed(2).padLeft(5)}, "
-          "matches: ${diffs.length}, "
-          "avg size: ${avgSize.toStringAsFixed(0).padLeft(3)}");
-  }
-
-  // Add legend
-  print("\nScale: Each position = ${(1/scale).toStringAsFixed(1)} points");
-  print("Center line = 0 difference");
-  print("■ = z-score");
-  print("[!] = values exceeded chart bounds");
-
-  print("\nRaw Connectivity Z-Score Analysis:");
-
-  print("Match Medians:");
-  print("  Mean: ${medianMean.toStringAsFixed(1)}");
-  print("  Std Dev: ${medianStdDev.toStringAsFixed(1)}");
-
-  print("\nMatch Averages:");
-  print("  Mean: ${avgMean.toStringAsFixed(1)}");
-  print("  Std Dev: ${avgStdDev.toStringAsFixed(1)}");
-
-  print("\nMedian Z-Score Distribution:");
-  print(_createHistogram(
-    matchCompetitorGlobalMedians.map((m) => (m - medianMean) / medianStdDev).toList(),
-    buckets: 20,
-    width: 60,
-    valueMapper: (z) => medianMean + (z * medianStdDev),
-    entityName: "matches"
-  ));
-
-  print("\nAverage Z-Score Distribution:");
-  print(_createHistogram(
-    matchCompetitorGlobalAverages.map((m) => (m - avgMean) / avgStdDev).toList(),
-    buckets: 20,
-    width: 60,
-    valueMapper: (z) => avgMean + (z * avgStdDev),
-    entityName: "matches"
-  ));
-
-  print("\nMatchGlobal Average Z-Score Distribution:");
-  print(_createHistogram(
-    matchMatchGlobalAverages.map((m) => (m - matchAvgMean) / matchAvgStdDev).toList(),
-    buckets: 40,
-    width: 60,
-    valueMapper: (z) => matchAvgMean + (z * matchAvgStdDev),
-    entityName: "matches"
-  ));
-
-  var avgSizeCorrelation = _calculateCorrelation(
-    matches.values.map((m) => m.competitorIds.length.toDouble()).toList(),
-    matches.values.map((m) => (m.averageConnectivityScore - avgMean) / avgStdDev).toList()
+  print("\n========== Generator Sanity ==========");
+  print("Living competitors in analysis: ${active.length}");
+  print("Retired competitors excluded: ${stale.length}");
+  _printKindCounts(matchList);
+  print("");
+  _printTable(
+    ["Kind", "n", "Matches", "Regions", "Club%", "Mega%", "Area%", "Nat%"],
+    [
+      for (var kind in CompetitorKind.values)
+        _competitorSanityRow(active.where((c) => c.kind == kind).toList()),
+    ],
   );
 
-  var medianSizeCorrelation = _calculateCorrelation(
-    matches.values.map((m) => m.competitorIds.length.toDouble()).toList(),
-    matches.values.map((m) => (m.medianConnectivityScore - medianMean) / medianStdDev).toList()
+  print("\n========== Shooter Scores By Archetype (mean) ==========");
+  _printTable(
+    ["Kind", "n", "U", "T", "D_eff", "D/U", "Q", "Q share", "reg", "field", ...methodNames],
+    [
+      for (var kind in CompetitorKind.values)
+        _archetypeRow(active.where((c) => c.kind == kind).toList()),
+    ],
   );
 
-  print("\nCorrelation with Match Size:");
-  print("  Average Z-Score: ${avgSizeCorrelation.toStringAsFixed(3)}");
-  print("  Median Z-Score: ${medianSizeCorrelation.toStringAsFixed(3)}");
-
-  var matchesByZScore = matches.values.map((m) => (
-    match: m,
-    zScore: (m.averageConnectivityScore - avgMean) / avgStdDev
-  )).toList()
-    ..sort((a, b) => a.zScore.compareTo(b.zScore));
-
-  // Analyze matches in different z-score ranges
-  var ranges = [
-    (-double.infinity, -1.0),
-    (-1.0, 0.0),
-    (0.0, 1.0),
-    (1.0, double.infinity)
-  ];
-
-  for (var (min, max) in ranges) {
-    var rangeMatches = matchesByZScore
-      .where((m) => m.zScore >= min && m.zScore < max)
-      .map((m) => m.match)
-      .toList();
-
-    print("\nMatches with ${min.isFinite ? min.toStringAsFixed(1) : '-∞'} ≤ z < ${max.isFinite ? max.toStringAsFixed(1) : '∞'} (${rangeMatches.length} matches):");
-    print("  Average size: ${rangeMatches.isNotEmpty ? rangeMatches.map((m) => m.competitorIds.length).average.toStringAsFixed(1) : 'N/A'}");
-    // Add more characteristics here
-  }
-
-  // After z-score calculations...
-  var matchAnalysis = matches.values.map((m) {
-    var highActivity = m.competitorIds.where((id) => id < 3000).length;
-    var total = m.competitorIds.length;
-    var highProportion = highActivity / total;
-
-    return {
-      "match": m,
-      "zScore": (m.averageConnectivityScore - avgMean) / avgStdDev,
-      "highProportion": highProportion,
-      "highCount": highActivity,
-      "totalSize": total,
-    };
-  }).toList();
-
-  // Group into ranges for analysis
-  var proportionRanges = [
-    (0.0, 0.2),
-    (0.2, 0.3),
-    (0.3, 0.4),
-    (0.4, 0.5),
-    (0.5, 0.6),
-    (0.6, 1.0)
-  ];
-
-  for (var (min, max) in proportionRanges) {
-    var rangeMatches = matchAnalysis
-        .where((m) => (m["highProportion"] as double) >= min && (m["highProportion"] as double) < max)
-        .toList();
-
-    if (rangeMatches.isEmpty) continue;
-
-    var avgZ = rangeMatches.map((m) => m["zScore"] as double).average;
-    var matchCount = rangeMatches.length;
-
-    print("\nMatches with ${(min * 100).toStringAsFixed(0)}%-${(max * 100).toStringAsFixed(0)}% high activity:");
-    print("  Count: $matchCount matches");
-    print("  Average z-score: ${avgZ.toStringAsFixed(2)}");
-    print("  Average size: ${rangeMatches.map((m) => m["totalSize"] as int).average.toStringAsFixed(1)}");
-  }
-
-  // After match analysis...
-  print("\nHigh Activity Proportion vs Z-Score Distribution:");
-
-  // Create buckets of 5% width
-  var buckets = List.generate(20, (i) => i * 0.05);
-  var bucketData = <double, List<Map<String, dynamic>>>{};
-
-  for (var bucket in buckets) {
-    bucketData[bucket] = matchAnalysis
-        .where((m) =>
-            (m["highProportion"] as double) >= bucket &&
-            (m["highProportion"] as double) < bucket + 0.05)
-        .toList();
-  }
-
-  var centerPos = 30;
-  // Print distribution with z-scores
-  for (var bucket in buckets) {
-    var matches = bucketData[bucket]!;
-    if (matches.isEmpty) continue;
-
-    var avgZ = matches.map((m) => m["zScore"] as double).average;
-    var avgSize = matches.map((m) => m["totalSize"] as int).average;
-    var proportion = (bucket * 100).toStringAsFixed(0).padLeft(2);
-
-    var zPos = (centerPos + (avgZ * 10).round()).clamp(0, 59);
-    var line = List.filled(60, ' ');
-    line[centerPos] = '|';
-    line[zPos] = '■';
-
-    // Add indicators for clamped values
-    var clampIndicator = '';
-    if (zPos == 0 || zPos == 59) {
-      clampIndicator = ' [!]';
-    }
-
-    print("${proportion}%-${(bucket * 100 + 5).toStringAsFixed(0)}%: "
-          "${line.join('')}$clampIndicator "
-          "z=${avgZ.toStringAsFixed(2).padLeft(5)} "
-          "n=${matches.length.toString().padLeft(3)} "
-          "size=${avgSize.toStringAsFixed(1).padLeft(5)}");
-  }
-
-    // Add scale markers
-  var scaleValues = List.generate(13, (i) => -3.0 + (i * 0.5));
-  var scalePositions = scaleValues.map((z) => (centerPos + (z * 10).round()).clamp(0, 60));
-  var scaleLine = List.filled(61, ' ');
-  for(int i = 0; i < 61; i++) {
-    if(scalePositions.contains(i)) {
-      scaleLine[i] = '|';
-    }
-  }
-  print(  "         ${scaleLine.join('')}");
-  print("Z-Score: ${scaleValues.map((z) => z.toStringAsFixed(1).padLeft(4)).join(' ')}");
-
-  print("\nScale: Each position = 0.1 standard deviations");
-  print("Center line = z-score of 0");
-  print("■ = z-score");
-  print("[!] = values exceeded chart bounds");
-
-  // After existing z-score visualization and scale...
-
-  print("\nDetailed Connectivity Analysis by High Activity Proportion:");
-  for (var bucket in buckets) {
-    var matches = bucketData[bucket]!;
-    if (matches.isEmpty) continue;
-
-    var matchStats = matches.map((m) {
-      var match = m["match"] as Match;
-      var matchCompetitors = match.competitorIds.map((id) => competitors[id]!);
-
-      // Calculate connectivity scores as of this match
-      var competitorStats = matchCompetitors.map((c) {
-        var matchWindows = c.allWindows
-            .where((w) => w.matchId < match.matchId)
-            .toList()
-            .getTailWindow(Competitor.windowSize);  // Only use last 5 matches before this one
-
-        if (matchWindows.isEmpty) return {
-          "unique": 0,
-          "total": 0,
-          "rawScore": 0.0,
-          "windowSize": 0,
-        };
-
-        var unique = matchWindows
-            .expand((w) => w.uniqueOpponents)
-            .toSet()
-            .length;
-        var total = matchWindows
-            .map((w) => w.totalOpponents)
-            .sum;
-
-        return {
-          "unique": unique,
-          "total": total,
-          "rawScore": unique * total / (unique + total),
-          "windowSize": matchWindows.length,
-        };
-      }).toList();
-
-      var avgUnique = competitorStats.map((s) => s["unique"] as int).average;
-      var avgTotal = competitorStats.map((s) => s["total"] as int).average;
-      var avgRawScore = competitorStats.map((s) => s["rawScore"] as double).average;
-      var avgWindowSize = competitorStats.map((s) => s["windowSize"] as int).average;
-
-      return {
-        "unique": avgUnique,
-        "total": avgTotal,
-        "rawScore": avgRawScore,
-        "size": match.competitorIds.length,
-        "windowSize": avgWindowSize,
-      };
-    }).toList();
-
-    var avgZ = matches.map((m) => m["zScore"] as double).average;
-    var avgSize = matchStats.map((s) => s["size"] as int).average;
-    var avgUnique = matchStats.map((s) => s["unique"] as double).average;
-    var avgTotal = matchStats.map((s) => s["total"] as double).average;
-    var avgRawScore = matchStats.map((s) => s["rawScore"] as double).average;
-    var avgWindowSize = matchStats.map((s) => s["windowSize"] as double).average;
-
-    var proportion = (bucket * 100).toStringAsFixed(0).padLeft(2);
-
-    print("${proportion}%-${(bucket * 100 + 5).toStringAsFixed(0)}%: "
-          "z=${avgZ.toStringAsFixed(2).padLeft(6)} "
-          "size=${avgSize.toStringAsFixed(1).padLeft(5)} "
-          "unique=${avgUnique.toStringAsFixed(1).padLeft(5)} "
-          "total=${avgTotal.toStringAsFixed(1).padLeft(5)} "
-          "raw=${avgRawScore.toStringAsFixed(1).padLeft(5)} "
-          "window=${avgWindowSize.toStringAsFixed(1).padLeft(4)}");
-  }
-
-  print("\nConnectivity Distribution by Competitor Type:");
-
-  var lowActivityScores = competitors.values
-      .where((c) => c.shooterId >= highActivityCount)  // ID >= 2500 means low activity
-      .where((c) => c.windows.isNotEmpty &&c.windows.last.date.isAfter(matches.values.last.start.subtract(Duration(days: 730))))
-      .map((c) => c.connectivityScore)
-      .toList();
-
-  var highActivityScores = competitors.values
-      .where((c) => c.shooterId < highActivityCount)   // ID < 2500 means high activity
-      .where((c) => c.windows.isNotEmpty&& c.windows.last.date.isAfter(matches.values.last.start.subtract(Duration(days: 730))))
-      .map((c) => c.connectivityScore)
-      .toList();
-
-  print("\nLow Activity Competitor Connectivity Distribution:");
-  print(_createHistogram(lowActivityScores, buckets: 20, width: 60, entityName: "low-activity"));
-
-  print("\nHigh Activity Competitor Connectivity Distribution:");
-  print(_createHistogram(highActivityScores, buckets: 20, width: 60, entityName: "high-activity"));
-
-  print("\nLow Activity Competitor Match Count Distribution:");
-  print(_createHistogram(
-    competitors.values
-      .where((c) => c.shooterId >= highActivityCount)
-      .map((c) => c.matchIds.length.toDouble())
-      .toList(),
-    buckets: 20,
-    width: 60,
-    integral: true,
-    entityName: "low-activity"
-  ));
-
-  print("\nHigh Activity Competitor Match Count Distribution:");
-  print(_createHistogram(
-    competitors.values
-      .where((c) => c.shooterId < highActivityCount)
-      .map((c) => c.matchIds.length.toDouble())
-      .toList(),
-    buckets: 20,
-    width: 60,
-    integral: true,
-    entityName: "high-activity"
-  ));
-
-  print("\nWeighted Connectivity Analysis:");
-
-  var matchWeights = matches.values.map((m) => {
-    "weightedMatch": m.weightedMatchConnectivity,
-    "weightedGlobal": m.weightedGlobalConnectivity,
-    "difference": m.weightedMatchConnectivity - m.weightedGlobalConnectivity,
-    "date": m.start,
-    "size": m.competitorIds.length
-  }).toList();
-
-  print("\nWeighted Match Connectivity Distribution:");
-  print(_createHistogram(
-    matchWeights.map((m) => m["weightedMatch"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-
-  print("\nWeighted Global Connectivity Distribution:");
-  print(_createHistogram(
-    matchWeights.map((m) => m["weightedGlobal"] as double).toList(),
-    buckets: 20,
-    width: 60,
-    entityName: "matches"
-  ));
-
-  print("\nWeighted Difference Distribution:");
-  var differences = matchWeights.map((m) => m["difference"] as double).toList();
-  print(_createHistogram(
-    differences,
-    buckets: 40,
-    width: 60,
-    entityName: "matches"
-  ));
-
-  // Basic statistics for differences
-  differences.sort();
-  var diffMean = differences.average;
-  var diffStdDev = _calculateStdDev(differences);
-  var diffMedian = _calculateMedian(differences);
-  diffQuartiles = _calculateQuartiles(differences);
-
-  print("\nDifference Statistics:");
-  print("Mean: ${diffMean.toStringAsFixed(2)}");
-  print("Median: ${diffMedian.toStringAsFixed(2)}");
-  print("Std Dev: ${diffStdDev.toStringAsFixed(2)}");
-  print("Q1: ${diffQuartiles.q1.toStringAsFixed(2)}");
-  print("Q3: ${diffQuartiles.q3.toStringAsFixed(2)}");
-  print("Min: ${differences.first.toStringAsFixed(2)}");
-  print("Max: ${differences.last.toStringAsFixed(2)}");
-
-  // Correlation with match size
-  correlation = _calculateCorrelation(
-    matchWeights.map((m) => m["size"] as int).toList(),
-    matchWeights.map((m) => m["difference"] as double).toList()
+  print("\n========== Match Scores By Type (mean) ==========");
+  _printTable(
+    ["Type", "n", "size", "coverage", "edge mass", "efficiency", "carriers", ...methodNames],
+    [
+      for (var kind in MatchKind.values)
+        _matchTypeRow(matchList.where((m) => m.kind == kind).toList()),
+    ],
   );
-  print("\nCorrelation with Match Size: ${correlation.toStringAsFixed(3)}");
 
-  // Time series analysis - group by month
-  var monthlyStats = <DateTime, List<double>>{};
-  for (var match in matchWeights) {
-    var date = match["date"] as DateTime;
-    var monthKey = DateTime(date.year, date.month);
-    monthlyStats.putIfAbsent(monthKey, () => []).add(match["difference"] as double);
+  print("\n========== Coverage Credit By Archetype And Match Type ==========");
+  print("Values are means over each living competitor's five-match window.");
+  _printTable(
+    ["Kind", for (var kind in MatchKind.values) kind.name],
+    [
+      for (var kind in CompetitorKind.values)
+        _coverageCreditByMatchTypeRow(
+          active.where((c) => c.kind == kind).toList(),
+        ),
+    ],
+  );
+
+  print("\n========== Rank Correlations Between Methods (shooters) ==========");
+  _printCorrelationMatrix(active, (c) => c.scores);
+
+  print("\n========== Rank Correlations Between Methods (matches) ==========");
+  _printCorrelationMatrix(matchList, (m) => m.matchScores);
+
+  print("\n========== What Each Method Tracks (shooter Spearman) ==========");
+  print("Feature proxies: region diversity, field size, unique 1-hop, effective degree, and coverage credit.");
+  _printTable(
+    ["Method", "vs regions", "vs field", "vs unique", "vs D_eff", "vs Q"],
+    [
+      for (var name in methodNames)
+        [
+          name,
+          _spearman(active.map((c) => c.scores[name]).toList(), active.map((c) => c.regionDiversity.toDouble()).toList()).toStringAsFixed(3),
+          _spearman(active.map((c) => c.scores[name]).toList(), active.map((c) => c.meanFieldSize).toList()).toStringAsFixed(3),
+          _spearman(active.map((c) => c.scores[name]).toList(), active.map((c) => c.uniqueOpponentCount.toDouble()).toList()).toStringAsFixed(3),
+          _spearman(active.map((c) => c.scores[name]).toList(), active.map((c) => c.effectiveDegree).toList()).toStringAsFixed(3),
+          _spearman(active.map((c) => c.scores[name]).toList(), active.map((c) => c.recentCoverageCredit).toList()).toStringAsFixed(3),
+        ],
+    ],
+  );
+
+  print("\n========== Top-20 Composition By Method ==========");
+  _printTable(
+    ["Method", "traveler%", "isolated%", "localHigh%", "localLow%"],
+    [
+      for (var name in methodNames) _topCompositionRow(active, name, 20),
+    ],
+  );
+
+  print("\n========== Isolated Mega vs National (pre-match scores) ==========");
+  print("The direct coverage rows measure graph attachment; competitor methods contain only historical information.");
+  var megas = matchList.where((m) => m.kind == MatchKind.isolatedMega).toList();
+  var nationals = matchList.where((m) => m.kind == MatchKind.national).toList();
+  _printTable(
+    ["Method", "mega mean", "nat mean", "nat/mega", "size-corr"],
+    [
+      [
+        "coverage",
+        megas.map((m) => m.externalCoverage.toDouble()).average.toStringAsFixed(1),
+        nationals.map((m) => m.externalCoverage.toDouble()).average.toStringAsFixed(1),
+        (nationals.map((m) => m.externalCoverage.toDouble()).average / max(1.0, megas.map((m) => m.externalCoverage.toDouble()).average)).toStringAsFixed(2),
+        _spearman(matchList.map((m) => m.externalCoverage.toDouble()).toList(), matchList.map((m) => m.competitorIds.length.toDouble()).toList()).toStringAsFixed(3),
+      ],
+      [
+        "efficiency",
+        megas.map((m) => m.coverageEfficiency).average.toStringAsFixed(3),
+        nationals.map((m) => m.coverageEfficiency).average.toStringAsFixed(3),
+        (nationals.map((m) => m.coverageEfficiency).average / max(1e-6, megas.map((m) => m.coverageEfficiency).average)).toStringAsFixed(2),
+        _spearman(matchList.map((m) => m.coverageEfficiency).toList(), matchList.map((m) => m.competitorIds.length.toDouble()).toList()).toStringAsFixed(3),
+      ],
+      [
+        "effective carriers",
+        megas.map((m) => m.effectiveCarrierCount).average.toStringAsFixed(1),
+        nationals.map((m) => m.effectiveCarrierCount).average.toStringAsFixed(1),
+        (nationals.map((m) => m.effectiveCarrierCount).average / max(1e-6, megas.map((m) => m.effectiveCarrierCount).average)).toStringAsFixed(2),
+        _spearman(matchList.map((m) => m.effectiveCarrierCount).toList(), matchList.map((m) => m.competitorIds.length.toDouble()).toList()).toStringAsFixed(3),
+      ],
+      for (var name in methodNames)
+        [
+          name,
+          megas.map((m) => m.matchScores[name]).average.toStringAsFixed(1),
+          nationals.map((m) => m.matchScores[name]).average.toStringAsFixed(1),
+          (nationals.map((m) => m.matchScores[name]).average / max(1e-6, megas.map((m) => m.matchScores[name]).average)).toStringAsFixed(2),
+          _spearman(matchList.map((m) => m.matchScores[name]).toList(), matchList.map((m) => m.competitorIds.length.toDouble()).toList()).toStringAsFixed(3),
+        ],
+    ],
+  );
+
+  print("\n========== Example Competitors ==========");
+  _printExamples(active);
+
+  print("\n========== Score Histograms (active high-volume) ==========");
+  var highVolume = active.where((c) => c.matchIds.length >= 8).toList();
+  for (var name in methodNames) {
+    print("\n$name:");
+    print(_createHistogram(
+      highVolume.map((c) => c.scores[name]).toList(),
+      buckets: 12,
+      width: 40,
+      entityName: "high-volume",
+    ));
   }
 
-  print("\nMonthly Trends (■ = weighted difference):");
-  var maxDiff = monthlyStats.values
-    .expand((m) => [m.average])
-    .map((d) => d.abs())
-    .max;
-  scale = 30 / maxDiff;  // Scale to fit in 60 chars
-
-  for (var entry in monthlyStats.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
-    var month = entry.key;
-    var diffs = entry.value;
-    var avgDiff = diffs.average;
-    var centerPos = 30;
-    var pos = (centerPos + (avgDiff * scale)).round().clamp(0, 59);
-
-    var line = List.filled(60, ' ');
-    line[centerPos] = '|';
-    line[pos] = '■';
-
-    print("${month.toString().substring(0, 7)}: "
-          "${line.join('')} "
-          "avg_diff: ${avgDiff.toStringAsFixed(2).padLeft(6)}, "
-          "matches: ${diffs.length}");
+  print("\n========== Traveler vs Isolated-High ==========");
+  for (var name in methodNames) {
+    var travelers = highVolume.where((c) => c.kind == CompetitorKind.traveler).map((c) => c.scores[name]).toList();
+    var isolated = highVolume.where((c) => c.kind == CompetitorKind.isolatedHigh).map((c) => c.scores[name]).toList();
+    print("\n$name  traveler mean=${travelers.isEmpty ? 0 : travelers.average.toStringAsFixed(1)}  "
+        "isolated mean=${isolated.isEmpty ? 0 : isolated.average.toStringAsFixed(1)}  "
+        "ratio=${travelers.isEmpty || isolated.isEmpty ? 0 : (travelers.average / max(1e-6, isolated.average)).toStringAsFixed(2)}");
   }
 }
 
-// ignore: unused_element
-void _printCompetitorDetail(Competitor competitor, Map<int, Match> matches) {
-  print("\nCompetitor ${competitor.shooterId}:");
-  print("Connectivity Score: ${competitor.connectivityScore.toStringAsFixed(1)}");
-  print("Total Unique Opponents: ${competitor.uniqueOpponentCount}");
-  print("Total Opponents: ${competitor.totalOpponentCount}");
-  print("Average Match Size: ${competitor.averageMatchSize.toStringAsFixed(1)}");
-  print("\nMatch Windows:");
-
-  for (var window in competitor.windows) {
-    var match = matches[window.matchId]!;
-    print("  Match ${window.matchId} (${window.date.toString().substring(0, 10)}):");
-    print("    Unique Opponents: ${window.uniqueOpponents.length}");
-    print("    Total Opponents: ${window.totalOpponents}");
-    print("    Match Size: ${match.competitorIds.length}");
+List<String> _competitorSanityRow(List<Competitor> group) {
+  if (group.isEmpty) {
+    return ["(empty)", "0", "0", "0", "-", "-", "-", "-"];
   }
-  print("----------------------------------------");
+  var kinds = <MatchKind, int>{};
+  for (var c in group) {
+    for (var w in c.windows) {
+      kinds[w.kind] = (kinds[w.kind] ?? 0) + 1;
+    }
+  }
+  var windowTotal = max(1, kinds.values.sum);
+  return [
+    group.first.kind.name,
+    "${group.length}",
+    group.map((c) => c.matchIds.length).average.toStringAsFixed(1),
+    group.map((c) => c.regionDiversity).average.toStringAsFixed(2),
+    ((kinds[MatchKind.club] ?? 0) / windowTotal * 100).toStringAsFixed(0),
+    ((kinds[MatchKind.isolatedMega] ?? 0) / windowTotal * 100).toStringAsFixed(0),
+    ((kinds[MatchKind.area] ?? 0) / windowTotal * 100).toStringAsFixed(0),
+    ((kinds[MatchKind.national] ?? 0) / windowTotal * 100).toStringAsFixed(0),
+  ];
 }
 
-double _calculateMedian(List<double> values) {
-  var sorted = List<double>.from(values)..sort();
-  var middle = sorted.length ~/ 2;
+List<String> _archetypeRow(List<Competitor> group) {
+  if (group.isEmpty) {
+    return [for (var i = 0; i < 10 + methodNames.length; i++) "-"];
+  }
+  return [
+    group.first.kind.name,
+    "${group.length}",
+    group.map((c) => c.uniqueOpponentCount).average.toStringAsFixed(0),
+    group.map((c) => c.totalOpponentCount).average.toStringAsFixed(0),
+    group.map((c) => c.effectiveDegree).average.toStringAsFixed(1),
+    group.map((c) => c.uniqueOpponentCount == 0 ? 0 : c.effectiveDegree / c.uniqueOpponentCount).average.toStringAsFixed(3),
+    group.map((c) => c.recentCoverageCredit).average.toStringAsFixed(1),
+    group.map((c) => c.recentCoverageShare).average.toStringAsFixed(3),
+    group.map((c) => c.regionDiversity).average.toStringAsFixed(2),
+    group.map((c) => c.meanFieldSize).average.toStringAsFixed(0),
+    for (var name in methodNames) group.map((c) => c.scores[name]).average.toStringAsFixed(1),
+  ];
+}
+
+List<String> _matchTypeRow(List<Match> group) {
+  if (group.isEmpty) {
+    return [for (var i = 0; i < 7 + methodNames.length; i++) "-"];
+  }
+  return [
+    group.first.kind.name,
+    "${group.length}",
+    group.map((m) => m.competitorIds.length).average.toStringAsFixed(0),
+    group.map((m) => m.externalCoverage).average.toStringAsFixed(0),
+    group.map((m) => m.externalEdgeMass).average.toStringAsFixed(0),
+    group.map((m) => m.coverageEfficiency).average.toStringAsFixed(3),
+    group.map((m) => m.effectiveCarrierCount).average.toStringAsFixed(1),
+    for (var name in methodNames) group.map((m) => m.matchScores[name]).average.toStringAsFixed(1),
+  ];
+}
+
+List<String> _coverageCreditByMatchTypeRow(List<Competitor> group) {
+  if (group.isEmpty) {
+    return ["(empty)", for (var _ in MatchKind.values) "-"];
+  }
+  var credits = <MatchKind, List<double>>{
+    for (var kind in MatchKind.values) kind: [],
+  };
+  for (var competitor in group) {
+    for (var window in competitor.windows) {
+      credits[window.kind]!.add(window.coverageCredit);
+    }
+  }
+  return [
+    group.first.kind.name,
+    for (var kind in MatchKind.values)
+      credits[kind]!.isEmpty ? "-" : credits[kind]!.average.toStringAsFixed(1),
+  ];
+}
+
+List<String> _topCompositionRow(List<Competitor> active, String method, int n) {
+  var top = active.sorted((a, b) => b.scores[method].compareTo(a.scores[method])).take(n).toList();
+  double pct(CompetitorKind kind) =>
+      top.where((c) => c.kind == kind).length / max(1, top.length) * 100;
+  return [
+    method,
+    pct(CompetitorKind.traveler).toStringAsFixed(0),
+    pct(CompetitorKind.isolatedHigh).toStringAsFixed(0),
+    pct(CompetitorKind.localHigh).toStringAsFixed(0),
+    pct(CompetitorKind.localLow).toStringAsFixed(0),
+  ];
+}
+
+void _printKindCounts(List<Match> matchList) {
+  print("Match counts by type:");
+  for (var kind in MatchKind.values) {
+    var group = matchList.where((m) => m.kind == kind).toList();
+    if (group.isEmpty) {
+      continue;
+    }
+    print("  ${kind.name.padRight(13)} n=${group.length.toString().padLeft(4)}  "
+        "avg size=${group.map((m) => m.competitorIds.length).average.toStringAsFixed(0)}  "
+        "avg coverage=${group.map((m) => m.externalCoverage).average.toStringAsFixed(0)}");
+  }
+}
+
+void _printCorrelationMatrix<T>(List<T> items, ScoreSet Function(T) scoresOf) {
+  if (items.length < 3) {
+    print("  (not enough items)");
+    return;
+  }
+  _printTable(
+    ["", ...methodNames],
+    [
+      for (var row in methodNames)
+        [
+          row,
+          for (var col in methodNames)
+            _spearman(
+              items.map((item) => scoresOf(item)[row]).toList(),
+              items.map((item) => scoresOf(item)[col]).toList(),
+            ).toStringAsFixed(3),
+        ],
+    ],
+  );
+}
+
+void _printExamples(List<Competitor> active) {
+  Competitor? pick(CompetitorKind kind, bool Function(Competitor) extra) {
+    var pool = active.where((c) => c.kind == kind && extra(c)).toList()
+      ..sort((a, b) => b.matchIds.length.compareTo(a.matchIds.length));
+    if (pool.isEmpty) {
+      return null;
+    }
+    return pool[pool.length ~/ 3];
+  }
+
+  var examples = <Competitor>[
+    ?pick(CompetitorKind.traveler, (c) => c.regionDiversity >= 3),
+    ?pick(CompetitorKind.isolatedHigh, (c) => c.meanFieldSize >= 140),
+    ?pick(CompetitorKind.localHigh, (c) => c.regionDiversity <= 2),
+    ?pick(CompetitorKind.localLow, (c) => c.matchIds.length >= 4),
+  ];
+
+  _printTable(
+    ["id", "kind", "matches", "U", "T", "D_eff", "D/U", "Q", "Q share", "reg", "field", ...methodNames],
+    [
+      for (var c in examples)
+        [
+          "${c.shooterId}",
+          c.kind.name,
+          "${c.matchIds.length}",
+          "${c.uniqueOpponentCount}",
+          "${c.totalOpponentCount}",
+          c.effectiveDegree.toStringAsFixed(1),
+          (c.uniqueOpponentCount == 0 ? 0 : c.effectiveDegree / c.uniqueOpponentCount).toStringAsFixed(3),
+          c.recentCoverageCredit.toStringAsFixed(1),
+          c.recentCoverageShare.toStringAsFixed(3),
+          "${c.regionDiversity}",
+          c.meanFieldSize.toStringAsFixed(0),
+          for (var name in methodNames) c.scores[name].toStringAsFixed(1),
+        ],
+    ],
+  );
+}
+
+void _printTable(List<String> header, List<List<String>> rows) {
+  var cols = header.length;
+  var widths = List<int>.generate(cols, (i) {
+    var w = header[i].length;
+    for (var row in rows) {
+      w = max(w, row[i].length);
+    }
+    return w;
+  });
+  String fmt(List<String> cells) =>
+      [for (var i = 0; i < cols; i++) cells[i].padLeft(widths[i])].join("  ");
+  print(fmt(header));
+  print([for (var w in widths) "-" * w].join("  "));
+  for (var row in rows) {
+    print(fmt(row));
+  }
+}
+
+int _logNormalSize(Random random, {required double median, required double sigma, required int min, required int max}) {
+  var u1 = random.nextDouble().clamp(1e-12, 1.0);
+  var u2 = random.nextDouble();
+  var z = sqrt(-2 * log(u1)) * cos(2 * pi * u2);
+  return exp(log(median) + sigma * z).round().clamp(min, max);
+}
+
+void _runMetricSelfTests() {
+  void expectClose(String name, double actual, double expected) {
+    if ((actual - expected).abs() > 1e-9) {
+      throw StateError("$name: expected $expected, got $actual");
+    }
+  }
+
+  expectClose(
+    "Effective degree, repeated club",
+    _effectiveDegreeFromCounts(List<double>.filled(40, 5)),
+    40,
+  );
+  expectClose(
+    "Effective degree, disjoint fields",
+    _effectiveDegreeFromCounts(List<double>.filled(200, 1)),
+    200,
+  );
+  expectClose(
+    "Effective degree, mixed core",
+    _effectiveDegreeFromCounts([
+      ...List<double>.filled(20, 5),
+      ...List<double>.filled(100, 1),
+    ]),
+    200 * 200 / 600,
+  );
+
+  var coverage = calculateCoverageCredit(
+    field: {1, 2, 3, 4},
+    neighborhoods: {
+      1: {10, 11, 12, 13},
+      2: {10, 11, 12, 13},
+      3: {10, 11, 12, 13},
+      4: {20, 21, 22},
+    },
+  );
+  if (coverage.externalCoverage != 7) {
+    throw StateError("Coverage: expected 7, got ${coverage.externalCoverage}");
+  }
+  expectClose("Local coverage credit", coverage.credits[1]!, 4 / 3);
+  expectClose("Traveler coverage credit", coverage.credits[4]!, 3);
+  expectClose("Coverage conservation", coverage.credits.values.sum, 7);
+
+  print("Metric self-tests passed.");
+}
+
+double _effectiveDegreeFromCounts(Iterable<double> counts) {
+  if (counts.isEmpty) {
+    return 0;
+  }
+  var total = counts.sum;
+  var sumSquared = counts.map((count) => count * count).sum;
+  if (sumSquared == 0) {
+    return 0;
+  }
+  return total * total / sumSquared;
+}
+
+double _medianSorted(List<double> sorted) {
+  if (sorted.isEmpty) {
+    return 0;
+  }
+  var mid = sorted.length ~/ 2;
   if (sorted.length.isOdd) {
-    return sorted[middle];
+    return sorted[mid];
   }
-  return (sorted[middle - 1] + sorted[middle]) / 2;
+  return (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-double _calculateStdDev(List<double> values) {
+double _recencyWeightedMean(List<double> values) {
+  if (values.isEmpty) {
+    return 0;
+  }
+  var weightedSum = 0.0;
+  var weightSum = 0.0;
+  for (var i = 0; i < values.length; i++) {
+    var weight = 1.0 + i * 0.2;
+    weightedSum += values[i] * weight;
+    weightSum += weight;
+  }
+  return weightedSum / weightSum;
+}
+
+double _skewness(List<int> values) {
+  if (values.length < 3) {
+    return 0.0;
+  }
   var mean = values.average;
-  var squaredDiffs = values.map((v) => pow(v - mean, 2));
-  return sqrt(squaredDiffs.average);
-}
-
-({double q1, double q2, double q3}) _calculateQuartiles(List<double> values) {
-  var sorted = List<double>.from(values)..sort();
-  var q2 = _calculateMedian(sorted);
-
-  var lowerHalf = sorted.sublist(0, sorted.length ~/ 2);
-  var upperHalf = sorted.sublist((sorted.length + 1) ~/ 2);
-
-  return (
-    q1: _calculateMedian(lowerHalf),
-    q2: q2,
-    q3: _calculateMedian(upperHalf)
-  );
-}
-
-double _calculatePercentile(List<double> values, double percentile) {
-  assert(percentile >= 0 && percentile <= 1);
-  var sorted = List<double>.from(values)..sort();
-  var index = (sorted.length - 1) * percentile;
-  var lower = sorted[index.floor()];
-  var upper = sorted[index.ceil()];
-  return lower + (upper - lower) * (index - index.floor());
-}
-
-String _createHistogram(List<double> values, {
-  int buckets = 20,
-  int width = 60,
-  double Function(double)? valueMapper,
-  String entityName = "competitors",
-  bool integral = false,
-}) {
-  if (values.isEmpty) return "No data";
-
-  // Create buckets
-  var min = values.min;
-  var max = values.max;
-  var range = max - min;
-  var bucketSize = range / buckets;
-  if(integral) {
-    bucketSize = bucketSize.roundToDouble();
-    buckets = (range / bucketSize).round();
+  var sumSquared = values.map((s) => s * s).sum.toDouble();
+  var variance = (sumSquared / values.length) - (mean * mean);
+  var stdDev = sqrt(max(0, variance));
+  if (stdDev == 0) {
+    return 0.0;
   }
-
-  // Count values in each bucket
-  var counts = List.filled(buckets, 0);
-  for (var value in values) {
-    var bucketIndex = ((value - min) / bucketSize).floor();
-    // Handle edge case for maximum value
-    if (bucketIndex == buckets) bucketIndex--;
-    counts[bucketIndex]++;
-  }
-
-  // Find maximum count for scaling
-  var maxCount = counts.max;
-  var scale = width / maxCount;
-
-  // Build histogram
-  var buffer = StringBuffer();
-  for (var i = 0; i < buckets; i++) {
-    var bucketMin = min + (i * bucketSize);
-    var barLength = (counts[i] * scale).round();
-    buffer.writeln(
-      "${bucketMin.toStringAsFixed(1).padLeft(6)}: "
-      "${"█" * barLength}${counts[i].toString().padLeft(4)} "
-      "(${(counts[i] / values.length * 100).toStringAsFixed(1)}%)"
-      "${valueMapper != null ? " [${valueMapper(bucketMin).toStringAsFixed(1)}]" : ""}"
-    );
-  }
-
-  // Add legend
-  buffer.writeln("\nTotal: ${values.length} $entityName");
-  buffer.writeln("Bucket size: ${bucketSize.toStringAsFixed(1)} points");
-
-  return buffer.toString();
+  var sumCubed = values.map((s) => s * s * s).sum.toDouble();
+  var thirdMoment = (sumCubed / values.length) - (3 * mean * variance) - (mean * mean * mean);
+  return thirdMoment / (stdDev * stdDev * stdDev);
 }
 
-double _calculateCorrelation(List<num> x, List<num> y) {
+double _spearman(List<double> a, List<double> b) {
+  return _pearson(_ranks(a), _ranks(b));
+}
+
+List<double> _ranks(List<double> values) {
+  var indexed = [for (var i = 0; i < values.length; i++) (i, values[i])];
+  indexed.sort((a, b) => a.$2.compareTo(b.$2));
+  var ranks = List<double>.filled(values.length, 0);
+  var start = 0;
+  while (start < indexed.length) {
+    var end = start + 1;
+    while (end < indexed.length && indexed[end].$2 == indexed[start].$2) {
+      end++;
+    }
+    var averageRank = (start + end - 1) / 2.0;
+    for (var r = start; r < end; r++) {
+      ranks[indexed[r].$1] = averageRank;
+    }
+    start = end;
+  }
+  return ranks;
+}
+
+double _pearson(List<double> x, List<double> y) {
   assert(x.length == y.length);
-  var n = x.length;
+  if (x.length < 2) {
+    return 0;
+  }
   var xMean = x.average;
   var yMean = y.average;
-
   var numerator = 0.0;
   var xDenom = 0.0;
   var yDenom = 0.0;
-
-  for (var i = 0; i < n; i++) {
+  for (var i = 0; i < x.length; i++) {
     var xDiff = x[i] - xMean;
     var yDiff = y[i] - yMean;
     numerator += xDiff * yDiff;
     xDenom += xDiff * xDiff;
     yDenom += yDiff * yDiff;
   }
-
-  return numerator / sqrt(xDenom * yDenom);
+  var denom = sqrt(xDenom * yDenom);
+  if (denom == 0) {
+    return 0;
+  }
+  return numerator / denom;
 }
 
-extension ListOverlap<T> on Iterable<T> {
-  Iterable<T> intersection(Iterable<T> other) {
-    return this.where((e) => other.contains(e));
+String _createHistogram(List<double> values, {
+  int buckets = 20,
+  int width = 60,
+  String entityName = "competitors",
+}) {
+  if (values.isEmpty) {
+    return "No data";
   }
-
-  bool intersects(Iterable<T> other) {
-    return this.any((e) => other.contains(e));
+  var minValue = values.min;
+  var maxValue = values.max;
+  var range = maxValue - minValue;
+  if (range == 0) {
+    return "All values ${minValue.toStringAsFixed(1)}";
   }
-
-  bool containsAll(Iterable<T> other) {
-    return other.every((e) => this.contains(e));
+  var bucketSize = range / buckets;
+  var counts = List.filled(buckets, 0);
+  for (var value in values) {
+    var bucketIndex = ((value - minValue) / bucketSize).floor();
+    if (bucketIndex == buckets) {
+      bucketIndex--;
+    }
+    counts[bucketIndex]++;
   }
+  var maxCount = counts.max;
+  var scale = width / maxCount;
+  var buffer = StringBuffer();
+  for (var i = 0; i < buckets; i++) {
+    var bucketMin = minValue + (i * bucketSize);
+    var barLength = (counts[i] * scale).round();
+    buffer.writeln(
+      "${bucketMin.toStringAsFixed(1).padLeft(6)}: "
+      "${"█" * barLength}${counts[i].toString().padLeft(4)} "
+      "(${(counts[i] / values.length * 100).toStringAsFixed(1)}%)",
+    );
+  }
+  buffer.writeln("Total: ${values.length} $entityName  bucket=${bucketSize.toStringAsFixed(1)}");
+  return buffer.toString();
 }
 
 extension WindowedList<T> on List<T> {
-    /// Get a windowed view into the list, starting at the tail of the list,
-  /// optionally offset by [offset].
   List<T> getTailWindow(int window, {int offset = 0}) {
-    if(offset + window > length) return this;
+    if (offset + window > length) {
+      return this;
+    }
     return sublist(length - window - offset, length - offset);
   }
 }
