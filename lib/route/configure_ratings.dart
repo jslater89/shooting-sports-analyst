@@ -380,22 +380,22 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                 ),
               ),
               SizedBox(width: 20),
-              Tooltip(
-                message: "Roll back to a previous date, removing ratings after that date.",
-                child: ElevatedButton(
-                  child: Text("ROLL BACK"),
-                  onPressed: () async {
-                    var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
-                    if(rollbackDate != null) {
-                      var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
-                      if(project != null) {
-                        widget.onSettingsReady(project, rollbackDate: rollbackDate);
-                      }
-                    }
-                  },
-                ),
-              ),
-              SizedBox(width: 20),
+              // Tooltip(
+              //   message: "Roll back to a previous date, removing ratings after that date.",
+              //   child: ElevatedButton(
+              //     child: Text("ROLL BACK"),
+              //     onPressed: () async {
+              //       var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
+              //       if(rollbackDate != null) {
+              //         var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
+              //         if(project != null) {
+              //           widget.onSettingsReady(project, rollbackDate: rollbackDate);
+              //         }
+              //       }
+              //     },
+              //   ),
+              // ),
+              // SizedBox(width: 20),
               ElevatedButton(
                 child: Text("RESTORE DEFAULTS"),
                 onPressed: () {
