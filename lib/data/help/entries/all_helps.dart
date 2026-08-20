@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/help/entries/glicko2_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/invitational_invites_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/latent_log_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/latent_log_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/local_mcp_server_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/icore_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
@@ -63,6 +64,7 @@ void registerHelpTopics() {
   root.addChild(helpMatchSourceChooser);
   root.addChild(helpResults);
   root.addChild(helpAppSettings);
+  root.addChild(helpLocalMcpServer);
 
   var matchPrepsDir = HelpDirectory(
     id: "matchPrepsDir",

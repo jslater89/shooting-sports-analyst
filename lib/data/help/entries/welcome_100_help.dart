@@ -6,6 +6,7 @@
 
 import 'package:shooting_sports_analyst/data/help/entries/invitational_invites_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/latent_log_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/local_mcp_server_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/match_file_import_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/match_preps/match_preps_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/prediction_games/prediction_games_help.dart';
@@ -78,4 +79,9 @@ As part of research work on the 2027 Cardinal Cup, I built out some infrastructu
 to an invitational match based on prior match finishes and ratings. Thanks to the wonders of AI-assisted
 development, that work is now available with a user interface inside of ratings projects. See the
 [invitational invites]($invitationalInvitesHelpLink) help page for more.
+
+## Local MCP Server
+Shooting Sports Analyst now supports a local MCP server, allowing you to connect AI agents to the application.
+The server supports read-only access to rating data, including match scores associated with a rating project,
+along with current and historical ratings. See the [local MCP server]($localMcpServerHelpLink) help page for more.
 """;

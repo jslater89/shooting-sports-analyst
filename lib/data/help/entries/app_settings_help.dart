@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/help/entries/local_mcp_server_help.dart';
 import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const appSettingsHelpId = "app-settings";
@@ -52,9 +53,8 @@ files after successful imports.
 
 ## Research MCP server
 When enabled, the application hosts a read-only research MCP server on 127.0.0.1
-(default port 8090). Agents typically use the headless stdio binary
-(`./build-mcp.sh` → `dist/ssa_mcp_server`), which opens the database
-itself rather than proxying through this socket. Disabled by default.
+(default port 8090). Disabled by default. See [Local MCP server]($localMcpServerHelpLink)
+for tool listings, agent configuration, and the recommended headless stdio setup.
 
 ## Ratings context
 The ratings context setting identifies the project that should be used as a ratings
