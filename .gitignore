@@ -73,7 +73,7 @@ config.toml
 config.ssaservers.toml
 ui_config.toml
 db/
-local**
+./local**
 *.csv
 *.json
 checkout-branch.sh
