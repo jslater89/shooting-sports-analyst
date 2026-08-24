@@ -211,8 +211,9 @@ class IsolateMatchCacheServer {
 
         _log.v("Cache miss, loading from database");
 
-        if(_getByIdCompleters.containsKey(matchId)) {
-          var match = await _getByIdCompleters[matchId]!.future;
+        final inflightCompleter = _getByIdCompleters[matchId];
+        if(inflightCompleter != null) {
+          var match = await inflightCompleter.future;
           if(match != null) {
             return _MatchResponse(match: match);
           }
@@ -225,18 +226,21 @@ class IsolateMatchCacheServer {
         var match = await db.getMatch(matchId);
         if(match == null) {
           _getByIdCompleters[matchId]!.complete(null);
+          _getByIdCompleters.remove(matchId);
           return _ErrorResponse(message: "Match not found");
         }
 
         var hydrated = await match.hydrate();
         if(hydrated.isErr()) {
           _getByIdCompleters[matchId]!.complete(null);
+          _getByIdCompleters.remove(matchId);
           return _ErrorResponse(message: "Failed to hydrate match: ${hydrated.unwrapErr().message}");
         }
         var hydratedMatch = hydrated.unwrap();
         cache.cache(hydratedMatch);
         _log.v("Cached match: ${hydratedMatch.name}");
         _getByIdCompleters[matchId]!.complete(hydratedMatch);
+        _getByIdCompleters.remove(matchId);
         return _MatchResponse(match: hydratedMatch);
 
 
