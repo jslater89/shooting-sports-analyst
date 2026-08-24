@@ -54,6 +54,10 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
     _cachedSortedEvents = null;
     for(var event in events) {
       wrappedRating.newRatingEvents.add(event.wrappedEvent);
+
+      if(!hasRatedHistory) {
+        hasRatedHistory = event.nonRatingResultReason == null;
+      }
     }
 
     wrappedRating.rating = usedEvents().map((e) => e.ratingChange).sum;

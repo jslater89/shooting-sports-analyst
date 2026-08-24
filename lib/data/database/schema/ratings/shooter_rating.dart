@@ -155,6 +155,10 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @ignore
   int get length => cachedLength;
 
+  /// Whether the competitor has had any rating changes that take effect,
+  /// i.e. at least one rating event that has a null [NonRatingResultReason].
+  bool hasRatedHistory = false;
+
   // TODO: move rating events getters from elo_shooter_rating to here
 
   /// The rating for this competitor. If the system makes a distinction between internal
@@ -383,6 +387,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
     this.agedRating = other.agedRating;
     this.careerMinimumRating = other.careerMinimumRating;
     this.careerMaximumRating = other.careerMaximumRating;
+    this.hasRatedHistory = other.hasRatedHistory;
   }
 
   @override

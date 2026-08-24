@@ -83,6 +83,10 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
 
       careerMinimumRating = min(careerMinimumRating, rating);
       careerMaximumRating = max(careerMaximumRating, rating);
+
+      if(!hasRatedHistory) {
+        hasRatedHistory = event.nonRatingResultReason == null;
+      }
     }
 
     agedRating = rating;

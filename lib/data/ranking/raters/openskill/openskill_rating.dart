@@ -84,6 +84,10 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
       sigma += event.sigmaChange;
       careerMinimumRating = min(careerMinimumRating, rating);
       careerMaximumRating = max(careerMaximumRating, rating);
+
+      if(!hasRatedHistory) {
+        hasRatedHistory = event.nonRatingResultReason == null;
+      }
     }
 
     agedRating = rating;

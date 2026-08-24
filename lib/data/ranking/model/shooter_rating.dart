@@ -59,6 +59,11 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   bool get female => wrappedRating.female;
   set female(bool f) => wrappedRating.female = f;
 
+  /// Whether the competitor has had any rating changes that take effect,
+  /// i.e. at least one rating event that has a null [NonRatingResultReason].
+  bool get hasRatedHistory => wrappedRating.hasRatedHistory;
+  set hasRatedHistory(bool v) => wrappedRating.hasRatedHistory = v;
+
   set memberNumber(String m) {
     super.memberNumber = m;
     this.wrappedRating.memberNumber = m;

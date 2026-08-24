@@ -43,6 +43,7 @@ class LatentLogRatingEvent extends RatingEvent {
     required double varianceChange,
     required double dispersionChange,
     required double momentumChange,
+    NonRatingResultReason? nonRatingResultReason,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: ratingChange,
     oldRating: oldRating,
@@ -56,6 +57,7 @@ class LatentLogRatingEvent extends RatingEvent {
     doubleDataElements: _DoubleKeys.values.length,
     infoLines: infoLines,
     infoData: infoData,
+    nonRatingResultReason: nonRatingResultReason,
   )) {
     this.oldRating = oldRating;
     this.oldVariance = oldVariance;
@@ -84,6 +86,9 @@ class LatentLogRatingEvent extends RatingEvent {
 
   double get momentumChange => wrappedEvent.doubleData[_DoubleKeys.momentumChange.index];
   set momentumChange(double v) => wrappedEvent.doubleData[_DoubleKeys.momentumChange.index] = v;
+
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
 
   LatentLogSettings settings;
 
@@ -123,6 +128,7 @@ class LatentLogRatingEvent extends RatingEvent {
     extraData = change.extraData;
     infoLines = change.infoLines;
     infoData = change.infoData;
+    nonRatingResultReason = change.nonRatingResultReason;
   }
 
 }

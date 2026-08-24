@@ -20,6 +20,7 @@ class PointsRatingEvent extends RatingEvent {
     required RelativeScore matchScore,
     List<String> infoLines = const [],
     List<RatingEventInfoElement> infoData = const [],
+    NonRatingResultReason? nonRatingResultReason,
   }) : super(
     wrappedEvent: DbRatingEvent(
       ratingChange: ratingChange,
@@ -35,6 +36,7 @@ class PointsRatingEvent extends RatingEvent {
       doubleDataElements: 0,
       infoLines: infoLines,
       infoData: infoData,
+      nonRatingResultReason: nonRatingResultReason,
   )) {
   }
 
@@ -53,5 +55,6 @@ class PointsRatingEvent extends RatingEvent {
     else {
       ratingChange += change.change[RatingSystem.ratingChangeKey]!;
     }
+    nonRatingResultReason = change.nonRatingResultReason;
   }
 }

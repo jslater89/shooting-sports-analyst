@@ -422,6 +422,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

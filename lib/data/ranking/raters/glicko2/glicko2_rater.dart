@@ -341,6 +341,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

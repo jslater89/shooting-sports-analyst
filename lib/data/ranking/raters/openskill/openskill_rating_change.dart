@@ -23,6 +23,9 @@ class OpenskillRatingEvent extends RatingEvent {
   double get initialSigma => wrappedEvent.doubleData[_DoubleKeys.initialSigma.index];
   set initialSigma(double v) => wrappedEvent.doubleData[_DoubleKeys.initialSigma.index] = v;
 
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
+
   double get initialMu => super.oldRating;
   set initialMu(double v) => super.oldRating = v;
 
@@ -47,6 +50,7 @@ class OpenskillRatingEvent extends RatingEvent {
     required RelativeScore matchScore,
     List<String> infoLines = const [],
     List<RatingEventInfoElement> infoData = const [],
+    NonRatingResultReason? nonRatingResultReason,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: muChange,
     oldRating: initialMu,
@@ -60,6 +64,7 @@ class OpenskillRatingEvent extends RatingEvent {
     doubleDataElements: _DoubleKeys.values.length,
     infoLines: infoLines,
     infoData: infoData,
+    nonRatingResultReason: nonRatingResultReason,
   )) {
     this.initialSigma = initialSigma;
   }
@@ -69,6 +74,7 @@ class OpenskillRatingEvent extends RatingEvent {
   void apply(RatingChange change) {
     muChange += change.change[OpenskillRater.muKey]!;
     sigmaChange += change.change[OpenskillRater.sigmaKey]!;
+    nonRatingResultReason = change.nonRatingResultReason;
   }
 
   OpenskillRatingEvent.copy(OpenskillRatingEvent other) :
@@ -76,6 +82,7 @@ class OpenskillRatingEvent extends RatingEvent {
     this.initialMu = other.initialMu;
     this.muChange = other.muChange;
     this.sigmaChange = other.sigmaChange;
+    this.nonRatingResultReason = other.nonRatingResultReason;
   }
 
   OpenskillRatingEvent.wrap(DbRatingEvent event) :

@@ -260,7 +260,10 @@ class InvitationalInvitesModel extends ChangeNotifier {
   }
 
   void addFinishOrderRule() {
-    config.invitationMatches.add(InvitationMatch.topN(topN: 1));
+    config.invitationMatches.add(InvitationMatch.topN(
+      topN: 1,
+      scope: InvitationMatchScope.general,
+    ));
     notifyConfigChanged();
   }
 
@@ -319,6 +322,8 @@ class InvitationalInvitesModel extends ChangeNotifier {
       return Result.err(StringError("Config name is required."));
     }
 
+    config.sortInvitationMatchesByPriority();
+
     final now = DateTime.now();
     final record = savedRecord ?? DbInvitationalInviteConfig();
     record.name = saveName.trim();
@@ -369,6 +374,7 @@ class InvitationalInvitesModel extends ChangeNotifier {
   }
 
   String exportToml() {
+    config.sortInvitationMatchesByPriority();
     return config.toToml();
   }
 
@@ -378,6 +384,8 @@ class InvitationalInvitesModel extends ChangeNotifier {
     if(project == null) {
       return Result.err(StringError("Rating project is not loaded."));
     }
+    config.sortInvitationMatchesByPriority();
+    _notify();
     final engine = InvitationalInviteEngine();
     final generated = await engine.generate(
       db: db,

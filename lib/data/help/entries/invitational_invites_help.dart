@@ -19,7 +19,9 @@ const _content =
 """# Invitational Invites
 
 This screen builds an invitational invite list from a rating project: finish-order slots from
-selected matches, then remaining slots filled by rating.
+selected matches, then remaining slots filled by rating. Rating fills ignore competitors who have
+never received a calculated rating update (`hasNonzeroRatingChanges` is false)—classification
+seeds and shooters with only DQ/DNF no-op events.
 
 Configs are stored separately from rating projects. You can reuse a config with a different project.
 If groups or match source IDs are missing from the current project, you will see a warning,
@@ -66,6 +68,15 @@ If enabled, invitations for multi-division groups will use combined scoring, not
 
 Each rule awards slots from matches that match its identification:
 
+- An optional **Name** is a short label for crowded configs; it does not affect generation.
+- **Scope** controls which invite-engine pass the rule runs on:
+  - **General**: overall (unfiltered) division scores only. Category competitors can still qualify
+    here if they place high enough overall.
+  - **Lady** / **Junior** / **Senior**: the matching reserved-category pass only (requires that
+    reserved slot option to be enabled).
+  - **Categories**: every enabled reserved pass (lady / junior / senior), but not the overall pass.
+  - **All**: the overall pass and every enabled reserved pass (legacy default when scope is omitted
+    from a TOML config).
 - The **Matches** section picks specific matches from the current project.
 - **Include name patterns** are regular expressions; if any are set, all of them must match the match name.
 - **Exclude name patterns** reject a match if any of them match.
@@ -78,8 +89,14 @@ Rule types:
 - *Either*: either top N or above N% qualifies
 - *Both*: only top N as well as above N% qualifies
 
+Typical pattern for separate category awards: one **general** top-3 rule plus a **lady** top-1 rule
+(and similar junior/senior rules as needed), instead of a single **all**-scoped top-3 rule.
+
 Higher **priority** values run first. Within a priority, matches are processed newest first. **Minimum competitors**
 skips small fields.
+
+New rules created in the UI default to **general** scope. Imported configs without a scope field keep
+**all** so existing behavior is unchanged.
 
 ## Excluded Groups
 
@@ -94,4 +111,10 @@ The Results tab can filter the list with Fallback, Lady, Junior, Senior, and Res
 Each is Any, Yes, or No, and they combine. Fallback Yes plus Lady Yes shows lady fallbacks for registration staff
 to walk. Lady Yes plus Junior No hides junior ladies who only qualified on the junior list. The refresh icon clears
 all filters back to Any. CSV export is unfiltered.
+
+Invitation detail shows how each qualification was earned. Match qualifications include a **Pass**
+column (General, Lady, Junior, Senior, or Age for combined junior/senior). Rating qualifications
+show the same category labels for the rating-fill path that produced them. Reserved-floor and
+reserved take-rate overflow rating fills both record their category; the final overall rating fill
+is General.
 """;

@@ -181,6 +181,10 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
       agedRating = rating;
       careerMinimumRating = min(careerMinimumRating, rating);
       careerMaximumRating = max(careerMaximumRating, rating);
+
+      if(!hasRatedHistory) {
+        hasRatedHistory = e.nonRatingResultReason == null;
+      }
     }
   }
 

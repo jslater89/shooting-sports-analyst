@@ -469,6 +469,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

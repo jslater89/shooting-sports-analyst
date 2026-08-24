@@ -189,6 +189,7 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

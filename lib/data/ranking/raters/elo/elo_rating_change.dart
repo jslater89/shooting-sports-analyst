@@ -37,6 +37,9 @@ class EloRatingEvent extends RatingEvent {
   double get backRatingError => wrappedEvent.doubleData[_DoubleKeys.backRatingError.index];
   set backRatingError(double v) => wrappedEvent.doubleData[_DoubleKeys.backRatingError.index] = v;
 
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
+
   EloRatingEvent({
     required double oldRating,
     required ShootingMatch match,
@@ -50,6 +53,7 @@ class EloRatingEvent extends RatingEvent {
     required double baseK,
     required double effectiveK,
     required double backRatingError,
+    NonRatingResultReason? nonRatingResultReason,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: ratingChange,
     oldRating: oldRating,
@@ -61,6 +65,7 @@ class EloRatingEvent extends RatingEvent {
     date: match.date,
     intDataElements: 0,
     doubleDataElements: _DoubleKeys.values.length,
+    nonRatingResultReason: nonRatingResultReason,
   )) {
     this.infoLines = infoLines;
     this.infoData = infoData;
@@ -98,5 +103,6 @@ class EloRatingEvent extends RatingEvent {
     extraData = change.extraData;
     infoLines = change.infoLines;
     infoData = change.infoData;
+    nonRatingResultReason = change.nonRatingResultReason;
   }
 }

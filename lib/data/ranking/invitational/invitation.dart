@@ -17,12 +17,45 @@ class InvitationMatchQualification {
   final ShootingMatch match;
   final RelativeMatchScore score;
   final InvitationMatch criterion;
+  final InvitationPassCategory passCategory;
 
   const InvitationMatchQualification({
     required this.group,
     required this.match,
     required this.score,
     required this.criterion,
+    required this.passCategory,
+  });
+}
+
+/// Which invite-engine pass produced a match or rating qualification.
+enum InvitationPassCategory {
+  general,
+  lady,
+  junior,
+  senior,
+  /// Combined junior+senior age leaderboard / rating pool.
+  age;
+
+  String get label => switch(this) {
+    general => "General",
+    lady => "Lady",
+    junior => "Junior",
+    senior => "Senior",
+    age => "Age",
+  };
+
+  bool get isCategory => this != general;
+}
+
+/// One rating-fill qualification that earned or extended an invitation.
+class InvitationRatingQualification {
+  final RatingGroup group;
+  final InvitationPassCategory source;
+
+  const InvitationRatingQualification({
+    required this.group,
+    required this.source,
   });
 }
 
@@ -33,7 +66,8 @@ class Invitation {
   final List<ShootingMatch> earnedAtMatches;
   final List<RatingGroup> earnedMatchGroups;
   final List<InvitationMatch> matchCriteria;
-  final List<RatingGroup> earnedByRatings = [];
+  final List<InvitationPassCategory> matchPassCategories;
+  final List<InvitationRatingQualification> ratingQualifications = [];
   bool fallbackSlot;
   bool reservedSlot;
 
@@ -44,17 +78,48 @@ class Invitation {
     List<ShootingMatch>? earnedAtMatches,
     List<RatingGroup>? earnedMatchGroups,
     List<InvitationMatch>? matchCriteria,
+    List<InvitationPassCategory>? matchPassCategories,
     required this.fallbackSlot,
     required this.reservedSlot,
   }) : relativeMatchScores = relativeMatchScores ?? [],
        earnedAtMatches = earnedAtMatches ?? [],
        earnedMatchGroups = earnedMatchGroups ?? [],
-       matchCriteria = matchCriteria ?? [];
+       matchCriteria = matchCriteria ?? [],
+       matchPassCategories = matchPassCategories ?? [];
 
-  /// Match qualifications with duplicate match/group pairs removed.
+  /// Groups that earned a rating-fill qualification (order preserved).
+  List<RatingGroup> get earnedByRatings => [
+    for(final q in ratingQualifications) q.group,
+  ];
+
+  /// Records a rating-fill qualification for [group] if one is not already present.
+  void addRatingQualification(RatingGroup group, InvitationPassCategory source) {
+    if(ratingQualifications.any((q) => q.group == group)) {
+      return;
+    }
+    ratingQualifications.add(InvitationRatingQualification(group: group, source: source));
+  }
+
+  /// Appends a match finish-order qualification.
+  void addMatchQualification({
+    required RatingGroup group,
+    required ShootingMatch match,
+    required RelativeMatchScore score,
+    required InvitationMatch criterion,
+    required InvitationPassCategory passCategory,
+  }) {
+    groups.addIfMissing(group);
+    relativeMatchScores.add(score);
+    earnedAtMatches.add(match);
+    earnedMatchGroups.add(group);
+    matchCriteria.add(criterion);
+    matchPassCategories.add(passCategory);
+  }
+
+  /// Match qualifications with duplicate match/group/pass triples removed.
   ///
-  /// Reserved-pass reprocessing can append the same match qualification more than
-  /// once; the detail view should show each match/group pair only once.
+  /// The same match can legitimately qualify on both general and category passes;
+  /// those are kept separately. Duplicate appends of the same triple are collapsed.
   List<InvitationMatchQualification> get deduplicatedMatchQualifications {
     final seen = <String>{};
     final qualifications = <InvitationMatchQualification>[];
@@ -65,7 +130,10 @@ class Invitation {
         continue;
       }
 
-      final key = _matchGroupDedupeKey(group, earnedAtMatches[i]);
+      final passCategory = i < matchPassCategories.length
+          ? matchPassCategories[i]
+          : InvitationPassCategory.general;
+      final key = _matchGroupPassDedupeKey(group, earnedAtMatches[i], passCategory);
       if(!seen.add(key)) {
         continue;
       }
@@ -75,6 +143,7 @@ class Invitation {
         match: earnedAtMatches[i],
         score: relativeMatchScores[i],
         criterion: matchCriteria[i],
+        passCategory: passCategory,
       ));
     }
 
@@ -104,11 +173,15 @@ class Invitation {
     return null;
   }
 
-  static String _matchGroupDedupeKey(RatingGroup group, ShootingMatch match) {
+  static String _matchGroupPassDedupeKey(
+    RatingGroup group,
+    ShootingMatch match,
+    InvitationPassCategory passCategory,
+  ) {
     final matchPart = match.sourceIds.isNotEmpty
         ? match.sourceIds.sorted().join("|")
         : "${programmerYmdFormat.format(match.date)}|${match.name}";
-    return "${group.name}|$matchPart";
+    return "${group.name}|$matchPart|${passCategory.name}";
   }
 
   Map<String, dynamic> toJson() {
@@ -127,9 +200,13 @@ class Invitation {
         "division": qualification.score.shooter.division?.name,
         "place": qualification.score.place,
         "percentage": double.tryParse(qualification.score.ratio.asPercentage()) ?? 0,
+        "passCategory": qualification.passCategory.name,
         "matchCriterion": qualification.criterion.toJson(),
       }).toList(),
-      "ratingInvitations": earnedByRatings.map((g) => g.name).toList(),
+      "ratingInvitations": ratingQualifications.map((q) => {
+        "ratingGroup": q.group.name,
+        "source": q.source.name,
+      }).toList(),
     };
   }
 }

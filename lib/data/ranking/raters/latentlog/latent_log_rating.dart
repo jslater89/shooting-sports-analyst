@@ -226,6 +226,9 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
       lastCommitTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
       careerMinimumRating = min(careerMinimumRating, rating);
       careerMaximumRating = max(careerMaximumRating, rating);
+      if(!hasRatedHistory) {
+        hasRatedHistory = e.nonRatingResultReason == null;
+      }
     }
 
     // LLR sets agedRating as a separate pass after calculation, since

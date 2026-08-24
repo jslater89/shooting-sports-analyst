@@ -248,6 +248,10 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
       }
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
       lastSeen = e.wrappedEvent.date;
+
+      if(!hasRatedHistory) {
+        hasRatedHistory = e.nonRatingResultReason == null;
+      }
     }
 
     standardError = calculateStandardError();

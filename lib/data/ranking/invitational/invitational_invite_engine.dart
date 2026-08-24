@@ -275,13 +275,40 @@ class InvitationalInviteEngine {
     final reservedPasses = <_ReservedPass>[
       if(config.ladySlots) _ReservedPass.lady(),
       if(config.combineAgeSlots && (juniorCategories.isNotEmpty || seniorCategories.isNotEmpty))
-        _ReservedPass.age([...juniorCategories, ...seniorCategories])
+        _ReservedPass.combinedAge([...juniorCategories, ...seniorCategories])
       else ...[
-        if(config.juniorSlots && juniorCategories.isNotEmpty) _ReservedPass.age(juniorCategories),
-        if(config.seniorSlots && seniorCategories.isNotEmpty) _ReservedPass.age(seniorCategories),
+        if(config.juniorSlots && juniorCategories.isNotEmpty) _ReservedPass.junior(juniorCategories),
+        if(config.seniorSlots && seniorCategories.isNotEmpty) _ReservedPass.senior(seniorCategories),
       ],
     ];
-    final totalSteps = prioritiesDescending.length * matchPointers.length * (1 + reservedPasses.length);
+
+    for(final rule in invitationMatches) {
+      if(rule.scope == InvitationMatchScope.lady && !config.ladySlots) {
+        warnings.add("Finish-order rule \"${rule.displayLabel}\" is lady-scoped, but lady slots are disabled; it will not run.");
+      }
+      else if(rule.scope == InvitationMatchScope.junior && !config.juniorSlots) {
+        warnings.add("Finish-order rule \"${rule.displayLabel}\" is junior-scoped, but junior slots are disabled; it will not run.");
+      }
+      else if(rule.scope == InvitationMatchScope.senior && !config.seniorSlots) {
+        warnings.add("Finish-order rule \"${rule.displayLabel}\" is senior-scoped, but senior slots are disabled; it will not run.");
+      }
+      else if(rule.scope == InvitationMatchScope.categories && !config.anyReservedSlots) {
+        warnings.add("Finish-order rule \"${rule.displayLabel}\" is categories-scoped, but no reserved slots are enabled; it will not run.");
+      }
+    }
+
+    int totalSteps = 0;
+    for(final priority in prioritiesDescending) {
+      final rulesAtPriority = invitationMatchesByPriority[priority]!;
+      final generalRules = rulesAtPriority.where((r) => r.scope.appliesToGeneralPass).toList();
+      var passesForPriority = generalRules.isNotEmpty ? 1 : 0;
+      for(final pass in reservedPasses) {
+        if(rulesAtPriority.any((r) => r.scope.appliesToReservedPass(pass.kind))) {
+          passesForPriority += 1;
+        }
+      }
+      totalSteps += matchPointers.length * passesForPriority;
+    }
     var currentStep = 0;
 
     Future<void> runMatchPass({
@@ -289,6 +316,9 @@ class InvitationalInviteEngine {
       required MatchPointer pointer,
       required _ReservedPass pass,
     }) async {
+      if(matchesAtPriority.isEmpty) {
+        return;
+      }
       await _getMatchInvitations(
         combinedScoringForMultiDivisionGroups: config.combinedScoringForMultiDivisionGroups,
         matchesAtPriority: matchesAtPriority,
@@ -301,6 +331,8 @@ class InvitationalInviteEngine {
         excludedGroupsRules: resolvedExcludedRules,
         groups: groups,
         pass: pass,
+        juniorCategories: juniorCategories,
+        seniorCategories: seniorCategories,
         invitationsByMemberNumber: invitationsByMemberNumber,
         invitations: invitations,
         invitationsByGroup: invitationsByGroup,
@@ -314,15 +346,24 @@ class InvitationalInviteEngine {
 
     for(final priority in prioritiesDescending) {
       final matchesAtPriority = invitationMatchesByPriority[priority]!;
+      final generalRules = matchesAtPriority.where((r) => r.scope.appliesToGeneralPass).toList();
       for(var pointer in matchPointers) {
-        await runMatchPass(
-          matchesAtPriority: matchesAtPriority,
-          pointer: pointer,
-          pass: const _ReservedPass.general(),
-        );
-        for(final pass in reservedPasses) {
+        if(generalRules.isNotEmpty) {
           await runMatchPass(
-            matchesAtPriority: matchesAtPriority,
+            matchesAtPriority: generalRules,
+            pointer: pointer,
+            pass: const _ReservedPass.general(),
+          );
+        }
+        for(final pass in reservedPasses) {
+          final scopedRules = matchesAtPriority
+              .where((r) => r.scope.appliesToReservedPass(pass.kind))
+              .toList();
+          if(scopedRules.isEmpty) {
+            continue;
+          }
+          await runMatchPass(
+            matchesAtPriority: scopedRules,
             pointer: pointer,
             pass: pass,
           );
@@ -340,6 +381,7 @@ class InvitationalInviteEngine {
 
       List<Invitation> ratingFill({
         required bool reserved,
+        required InvitationPassCategory ratingSource,
         required bool Function(DbShooterRating rating) matches,
         required int neededSlots,
       }) {
@@ -348,6 +390,7 @@ class InvitationalInviteEngine {
           ratings: ratingsList,
           group: group,
           reserved: reserved,
+          ratingSource: ratingSource,
           matches: matches,
           activeSince: config.activeSince,
           neededSlots: neededSlots,
@@ -364,6 +407,7 @@ class InvitationalInviteEngine {
 
       void fillReservedFloor({
         required int reservedCount,
+        required InvitationPassCategory ratingSource,
         required int Function() currentCount,
         required bool Function(DbShooterRating rating) matches,
       }) {
@@ -371,6 +415,7 @@ class InvitationalInviteEngine {
         if(neededFloor > 0) {
           ratingFill(
             reserved: true,
+            ratingSource: ratingSource,
             matches: matches,
             neededSlots: neededFloor,
           );
@@ -379,6 +424,7 @@ class InvitationalInviteEngine {
 
       void fillReservedOverflow({
         required int reservedCount,
+        required InvitationPassCategory ratingSource,
         required int Function() currentCount,
         required bool Function(DbShooterRating rating) matches,
       }) {
@@ -388,6 +434,7 @@ class InvitationalInviteEngine {
         if(neededOverflow > 0) {
           reservedOverflowInvitations.addAll(ratingFill(
             reserved: false,
+            ratingSource: ratingSource,
             matches: matches,
             neededSlots: neededOverflow,
           ));
@@ -397,6 +444,7 @@ class InvitationalInviteEngine {
       if(config.ladySlots) {
         fillReservedFloor(
           reservedCount: ladySlotsByGroup[group] ?? 0,
+          ratingSource: InvitationPassCategory.lady,
           currentCount: () => ladyInvitations[group]!.length,
           matches: (r) => r.female,
         );
@@ -405,6 +453,7 @@ class InvitationalInviteEngine {
       if(config.combineAgeSlots) {
         fillReservedFloor(
           reservedCount: juniorSeniorSlotsByGroup[group] ?? 0,
+          ratingSource: InvitationPassCategory.age,
           currentCount: () => <Invitation>{
             ...juniorInvitations[group]!,
             ...seniorInvitations[group]!,
@@ -416,6 +465,7 @@ class InvitationalInviteEngine {
         if(config.juniorSlots) {
           fillReservedFloor(
             reservedCount: juniorSlotsByGroup[group] ?? 0,
+            ratingSource: InvitationPassCategory.junior,
             currentCount: () => juniorInvitations[group]!.length,
             matches: (r) => r.ageCategory?.isJunior == true,
           );
@@ -423,6 +473,7 @@ class InvitationalInviteEngine {
         if(config.seniorSlots) {
           fillReservedFloor(
             reservedCount: seniorSlotsByGroup[group] ?? 0,
+            ratingSource: InvitationPassCategory.senior,
             currentCount: () => seniorInvitations[group]!.length,
             matches: (r) => r.ageCategory?.isSenior == true,
           );
@@ -432,6 +483,7 @@ class InvitationalInviteEngine {
       if(config.ladySlots) {
         fillReservedOverflow(
           reservedCount: ladySlotsByGroup[group] ?? 0,
+          ratingSource: InvitationPassCategory.lady,
           currentCount: () => ladyInvitations[group]!.length,
           matches: (r) => r.female,
         );
@@ -440,6 +492,7 @@ class InvitationalInviteEngine {
       if(config.combineAgeSlots) {
         fillReservedOverflow(
           reservedCount: juniorSeniorSlotsByGroup[group] ?? 0,
+          ratingSource: InvitationPassCategory.age,
           currentCount: () => <Invitation>{
             ...juniorInvitations[group]!,
             ...seniorInvitations[group]!,
@@ -451,6 +504,7 @@ class InvitationalInviteEngine {
         if(config.juniorSlots) {
           fillReservedOverflow(
             reservedCount: juniorSlotsByGroup[group] ?? 0,
+            ratingSource: InvitationPassCategory.junior,
             currentCount: () => juniorInvitations[group]!.length,
             matches: (r) => r.ageCategory?.isJunior == true,
           );
@@ -458,6 +512,7 @@ class InvitationalInviteEngine {
         if(config.seniorSlots) {
           fillReservedOverflow(
             reservedCount: seniorSlotsByGroup[group] ?? 0,
+            ratingSource: InvitationPassCategory.senior,
             currentCount: () => seniorInvitations[group]!.length,
             matches: (r) => r.ageCategory?.isSenior == true,
           );
@@ -467,6 +522,7 @@ class InvitationalInviteEngine {
       final neededSlots = maximumSlotsByGroup[group]! - filledSlotsByGroup[group]!;
       ratingFill(
         reserved: false,
+        ratingSource: InvitationPassCategory.general,
         matches: (_) => true,
         neededSlots: neededSlots,
       );
@@ -570,6 +626,7 @@ class InvitationalInviteEngine {
     required List<DbShooterRating> ratings,
     required RatingGroup group,
     required bool reserved,
+    required InvitationPassCategory ratingSource,
     required bool Function(DbShooterRating rating) matches,
     required DateTime? activeSince,
     required int neededSlots,
@@ -589,7 +646,7 @@ class InvitationalInviteEngine {
     var ratingsList = [...ratings];
     ratingsList.retainWhere((r) {
       final dateInRange = activeSince == null || r.lastSeen.isAfter(activeSince);
-      return dateInRange && matches(r);
+      return dateInRange && r.hasRatedHistory && matches(r);
     });
     ratingsList.sort((a, b) => b.rating.compareTo(a.rating));
 
@@ -603,7 +660,7 @@ class InvitationalInviteEngine {
 
           if(multipleDivisionRatingQualification) {
             existingInvitation.groups.addIfMissing(group);
-            existingInvitation.earnedByRatings.addIfMissing(group);
+            existingInvitation.addRatingQualification(group, ratingSource);
           }
           break;
         }
@@ -613,7 +670,7 @@ class InvitationalInviteEngine {
       }
 
       var invitation = Invitation(groups: [group], rating: ratingSystem.wrapDbRating(rating), fallbackSlot: false, reservedSlot: reserved);
-      invitation.earnedByRatings.add(group);
+      invitation.addRatingQualification(group, ratingSource);
       invitations.add(invitation);
       invitationsByGroup.addToList(group, invitation);
       filledSlotsByGroup.increment(group);
@@ -649,6 +706,8 @@ class InvitationalInviteEngine {
     required List<_ResolvedExcludedGroupsRule> excludedGroupsRules,
     required List<RatingGroup> groups,
     required _ReservedPass pass,
+    required List<AgeCategory> juniorCategories,
+    required List<AgeCategory> seniorCategories,
     required Map<String, Invitation> invitationsByMemberNumber,
     required List<Invitation> invitations,
     required Map<RatingGroup, List<Invitation>> invitationsByGroup,
@@ -701,11 +760,16 @@ class InvitationalInviteEngine {
           }
         }
         for(var divisionGroup in divisionGroups) {
+          final ageCategories = pass.ageCategoriesForRule(
+            invitationMatch.scope,
+            juniorCategories: juniorCategories,
+            seniorCategories: seniorCategories,
+          );
           var relativeMatchScores = invitationMatch.getRelativeMatchScores(
             match,
             divisions: divisionGroup,
             lady: pass.lady,
-            ageCategories: pass.ageCategories,
+            ageCategories: ageCategories,
           );
           if(relativeMatchScores.isNotEmpty) {
             for(var relativeMatchScore in relativeMatchScores) {
@@ -714,15 +778,19 @@ class InvitationalInviteEngine {
                 continue;
               }
 
+              final passCategory = pass.passCategoryForRule(invitationMatch.scope);
+
               bool foundExistingInvitation = false;
               for(var number in rating.allPossibleMemberNumbers) {
                 final existingInvitation = invitationsByMemberNumber[number];
                 if(existingInvitation != null) {
-                  existingInvitation.groups.addIfMissing(group);
-                  existingInvitation.relativeMatchScores.add(relativeMatchScore);
-                  existingInvitation.earnedAtMatches.add(match);
-                  existingInvitation.earnedMatchGroups.add(group);
-                  existingInvitation.matchCriteria.add(invitationMatch);
+                  existingInvitation.addMatchQualification(
+                    group: group,
+                    match: match,
+                    score: relativeMatchScore,
+                    criterion: invitationMatch,
+                    passCategory: passCategory,
+                  );
                   foundExistingInvitation = true;
                   break;
                 }
@@ -738,6 +806,7 @@ class InvitationalInviteEngine {
                 earnedAtMatches: [match],
                 earnedMatchGroups: [group],
                 matchCriteria: [invitationMatch],
+                matchPassCategories: [passCategory],
                 fallbackSlot: false,
                 reservedSlot: pass.reserved,
               );
@@ -785,22 +854,68 @@ class InvitationalInviteEngine {
 }
 
 class _ReservedPass {
+  final InvitationMatchPassKind kind;
   final bool lady;
   final List<AgeCategory>? ageCategories;
 
   const _ReservedPass.general()
-      : lady = false,
+      : kind = InvitationMatchPassKind.general,
+        lady = false,
         ageCategories = null;
 
   const _ReservedPass.lady()
-      : lady = true,
+      : kind = InvitationMatchPassKind.lady,
+        lady = true,
         ageCategories = null;
 
-  _ReservedPass.age(List<AgeCategory> categories)
-      : lady = false,
+  _ReservedPass.junior(List<AgeCategory> categories)
+      : kind = InvitationMatchPassKind.junior,
+        lady = false,
         ageCategories = categories;
 
-  bool get reserved => lady || (ageCategories != null && ageCategories!.isNotEmpty);
+  _ReservedPass.senior(List<AgeCategory> categories)
+      : kind = InvitationMatchPassKind.senior,
+        lady = false,
+        ageCategories = categories;
+
+  _ReservedPass.combinedAge(List<AgeCategory> categories)
+      : kind = InvitationMatchPassKind.combinedAge,
+        lady = false,
+        ageCategories = categories;
+
+  bool get reserved => kind != InvitationMatchPassKind.general;
+
+  /// Age categories for [getRelativeMatchScores], with combined-pass overrides by rule scope.
+  List<AgeCategory>? ageCategoriesForRule(
+    InvitationMatchScope scope, {
+    required List<AgeCategory> juniorCategories,
+    required List<AgeCategory> seniorCategories,
+  }) {
+    if(kind != InvitationMatchPassKind.combinedAge) {
+      return ageCategories;
+    }
+    return switch(scope) {
+      InvitationMatchScope.junior => juniorCategories,
+      InvitationMatchScope.senior => seniorCategories,
+      InvitationMatchScope.all || InvitationMatchScope.categories => ageCategories,
+      InvitationMatchScope.general || InvitationMatchScope.lady => ageCategories,
+    };
+  }
+
+  /// Effective pass category recorded on match qualifications for this pass + rule.
+  InvitationPassCategory passCategoryForRule(InvitationMatchScope scope) {
+    return switch(kind) {
+      InvitationMatchPassKind.general => InvitationPassCategory.general,
+      InvitationMatchPassKind.lady => InvitationPassCategory.lady,
+      InvitationMatchPassKind.junior => InvitationPassCategory.junior,
+      InvitationMatchPassKind.senior => InvitationPassCategory.senior,
+      InvitationMatchPassKind.combinedAge => switch(scope) {
+        InvitationMatchScope.junior => InvitationPassCategory.junior,
+        InvitationMatchScope.senior => InvitationPassCategory.senior,
+        _ => InvitationPassCategory.age,
+      },
+    };
+  }
 }
 
 class _ResolvedExcludedGroupsRule {

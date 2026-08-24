@@ -9,6 +9,7 @@ import "package:flutter/material.dart";
 import "package:shooting_sports_analyst/config/config.dart";
 import "package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart";
 import "package:shooting_sports_analyst/data/ranking/invitational/invitation.dart";
+import "package:shooting_sports_analyst/data/ranking/invitational/invitation_match.dart";
 import "package:shooting_sports_analyst/data/ranking/invitational/invitational_invite_engine.dart";
 import "package:shooting_sports_analyst/data/sport/model.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/filter_set.dart";
@@ -57,7 +58,8 @@ class InvitationDetailDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     final matchQualifications = invitation.deduplicatedMatchQualifications;
-    final ratingQualifications = invitation.earnedByRatings.sorted((a, b) => a.uiLabel.compareTo(b.uiLabel));
+    final ratingQualifications = invitation.ratingQualifications
+        .sorted((a, b) => a.group.uiLabel.compareTo(b.group.uiLabel));
     final invitedGroups = invitation.groups.sorted((a, b) => a.uiLabel.compareTo(b.uiLabel));
 
     return AlertDialog(
@@ -102,10 +104,13 @@ class InvitationDetailDialog extends StatelessWidget {
               if(ratingQualifications.isNotEmpty) ...[
                 SizedBox(height: 16 * uiScaleFactor),
                 _sectionTitle(context, uiScaleFactor, "Rating qualifications"),
-                for(final group in ratingQualifications)
+                for(final qualification in ratingQualifications)
                   Padding(
                     padding: EdgeInsets.only(left: 8 * uiScaleFactor, top: 4 * uiScaleFactor),
-                    child: Text("• ${group.uiLabel}", style: Theme.of(context).textTheme.bodyLarge),
+                    child: Text(
+                      "• ${qualification.group.uiLabel} (${qualification.source.label})",
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
                   ),
               ],
               if(matchQualifications.isEmpty && ratingQualifications.isEmpty)
@@ -162,9 +167,10 @@ class InvitationDetailDialog extends StatelessWidget {
         1: FlexColumnWidth(1.2),
         2: FlexColumnWidth(1.0),
         3: FlexColumnWidth(2.4),
-        4: FlexColumnWidth(1.4),
-        5: FlexColumnWidth(0.6),
-        6: FlexColumnWidth(0.7),
+        4: FlexColumnWidth(1.0),
+        5: FlexColumnWidth(1.4),
+        6: FlexColumnWidth(0.6),
+        7: FlexColumnWidth(0.7),
       },
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
@@ -174,6 +180,7 @@ class InvitationDetailDialog extends StatelessWidget {
             _tableHeader(context, uiScaleFactor, "Division"),
             _tableHeader(context, uiScaleFactor, "Date"),
             _tableHeader(context, uiScaleFactor, "Match"),
+            _tableHeader(context, uiScaleFactor, "Pass"),
             _tableHeader(context, uiScaleFactor, "Rule"),
             _tableHeader(context, uiScaleFactor, "Place", align: TextAlign.right),
             _tableHeader(context, uiScaleFactor, "%", align: TextAlign.right),
@@ -186,7 +193,8 @@ class InvitationDetailDialog extends StatelessWidget {
               _tableCell(context, uiScaleFactor, qualification.score.shooter.division?.shortDisplayName ?? "—"),
               _tableCell(context, uiScaleFactor, programmerYmdFormat.format(qualification.match.date)),
               _tableMatchCell(context, uiScaleFactor, combinedScoring, qualification),
-              _tableCell(context, uiScaleFactor, qualification.criterion.ruleSummary),
+              _tableCell(context, uiScaleFactor, qualification.passCategory.label),
+              _tableCell(context, uiScaleFactor, _criterionLabel(qualification.criterion)),
               _tableCell(context, uiScaleFactor, "${qualification.score.place}", align: TextAlign.right),
               _tableCell(context, uiScaleFactor, qualification.score.ratio.asPercentage(), align: TextAlign.right),
             ],
@@ -200,6 +208,14 @@ class InvitationDetailDialog extends StatelessWidget {
       padding: EdgeInsets.only(bottom: 6 * uiScaleFactor),
       child: Text(text, style: Theme.of(context).textTheme.titleSmall),
     );
+  }
+
+  String _criterionLabel(InvitationMatch criterion) {
+    final trimmed = criterion.name?.trim();
+    if(trimmed != null && trimmed.isNotEmpty) {
+      return "$trimmed (${criterion.ruleSummary})";
+    }
+    return criterion.ruleSummary;
   }
 
   Widget _bodyText(BuildContext context, double uiScaleFactor, String text) {

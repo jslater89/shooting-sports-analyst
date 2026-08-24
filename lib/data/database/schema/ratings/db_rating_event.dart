@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:sprintf/sprintf.dart';
 
 part 'db_rating_event.g.dart';
@@ -149,6 +150,9 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
   DbRelativeScore score;
   DbRelativeScore matchScore;
 
+  @Enumerated(EnumType.name)
+  NonRatingResultReason? nonRatingResultReason;
+
   DbRatingEvent({
     required this.ratingChange,
     required this.oldRating,
@@ -162,6 +166,7 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
     required this.matchId,
     this.infoData = const [],
     this.infoLines = const [],
+    this.nonRatingResultReason,
     int doubleDataElements = 0,
     int intDataElements = 0,
   }) :
@@ -184,6 +189,7 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
       date: this.date,
       stageNumber: this.stageNumber,
       entryId: this.entryId,
+      nonRatingResultReason: this.nonRatingResultReason,
       matchId: this.matchId,
     )..intData = ([]..addAll(intData))..doubleData = ([]..addAll(doubleData));
 

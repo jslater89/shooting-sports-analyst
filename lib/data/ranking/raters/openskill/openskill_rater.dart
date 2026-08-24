@@ -195,6 +195,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

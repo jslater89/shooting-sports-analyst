@@ -43,6 +43,7 @@ class Glicko2RatingEvent extends RatingEvent {
     required double volatilityChange,
     required double oldRD,
     required double rdChange,
+    NonRatingResultReason? nonRatingResultReason,
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: ratingChange,
     oldRating: oldRating,
@@ -56,6 +57,7 @@ class Glicko2RatingEvent extends RatingEvent {
     doubleDataElements: _DoubleKeys.values.length,
     infoLines: infoLines,
     infoData: infoData,
+    nonRatingResultReason: nonRatingResultReason,
   )) {
     this.oldRD = oldRD;
     this.rdChange = rdChange;
@@ -87,6 +89,9 @@ class Glicko2RatingEvent extends RatingEvent {
   int get stages => wrappedEvent.intData[_IntKeys.stages.index];
   set stages(int v) => wrappedEvent.intData[_IntKeys.stages.index] = v;
 
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
+
   Glicko2RatingEvent.wrap(DbRatingEvent event, {required this.settings}) :
     super(wrappedEvent: event) {
     this.settings = settings;
@@ -115,6 +120,7 @@ class Glicko2RatingEvent extends RatingEvent {
     extraData = change.extraData;
     infoLines = change.infoLines;
     infoData = change.infoData;
+    nonRatingResultReason = change.nonRatingResultReason;
   }
 
   Glicko2RatingEvent.copy(Glicko2RatingEvent other) :

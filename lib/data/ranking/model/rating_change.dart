@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/cache/match/match_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/info_lines_templates.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -32,10 +33,12 @@ class RatingChange {
   /// relevant element in this list.
   List<RatingEventInfoElement> infoData;
 
+  NonRatingResultReason? nonRatingResultReason;
+
   /// Other data that can't be represented as an int or double
   final Map<String, dynamic> extraData;
 
-  RatingChange({required this.change, this.infoLines = const [], this.infoData = const [], this.extraData = const {}});
+  RatingChange({required this.change, this.infoLines = const [], this.infoData = const [], this.extraData = const {}, this.nonRatingResultReason});
 
   @override
   String toString() {
@@ -120,6 +123,9 @@ abstract class RatingEvent implements IRatingEvent, IConnectivityEvent {
   }
 
   bool get byStage => wrappedEvent.stageNumber >= 0;
+
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
 
   DateTime get date => wrappedEvent.date;
 

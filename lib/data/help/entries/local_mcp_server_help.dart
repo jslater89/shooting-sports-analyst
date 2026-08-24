@@ -24,6 +24,17 @@ tools. It queries your local Analyst database: rating projects, match results ti
 projects, leaderboards, and shooter histories. It cannot modify ratings, import matches, or change
 settings.
 
+## Local research REST API
+
+While the desktop app is running, it also hosts a loopback-only research HTTP API on
+`127.0.0.1:6578`, under the `/research` path. That host wraps the same
+read-only research facade used by MCP. Agents do not call it directly; the stdio MCP process
+health-checks `GET /research/health` and uses the API when the app is available so only one process
+holds the Isar database file open.
+
+This local API is intentionally separate from the public SSA server. It is not a preview of the
+future public REST API.
+
 ## Connection Options
 
 ### Headless stdio server (recommended)
@@ -34,8 +45,9 @@ Build the standalone binary from the project root:
 ./build-mcp.sh
 ```
 
-This produces `dist/ssa_mcp_server`. The process opens AnalystDatabase directly and speaks MCP over
-stdio. This is the usual setup for Cursor, OpenCode, and similar agents.
+This produces `dist/ssa_mcp_server`. Rebuild after updating research/MCP code so agents pick up
+changes. The process speaks MCP over stdio. When the desktop app is running, it prefers the local
+research REST API; when the app is not available, it opens AnalystDatabase itself.
 
 Example Cursor / OpenCode configuration:
 
@@ -57,14 +69,17 @@ Environment variables:
 
 * **SSA_MCP_DEFAULT_PROJECT** — rating project name used when a tool call omits `project`. Defaults
   to `L2s Main LLR`.
-* **SSA_DB_PATH** — optional path to the Analyst database directory. When unset, the server uses the
-  same default location as the desktop app.
+* **SSA_DB_PATH** — optional path to the Analyst database directory for the local-Isar fallback.
+  When unset, the server uses the same default location as the desktop app.
+* **SSA_RESEARCH_API_BASE** — base URL of the desktop research API (default
+  `http://127.0.0.1:6578`).
 
-### In-app localhost server
+### In-app localhost MCP (optional)
 
 Enable **Research MCP server** in [app settings]($appSettingsHelpLink). While the application is
-running, Analyst listens on `127.0.0.1` only (default port 8090, configurable). Clients connect
-over TCP with the same MCP JSON-RPC framing as stdio.
+running, Analyst can also listen for MCP JSON-RPC over TCP on `127.0.0.1` (default port 8090).
+That path uses the app's already-open database in-process; it is separate from the stdio binary
+and from the research REST API on port 6578.
 
 The in-app host uses the built-in default project name (`L2s Main LLR`) rather than
 `SSA_MCP_DEFAULT_PROJECT`. Most agent workflows should prefer the headless binary.
@@ -106,9 +121,9 @@ The in-app host uses the built-in default project name (`L2s Main LLR`) rather t
 
 ## Errors and Limits
 
-Tool failures return JSON error objects in the MCP result. All access is read-only against the
-database snapshot available when the server started (headless) or when the app opened the database
-(in-app host).
+Tool failures return JSON error objects in the MCP result. Access is read-only. When the stdio
+server is using the desktop research API, results reflect the app's live database; when falling
+back to a local Isar open, results reflect that process's snapshot.
 
-For enable/disable and port settings, see [app settings]($appSettingsHelpLink).
+For the optional in-app MCP TCP toggle and port, see [app settings]($appSettingsHelpLink).
 """;

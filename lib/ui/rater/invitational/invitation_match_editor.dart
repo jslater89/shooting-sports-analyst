@@ -16,12 +16,18 @@ class InvitationMatchEditor extends StatefulWidget {
     super.key,
     required this.rule,
     required this.matchPointers,
+    required this.ladySlots,
+    required this.juniorSlots,
+    required this.seniorSlots,
     required this.onChanged,
     required this.onDelete,
   });
 
   final InvitationMatch rule;
   final List<MatchPointer> matchPointers;
+  final bool ladySlots;
+  final bool juniorSlots;
+  final bool seniorSlots;
   final VoidCallback onChanged;
   final VoidCallback onDelete;
 
@@ -30,18 +36,22 @@ class InvitationMatchEditor extends StatefulWidget {
 }
 
 class _InvitationMatchEditorState extends State<InvitationMatchEditor> {
+  late TextEditingController _nameController;
   late TextEditingController _includeController;
   late TextEditingController _excludeController;
+  bool _expanded = true;
 
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController(text: widget.rule.name ?? "");
     _includeController = TextEditingController(text: _patternsToText(widget.rule.includePatterns));
     _excludeController = TextEditingController(text: _patternsToText(widget.rule.negativePatterns));
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _includeController.dispose();
     _excludeController.dispose();
     super.dispose();
@@ -84,6 +94,32 @@ class _InvitationMatchEditorState extends State<InvitationMatchEditor> {
     widget.onChanged();
   }
 
+  bool _scopeEnabled(InvitationMatchScope scope) {
+    return switch(scope) {
+      InvitationMatchScope.general || InvitationMatchScope.all => true,
+      InvitationMatchScope.categories => widget.ladySlots || widget.juniorSlots || widget.seniorSlots,
+      InvitationMatchScope.lady => widget.ladySlots,
+      InvitationMatchScope.junior => widget.juniorSlots,
+      InvitationMatchScope.senior => widget.seniorSlots,
+    };
+  }
+
+  String _scopeHint(InvitationMatchScope scope) {
+    if(_scopeEnabled(scope)) {
+      return scope.label;
+    }
+    return "${scope.label} (enable reserved slots)";
+  }
+
+  String _headerSubtitle(InvitationMatch rule) {
+    final bits = <String>[
+      rule.scope.label,
+      if(rule.name?.trim().isNotEmpty == true) rule.ruleSummary,
+      "Priority ${rule.priority}",
+    ];
+    return bits.join(" · ");
+  }
+
   @override
   Widget build(BuildContext context) {
     final rule = widget.rule;
@@ -95,71 +131,32 @@ class _InvitationMatchEditorState extends State<InvitationMatchEditor> {
           children: [
             Row(
               children: [
+                IconButton(
+                  tooltip: _expanded ? "Collapse" : "Expand",
+                  icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                ),
                 Expanded(
-                  child: DropdownMenu<InvitationMatchType>(
-                    key: ValueKey(rule.type),
-                    label: const Text("Type"),
-                    expandedInsets: EdgeInsets.zero,
-                    initialSelection: rule.type,
-                    requestFocusOnTap: false,
-                    dropdownMenuEntries: [
-                      for(final type in InvitationMatchType.values)
-                        DropdownMenuEntry(value: type, label: type.label),
-                    ],
-                    onSelected: (type) {
-                      if(type == null || type == rule.type) {
-                        return;
-                      }
-                      final replacement = rule.withType(type);
-                      rule.topN = replacement.topN;
-                      rule.aboveNPercent = replacement.aboveNPercent;
-                      rule.either = replacement.either;
-                      rule.both = replacement.both;
-                      widget.onChanged();
-                      setState(() {});
-                    },
+                  child: InkWell(
+                    onTap: () => setState(() => _expanded = !_expanded),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            rule.displayLabel,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          if(!_expanded)
+                            Text(
+                              _headerSubtitle(rule),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                if(rule.type != InvitationMatchType.aboveNPercent)
-                  IntTextField(
-                    value: rule.topN ?? 1,
-                    label: "Top N",
-                    onChanged: (value) {
-                      rule.topN = value;
-                      widget.onChanged();
-                    },
-                  ),
-                if(rule.type != InvitationMatchType.topN) ...[
-                  const SizedBox(width: 12),
-                  DoubleTextField(
-                    value: (rule.aboveNPercent ?? 0.9) * 100,
-                    label: "Above %",
-                    width: 90,
-                    onChanged: (value) {
-                      rule.aboveNPercent = value / 100.0;
-                      widget.onChanged();
-                    },
-                  ),
-                ],
-                const SizedBox(width: 12),
-                IntTextField(
-                  value: rule.priority,
-                  label: "Priority",
-                  onChanged: (value) {
-                    rule.priority = value;
-                    widget.onChanged();
-                  },
-                ),
-                const SizedBox(width: 12),
-                IntTextField(
-                  value: rule.minimumCompetitors,
-                  label: "Min. Competitors",
-                  width: 110,
-                  onChanged: (value) {
-                    rule.minimumCompetitors = value;
-                    widget.onChanged();
-                  },
                 ),
                 IconButton(
                   tooltip: "Remove rule",
@@ -168,76 +165,190 @@ class _InvitationMatchEditorState extends State<InvitationMatchEditor> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Text(rule.afterDate != null
-                    ? "After ${programmerYmdFormat.format(rule.afterDate!)}"
-                    : "No after-date filter"),
-                const SizedBox(width: 8),
-                TextButton(
-                  child: const Text("SET DATE"),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: rule.afterDate ?? DateTime.now(),
-                      firstDate: DateTime(2010),
-                      lastDate: DateTime.now(),
-                    );
-                    if(picked != null) {
-                      rule.afterDate = picked;
-                      widget.onChanged();
-                      setState(() {});
-                    }
-                  },
+            if(_expanded) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: "Name",
+                  hintText: "Optional short label",
+                  border: OutlineInputBorder(),
                 ),
-                if(rule.afterDate != null)
-                  TextButton(
-                    child: const Text("CLEAR"),
-                    onPressed: () {
-                      rule.afterDate = null;
+                onChanged: (value) {
+                  final trimmed = value.trim();
+                  rule.name = trimmed.isEmpty ? null : trimmed;
+                  widget.onChanged();
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownMenu<InvitationMatchScope>(
+                      key: ValueKey("scope-${rule.scope}"),
+                      label: const Text("Scope"),
+                      expandedInsets: EdgeInsets.zero,
+                      initialSelection: rule.scope,
+                      requestFocusOnTap: false,
+                      dropdownMenuEntries: [
+                        for(final scope in InvitationMatchScope.values)
+                          DropdownMenuEntry(
+                            value: scope,
+                            label: _scopeHint(scope),
+                            enabled: _scopeEnabled(scope),
+                          ),
+                      ],
+                      onSelected: (scope) {
+                        if(scope == null || scope == rule.scope || !_scopeEnabled(scope)) {
+                          return;
+                        }
+                        rule.scope = scope;
+                        widget.onChanged();
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownMenu<InvitationMatchType>(
+                      key: ValueKey(rule.type),
+                      label: const Text("Type"),
+                      expandedInsets: EdgeInsets.zero,
+                      initialSelection: rule.type,
+                      requestFocusOnTap: false,
+                      dropdownMenuEntries: [
+                        for(final type in InvitationMatchType.values)
+                          DropdownMenuEntry(value: type, label: type.label),
+                      ],
+                      onSelected: (type) {
+                        if(type == null || type == rule.type) {
+                          return;
+                        }
+                        final replacement = rule.withType(type);
+                        rule.topN = replacement.topN;
+                        rule.aboveNPercent = replacement.aboveNPercent;
+                        rule.either = replacement.either;
+                        rule.both = replacement.both;
+                        widget.onChanged();
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if(rule.type != InvitationMatchType.aboveNPercent)
+                    IntTextField(
+                      value: rule.topN ?? 1,
+                      label: "Top N",
+                      onChanged: (value) {
+                        rule.topN = value;
+                        widget.onChanged();
+                      },
+                    ),
+                  if(rule.type != InvitationMatchType.topN) ...[
+                    const SizedBox(width: 12),
+                    DoubleTextField(
+                      value: (rule.aboveNPercent ?? 0.9) * 100,
+                      label: "Above %",
+                      width: 90,
+                      onChanged: (value) {
+                        rule.aboveNPercent = value / 100.0;
+                        widget.onChanged();
+                      },
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  IntTextField(
+                    value: rule.priority,
+                    label: "Priority",
+                    onChanged: (value) {
+                      rule.priority = value;
                       widget.onChanged();
-                      setState(() {});
                     },
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text("Matches", style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 4),
-            MatchSourceIdChips(
-              sourceIds: rule.sourceIds,
-              matchPointers: widget.matchPointers,
-              onChanged: (ids) {
-                rule.sourceIds
-                  ..clear()
-                  ..addAll(ids);
-                widget.onChanged();
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _includeController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: "Include name patterns",
-                hintText: "One regex per line. All must match.",
-                border: OutlineInputBorder(),
+                  const SizedBox(width: 12),
+                  IntTextField(
+                    value: rule.minimumCompetitors,
+                    label: "Min. Competitors",
+                    width: 110,
+                    onChanged: (value) {
+                      rule.minimumCompetitors = value;
+                      widget.onChanged();
+                    },
+                  ),
+                ],
               ),
-              onChanged: _applyInclude,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _excludeController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: "Exclude name patterns",
-                hintText: "One regex per line. Any match excludes.",
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(rule.afterDate != null
+                      ? "After ${programmerYmdFormat.format(rule.afterDate!)}"
+                      : "No after-date filter"),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    child: const Text("SET DATE"),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: rule.afterDate ?? DateTime.now(),
+                        firstDate: DateTime(2010),
+                        lastDate: DateTime.now(),
+                      );
+                      if(picked != null) {
+                        rule.afterDate = picked;
+                        widget.onChanged();
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  if(rule.afterDate != null)
+                    TextButton(
+                      child: const Text("CLEAR"),
+                      onPressed: () {
+                        rule.afterDate = null;
+                        widget.onChanged();
+                        setState(() {});
+                      },
+                    ),
+                ],
               ),
-              onChanged: _applyExclude,
-            ),
+              const SizedBox(height: 8),
+              Text("Matches", style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              MatchSourceIdChips(
+                sourceIds: rule.sourceIds,
+                matchPointers: widget.matchPointers,
+                onChanged: (ids) {
+                  rule.sourceIds
+                    ..clear()
+                    ..addAll(ids);
+                  widget.onChanged();
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _includeController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: "Include name patterns",
+                  hintText: "One regex per line. All must match.",
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: _applyInclude,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _excludeController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: "Exclude name patterns",
+                  hintText: "One regex per line. Any match excludes.",
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: _applyExclude,
+              ),
+            ],
           ],
         ),
       ),

@@ -7,6 +7,7 @@
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
@@ -34,6 +35,9 @@ class MarbleRatingEvent extends RatingEvent {
   int get totalCompetitors => wrappedEvent.intData[_IntKeys.totalCompetitors.index];
   set totalCompetitors(int v) => wrappedEvent.intData[_IntKeys.totalCompetitors.index] = v;
 
+  NonRatingResultReason? get nonRatingResultReason => wrappedEvent.nonRatingResultReason;
+  set nonRatingResultReason(NonRatingResultReason? v) => wrappedEvent.nonRatingResultReason = v;
+
   int get exactChange => wrappedEvent.intData[_IntKeys.exactChange.index];
 
   @override
@@ -45,6 +49,7 @@ class MarbleRatingEvent extends RatingEvent {
   }
 
   MarbleRatingEvent({
+    NonRatingResultReason? nonRatingResultReason,
     required int initialMarbles,
     required int marblesStaked,
     required int marblesWon,
@@ -69,6 +74,7 @@ class MarbleRatingEvent extends RatingEvent {
     doubleDataElements: 0,
     infoLines: infoLines,
     infoData: infoData,
+    nonRatingResultReason: nonRatingResultReason,
   )) {
     this.exactOldMarbles = initialMarbles;
     this.marblesStaked = marblesStaked;
@@ -76,13 +82,14 @@ class MarbleRatingEvent extends RatingEvent {
     this.matchStake = matchStake;
     this.totalCompetitors = totalCompetitors;
   }
-  
+
   @override
   void apply(RatingChange change) {
     marblesWon += change.change[MarbleRater.marblesWonKey]!.round();
     marblesStaked += change.change[MarbleRater.marblesStakedKey]!.round();
     matchStake += change.change[MarbleRater.matchStakeKey]!.round();
     totalCompetitors += change.change[MarbleRater.totalCompetitorsKey]!.round();
+    nonRatingResultReason = change.nonRatingResultReason;
 
     _updateChange();
     extraData = change.extraData;
@@ -97,6 +104,7 @@ class MarbleRatingEvent extends RatingEvent {
     this.marblesWon = other.marblesWon;
     this.matchStake = other.matchStake;
     this.totalCompetitors = other.totalCompetitors;
+    this.nonRatingResultReason = other.nonRatingResultReason;
   }
 
   MarbleRatingEvent.wrap(DbRatingEvent e) :

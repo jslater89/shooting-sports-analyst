@@ -178,6 +178,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
       infoData: [
         RatingEventInfoElement.string(name: "resultReason", stringValue: reason.name.toUpperCase()),
       ],
+      nonRatingResultReason: reason,
     );
   }
 

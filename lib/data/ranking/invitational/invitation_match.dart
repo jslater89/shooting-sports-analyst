@@ -45,8 +45,76 @@ enum InvitationMatchType {
   }
 }
 
+/// Which invite-engine pass(es) a finish-order rule runs on.
+enum InvitationMatchScope {
+  general,
+  lady,
+  junior,
+  senior,
+  /// Every enabled reserved pass (lady / junior / senior), not the overall pass.
+  categories,
+  all;
+
+  String get label => switch(this) {
+    general => "General",
+    lady => "Lady",
+    junior => "Junior",
+    senior => "Senior",
+    categories => "Categories",
+    all => "All",
+  };
+
+  String get tomlValue => switch(this) {
+    general => "general",
+    lady => "lady",
+    junior => "junior",
+    senior => "senior",
+    categories => "categories",
+    all => "all",
+  };
+
+  /// Missing/empty → [all] for backward compatibility. Unknown → [all] with warning.
+  static InvitationMatchScope fromToml(String? value, List<String> warnings) {
+    if(value == null || value.isEmpty) {
+      return all;
+    }
+    for(final scope in InvitationMatchScope.values) {
+      if(scope.tomlValue == value) {
+        return scope;
+      }
+    }
+    warnings.add("Unknown invitationMatches scope \"$value\"; using all.");
+    return all;
+  }
+
+  bool get appliesToGeneralPass => this == general || this == all;
+
+  bool appliesToReservedPass(InvitationMatchPassKind kind) {
+    return switch(kind) {
+      InvitationMatchPassKind.general => appliesToGeneralPass,
+      InvitationMatchPassKind.lady => this == lady || this == categories || this == all,
+      InvitationMatchPassKind.junior => this == junior || this == categories || this == all,
+      InvitationMatchPassKind.senior => this == senior || this == categories || this == all,
+      InvitationMatchPassKind.combinedAge =>
+        this == junior || this == senior || this == categories || this == all,
+    };
+  }
+}
+
+/// Engine pass kind used for scope filtering.
+enum InvitationMatchPassKind {
+  general,
+  lady,
+  junior,
+  senior,
+  combinedAge,
+}
+
 /// A finish-order rule that awards invitational slots from matching matches.
 class InvitationMatch {
+  /// Optional short label for crowded configs.
+  String? name;
+  InvitationMatchScope scope;
   RegExp? namePattern;
   List<String> sourceIds;
   List<RegExp> additionalPatterns;
@@ -60,6 +128,8 @@ class InvitationMatch {
   int priority;
 
   InvitationMatch.topN({
+    this.name,
+    this.scope = InvitationMatchScope.all,
     this.namePattern,
     List<String>? sourceIds,
     List<RegExp>? additionalPatterns,
@@ -76,6 +146,8 @@ class InvitationMatch {
        aboveNPercent = null;
 
   InvitationMatch.aboveNPercent({
+    this.name,
+    this.scope = InvitationMatchScope.all,
     this.namePattern,
     List<String>? sourceIds,
     List<RegExp>? additionalPatterns,
@@ -92,6 +164,8 @@ class InvitationMatch {
        topN = null;
 
   InvitationMatch.either({
+    this.name,
+    this.scope = InvitationMatchScope.all,
     this.namePattern,
     List<String>? sourceIds,
     required this.topN,
@@ -108,6 +182,8 @@ class InvitationMatch {
        negativePatterns = negativePatterns ?? [];
 
   InvitationMatch.both({
+    this.name,
+    this.scope = InvitationMatchScope.all,
     this.namePattern,
     List<String>? sourceIds,
     required this.topN,
@@ -139,16 +215,30 @@ class InvitationMatch {
   }
 
   String get ruleSummary {
+    final String base;
     switch(type) {
       case InvitationMatchType.topN:
-        return "Top ${topN ?? "?"}";
+        base = "Top ${topN ?? "?"}";
       case InvitationMatchType.aboveNPercent:
-        return "Above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+        base = "Above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
       case InvitationMatchType.either:
-        return "Top ${topN ?? "?"} or above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+        base = "Top ${topN ?? "?"} or above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
       case InvitationMatchType.both:
-        return "Top ${topN ?? "?"} and above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
+        base = "Top ${topN ?? "?"} and above ${((aboveNPercent ?? 0) * 100).toStringAsFixed(0)}%";
     }
+    if(scope == InvitationMatchScope.all) {
+      return base;
+    }
+    return "$base (${scope.label.toLowerCase()})";
+  }
+
+  /// Prefer [name] when set; otherwise [ruleSummary].
+  String get displayLabel {
+    final trimmed = name?.trim();
+    if(trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    return ruleSummary;
   }
 
   List<RegExp> get includePatterns => [
@@ -171,6 +261,8 @@ class InvitationMatch {
     switch(newType) {
       case InvitationMatchType.topN:
         return InvitationMatch.topN(
+          name: name,
+          scope: scope,
           namePattern: namePattern,
           sourceIds: [...sourceIds],
           additionalPatterns: [...additionalPatterns],
@@ -182,6 +274,8 @@ class InvitationMatch {
         );
       case InvitationMatchType.aboveNPercent:
         return InvitationMatch.aboveNPercent(
+          name: name,
+          scope: scope,
           namePattern: namePattern,
           sourceIds: [...sourceIds],
           additionalPatterns: [...additionalPatterns],
@@ -193,6 +287,8 @@ class InvitationMatch {
         );
       case InvitationMatchType.either:
         return InvitationMatch.either(
+          name: name,
+          scope: scope,
           namePattern: namePattern,
           sourceIds: [...sourceIds],
           additionalPatterns: [...additionalPatterns],
@@ -205,6 +301,8 @@ class InvitationMatch {
         );
       case InvitationMatchType.both:
         return InvitationMatch.both(
+          name: name,
+          scope: scope,
           namePattern: namePattern,
           sourceIds: [...sourceIds],
           additionalPatterns: [...additionalPatterns],
@@ -335,12 +433,17 @@ class InvitationMatch {
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
       "type": type.tomlValue,
+      "scope": scope.tomlValue,
       "sourceIds": [...sourceIds],
       "additionalPatterns": additionalPatterns.map((p) => p.pattern).toList(),
       "negativePatterns": negativePatterns.map((p) => p.pattern).toList(),
       "minimumCompetitors": minimumCompetitors,
       "priority": priority,
     };
+    final trimmedName = name?.trim();
+    if(trimmedName != null && trimmedName.isNotEmpty) {
+      map["name"] = trimmedName;
+    }
     if(namePattern != null) {
       map["namePattern"] = namePattern!.pattern;
     }

@@ -165,11 +165,17 @@ class InvitationalInviteConfig {
         config.invitationMatches.add(parsed);
       }
     }
+    config.sortInvitationMatchesByPriority();
 
     return Result.ok(InvitationalInviteConfigParseResult(
       config: config,
       warnings: warnings,
     ));
+  }
+
+  /// Higher priority first (matches engine run order).
+  void sortInvitationMatchesByPriority() {
+    invitationMatches.sort((a, b) => b.priority.compareTo(a.priority));
   }
 
   String toToml() {
@@ -359,6 +365,9 @@ InvitationMatch? _parseInvitationMatch(Map<dynamic, dynamic> raw, List<String> w
     return null;
   }
 
+  final String? ruleName = raw["name"] as String?;
+  final scope = InvitationMatchScope.fromToml(raw["scope"] as String?, warnings);
+
   final String? namePatternStr = raw["namePattern"] as String?;
   final RegExp? namePattern = namePatternStr != null ? RegExp(namePatternStr) : null;
   final sourceIds = _stringsFromList(raw["sourceIds"]);
@@ -392,6 +401,8 @@ InvitationMatch? _parseInvitationMatch(Map<dynamic, dynamic> raw, List<String> w
         return null;
       }
       return InvitationMatch.topN(
+        name: ruleName,
+        scope: scope,
         namePattern: namePattern,
         sourceIds: sourceIds,
         additionalPatterns: additionalPatterns,
@@ -408,6 +419,8 @@ InvitationMatch? _parseInvitationMatch(Map<dynamic, dynamic> raw, List<String> w
         return null;
       }
       return InvitationMatch.aboveNPercent(
+        name: ruleName,
+        scope: scope,
         namePattern: namePattern,
         sourceIds: sourceIds,
         additionalPatterns: additionalPatterns,
@@ -425,6 +438,8 @@ InvitationMatch? _parseInvitationMatch(Map<dynamic, dynamic> raw, List<String> w
         return null;
       }
       return InvitationMatch.either(
+        name: ruleName,
+        scope: scope,
         namePattern: namePattern,
         sourceIds: sourceIds,
         topN: topN,
@@ -443,6 +458,8 @@ InvitationMatch? _parseInvitationMatch(Map<dynamic, dynamic> raw, List<String> w
         return null;
       }
       return InvitationMatch.both(
+        name: ruleName,
+        scope: scope,
         namePattern: namePattern,
         sourceIds: sourceIds,
         topN: topN,

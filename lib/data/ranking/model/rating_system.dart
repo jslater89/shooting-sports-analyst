@@ -331,6 +331,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
 enum NonRatingResultReason {
   dq,
   dnf,
+  singleEntry;
 }
 
 class PredictionOutcome {
