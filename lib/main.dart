@@ -33,6 +33,7 @@ import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/research/http/research_api_host.dart';
 import 'package:shooting_sports_analyst/research/mcp/research_mcp_host.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
@@ -217,6 +218,7 @@ void main() async {
     await AnalystDatabase().ready;
     _log.i("Database ready");
 
+    await ResearchApiHost().start();
     await ResearchMcpHost().initialize();
 
     Hive.init((await getApplicationSupportDirectory()).absolute.path);

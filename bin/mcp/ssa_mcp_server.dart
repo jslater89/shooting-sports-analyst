@@ -6,8 +6,8 @@
 
 /// SSA research MCP server (stdio).
 ///
-/// Opens AnalystDatabase in-process. This is the usual agent path: proxying
-/// stdio through the in-app MCP host was stateful and disconnected in practice.
+/// Prefers the desktop app's loopback research REST API when available;
+/// otherwise opens AnalystDatabase in-process. This is the usual agent path.
 ///
 /// Build: `./build-mcp.sh` → `dist/ssa_mcp_server`
 ///
@@ -26,7 +26,7 @@
 /// }
 /// ```
 ///
-/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_DB_PATH.
+/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_DB_PATH, SSA_RESEARCH_API_BASE.
 library;
 
 import "dart:async";
@@ -34,12 +34,12 @@ import "dart:io" as io;
 
 import "package:dart_mcp/stdio.dart";
 import "package:shooting_sports_analyst/config/serialized_config.dart";
-import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/flutter_native_providers.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
+import "package:shooting_sports_analyst/research/http/research_api_constants.dart";
+import "package:shooting_sports_analyst/research/http/switching_research_facade.dart";
 import "package:shooting_sports_analyst/research/mcp/ssa_research_mcp_server.dart";
-import "package:shooting_sports_analyst/research/research_facade.dart";
 import "package:shooting_sports_analyst/server/providers.dart";
 
 final _log = SSALogger("SsaMcpShim");
@@ -53,31 +53,17 @@ Future<void> main(List<String> args) async {
 
   final defaultProject =
       io.Platform.environment["SSA_MCP_DEFAULT_PROJECT"] ?? kDefaultResearchProjectName;
+  final apiBase =
+      io.Platform.environment[kResearchApiBaseEnv] ?? kDefaultResearchApiBase;
 
-  _log.i("Opening AnalystDatabase for stdio MCP");
+  _log.i("stdio MCP starting (prefer research API at $apiBase)");
   await ConfigLoader().readyFuture;
-
-  final dbPath = io.Platform.environment["SSA_DB_PATH"];
-  final AnalystDatabase db;
-  if (dbPath != null && dbPath.isNotEmpty) {
-    db = AnalystDatabase.path(dbPath);
-  }
-  else {
-    db = AnalystDatabase();
-  }
-  try {
-    await db.ready;
-  } catch (e, st) {
-    _log.e("Failed to open AnalystDatabase", error: e, stackTrace: st);
-    io.stderr.writeln("ssa-research MCP: failed to open database: $e");
-    io.exit(1);
-  }
 
   // Keep the server object alive for the process lifetime.
   // ignore: unused_local_variable
   final server = SsaResearchMcpServer(
     stdioChannel(input: io.stdin, output: io.stdout),
-    facade: ResearchFacade(db),
+    facade: SwitchingResearchFacade(),
     defaultProject: defaultProject,
   );
   await Completer<void>().future;

@@ -23,13 +23,15 @@ import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
 import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
+import "package:shooting_sports_analyst/research/research_queries.dart";
 
 final _log = SSALogger("ResearchFacade");
 
 /// Read-only research queries over [AnalystDatabase].
 ///
-/// Shared by the stdio MCP server and the optional in-app localhost MCP host.
-class ResearchFacade {
+/// Shared by the stdio MCP server (local fallback), the optional in-app
+/// localhost MCP host, and the local research HTTP API.
+class ResearchFacade implements ResearchQueries {
   ResearchFacade(this.db);
 
   final AnalystDatabase db;

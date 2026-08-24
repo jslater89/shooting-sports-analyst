@@ -195,6 +195,35 @@ class AnalystDatabase {
 
   AnalystDatabase._();
 
+  /// Whether the default (non-test) singleton is currently open.
+  static bool get isOpen => _instance != null;
+
+  /// Close the default singleton and release the Isar file handle.
+  ///
+  /// Used by the stdio MCP process so it can yield the database to the
+  /// desktop app's local research API. After close, a later [AnalystDatabase]
+  /// or [AnalystDatabase.path] call will open a fresh instance.
+  ///
+  /// Does not close [AnalystDatabase.test].
+  static Future<void> close() async {
+    final instance = _instance;
+    if(instance == null) {
+      return;
+    }
+    _instance = null;
+    try {
+      await instance.isar.close();
+      _log.i("Database closed");
+    }
+    catch(e, stackTrace) {
+      _log.e("Failed to close database", error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+    finally {
+      _readyCompleter = Completer();
+    }
+  }
+
   /// Perform a synchronous write transaction.
   T writeTxnSync<T>(T Function() txn, {bool silent = false}) {
     // Making my life slightly easier if I ever want to move off of Isar.

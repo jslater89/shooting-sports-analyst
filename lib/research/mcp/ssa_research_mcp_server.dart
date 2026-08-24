@@ -11,19 +11,19 @@ import "package:dart_mcp/server.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/mcp/request_args.dart";
-import "package:shooting_sports_analyst/research/research_facade.dart";
+import "package:shooting_sports_analyst/research/research_queries.dart";
 import "package:stream_channel/stream_channel.dart";
 
 final _log = SSALogger("SsaResearchMcp");
 
-/// Shared MCP tools over [ResearchFacade].
+/// Shared MCP tools over [ResearchQueries].
 ///
 /// Hosted by the headless stdio server ([bin/mcp/ssa_mcp_server.dart]), and by
 /// the Flutter app over a localhost TCP socket when research MCP is enabled.
 base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
   SsaResearchMcpServer(
     StreamChannel<String> channel, {
-    required ResearchFacade facade,
+    required ResearchQueries facade,
     this.defaultProject = kDefaultResearchProjectName,
   })  : _facade = facade,
         super.fromStreamChannel(
@@ -57,7 +57,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
   }
 
   final String defaultProject;
-  final ResearchFacade _facade;
+  final ResearchQueries _facade;
 
   FutureOr<CallToolResult> _listProjects(CallToolRequest request) {
     return _run(() async {
