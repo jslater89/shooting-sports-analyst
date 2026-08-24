@@ -86,6 +86,7 @@ import "db_oneoff_impl/rating_project_correspondence_command.dart";
 import "db_oneoff_impl/loco_correspondence_command.dart";
 import "db_oneoff_impl/elite_head_to_head_command.dart";
 import "db_oneoff_impl/shot_both_years_command.dart";
+import "db_oneoff_impl/scoring_close_flips_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -273,6 +274,7 @@ Future<void> main(List<String> args) async {
     EliteHeadToHeadCommand(db),
     LocoCorrespondenceCommand(db),
     ShotBothYearsCommand(db),
+    ScoringCloseFlipsCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
