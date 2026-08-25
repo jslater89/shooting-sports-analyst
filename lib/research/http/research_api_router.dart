@@ -12,6 +12,7 @@ import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/http/research_api_constants.dart";
 import "package:shooting_sports_analyst/research/mcp/request_args.dart";
 import "package:shooting_sports_analyst/research/research_queries.dart";
+import "package:shooting_sports_analyst/util.dart";
 
 final _log = SSALogger("ResearchApiRouter");
 
@@ -33,7 +34,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         name: args.name,
         limit: args.limit,
       );
-      return {"projects": projects.map((p) => p.toJson()).toList()};
+      if (projects.isErr()) {
+        return Result.errFrom(projects);
+      }
+      return Result.ok({"projects": projects.unwrap().map((p) => p.toJson()).toList()});
     });
   });
 
@@ -44,7 +48,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         query: args.query,
         limit: args.limit,
       );
-      return {"matches": matches.map((m) => m.toJson()).toList()};
+      if (matches.isErr()) {
+        return Result.errFrom(matches);
+      }
+      return Result.ok({"matches": matches.unwrap().map((m) => m.toJson()).toList()});
     });
   });
 
@@ -58,7 +65,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         byRatingGroup: args.byRatingGroup,
         topN: args.topN,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   });
 
@@ -78,7 +88,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         topN: args.topN,
         overall: args.overall,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   });
 
@@ -100,7 +113,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         includeStages: args.includeStages,
         includeScoringEventCounts: args.includeScoringEventCounts,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   });
 
@@ -119,7 +135,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         overall: args.overall,
         includeScoringEventCounts: args.includeScoringEventCounts,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   });
 
@@ -135,7 +154,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         limit: args.limit,
         includeInternal: args.includeInternal,
       );
-      return {"shooters": hits.map((h) => h.toJson()).toList()};
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"shooters": hits.unwrap().map((h) => h.toJson()).toList()});
     });
   });
 
@@ -150,7 +172,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         ratingId: args.ratingId,
         includeInternal: args.includeInternal,
       );
-      return summary.toJson();
+      if (summary.isErr()) {
+        return Result.errFrom(summary);
+      }
+      return Result.ok(summary.unwrap().toJson());
     });
   });
 
@@ -166,7 +191,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
       );
-      return {"events": events.map((e) => e.toJson()).toList()};
+      if (events.isErr()) {
+        return Result.errFrom(events);
+      }
+      return Result.ok({"events": events.unwrap().map((e) => e.toJson()).toList()});
     });
   });
 
@@ -183,7 +211,10 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         includeInternal: args.includeInternal,
         bestFirst: args.bestFirst,
       );
-      return {"results": results.map((r) => r.toJson()).toList()};
+      if (results.isErr()) {
+        return Result.errFrom(results);
+      }
+      return Result.ok({"results": results.unwrap().map((r) => r.toJson()).toList()});
     });
   });
 
@@ -200,7 +231,78 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         seenSince: args.seenSince,
         changeSince: args.changeSince,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  });
+
+  router.get("$kResearchApiPathPrefix/match-preps", (Request request) async {
+    return _run(() async {
+      final args = SearchMatchPrepsArgs.fromJson(_queryMap(request));
+      final hits = await facade.searchMatchPreps(
+        projectName: args.project,
+        query: args.query,
+        after: args.after,
+        before: args.before,
+        limit: args.limit,
+        hasPredictionsOnly: args.hasPredictionsOnly,
+      );
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"matchPreps": hits.unwrap().map((h) => h.toJson()).toList()});
+    });
+  });
+
+  router.get("$kResearchApiPathPrefix/match-preps/prediction-sets", (Request request) async {
+    return _run(() async {
+      final args = ListPredictionSetsArgs.fromJson(_queryMap(request));
+      final sets = await facade.listPredictionSets(prepId: args.prepId);
+      if (sets.isErr()) {
+        return Result.errFrom(sets);
+      }
+      return Result.ok({"predictionSets": sets.unwrap().map((s) => s.toJson()).toList()});
+    });
+  });
+
+  router.get("$kResearchApiPathPrefix/prediction-sets/predictions", (Request request) async {
+    return _run(() async {
+      final args = GetPredictionsArgs.fromJson(_queryMap(request));
+      final result = await facade.getPredictions(
+        predictionSetId: args.predictionSetId,
+        prepId: args.prepId,
+        groupUuid: args.groupUuid,
+        groupName: args.group,
+        topN: args.topN,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  });
+
+  router.get("$kResearchApiPathPrefix/prediction-sets/search-predictions", (Request request) async {
+    return _run(() async {
+      final args = SearchPredictionsArgs.fromJson(_queryMap(request));
+      final hits = await facade.searchPredictions(
+        predictionSetId: args.predictionSetId,
+        prepId: args.prepId,
+        groupUuid: args.groupUuid,
+        groupName: args.group,
+        memberNumber: args.memberNumber,
+        ratingId: args.ratingId,
+        query: args.query,
+        memberNumbers: args.memberNumbers,
+        ratingIds: args.ratingIds,
+        limit: args.limit,
+      );
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"predictions": hits.unwrap().map((p) => p.toJson()).toList()});
     });
   });
 
@@ -235,9 +337,19 @@ dynamic _coerceQueryValue(String value) {
   return value;
 }
 
-Future<Response> _run(Future<Map<String, dynamic>> Function() body) async {
+Future<Response> _run(Future<ResearchResult<Map<String, dynamic>>> Function() body) async {
   try {
-    return _jsonOk(await body());
+    final result = await body();
+    if (result.isErr()) {
+      final err = result.unwrapErr();
+      _log.w("Research API error: ${err.message}");
+      return Response(
+        err.statusCode,
+        body: jsonEncode(researchErrorJson(err)),
+        headers: {"Content-Type": "application/json"},
+      );
+    }
+    return _jsonOk(result.unwrap());
   }
   catch(e, st) {
     _log.w("Research API error", error: e, stackTrace: st);

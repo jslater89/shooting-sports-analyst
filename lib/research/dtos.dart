@@ -5,6 +5,7 @@
  */
 
 import "package:json_annotation/json_annotation.dart";
+import "package:shooting_sports_analyst/util.dart";
 
 part "dtos.g.dart";
 
@@ -14,6 +15,12 @@ const String kDefaultResearchProjectName = "L2s Main LLR";
 const int kDefaultResearchMcpPort = 8090;
 /// Default [getMatchResults] / [getMatchScores] row cap. Pass topN 0 for the full pool.
 const int kDefaultMatchPoolTopN = 10;
+/// Default [getPredictions] row cap. Pass topN 0 for the full scoring group.
+const int kDefaultPredictionTopN = 10;
+/// Default [searchPredictions] result cap when not batching explicit ids.
+const int kDefaultPredictionSearchLimit = 20;
+/// Hard cap for [searchPredictions] when batching memberNumbers / ratingIds.
+const int kMaxPredictionSearchLimit = 100;
 
 String? researchDateOnlyToJson(DateTime? d) =>
     d?.toIso8601String().split("T").first;
@@ -32,17 +39,25 @@ DateTime? researchDateOnlyFromJsonNullable(Object? value) {
   return researchDateOnlyFromJson(value);
 }
 
-class ResearchException implements Exception {
-  ResearchException(this.message, {this.statusCode = 400});
+class ResearchError extends ResultErr {
+  const ResearchError(this.message, {this.statusCode = 400});
+
+  @override
   final String message;
   final int statusCode;
+
+  static Result<T, ResearchError> result<T>(String message, {int statusCode = 400}) {
+    return Result.err(ResearchError(message, statusCode: statusCode));
+  }
 
   @override
   String toString() => message;
 }
 
+typedef ResearchResult<T> = Result<T, ResearchError>;
+
 Map<String, dynamic> researchErrorJson(Object error) {
-  if (error is ResearchException) {
+  if (error is ResearchError) {
     return {
       "error": error.message,
       "statusCode": error.statusCode,
@@ -817,4 +832,260 @@ class LeaderboardEntryDto {
   factory LeaderboardEntryDto.fromJson(Map<String, dynamic> json) =>
       _$LeaderboardEntryDtoFromJson(json);
   Map<String, dynamic> toJson() => _$LeaderboardEntryDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class MatchPrepHitDto {
+  MatchPrepHitDto({
+    required this.id,
+    required this.matchName,
+    required this.matchDate,
+    required this.projectName,
+    required this.predictionSetCount,
+    this.latestPredictionSet,
+  });
+
+  /// Decimal string of the 64-bit MatchPrep id (avoids JS Number precision loss).
+  @JsonKey(fromJson: researchIdFromJson)
+  final String id;
+  final String matchName;
+  @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
+  final DateTime matchDate;
+  final String projectName;
+  @JsonKey(fromJson: researchIntFromJson)
+  final int predictionSetCount;
+  @JsonKey(includeIfNull: false)
+  final PredictionSetStubDto? latestPredictionSet;
+
+  factory MatchPrepHitDto.fromJson(Map<String, dynamic> json) =>
+      _$MatchPrepHitDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$MatchPrepHitDtoToJson(this);
+}
+
+@JsonSerializable()
+class PredictionSetStubDto {
+  PredictionSetStubDto({
+    required this.id,
+    required this.name,
+    required this.created,
+  });
+
+  /// Decimal string of the 64-bit PredictionSet id.
+  @JsonKey(fromJson: researchIdFromJson)
+  final String id;
+  final String name;
+  final DateTime created;
+
+  factory PredictionSetStubDto.fromJson(Map<String, dynamic> json) =>
+      _$PredictionSetStubDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PredictionSetStubDtoToJson(this);
+}
+
+@JsonSerializable()
+class PredictionSetDto {
+  PredictionSetDto({
+    required this.id,
+    required this.name,
+    required this.created,
+    required this.predictionCount,
+    this.note,
+    this.matchPrepId,
+  });
+
+  /// Decimal string of the 64-bit PredictionSet id.
+  @JsonKey(fromJson: researchIdFromJson)
+  final String id;
+  final String name;
+  final DateTime created;
+  @JsonKey(fromJson: researchIntFromJson)
+  final int predictionCount;
+  @JsonKey(includeIfNull: false)
+  final String? note;
+  /// Decimal string of the parent MatchPrep id.
+  @JsonKey(fromJson: researchIdFromJsonNullable, includeIfNull: false)
+  final String? matchPrepId;
+
+  factory PredictionSetDto.fromJson(Map<String, dynamic> json) =>
+      _$PredictionSetDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PredictionSetDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PredictionsResponse {
+  PredictionsResponse({
+    required this.predictionSet,
+    required this.scoringGroup,
+    required this.scoringGroupUuid,
+    required this.competitorCount,
+    required this.predictions,
+  });
+
+  final PredictionSetDto predictionSet;
+  final String scoringGroup;
+  final String scoringGroupUuid;
+  final int competitorCount;
+  final List<PredictionRowDto> predictions;
+
+  factory PredictionsResponse.fromJson(Map<String, dynamic> json) =>
+      _$PredictionsResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$PredictionsResponseToJson(this);
+}
+
+@JsonSerializable()
+class PredictionRowDto {
+  PredictionRowDto({
+    required this.memberNumber,
+    required this.name,
+    required this.firstName,
+    required this.lastName,
+    required this.scoringGroup,
+    required this.scoringGroupUuid,
+    required this.medianPlace,
+    required this.lowPlace,
+    required this.highPlace,
+    required this.mean,
+    required this.oneSigma,
+    this.ratingId,
+    this.classification,
+    this.meanRatio,
+    this.oneSigmaRatio,
+  });
+
+  final String memberNumber;
+  @JsonKey(includeIfNull: false)
+  final int? ratingId;
+  final String name;
+  final String firstName;
+  final String lastName;
+  @JsonKey(includeIfNull: false)
+  final String? classification;
+  final String scoringGroup;
+  final String scoringGroupUuid;
+  final int medianPlace;
+  final int lowPlace;
+  final int highPlace;
+  final double mean;
+  final double oneSigma;
+  @JsonKey(includeIfNull: false)
+  final double? meanRatio;
+  @JsonKey(includeIfNull: false)
+  final double? oneSigmaRatio;
+
+  factory PredictionRowDto.fromJson(Map<String, dynamic> json) =>
+      _$PredictionRowDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PredictionRowDtoToJson(this);
+}
+
+/// Accept a JSON list or comma-separated HTTP query string.
+List<String>? researchStringListFromJson(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is List) {
+    return value.map((e) => e.toString()).where((s) => s.isNotEmpty).toList();
+  }
+  final raw = value.toString().trim();
+  if (raw.isEmpty) {
+    return null;
+  }
+  return raw
+      .split(",")
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+}
+
+/// Accept a JSON list or comma-separated HTTP query string of ints.
+List<int>? researchIntListFromJson(Object? value) {
+  final strings = researchStringListFromJson(value);
+  if (strings == null) {
+    return null;
+  }
+  final out = <int>[];
+  for (final s in strings) {
+    final n = int.tryParse(s);
+    if (n != null) {
+      out.add(n);
+    }
+  }
+  return out.isEmpty ? null : out;
+}
+
+/// Coerce a wire id (string or number) to a decimal string.
+///
+/// Synthetic MatchPrep / PredictionSet ids are full 64-bit hashes; JSON/JS
+/// numbers lose precision above 2^53-1, so the API uses strings. Accepting
+/// [num] on decode keeps older payloads working.
+String researchIdFromJson(Object? value) {
+  if (value == null) {
+    throw FormatException("Missing research id");
+  }
+  final s = value.toString().trim();
+  if (s.isEmpty) {
+    throw FormatException("Empty research id");
+  }
+  return s;
+}
+
+String? researchIdFromJsonNullable(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  final s = value.toString().trim();
+  if (s.isEmpty) {
+    return null;
+  }
+  return s;
+}
+
+/// MCP / query-string clients often send integers as strings.
+int researchIntFromJson(Object? value) {
+  if (value == null) {
+    throw FormatException("Missing int value");
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  final parsed = int.tryParse(value.toString().trim());
+  if (parsed == null) {
+    throw FormatException("Invalid int value: $value");
+  }
+  return parsed;
+}
+
+int? researchIntFromJsonNullable(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  final s = value.toString().trim();
+  if (s.isEmpty) {
+    return null;
+  }
+  return int.tryParse(s);
+}
+
+bool researchBoolFromJson(Object? value, {bool defaultValue = false}) {
+  if (value == null) {
+    return defaultValue;
+  }
+  if (value is bool) {
+    return value;
+  }
+  final s = value.toString().trim().toLowerCase();
+  if (s == "true" || s == "1") {
+    return true;
+  }
+  if (s == "false" || s == "0") {
+    return false;
+  }
+  return defaultValue;
 }

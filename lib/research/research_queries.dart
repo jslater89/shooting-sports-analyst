@@ -9,9 +9,9 @@ import "package:shooting_sports_analyst/research/dtos.dart";
 /// Read-only research query surface shared by the local DB facade, HTTP
 /// client facade, and MCP tool handlers.
 abstract class ResearchQueries {
-  Future<List<RatingProjectDto>> listRatingProjects({String? name, int limit = 50});
+  Future<ResearchResult<List<RatingProjectDto>>> listRatingProjects({String? name, int limit = 50});
 
-  Future<LeaderboardResponse> getLeaderboard({
+  Future<ResearchResult<LeaderboardResponse>> getLeaderboard({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -22,14 +22,14 @@ abstract class ResearchQueries {
     DateTime? changeSince,
   });
 
-  Future<List<MatchSummaryDto>> searchMatches({
+  Future<ResearchResult<List<MatchSummaryDto>>> searchMatches({
     required String query,
     int limit = 10,
     DateTime? after,
     DateTime? before,
   });
 
-  Future<MatchWinnersResponse> getMatchWinners({
+  Future<ResearchResult<MatchWinnersResponse>> getMatchWinners({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -37,7 +37,7 @@ abstract class ResearchQueries {
     int topN = 1,
   });
 
-  Future<MatchResultsResponse> getMatchResults({
+  Future<ResearchResult<MatchResultsResponse>> getMatchResults({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -51,7 +51,7 @@ abstract class ResearchQueries {
     bool overall = false,
   });
 
-  Future<MatchScoresResponse> getMatchScores({
+  Future<ResearchResult<MatchScoresResponse>> getMatchScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -67,7 +67,7 @@ abstract class ResearchQueries {
     bool includeScoringEventCounts = false,
   });
 
-  Future<CompetitorStageScoresResponse> getCompetitorStageScores({
+  Future<ResearchResult<CompetitorStageScoresResponse>> getCompetitorStageScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -80,7 +80,7 @@ abstract class ResearchQueries {
     bool includeScoringEventCounts = false,
   });
 
-  Future<List<ShooterHitDto>> searchShooters({
+  Future<ResearchResult<List<ShooterHitDto>>> searchShooters({
     required String query,
     String? projectName,
     String? groupUuid,
@@ -90,7 +90,7 @@ abstract class ResearchQueries {
     bool includeInternal = false,
   });
 
-  Future<ShooterSummaryDto> getShooterSummary({
+  Future<ResearchResult<ShooterSummaryDto>> getShooterSummary({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -99,7 +99,7 @@ abstract class ResearchQueries {
     bool includeInternal = false,
   });
 
-  Future<List<RatingEventDto>> getRatingHistory({
+  Future<ResearchResult<List<RatingEventDto>>> getRatingHistory({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -110,7 +110,7 @@ abstract class ResearchQueries {
     bool includeInternal = false,
   });
 
-  Future<List<ShooterMatchResultDto>> getShooterMatchResults({
+  Future<ResearchResult<List<ShooterMatchResultDto>>> getShooterMatchResults({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -119,5 +119,39 @@ abstract class ResearchQueries {
     int limit = 50,
     bool includeInternal = false,
     bool bestFirst = false,
+  });
+
+  Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
+    String? projectName,
+    String? query,
+    DateTime? after,
+    DateTime? before,
+    int limit = 10,
+    bool hasPredictionsOnly = true,
+  });
+
+  Future<ResearchResult<List<PredictionSetDto>>> listPredictionSets({
+    required String prepId,
+  });
+
+  Future<ResearchResult<PredictionsResponse>> getPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    int topN = kDefaultPredictionTopN,
+  });
+
+  Future<ResearchResult<List<PredictionRowDto>>> searchPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+    String? query,
+    List<String>? memberNumbers,
+    List<int>? ratingIds,
+    int limit = kDefaultPredictionSearchLimit,
   });
 }

@@ -7,11 +7,12 @@
 import "dart:async";
 import "dart:convert";
 
-import "package:dart_mcp/server.dart";
+import "package:dart_mcp/server.dart" hide Result;
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/mcp/request_args.dart";
 import "package:shooting_sports_analyst/research/research_queries.dart";
+import "package:shooting_sports_analyst/util.dart";
 import "package:stream_channel/stream_channel.dart";
 
 final _log = SSALogger("SsaResearchMcp");
@@ -41,7 +42,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "get_competitor_stage_scores for stage results and hit/penalty counts. "
               "Use get_rating_history for rating trajectory, and "
               "get_shooter_match_results (bestFirst=true for career highlights) "
-              "for a competitor's match list.",
+              "for a competitor's match list. For pre-match predictions: "
+              "search_match_preps (includes latestPredictionSet), then "
+              "get_predictions with a required scoring group; use "
+              "list_prediction_sets only for older runs. Use search_predictions "
+              "to look up finishers by memberNumber/ratingId (batch lists OK).",
         ) {
     registerTool(_listProjectsTool, _listProjects);
     registerTool(_searchMatchesTool, _searchMatches);
@@ -54,6 +59,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     registerTool(_getRatingHistoryTool, _getRatingHistory);
     registerTool(_getShooterMatchResultsTool, _getShooterMatchResults);
     registerTool(_getLeaderboardTool, _getLeaderboard);
+    registerTool(_searchMatchPrepsTool, _searchMatchPreps);
+    registerTool(_listPredictionSetsTool, _listPredictionSets);
+    registerTool(_getPredictionsTool, _getPredictions);
+    registerTool(_searchPredictionsTool, _searchPredictions);
   }
 
   final String defaultProject;
@@ -66,7 +75,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         name: args.name,
         limit: args.limit,
       );
-      return {"projects": projects.map((p) => p.toJson()).toList()};
+      if (projects.isErr()) {
+        return Result.errFrom(projects);
+      }
+      return Result.ok({"projects": projects.unwrap().map((p) => p.toJson()).toList()});
     });
   }
 
@@ -77,7 +89,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         query: args.query,
         limit: args.limit,
       );
-      return {"matches": matches.map((m) => m.toJson()).toList()};
+      if (matches.isErr()) {
+        return Result.errFrom(matches);
+      }
+      return Result.ok({"matches": matches.unwrap().map((m) => m.toJson()).toList()});
     });
   }
 
@@ -91,7 +106,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         byRatingGroup: args.byRatingGroup,
         topN: args.topN,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
@@ -111,7 +129,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         topN: args.topN,
         overall: args.overall,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
@@ -133,7 +154,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         includeStages: args.includeStages,
         includeScoringEventCounts: args.includeScoringEventCounts,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
@@ -152,7 +176,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         overall: args.overall,
         includeScoringEventCounts: args.includeScoringEventCounts,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
@@ -168,7 +195,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         limit: args.limit,
         includeInternal: args.includeInternal,
       );
-      return {"shooters": hits.map((h) => h.toJson()).toList()};
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"shooters": hits.unwrap().map((h) => h.toJson()).toList()});
     });
   }
 
@@ -183,7 +213,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         ratingId: args.ratingId,
         includeInternal: args.includeInternal,
       );
-      return summary.toJson();
+      if (summary.isErr()) {
+        return Result.errFrom(summary);
+      }
+      return Result.ok(summary.unwrap().toJson());
     });
   }
 
@@ -199,7 +232,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
       );
-      return {"events": events.map((e) => e.toJson()).toList()};
+      if (events.isErr()) {
+        return Result.errFrom(events);
+      }
+      return Result.ok({"events": events.unwrap().map((e) => e.toJson()).toList()});
     });
   }
 
@@ -216,7 +252,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         includeInternal: args.includeInternal,
         bestFirst: args.bestFirst,
       );
-      return {"results": results.map((r) => r.toJson()).toList()};
+      if (results.isErr()) {
+        return Result.errFrom(results);
+      }
+      return Result.ok({"results": results.unwrap().map((r) => r.toJson()).toList()});
     });
   }
 
@@ -233,15 +272,94 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         seenSince: args.seenSince,
         changeSince: args.changeSince,
       );
-      return result.toJson();
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
-  Future<CallToolResult> _run(Future<Map<String, dynamic>> Function() body) async {
+  FutureOr<CallToolResult> _searchMatchPreps(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, SearchMatchPrepsArgs.fromJson);
+      final hits = await _facade.searchMatchPreps(
+        projectName: args.project ?? defaultProject,
+        query: args.query,
+        after: args.after,
+        before: args.before,
+        limit: args.limit,
+        hasPredictionsOnly: args.hasPredictionsOnly,
+      );
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"matchPreps": hits.unwrap().map((h) => h.toJson()).toList()});
+    });
+  }
+
+  FutureOr<CallToolResult> _listPredictionSets(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, ListPredictionSetsArgs.fromJson);
+      final sets = await _facade.listPredictionSets(prepId: args.prepId);
+      if (sets.isErr()) {
+        return Result.errFrom(sets);
+      }
+      return Result.ok({"predictionSets": sets.unwrap().map((s) => s.toJson()).toList()});
+    });
+  }
+
+  FutureOr<CallToolResult> _getPredictions(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, GetPredictionsArgs.fromJson);
+      final result = await _facade.getPredictions(
+        predictionSetId: args.predictionSetId,
+        prepId: args.prepId,
+        groupUuid: args.groupUuid,
+        groupName: args.group,
+        topN: args.topN,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  }
+
+  FutureOr<CallToolResult> _searchPredictions(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, SearchPredictionsArgs.fromJson);
+      final hits = await _facade.searchPredictions(
+        predictionSetId: args.predictionSetId,
+        prepId: args.prepId,
+        groupUuid: args.groupUuid,
+        groupName: args.group,
+        memberNumber: args.memberNumber,
+        ratingId: args.ratingId,
+        query: args.query,
+        memberNumbers: args.memberNumbers,
+        ratingIds: args.ratingIds,
+        limit: args.limit,
+      );
+      if (hits.isErr()) {
+        return Result.errFrom(hits);
+      }
+      return Result.ok({"predictions": hits.unwrap().map((p) => p.toJson()).toList()});
+    });
+  }
+
+  Future<CallToolResult> _run(Future<ResearchResult<Map<String, dynamic>>> Function() body) async {
     try {
-      final data = await body();
+      final result = await body();
+      if (result.isErr()) {
+        final err = result.unwrapErr();
+        _log.w("Tool error: ${err.message}");
+        return CallToolResult(
+          isError: true,
+          content: [TextContent(text: jsonEncode(researchErrorJson(err)))],
+        );
+      }
       return CallToolResult(
-        content: [TextContent(text: jsonEncode(data))],
+        content: [TextContent(text: jsonEncode(result.unwrap()))],
       );
     } catch (e, st) {
       _log.w("Tool error", error: e, stackTrace: st);
@@ -493,6 +611,98 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         ),
         "changeSince": Schema.string(
           description: "YYYY-MM-DD optional date for trend-since-date sorting",
+        ),
+      },
+    ),
+  );
+
+  final _searchMatchPrepsTool = Tool(
+    name: "search_match_preps",
+    description:
+        "Search match preps (pre-match prediction contexts) for a rating project. "
+        "Returns lean hits with predictionSetCount and latestPredictionSet stub. "
+        "Default hasPredictionsOnly=true. Prefer latestPredictionSet.id with "
+        "get_predictions; use list_prediction_sets only for older runs.",
+    inputSchema: Schema.object(
+      properties: {
+        "project": Schema.string(description: "Rating project name"),
+        "query": Schema.string(description: "Match/event name filter"),
+        "after": Schema.string(description: "YYYY-MM-DD inclusive lower bound on match date"),
+        "before": Schema.string(description: "YYYY-MM-DD exclusive upper bound on match date"),
+        "limit": Schema.int(description: "Max results (default 10)"),
+        "hasPredictionsOnly": Schema.bool(
+          description: "Only preps that already have prediction sets (default true)",
+        ),
+      },
+    ),
+  );
+
+  final _listPredictionSetsTool = Tool(
+    name: "list_prediction_sets",
+    description:
+        "List prediction sets for one match prep (metadata only: id, name, created, "
+        "note, predictionCount). Sort is newest first. Usually unnecessary when "
+        "search_match_preps already returned latestPredictionSet.",
+    inputSchema: Schema.object(
+      properties: {
+        "prepId": Schema.string(
+          description: "Match prep id from search_match_preps (decimal string; 64-bit)",
+        ),
+      },
+      required: ["prepId"],
+    ),
+  );
+
+  final _getPredictionsTool = Tool(
+    name: "get_predictions",
+    description:
+        "Predictions for one scoring group in a prediction set, sorted by medianPlace. "
+        "Pass predictionSetId (preferred) or prepId (uses latest set). Requires group "
+        "or groupUuid. topN defaults to 10; pass 0 for the full group. Does not "
+        "include Monte Carlo place odds.",
+    inputSchema: Schema.object(
+      properties: {
+        "predictionSetId": Schema.string(
+          description: "Prediction set id (decimal string; 64-bit)",
+        ),
+        "prepId": Schema.string(
+          description: "Match prep id; uses latest set if predictionSetId omitted",
+        ),
+        "group": Schema.string(description: "Scoring group name (required if groupUuid omitted)"),
+        "groupUuid": Schema.string(description: "Scoring group uuid"),
+        "topN": Schema.int(description: "Max rows (default 10; 0 = entire scoring group)"),
+      },
+    ),
+  );
+
+  final _searchPredictionsTool = Tool(
+    name: "search_predictions",
+    description:
+        "Look up prediction rows in a set by memberNumber, ratingId, and/or name. "
+        "Supports batch memberNumbers / ratingIds for comparing finishers to "
+        "predictions. Optional group/groupUuid restricts scoring context. "
+        "Pass predictionSetId or prepId (latest set).",
+    inputSchema: Schema.object(
+      properties: {
+        "predictionSetId": Schema.string(
+          description: "Prediction set id (decimal string; 64-bit)",
+        ),
+        "prepId": Schema.string(
+          description: "Match prep id; uses latest set if predictionSetId omitted",
+        ),
+        "group": Schema.string(description: "Optional scoring group name filter"),
+        "groupUuid": Schema.string(description: "Optional scoring group uuid"),
+        "memberNumber": Schema.string(description: "Single member number"),
+        "ratingId": Schema.int(description: "Single DbShooterRating id"),
+        "query": Schema.string(description: "Name query (min 2 chars)"),
+        "memberNumbers": Schema.string(
+          description: "Comma-separated member numbers for batch lookup",
+        ),
+        "ratingIds": Schema.string(
+          description: "Comma-separated rating ids for batch lookup",
+        ),
+        "limit": Schema.int(
+          description: "Max rows when not batching ids (default 20; hard cap 100)",
         ),
       },
     ),

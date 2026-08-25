@@ -26,21 +26,36 @@ Future<void> main(List<String> args) async {
   await db.ready;
   final facade = ResearchFacade(db);
 
-  final projects = await facade.listRatingProjects(limit: 5);
+  final projectsRes = await facade.listRatingProjects(limit: 5);
+  if (projectsRes.isErr()) {
+    stderr.writeln(projectsRes.unwrapErr());
+    exit(1);
+  }
+  final projects = projectsRes.unwrap();
   stdout.writeln("Projects (${projects.length}):");
   for (final p in projects) {
     stdout.writeln("  - ${p.name} (${p.matchCount} matches, ${p.groups.length} groups)");
   }
 
   final query = args.isNotEmpty ? args.join(" ") : "Area 5 Championship";
-  final matches = await facade.searchMatches(query: query, limit: 5);
+  final matchesRes = await facade.searchMatches(query: query, limit: 5);
+  if (matchesRes.isErr()) {
+    stderr.writeln(matchesRes.unwrapErr());
+    exit(1);
+  }
+  final matches = matchesRes.unwrap();
   stdout.writeln("\nMatches for '$query':");
   for (final m in matches) {
     stdout.writeln("  - ${m.id}: ${m.name} (${m.date.toIso8601String().split("T").first})");
   }
 
   if (matches.isNotEmpty) {
-    final winners = await facade.getMatchWinners(matchId: matches.first.id, topN: 1);
+    final winnersRes = await facade.getMatchWinners(matchId: matches.first.id, topN: 1);
+    if (winnersRes.isErr()) {
+      stderr.writeln(winnersRes.unwrapErr());
+      exit(1);
+    }
+    final winners = winnersRes.unwrap();
     stdout.writeln("\nWinners for ${winners.match.name}:");
     for (final w in winners.winners.where((w) => w.place == 1).take(12)) {
       stdout.writeln(
@@ -50,11 +65,16 @@ Future<void> main(List<String> args) async {
       );
     }
 
-    final results = await facade.getMatchResults(
+    final resultsRes = await facade.getMatchResults(
       matchId: matches.first.id,
       division: "Carry Optics",
       topN: 5,
     );
+    if (resultsRes.isErr()) {
+      stderr.writeln(resultsRes.unwrapErr());
+      exit(1);
+    }
+    final results = resultsRes.unwrap();
     stdout.writeln("\nTop ${results.results.length} of ${results.competitorCount} in ${results.pool}:");
     for (final row in results.results) {
       stdout.writeln(

@@ -51,12 +51,21 @@ extension MatchPrepDatabase on AnalystDatabase {
     int limit = 10,
     bool hasPredictionsOnly = false,
     List<int>? excludeIds,
+    DbRatingProject? project,
   }) {
     var queryBase = isar.matchPreps.where();
     var filteredQuery = queryBase.filter();
     QueryBuilder<MatchPrep, MatchPrep, QAfterFilterCondition>? afterQuery;
+    if(project != null) {
+      afterQuery = filteredQuery.projectIdEqualTo(project.id.stableHash);
+    }
     if(nameFilter != null) {
-      afterQuery = filteredQuery.futureMatch((m) => m.eventNameContains(nameFilter, caseSensitive: false));
+      if(afterQuery == null) {
+        afterQuery = filteredQuery.futureMatch((m) => m.eventNameContains(nameFilter, caseSensitive: false));
+      }
+      else {
+        afterQuery = afterQuery.futureMatch((m) => m.eventNameContains(nameFilter, caseSensitive: false));
+      }
     }
     if(after != null) {
       if(afterQuery == null) {

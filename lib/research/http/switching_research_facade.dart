@@ -38,12 +38,12 @@ class SwitchingResearchFacade implements ResearchQueries {
   Future<void>? _localOpenFuture;
 
   @override
-  Future<List<RatingProjectDto>> listRatingProjects({String? name, int limit = 50}) {
+  Future<ResearchResult<List<RatingProjectDto>>> listRatingProjects({String? name, int limit = 50}) {
     return _delegate((f) => f.listRatingProjects(name: name, limit: limit));
   }
 
   @override
-  Future<LeaderboardResponse> getLeaderboard({
+  Future<ResearchResult<LeaderboardResponse>> getLeaderboard({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -66,7 +66,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<List<MatchSummaryDto>> searchMatches({
+  Future<ResearchResult<List<MatchSummaryDto>>> searchMatches({
     required String query,
     int limit = 10,
     DateTime? after,
@@ -81,7 +81,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<MatchWinnersResponse> getMatchWinners({
+  Future<ResearchResult<MatchWinnersResponse>> getMatchWinners({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -98,7 +98,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<MatchResultsResponse> getMatchResults({
+  Future<ResearchResult<MatchResultsResponse>> getMatchResults({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -127,7 +127,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<MatchScoresResponse> getMatchScores({
+  Future<ResearchResult<MatchScoresResponse>> getMatchScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -160,7 +160,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<CompetitorStageScoresResponse> getCompetitorStageScores({
+  Future<ResearchResult<CompetitorStageScoresResponse>> getCompetitorStageScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -187,7 +187,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<List<ShooterHitDto>> searchShooters({
+  Future<ResearchResult<List<ShooterHitDto>>> searchShooters({
     required String query,
     String? projectName,
     String? groupUuid,
@@ -208,7 +208,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<ShooterSummaryDto> getShooterSummary({
+  Future<ResearchResult<ShooterSummaryDto>> getShooterSummary({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -227,7 +227,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<List<RatingEventDto>> getRatingHistory({
+  Future<ResearchResult<List<RatingEventDto>>> getRatingHistory({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -250,7 +250,7 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
-  Future<List<ShooterMatchResultDto>> getShooterMatchResults({
+  Future<ResearchResult<List<ShooterMatchResultDto>>> getShooterMatchResults({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -272,7 +272,77 @@ class SwitchingResearchFacade implements ResearchQueries {
         ));
   }
 
-  Future<T> _delegate<T>(Future<T> Function(ResearchQueries facade) body) async {
+  @override
+  Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
+    String? projectName,
+    String? query,
+    DateTime? after,
+    DateTime? before,
+    int limit = 10,
+    bool hasPredictionsOnly = true,
+  }) {
+    return _delegate((f) => f.searchMatchPreps(
+          projectName: projectName,
+          query: query,
+          after: after,
+          before: before,
+          limit: limit,
+          hasPredictionsOnly: hasPredictionsOnly,
+        ));
+  }
+
+  @override
+  Future<ResearchResult<List<PredictionSetDto>>> listPredictionSets({
+    required String prepId,
+  }) {
+    return _delegate((f) => f.listPredictionSets(prepId: prepId));
+  }
+
+  @override
+  Future<ResearchResult<PredictionsResponse>> getPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    int topN = kDefaultPredictionTopN,
+  }) {
+    return _delegate((f) => f.getPredictions(
+          predictionSetId: predictionSetId,
+          prepId: prepId,
+          groupUuid: groupUuid,
+          groupName: groupName,
+          topN: topN,
+        ));
+  }
+
+  @override
+  Future<ResearchResult<List<PredictionRowDto>>> searchPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+    String? query,
+    List<String>? memberNumbers,
+    List<int>? ratingIds,
+    int limit = kDefaultPredictionSearchLimit,
+  }) {
+    return _delegate((f) => f.searchPredictions(
+          predictionSetId: predictionSetId,
+          prepId: prepId,
+          groupUuid: groupUuid,
+          groupName: groupName,
+          memberNumber: memberNumber,
+          ratingId: ratingId,
+          query: query,
+          memberNumbers: memberNumbers,
+          ratingIds: ratingIds,
+          limit: limit,
+        ));
+  }
+
+  Future<ResearchResult<T>> _delegate<T>(Future<ResearchResult<T>> Function(ResearchQueries facade) body) async {
     final healthy = await _checkHealthy();
     if(healthy) {
       await _closeLocalIfOpen();

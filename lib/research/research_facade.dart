@@ -5,9 +5,15 @@
  */
 
 import "package:collection/collection.dart";
+import "package:isar_community/isar.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
+import "package:shooting_sports_analyst/data/database/extensions/match_prep.dart";
+import "package:shooting_sports_analyst/data/database/extensions/prediction_game.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
 import "package:shooting_sports_analyst/data/database/schema/match.dart";
+import "package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart";
+import "package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart";
+import "package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
 import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart";
@@ -24,6 +30,7 @@ import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/research_queries.dart";
+import "package:shooting_sports_analyst/util.dart";
 
 final _log = SSALogger("ResearchFacade");
 
@@ -36,7 +43,7 @@ class ResearchFacade implements ResearchQueries {
 
   final AnalystDatabase db;
 
-  Future<List<RatingProjectDto>> listRatingProjects({String? name, int limit = 50}) async {
+  Future<ResearchResult<List<RatingProjectDto>>> listRatingProjects({String? name, int limit = 50}) async {
     final projects = name == null || name.trim().isEmpty
         ? await db.getAllRatingProjects()
         : await db.findRatingProjects(name: name, limit: limit);
@@ -47,10 +54,10 @@ class ResearchFacade implements ResearchQueries {
       }
       out.add(_projectDto(p));
     }
-    return out;
+    return Result.ok(out);
   }
 
-  Future<LeaderboardResponse> getLeaderboard({
+  Future<ResearchResult<LeaderboardResponse>> getLeaderboard({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -61,28 +68,44 @@ class ResearchFacade implements ResearchQueries {
     DateTime? changeSince,
   }) async {
     if (limit < 1) {
-      throw ResearchException("limit must be >= 1");
+      return Result.err(ResearchError("limit must be >= 1"));
     }
     if (minMatches < 0) {
-      throw ResearchException("minMatches must be >= 0");
+      return Result.err(ResearchError("minMatches must be >= 0"));
     }
 
-    final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    if (projectRes.isErr()) {
+      return Result.errFrom(projectRes);
+    }
+    final project = projectRes.unwrap();
     if (!project.dbGroups.isLoaded) {
       await project.dbGroups.load();
     }
-    final group = _requireSingleGroup(project, groupUuid: groupUuid, groupName: groupName);
+    final groupRes = _requireSingleGroup(project, groupUuid: groupUuid, groupName: groupName);
+    if (groupRes.isErr()) {
+      return Result.errFrom(groupRes);
+    }
+    final group = groupRes.unwrap();
     final algo = project.settings.algorithm;
-    final sortMode = _parseSortMode(sort, algo);
-    final latestMatchDate = _latestMatchDate(project);
+    final sortModeRes = _parseSortMode(sort, algo);
+    if (sortModeRes.isErr()) {
+      return Result.errFrom(sortModeRes);
+    }
+    final sortMode = sortModeRes.unwrap();
+    final latestMatchDateRes = _latestMatchDate(project);
+    if (latestMatchDateRes.isErr()) {
+      return Result.errFrom(latestMatchDateRes);
+    }
+    final latestMatchDate = latestMatchDateRes.unwrap();
     final effectiveSeenSince = seenSince ?? DateTime(latestMatchDate.year - 1, 1, 1);
 
     final ratingsRes = await project.getRatings(group);
     if (ratingsRes.isErr()) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Failed to load ratings for group ${group.name}: ${ratingsRes.unwrapErr()}",
         statusCode: 500,
-      );
+      ));
     }
 
     final wrapped = <ShooterRating>[];
@@ -114,7 +137,7 @@ class ResearchFacade implements ResearchQueries {
       ));
     }
 
-    return LeaderboardResponse(
+    return Result.ok(LeaderboardResponse(
       projectName: project.name,
       groupUuid: group.uuid,
       groupName: group.name,
@@ -125,10 +148,10 @@ class ResearchFacade implements ResearchQueries {
       latestMatchDate: latestMatchDate,
       totalAfterFilters: wrapped.length,
       entries: entries,
-    );
+    ));
   }
 
-  Future<List<MatchSummaryDto>> searchMatches({
+  Future<ResearchResult<List<MatchSummaryDto>>> searchMatches({
     required String query,
     int limit = 10,
     DateTime? after,
@@ -136,7 +159,7 @@ class ResearchFacade implements ResearchQueries {
   }) async {
     final q = query.trim();
     if (q.isEmpty) {
-      throw ResearchException("query is required");
+      return Result.err(ResearchError("query is required"));
     }
     final matches = await db.matchNameTextSearch(
       q,
@@ -144,10 +167,10 @@ class ResearchFacade implements ResearchQueries {
       after: after,
       before: before,
     );
-    return matches.map(_matchSummary).toList();
+    return Result.ok(matches.map(_matchSummary).toList());
   }
 
-  Future<MatchWinnersResponse> getMatchWinners({
+  Future<ResearchResult<MatchWinnersResponse>> getMatchWinners({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -155,14 +178,26 @@ class ResearchFacade implements ResearchQueries {
     int topN = 1,
   }) async {
     if (topN < 1) {
-      throw ResearchException("topN must be >= 1");
+      return Result.err(ResearchError("topN must be >= 1"));
     }
-    final dbMatch = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
-    final shootingMatch = await _hydrate(dbMatch);
+    final dbMatchRes = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
+    if (dbMatchRes.isErr()) {
+      return Result.errFrom(dbMatchRes);
+    }
+    final dbMatch = dbMatchRes.unwrap();
+    final shootingMatchRes = await _hydrate(dbMatch);
+    if (shootingMatchRes.isErr()) {
+      return Result.errFrom(shootingMatchRes);
+    }
+    final shootingMatch = shootingMatchRes.unwrap();
 
     final winners = <MatchWinnerDto>[];
     if (byRatingGroup) {
-      final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+      final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+      if (projectRes.isErr()) {
+        return Result.errFrom(projectRes);
+      }
+      final project = projectRes.unwrap();
       if (!project.dbGroups.isLoaded) {
         await project.dbGroups.load();
       }
@@ -194,17 +229,17 @@ class ResearchFacade implements ResearchQueries {
       }
     }
 
-    return MatchWinnersResponse(
+    return Result.ok(MatchWinnersResponse(
       match: _matchSummary(dbMatch),
       winners: winners,
-    );
+    ));
   }
 
   /// Fuller standings for one scoring pool (division, rating group, or overall).
   ///
   /// Optional [femaleOnly], [ageCategory], and [category] narrow the competitor
   /// pool before scoring (same semantics as UI [FilterSet]).
-  Future<MatchResultsResponse> getMatchResults({
+  Future<ResearchResult<MatchResultsResponse>> getMatchResults({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -217,7 +252,7 @@ class ResearchFacade implements ResearchQueries {
     int topN = kDefaultMatchPoolTopN,
     bool overall = false,
   }) async {
-    final resolved = await _resolveMatchPool(
+    final resolvedRes = await _resolveMatchPool(
       matchId: matchId,
       matchQuery: matchQuery,
       projectName: projectName,
@@ -229,6 +264,10 @@ class ResearchFacade implements ResearchQueries {
       category: category,
       overall: overall,
     );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
     final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
     final limit = topN > 0 ? topN : scored.length;
@@ -237,7 +276,7 @@ class ResearchFacade implements ResearchQueries {
       results.add(_competitorResult(e.key, e.value));
     }
 
-    return MatchResultsResponse(
+    return Result.ok(MatchResultsResponse(
       match: _matchSummary(resolved.dbMatch),
       pool: resolved.pool,
       kind: resolved.kind,
@@ -246,11 +285,11 @@ class ResearchFacade implements ResearchQueries {
       category: resolved.categoryFilter,
       competitorCount: scored.length,
       results: results,
-    );
+    ));
   }
 
   /// Detailed match scores for one scoring pool, with optional stages and event counts.
-  Future<MatchScoresResponse> getMatchScores({
+  Future<ResearchResult<MatchScoresResponse>> getMatchScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -265,7 +304,7 @@ class ResearchFacade implements ResearchQueries {
     bool includeStages = false,
     bool includeScoringEventCounts = false,
   }) async {
-    final resolved = await _resolveMatchPool(
+    final resolvedRes = await _resolveMatchPool(
       matchId: matchId,
       matchQuery: matchQuery,
       projectName: projectName,
@@ -277,6 +316,10 @@ class ResearchFacade implements ResearchQueries {
       category: category,
       overall: overall,
     );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
     final scoringKind = _scoringKind(resolved.shootingMatch.sport);
     final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
@@ -292,7 +335,7 @@ class ResearchFacade implements ResearchQueries {
       ));
     }
 
-    return MatchScoresResponse(
+    return Result.ok(MatchScoresResponse(
       match: _matchSummary(resolved.dbMatch),
       pool: resolved.pool,
       kind: resolved.kind,
@@ -304,13 +347,13 @@ class ResearchFacade implements ResearchQueries {
       includeStages: includeStages,
       includeScoringEventCounts: includeScoringEventCounts,
       scores: rows,
-    );
+    ));
   }
 
   /// One competitor's stage scores at a match.
   ///
   /// If no pool is specified, defaults to the competitor's entered division.
-  Future<CompetitorStageScoresResponse> getCompetitorStageScores({
+  Future<ResearchResult<CompetitorStageScoresResponse>> getCompetitorStageScores({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -322,25 +365,37 @@ class ResearchFacade implements ResearchQueries {
     bool overall = false,
     bool includeScoringEventCounts = false,
   }) async {
-    final dbMatch = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
-    final shootingMatch = await _hydrate(dbMatch);
+    final dbMatchRes = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
+    if (dbMatchRes.isErr()) {
+      return Result.errFrom(dbMatchRes);
+    }
+    final dbMatch = dbMatchRes.unwrap();
+    final shootingMatchRes = await _hydrate(dbMatch);
+    if (shootingMatchRes.isErr()) {
+      return Result.errFrom(shootingMatchRes);
+    }
+    final shootingMatch = shootingMatchRes.unwrap();
     final sport = shootingMatch.sport;
 
-    final entry = await _resolveMatchEntry(
+    final entryRes = await _resolveMatchEntry(
       shootingMatch,
       memberNumber: memberNumber,
       ratingId: ratingId,
       projectName: projectName,
     );
+    if (entryRes.isErr()) {
+      return Result.errFrom(entryRes);
+    }
+    final entry = entryRes.unwrap();
 
     final hasExplicitPool = overall ||
         (division != null && division.trim().isNotEmpty) ||
         (groupUuid != null && groupUuid.isNotEmpty) ||
         (groupName != null && groupName.isNotEmpty);
 
-    late final _ResolvedMatchPool resolved;
+    late final ResearchResult<_ResolvedMatchPool> resolvedRes;
     if (hasExplicitPool) {
-      resolved = await _resolveMatchPool(
+      resolvedRes = await _resolveMatchPool(
         matchId: dbMatch.id,
         projectName: projectName,
         division: division,
@@ -354,11 +409,11 @@ class ResearchFacade implements ResearchQueries {
     else {
       final entered = entry.division;
       if (entered == null) {
-        throw ResearchException(
+        return Result.err(ResearchError(
           "Competitor has no entered division; specify division, group/groupUuid, or overall=true",
-        );
+        ));
       }
-      resolved = await _resolveMatchPool(
+      resolvedRes = await _resolveMatchPool(
         matchId: dbMatch.id,
         projectName: projectName,
         division: entered.name,
@@ -366,13 +421,17 @@ class ResearchFacade implements ResearchQueries {
         preloadedShootingMatch: shootingMatch,
       );
     }
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
 
     final score = resolved.scores[entry];
     if (score == null) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Competitor ${entry.memberNumber} is not in scoring pool '${resolved.pool}'",
         statusCode: 404,
-      );
+      ));
     }
 
     final scoringKind = _scoringKind(sport);
@@ -389,7 +448,7 @@ class ResearchFacade implements ResearchQueries {
       includeScoringEventCounts: includeScoringEventCounts,
     );
 
-    return CompetitorStageScoresResponse(
+    return Result.ok(CompetitorStageScoresResponse(
       match: _matchSummary(dbMatch),
       pool: resolved.pool,
       kind: resolved.kind,
@@ -397,10 +456,10 @@ class ResearchFacade implements ResearchQueries {
       competitor: competitorRow,
       stages: stages,
       includeScoringEventCounts: includeScoringEventCounts,
-    );
+    ));
   }
 
-  Future<List<ShooterHitDto>> searchShooters({
+  Future<ResearchResult<List<ShooterHitDto>>> searchShooters({
     required String query,
     String? projectName,
     String? groupUuid,
@@ -409,11 +468,19 @@ class ResearchFacade implements ResearchQueries {
     int limit = 20,
     bool includeInternal = false,
   }) async {
-    final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    if (projectRes.isErr()) {
+      return Result.errFrom(projectRes);
+    }
+    final project = projectRes.unwrap();
     if (!project.dbGroups.isLoaded) {
       await project.dbGroups.load();
     }
-    final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    final groupsRes = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    if (groupsRes.isErr()) {
+      return Result.errFrom(groupsRes);
+    }
+    final groups = groupsRes.unwrap();
     final hits = <ShooterHitDto>[];
 
     final mn = memberNumber?.trim();
@@ -429,12 +496,12 @@ class ResearchFacade implements ResearchQueries {
           hits.add(_shooterHit(project, rating, group, includeInternal: includeInternal));
         }
       }
-      return hits.take(limit).toList();
+      return Result.ok(hits.take(limit).toList());
     }
 
     final q = query.trim();
     if (q.length < 2) {
-      throw ResearchException("query must be at least 2 characters (or pass memberNumber)");
+      return Result.err(ResearchError("query must be at least 2 characters (or pass memberNumber)"));
     }
     for (final group in groups) {
       final found = await db.findShooterRatings(
@@ -447,10 +514,10 @@ class ResearchFacade implements ResearchQueries {
         hits.add(_shooterHit(project, rating, group, includeInternal: includeInternal));
       }
     }
-    return hits.take(limit).toList();
+    return Result.ok(hits.take(limit).toList());
   }
 
-  Future<ShooterSummaryDto> getShooterSummary({
+  Future<ResearchResult<ShooterSummaryDto>> getShooterSummary({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -458,20 +525,24 @@ class ResearchFacade implements ResearchQueries {
     int? ratingId,
     bool includeInternal = false,
   }) async {
-    final resolved = await _resolveShooterRating(
+    final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
       groupUuid: groupUuid,
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
     );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
     final rating = resolved.rating;
     final group = resolved.group;
     final project = resolved.project;
     final wrapped = project.wrapDbRatingSync(rating);
     final algo = project.settings.algorithm;
 
-    return ShooterSummaryDto(
+    return Result.ok(ShooterSummaryDto(
       ratingId: rating.id,
       firstName: rating.firstName,
       lastName: rating.lastName,
@@ -502,10 +573,10 @@ class ResearchFacade implements ResearchQueries {
       internalAgedRating: includeInternal ? wrapped.agedRating : null,
       internalCareerMinimumRating: includeInternal ? wrapped.careerMinimumRating : null,
       internalCareerMaximumRating: includeInternal ? wrapped.careerMaximumRating : null,
-    );
+    ));
   }
 
-  Future<List<RatingEventDto>> getRatingHistory({
+  Future<ResearchResult<List<RatingEventDto>>> getRatingHistory({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -515,13 +586,17 @@ class ResearchFacade implements ResearchQueries {
     bool matchLevelOnly = true,
     bool includeInternal = false,
   }) async {
-    final resolved = await _resolveShooterRating(
+    final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
       groupUuid: groupUuid,
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
     );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
     final algo = resolved.project.settings.algorithm;
     final events = await db.getRatingEventsFor(resolved.rating, limit: limit * 4);
     final out = <RatingEventDto>[];
@@ -558,10 +633,10 @@ class ResearchFacade implements ResearchQueries {
         break;
       }
     }
-    return out;
+    return Result.ok(out);
   }
 
-  Future<List<ShooterMatchResultDto>> getShooterMatchResults({
+  Future<ResearchResult<List<ShooterMatchResultDto>>> getShooterMatchResults({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -571,13 +646,17 @@ class ResearchFacade implements ResearchQueries {
     bool includeInternal = false,
     bool bestFirst = false,
   }) async {
-    final resolved = await _resolveShooterRating(
+    final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
       groupUuid: groupUuid,
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
     );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
     final algo = resolved.project.settings.algorithm;
     // Recency mode can stop after [limit] matches. Highlights need the full
     // match-level history so "best" is career-best, not recent-best.
@@ -636,7 +715,196 @@ class ResearchFacade implements ResearchQueries {
         out = out.take(limit).toList();
       }
     }
-    return out;
+    return Result.ok(out);
+  }
+
+  Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
+    String? projectName,
+    String? query,
+    DateTime? after,
+    DateTime? before,
+    int limit = 10,
+    bool hasPredictionsOnly = true,
+  }) async {
+    if (limit < 1) {
+      return Result.err(ResearchError("limit must be >= 1"));
+    }
+    final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    if (projectRes.isErr()) {
+      return Result.errFrom(projectRes);
+    }
+    final project = projectRes.unwrap();
+    final nameFilter = query?.trim();
+    final preps = await db.queryMatchPreps(
+      project: project,
+      nameFilter: (nameFilter == null || nameFilter.isEmpty) ? null : nameFilter,
+      after: after,
+      before: before,
+      limit: limit,
+      hasPredictionsOnly: hasPredictionsOnly,
+    );
+    final out = <MatchPrepHitDto>[];
+    for (final prep in preps) {
+      out.add(await _matchPrepHit(prep, projectName: project.name));
+    }
+    return Result.ok(out);
+  }
+
+  Future<ResearchResult<List<PredictionSetDto>>> listPredictionSets({
+    required String prepId,
+  }) async {
+    final idRes = _parseResearchId(prepId, "prepId");
+    if (idRes.isErr()) {
+      return Result.errFrom(idRes);
+    }
+    final prep = await db.getMatchPrepById(idRes.unwrap());
+    if (prep == null) {
+      return Result.err(ResearchError("Match prep not found: id=$prepId", statusCode: 404));
+    }
+    final sets = await db.getPredictionSetsForMatchPrep(prep);
+    final out = <PredictionSetDto>[];
+    for (final set in sets) {
+      out.add(await _predictionSetDto(set));
+    }
+    return Result.ok(out);
+  }
+
+  Future<ResearchResult<PredictionsResponse>> getPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    int topN = kDefaultPredictionTopN,
+  }) async {
+    final setRes = await _resolvePredictionSet(
+      predictionSetId: predictionSetId,
+      prepId: prepId,
+    );
+    if (setRes.isErr()) {
+      return Result.errFrom(setRes);
+    }
+    final set = setRes.unwrap();
+    final projectRes = await _projectForPredictionSet(set);
+    if (projectRes.isErr()) {
+      return Result.errFrom(projectRes);
+    }
+    final project = projectRes.unwrap();
+    if (!project.dbGroups.isLoaded) {
+      await project.dbGroups.load();
+    }
+    final groupRes = _requireSingleGroup(project, groupUuid: groupUuid, groupName: groupName);
+    if (groupRes.isErr()) {
+      return Result.errFrom(groupRes);
+    }
+    final group = groupRes.unwrap();
+
+    final rows = await _loadPredictionRows(set, scoringGroup: group);
+    rows.sort((a, b) => a.medianPlace.compareTo(b.medianPlace));
+    final limit = topN > 0 ? topN : rows.length;
+    return Result.ok(PredictionsResponse(
+      predictionSet: await _predictionSetDto(set),
+      scoringGroup: group.name,
+      scoringGroupUuid: group.uuid,
+      competitorCount: rows.length,
+      predictions: rows.take(limit).toList(),
+    ));
+  }
+
+  Future<ResearchResult<List<PredictionRowDto>>> searchPredictions({
+    String? predictionSetId,
+    String? prepId,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+    String? query,
+    List<String>? memberNumbers,
+    List<int>? ratingIds,
+    int limit = kDefaultPredictionSearchLimit,
+  }) async {
+    final memberSet = <String>{
+      if (memberNumber != null && memberNumber.trim().isNotEmpty) memberNumber.trim(),
+      ...?memberNumbers?.map((m) => m.trim()).where((m) => m.isNotEmpty),
+    };
+    final ratingIdSet = <int>{
+      if (ratingId != null) ratingId,
+      ...?ratingIds,
+    };
+    final nameQuery = query?.trim() ?? "";
+    final hasBatch = memberSet.isNotEmpty || ratingIdSet.isNotEmpty;
+    final hasName = nameQuery.length >= 2;
+    if (!hasBatch && !hasName) {
+      return Result.err(ResearchError(
+        "Provide memberNumber(s), ratingId(s), and/or a name query of at least 2 characters",
+      ));
+    }
+    if (nameQuery.isNotEmpty && nameQuery.length < 2) {
+      return Result.err(ResearchError("query must be at least 2 characters"));
+    }
+
+    final setRes = await _resolvePredictionSet(
+      predictionSetId: predictionSetId,
+      prepId: prepId,
+    );
+    if (setRes.isErr()) {
+      return Result.errFrom(setRes);
+    }
+    final set = setRes.unwrap();
+
+    RatingGroup? groupFilter;
+    if ((groupUuid != null && groupUuid.isNotEmpty) || (groupName != null && groupName.isNotEmpty)) {
+      final projectRes = await _projectForPredictionSet(set);
+      if (projectRes.isErr()) {
+        return Result.errFrom(projectRes);
+      }
+      final project = projectRes.unwrap();
+      if (!project.dbGroups.isLoaded) {
+        await project.dbGroups.load();
+      }
+      final groupRes = _requireSingleGroup(project, groupUuid: groupUuid, groupName: groupName);
+      if (groupRes.isErr()) {
+        return Result.errFrom(groupRes);
+      }
+      groupFilter = groupRes.unwrap();
+    }
+
+    final loaded = await _loadPredictionsWithRatings(set, scoringGroup: groupFilter);
+    final nameLower = nameQuery.toLowerCase();
+    final matched = <PredictionRowDto>[];
+    for (final entry in loaded) {
+      final pred = entry.prediction;
+      final rating = entry.rating;
+      final row = entry.row;
+      var hit = false;
+      if (memberSet.isNotEmpty) {
+        if (memberSet.contains(pred.memberNumber)) {
+          hit = true;
+        }
+        else if (rating != null && rating.knownMemberNumbers.any(memberSet.contains)) {
+          hit = true;
+        }
+      }
+      if (!hit && ratingIdSet.isNotEmpty && rating != null && ratingIdSet.contains(rating.id)) {
+        hit = true;
+      }
+      if (!hit && hasName) {
+        final full = row.name.toLowerCase();
+        if (full.contains(nameLower) ||
+            row.firstName.toLowerCase().contains(nameLower) ||
+            row.lastName.toLowerCase().contains(nameLower)) {
+          hit = true;
+        }
+      }
+      if (hit) {
+        matched.add(row);
+      }
+    }
+
+    matched.sort((a, b) => a.medianPlace.compareTo(b.medianPlace));
+    final effectiveLimit = hasBatch
+        ? kMaxPredictionSearchLimit
+        : (limit < 1 ? kDefaultPredictionSearchLimit : limit.clamp(1, kMaxPredictionSearchLimit));
+    return Result.ok(matched.take(effectiveLimit).toList());
   }
 
   MatchSummaryDto _matchSummary(DbShootingMatch m) => MatchSummaryDto(
@@ -647,21 +915,21 @@ class ResearchFacade implements ResearchQueries {
         sourceIds: [...m.sourceIds],
       );
 
-  Future<DbShootingMatch> _resolveMatch({int? matchId, String? matchQuery}) async {
+  Future<ResearchResult<DbShootingMatch>> _resolveMatch({int? matchId, String? matchQuery}) async {
     if (matchId != null) {
       final m = await db.getMatch(matchId);
       if (m == null) {
-        throw ResearchException("Match not found: id=$matchId", statusCode: 404);
+        return Result.err(ResearchError("Match not found: id=$matchId", statusCode: 404));
       }
-      return m;
+      return Result.ok(m);
     }
     final q = matchQuery?.trim();
     if (q == null || q.isEmpty) {
-      throw ResearchException("matchId or matchQuery is required");
+      return Result.err(ResearchError("matchId or matchQuery is required"));
     }
     final hits = await db.matchNameTextSearch(q, limit: 5);
     if (hits.isEmpty) {
-      throw ResearchException("No matches found for query: $q", statusCode: 404);
+      return Result.err(ResearchError("No matches found for query: $q", statusCode: 404));
     }
     if (hits.length > 1) {
       final names = hits.map((h) => "${h.id}: ${h.eventName}").join("; ");
@@ -673,21 +941,21 @@ class ResearchFacade implements ResearchQueries {
       // If multiple strong hits, still pick the top text-search result (agents can re-query by id).
       _log.d("Candidates: $names");
     }
-    return hits.first;
+    return Result.ok(hits.first);
   }
 
-  Future<ShootingMatch> _hydrate(DbShootingMatch dbMatch) async {
+  Future<ResearchResult<ShootingMatch>> _hydrate(DbShootingMatch dbMatch) async {
     if (dbMatch.shootersStoredSeparately) {
       await dbMatch.shooterLinks.load();
     }
     final hydrated = await dbMatch.hydrate();
     if (hydrated.isErr()) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Failed to hydrate match ${dbMatch.eventName}: ${hydrated.unwrapErr()}",
         statusCode: 500,
-      );
+      ));
     }
-    return hydrated.unwrap();
+    return Result.ok(hydrated.unwrap());
   }
 
   /// Resolve division/classification entered for a rating event via match entryId.
@@ -784,7 +1052,7 @@ class ResearchFacade implements ResearchQueries {
     );
   }
 
-  Future<_ResolvedMatchPool> _resolveMatchPool({
+  Future<ResearchResult<_ResolvedMatchPool>> _resolveMatchPool({
     int? matchId,
     String? matchQuery,
     String? projectName,
@@ -798,9 +1066,29 @@ class ResearchFacade implements ResearchQueries {
     DbShootingMatch? preloadedDbMatch,
     ShootingMatch? preloadedShootingMatch,
   }) async {
-    final dbMatch = preloadedDbMatch ??
-        await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
-    final shootingMatch = preloadedShootingMatch ?? await _hydrate(dbMatch);
+    late final ResearchResult<DbShootingMatch> dbMatchRes;
+    if (preloadedDbMatch != null) {
+      dbMatchRes = Result.ok(preloadedDbMatch);
+    }
+    else {
+      dbMatchRes = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
+    }
+    if (dbMatchRes.isErr()) {
+      return Result.errFrom(dbMatchRes);
+    }
+    final dbMatch = dbMatchRes.unwrap();
+
+    late final ResearchResult<ShootingMatch> shootingMatchRes;
+    if (preloadedShootingMatch != null) {
+      shootingMatchRes = Result.ok(preloadedShootingMatch);
+    }
+    else {
+      shootingMatchRes = await _hydrate(dbMatch);
+    }
+    if (shootingMatchRes.isErr()) {
+      return Result.errFrom(shootingMatchRes);
+    }
+    final shootingMatch = shootingMatchRes.unwrap();
     final sport = shootingMatch.sport;
 
     late final FilterSet filters;
@@ -813,30 +1101,42 @@ class ResearchFacade implements ResearchQueries {
       kind = "overall";
     }
     else if (groupUuid != null || groupName != null) {
-      final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+      final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+      if (projectRes.isErr()) {
+        return Result.errFrom(projectRes);
+      }
+      final project = projectRes.unwrap();
       if (!project.dbGroups.isLoaded) {
         await project.dbGroups.load();
       }
-      final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+      final groupsRes = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+      if (groupsRes.isErr()) {
+        return Result.errFrom(groupsRes);
+      }
+      final groups = groupsRes.unwrap();
       if (groups.length != 1) {
-        throw ResearchException(
+        return Result.err(ResearchError(
           "Specify a single rating group (got ${groups.length}). Pass groupUuid or a unique group name.",
-        );
+        ));
       }
       filters = groups.first.filters;
       pool = groups.first.name;
       kind = "ratingGroup";
     }
     else if (division != null && division.trim().isNotEmpty) {
-      final div = _lookupDivision(sport, division.trim());
+      final divRes = _lookupDivision(sport, division.trim());
+      if (divRes.isErr()) {
+        return Result.errFrom(divRes);
+      }
+      final div = divRes.unwrap();
       filters = FilterSet.forDivision(sport, div);
       pool = div.displayName;
       kind = "division";
     }
     else {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Specify division, group/groupUuid, or overall=true",
-      );
+      ));
     }
 
     filters.femaleOnly = femaleOnly;
@@ -845,7 +1145,7 @@ class ResearchFacade implements ResearchQueries {
     if (ageFilter != null && ageFilter.isNotEmpty) {
       final age = sport.ageCategories.lookupByName(ageFilter);
       if (age == null) {
-        throw ResearchException("Unknown age category: $ageFilter", statusCode: 404);
+        return Result.err(ResearchError("Unknown age category: $ageFilter", statusCode: 404));
       }
       for (final key in filters.ageCategories.keys.toList()) {
         filters.ageCategories[key] = key == age;
@@ -854,7 +1154,7 @@ class ResearchFacade implements ResearchQueries {
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
       final cat = sport.categories.lookupByName(categoryFilter);
       if (cat == null) {
-        throw ResearchException("Unknown competitor category: $categoryFilter", statusCode: 404);
+        return Result.err(ResearchError("Unknown competitor category: $categoryFilter", statusCode: 404));
       }
       for (final key in filters.categories.keys.toList()) {
         filters.categories[key] = key == cat;
@@ -862,7 +1162,7 @@ class ResearchFacade implements ResearchQueries {
     }
 
     final scores = shootingMatch.getScoresFromFilters(filters);
-    return _ResolvedMatchPool(
+    return Result.ok(_ResolvedMatchPool(
       dbMatch: dbMatch,
       shootingMatch: shootingMatch,
       filters: filters,
@@ -871,10 +1171,10 @@ class ResearchFacade implements ResearchQueries {
       kind: kind,
       ageCategoryFilter: (ageFilter == null || ageFilter.isEmpty) ? null : ageFilter,
       categoryFilter: (categoryFilter == null || categoryFilter.isEmpty) ? null : categoryFilter,
-    );
+    ));
   }
 
-  Future<MatchEntry> _resolveMatchEntry(
+  Future<ResearchResult<MatchEntry>> _resolveMatchEntry(
     ShootingMatch match, {
     String? memberNumber,
     int? ratingId,
@@ -882,14 +1182,17 @@ class ResearchFacade implements ResearchQueries {
   }) async {
     String? mn = memberNumber?.trim();
     if ((mn == null || mn.isEmpty) && ratingId != null) {
-      final resolved = await _resolveShooterRating(
+      final resolvedRes = await _resolveShooterRating(
         projectName: projectName,
         ratingId: ratingId,
       );
-      mn = resolved.rating.memberNumber;
+      if (resolvedRes.isErr()) {
+        return Result.errFrom(resolvedRes);
+      }
+      mn = resolvedRes.unwrap().rating.memberNumber;
     }
     if (mn == null || mn.isEmpty) {
-      throw ResearchException("memberNumber or ratingId is required");
+      return Result.err(ResearchError("memberNumber or ratingId is required"));
     }
 
     final processor = ShooterDeduplicator.numberProcessor(match.sport);
@@ -903,14 +1206,14 @@ class ResearchFacade implements ResearchQueries {
     }).toList();
 
     if (matches.isEmpty) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Competitor not found in match: memberNumber=$mn",
         statusCode: 404,
-      );
+      ));
     }
     // Prefer non-reentry when multiple entries exist.
     final primary = matches.firstWhereOrNull((s) => !s.reentry) ?? matches.first;
-    return primary;
+    return Result.ok(primary);
   }
 
   String _scoringKind(Sport sport) {
@@ -1020,10 +1323,10 @@ class ResearchFacade implements ResearchQueries {
     );
   }
 
-  Division _lookupDivision(Sport sport, String name) {
+  ResearchResult<Division> _lookupDivision(Sport sport, String name) {
     final exact = sport.divisions.lookupByName(name);
     if (exact != null) {
-      return exact;
+      return Result.ok(exact);
     }
     final lower = name.toLowerCase();
     final fuzzy = sport.divisions.values.where((d) {
@@ -1031,25 +1334,25 @@ class ResearchFacade implements ResearchQueries {
           d.displayName.toLowerCase().contains(lower);
     }).toList();
     if (fuzzy.length == 1) {
-      return fuzzy.first;
+      return Result.ok(fuzzy.first);
     }
     if (fuzzy.isEmpty) {
-      throw ResearchException("Unknown division: $name", statusCode: 404);
+      return Result.err(ResearchError("Unknown division: $name", statusCode: 404));
     }
-    throw ResearchException(
+    return Result.err(ResearchError(
       "Ambiguous division '$name': ${fuzzy.map((d) => d.displayName).join(", ")}",
-    );
+    ));
   }
 
-  Future<DbRatingProject> _requireProject(String name) async {
+  Future<ResearchResult<DbRatingProject>> _requireProject(String name) async {
     final project = await db.getRatingProjectByName(name);
     if (project == null) {
-      throw ResearchException("Rating project not found: $name", statusCode: 404);
+      return Result.err(ResearchError("Rating project not found: $name", statusCode: 404));
     }
-    return project;
+    return Result.ok(project);
   }
 
-  List<RatingGroup> _resolveGroups(
+  ResearchResult<List<RatingGroup>> _resolveGroups(
     DbRatingProject project, {
     String? groupUuid,
     String? groupName,
@@ -1058,22 +1361,33 @@ class ResearchFacade implements ResearchQueries {
     if (groupUuid != null && groupUuid.isNotEmpty) {
       final g = all.firstWhereOrNull((g) => g.uuid == groupUuid);
       if (g == null) {
-        throw ResearchException("Rating group not found: uuid=$groupUuid", statusCode: 404);
+        return Result.err(ResearchError("Rating group not found: uuid=$groupUuid", statusCode: 404));
       }
-      return [g];
+      return Result.ok([g]);
     }
     if (groupName != null && groupName.isNotEmpty) {
       final lower = groupName.toLowerCase();
-      final matches = all.where((g) => g.name.toLowerCase().contains(lower)).toList();
-      if (matches.isEmpty) {
-        throw ResearchException("Rating group not found: name=$groupName", statusCode: 404);
+      final exact = all.where((g) => g.name.toLowerCase() == lower).toList();
+      if (exact.isNotEmpty) {
+        return Result.ok(exact);
       }
-      return matches;
+      final partial = all.where((g) => g.name.toLowerCase().contains(lower)).toList();
+      if (partial.length == 1) {
+        return Result.ok(partial);
+      }
+      if (partial.isEmpty) {
+        return Result.err(ResearchError("Rating group not found: name=$groupName", statusCode: 404));
+      }
+      return Result.err(ResearchError(
+        "Ambiguous rating group name '$groupName'; matches: "
+        "${partial.map((g) => g.name).join(", ")}. "
+        "Use an exact group name or groupUuid.",
+      ));
     }
-    return all;
+    return Result.ok(all);
   }
 
-  Future<({DbRatingProject project, RatingGroup group, DbShooterRating rating})> _resolveShooterRating({
+  Future<ResearchResult<({DbRatingProject project, RatingGroup group, DbShooterRating rating})>> _resolveShooterRating({
     String? projectName,
     String? groupUuid,
     String? groupName,
@@ -1083,7 +1397,7 @@ class ResearchFacade implements ResearchQueries {
     if (ratingId != null) {
       final rating = await db.getRatingById(ratingId);
       if (rating == null) {
-        throw ResearchException("Shooter rating not found: id=$ratingId", statusCode: 404);
+        return Result.err(ResearchError("Shooter rating not found: id=$ratingId", statusCode: 404));
       }
       if (!rating.group.isLoaded) {
         await rating.group.load();
@@ -1094,22 +1408,30 @@ class ResearchFacade implements ResearchQueries {
       final group = rating.group.value;
       final proj = rating.project.value;
       if (group == null || proj == null) {
-        throw ResearchException("Shooter rating $ratingId missing project/group links", statusCode: 500);
+        return Result.err(ResearchError("Shooter rating $ratingId missing project/group links", statusCode: 500));
       }
-      return (project: proj, group: group, rating: rating);
+      return Result.ok((project: proj, group: group, rating: rating));
     }
 
-    final project = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
+    if (projectRes.isErr()) {
+      return Result.errFrom(projectRes);
+    }
+    final project = projectRes.unwrap();
     if (!project.dbGroups.isLoaded) {
       await project.dbGroups.load();
     }
 
     final mn = memberNumber?.trim();
     if (mn == null || mn.isEmpty) {
-      throw ResearchException("memberNumber or ratingId is required");
+      return Result.err(ResearchError("memberNumber or ratingId is required"));
     }
 
-    final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    final groupsRes = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    if (groupsRes.isErr()) {
+      return Result.errFrom(groupsRes);
+    }
+    final groups = groupsRes.unwrap();
     DbShooterRating? found;
     RatingGroup? foundGroup;
     for (final group in groups) {
@@ -1126,12 +1448,12 @@ class ResearchFacade implements ResearchQueries {
       }
     }
     if (found == null || foundGroup == null) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Shooter not found: memberNumber=$mn project=${project.name}",
         statusCode: 404,
-      );
+      ));
     }
-    return (project: project, group: foundGroup, rating: found);
+    return Result.ok((project: project, group: foundGroup, rating: found));
   }
 
   ShooterHitDto _shooterHit(
@@ -1169,6 +1491,7 @@ class ResearchFacade implements ResearchQueries {
   RatingProjectDto _projectDto(DbRatingProject p) {
     final algo = p.settings.algorithm;
     final algoId = _algorithmId(p);
+    final latestRes = _latestMatchDate(p);
     return RatingProjectDto(
       id: p.id,
       name: p.name,
@@ -1182,44 +1505,48 @@ class ResearchFacade implements ResearchQueries {
       supportedSorts: algo.supportedSorts
           .map((m) => RatingSortModeDto(id: m.name, label: algo.nameForSort(m)))
           .toList(),
-      latestMatchDate: p.matchPointers.isEmpty ? null : _latestMatchDate(p),
+      latestMatchDate: latestRes.isOk() ? latestRes.unwrap() : null,
       byStage: algo.byStage,
     );
   }
 
-  RatingGroup _requireSingleGroup(
+  ResearchResult<RatingGroup> _requireSingleGroup(
     DbRatingProject project, {
     String? groupUuid,
     String? groupName,
   }) {
-    final groups = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    final groupsRes = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
+    if (groupsRes.isErr()) {
+      return Result.errFrom(groupsRes);
+    }
+    final groups = groupsRes.unwrap();
     if (groups.length == 1) {
-      return groups.first;
+      return Result.ok(groups.first);
     }
     if (groups.isEmpty) {
-      throw ResearchException("No rating groups in project ${project.name}", statusCode: 404);
+      return Result.err(ResearchError("No rating groups in project ${project.name}", statusCode: 404));
     }
-    throw ResearchException(
+    return Result.err(ResearchError(
       "Specify group or groupUuid; project has multiple groups: "
       "${groups.map((g) => g.name).join(", ")}",
-    );
+    ));
   }
 
-  DateTime _latestMatchDate(DbRatingProject project) {
+  ResearchResult<DateTime> _latestMatchDate(DbRatingProject project) {
     final dated = project.matchPointers.where((m) => m.date != null).toList();
     if (dated.isEmpty) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Project ${project.name} has no dated matches",
         statusCode: 500,
-      );
+      ));
     }
     dated.sort((a, b) => b.date!.compareTo(a.date!));
-    return dated.first.date!;
+    return Result.ok(dated.first.date!);
   }
 
-  RatingSortMode _parseSortMode(String? raw, RatingSystem algo) {
+  ResearchResult<RatingSortMode> _parseSortMode(String? raw, RatingSystem algo) {
     if (raw == null || raw.trim().isEmpty) {
-      return algo.supportedSorts.first;
+      return Result.ok(algo.supportedSorts.first);
     }
     final normalized = raw.trim().toLowerCase().replaceAll(RegExp(r"[\s_\-+±]"), "");
     RatingSortMode? match;
@@ -1235,18 +1562,18 @@ class ResearchFacade implements ResearchQueries {
       match = RatingSortMode.lastChange;
     }
     if (match == null) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Unknown sort '$raw'. Supported: "
         "${algo.supportedSorts.map((m) => m.name).join(", ")}",
-      );
+      ));
     }
     if (!algo.supportedSorts.contains(match)) {
-      throw ResearchException(
+      return Result.err(ResearchError(
         "Sort '${match.name}' is not supported by this project's algorithm. "
         "Supported: ${algo.supportedSorts.map((m) => m.name).join(", ")}",
-      );
+      ));
     }
-    return match;
+    return Result.ok(match);
   }
 
   String _algorithmId(DbRatingProject project) {
@@ -1371,6 +1698,195 @@ class ResearchFacade implements ResearchQueries {
       historyLength: rating.length,
       lastChange: lastChange,
     );
+  }
+
+  Future<MatchPrepHitDto> _matchPrepHit(MatchPrep prep, {required String projectName}) async {
+    if (!prep.futureMatch.isLoaded) {
+      await prep.futureMatch.load();
+    }
+    final match = prep.futureMatch.value;
+    final sets = await db.getPredictionSetsForMatchPrep(prep);
+    final latest = sets.isEmpty ? null : sets.first;
+    return MatchPrepHitDto(
+      id: prep.id.toString(),
+      matchName: match?.eventName ?? "Unknown Match",
+      matchDate: match?.date ?? practicalShootingZeroDate,
+      projectName: projectName,
+      predictionSetCount: sets.length,
+      latestPredictionSet: latest == null
+          ? null
+          : PredictionSetStubDto(
+              id: latest.id.toString(),
+              name: latest.name,
+              created: latest.created,
+            ),
+    );
+  }
+
+  Future<PredictionSetDto> _predictionSetDto(PredictionSet set) async {
+    final count = await db.isar.dbAlgorithmPredictions
+        .where()
+        .predictionSetIdEqualTo(set.id)
+        .count();
+    return PredictionSetDto(
+      id: set.id.toString(),
+      name: set.name,
+      created: set.created,
+      predictionCount: count,
+      note: (set.note == null || set.note!.trim().isEmpty) ? null : set.note,
+      matchPrepId: set.matchPrepId.toString(),
+    );
+  }
+
+  ResearchResult<int> _parseResearchId(String raw, String label) {
+    final n = int.tryParse(raw.trim());
+    if (n == null) {
+      return Result.err(ResearchError("Invalid $label: $raw"));
+    }
+    return Result.ok(n);
+  }
+
+  Future<ResearchResult<PredictionSet>> _resolvePredictionSet({
+    String? predictionSetId,
+    String? prepId,
+  }) async {
+    if (predictionSetId != null && predictionSetId.trim().isNotEmpty) {
+      final idRes = _parseResearchId(predictionSetId, "predictionSetId");
+      if (idRes.isErr()) {
+        return Result.errFrom(idRes);
+      }
+      final set = await db.isar.predictionSets.get(idRes.unwrap());
+      if (set == null) {
+        return Result.err(ResearchError(
+          "Prediction set not found: id=$predictionSetId",
+          statusCode: 404,
+        ));
+      }
+      return Result.ok(set);
+    }
+    if (prepId == null || prepId.trim().isEmpty) {
+      return Result.err(ResearchError("predictionSetId or prepId is required"));
+    }
+    final idRes = _parseResearchId(prepId, "prepId");
+    if (idRes.isErr()) {
+      return Result.errFrom(idRes);
+    }
+    final prep = await db.getMatchPrepById(idRes.unwrap());
+    if (prep == null) {
+      return Result.err(ResearchError("Match prep not found: id=$prepId", statusCode: 404));
+    }
+    final latest = prep.latestPredictionSet();
+    if (latest == null) {
+      return Result.err(ResearchError(
+        "No prediction sets for match prep $prepId",
+        statusCode: 404,
+      ));
+    }
+    return Result.ok(latest);
+  }
+
+  Future<ResearchResult<DbRatingProject>> _projectForPredictionSet(PredictionSet set) async {
+    if (!set.matchPrep.isLoaded) {
+      await set.matchPrep.load();
+    }
+    final prep = set.matchPrep.value;
+    if (prep == null) {
+      final byId = await db.getMatchPrepById(set.matchPrepId);
+      if (byId == null) {
+        return Result.err(ResearchError(
+          "Match prep not found for prediction set ${set.id}",
+          statusCode: 500,
+        ));
+      }
+      if (!byId.ratingProject.isLoaded) {
+        await byId.ratingProject.load();
+      }
+      final project = byId.ratingProject.value;
+      if (project == null) {
+        return Result.err(ResearchError(
+          "Rating project missing for match prep ${byId.id}",
+          statusCode: 500,
+        ));
+      }
+      return Result.ok(project);
+    }
+    if (!prep.ratingProject.isLoaded) {
+      await prep.ratingProject.load();
+    }
+    final project = prep.ratingProject.value;
+    if (project == null) {
+      return Result.err(ResearchError(
+        "Rating project missing for match prep ${prep.id}",
+        statusCode: 500,
+      ));
+    }
+    return Result.ok(project);
+  }
+
+  Future<List<PredictionRowDto>> _loadPredictionRows(
+    PredictionSet set, {
+    RatingGroup? scoringGroup,
+  }) async {
+    final loaded = await _loadPredictionsWithRatings(set, scoringGroup: scoringGroup);
+    return loaded.map((e) => e.row).toList();
+  }
+
+  Future<List<({DbAlgorithmPrediction prediction, DbShooterRating? rating, PredictionRowDto row})>>
+      _loadPredictionsWithRatings(
+    PredictionSet set, {
+    RatingGroup? scoringGroup,
+  }) async {
+    final preds = await db.isar.dbAlgorithmPredictions
+        .where()
+        .predictionSetIdEqualTo(set.id)
+        .findAll();
+    final out = <({DbAlgorithmPrediction prediction, DbShooterRating? rating, PredictionRowDto row})>[];
+    for (final pred in preds) {
+      final effectiveUuid = pred.scoringGroupUuid ?? pred.groupUuid;
+      if (scoringGroup != null && effectiveUuid != scoringGroup.uuid) {
+        continue;
+      }
+      if (!pred.rating.isLoaded) {
+        await pred.rating.load();
+      }
+      if (!pred.scoringGroup.isLoaded) {
+        await pred.scoringGroup.load();
+      }
+      if (!pred.group.isLoaded) {
+        await pred.group.load();
+      }
+      final rating = pred.rating.value;
+      final scoringName = pred.scoringGroup.value?.name
+          ?? pred.group.value?.name
+          ?? effectiveUuid
+          ?? "unknown";
+      final scoringUuid = effectiveUuid ?? "";
+      final firstName = rating?.firstName ?? "";
+      final lastName = rating?.lastName ?? "";
+      final name = "$firstName $lastName".trim();
+      out.add((
+        prediction: pred,
+        rating: rating,
+        row: PredictionRowDto(
+          memberNumber: pred.memberNumber,
+          ratingId: rating?.id,
+          name: name.isEmpty ? pred.memberNumber : name,
+          firstName: firstName,
+          lastName: lastName,
+          classification: rating?.lastClassificationName,
+          scoringGroup: scoringName,
+          scoringGroupUuid: scoringUuid,
+          medianPlace: pred.medianPlace,
+          lowPlace: pred.lowPlace,
+          highPlace: pred.highPlace,
+          mean: pred.mean,
+          oneSigma: pred.oneSigma,
+          meanRatio: pred.meanRatio,
+          oneSigmaRatio: pred.oneSigmaRatio,
+        ),
+      ));
+    }
+    return out;
   }
 }
 

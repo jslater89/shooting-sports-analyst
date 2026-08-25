@@ -8,8 +8,16 @@ import "package:json_annotation/json_annotation.dart";
 import "package:shooting_sports_analyst/research/dtos.dart"
     show
         kDefaultMatchPoolTopN,
+        kDefaultPredictionSearchLimit,
+        kDefaultPredictionTopN,
+        researchBoolFromJson,
         researchDateOnlyFromJsonNullable,
-        researchDateOnlyToJson;
+        researchDateOnlyToJson,
+        researchIdFromJson,
+        researchIdFromJsonNullable,
+        researchIntFromJsonNullable,
+        researchIntListFromJson,
+        researchStringListFromJson;
 
 part "request_args.g.dart";
 
@@ -53,7 +61,7 @@ class SearchMatchesArgs {
 
   @JsonKey(defaultValue: "")
   final String query;
-  @JsonKey(defaultValue: 10)
+  @JsonKey(fromJson: _limit10FromJson)
   final int limit;
 
   factory SearchMatchesArgs.fromJson(Map<String, dynamic> json) =>
@@ -288,3 +296,116 @@ class GetCompetitorStageScoresArgs {
       _$GetCompetitorStageScoresArgsFromJson(json);
   Map<String, dynamic> toJson() => _$GetCompetitorStageScoresArgsToJson(this);
 }
+
+@JsonSerializable()
+class SearchMatchPrepsArgs {
+  SearchMatchPrepsArgs({
+    this.project,
+    this.query,
+    this.after,
+    this.before,
+    this.limit = 10,
+    this.hasPredictionsOnly = true,
+  });
+
+  final String? project;
+  final String? query;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? after;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? before;
+  @JsonKey(fromJson: _limit10FromJson)
+  final int limit;
+  @JsonKey(fromJson: _hasPredictionsOnlyFromJson)
+  final bool hasPredictionsOnly;
+
+  factory SearchMatchPrepsArgs.fromJson(Map<String, dynamic> json) =>
+      _$SearchMatchPrepsArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$SearchMatchPrepsArgsToJson(this);
+}
+
+@JsonSerializable()
+class ListPredictionSetsArgs {
+  ListPredictionSetsArgs({
+    required this.prepId,
+  });
+
+  @JsonKey(fromJson: researchIdFromJson)
+  final String prepId;
+
+  factory ListPredictionSetsArgs.fromJson(Map<String, dynamic> json) =>
+      _$ListPredictionSetsArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$ListPredictionSetsArgsToJson(this);
+}
+
+@JsonSerializable()
+class GetPredictionsArgs {
+  GetPredictionsArgs({
+    this.predictionSetId,
+    this.prepId,
+    this.group,
+    this.groupUuid,
+    this.topN = kDefaultPredictionTopN,
+  });
+
+  @JsonKey(fromJson: researchIdFromJsonNullable)
+  final String? predictionSetId;
+  @JsonKey(fromJson: researchIdFromJsonNullable)
+  final String? prepId;
+  final String? group;
+  final String? groupUuid;
+  @JsonKey(fromJson: _topNPredictionFromJson)
+  final int topN;
+
+  factory GetPredictionsArgs.fromJson(Map<String, dynamic> json) =>
+      _$GetPredictionsArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$GetPredictionsArgsToJson(this);
+}
+
+@JsonSerializable()
+class SearchPredictionsArgs {
+  SearchPredictionsArgs({
+    this.predictionSetId,
+    this.prepId,
+    this.group,
+    this.groupUuid,
+    this.memberNumber,
+    this.ratingId,
+    this.query,
+    this.memberNumbers,
+    this.ratingIds,
+    this.limit = kDefaultPredictionSearchLimit,
+  });
+
+  @JsonKey(fromJson: researchIdFromJsonNullable)
+  final String? predictionSetId;
+  @JsonKey(fromJson: researchIdFromJsonNullable)
+  final String? prepId;
+  final String? group;
+  final String? groupUuid;
+  final String? memberNumber;
+  @JsonKey(fromJson: researchIntFromJsonNullable)
+  final int? ratingId;
+  final String? query;
+  @JsonKey(fromJson: researchStringListFromJson)
+  final List<String>? memberNumbers;
+  @JsonKey(fromJson: researchIntListFromJson)
+  final List<int>? ratingIds;
+  @JsonKey(fromJson: _predictionSearchLimitFromJson)
+  final int limit;
+
+  factory SearchPredictionsArgs.fromJson(Map<String, dynamic> json) =>
+      _$SearchPredictionsArgsFromJson(json);
+  Map<String, dynamic> toJson() => _$SearchPredictionsArgsToJson(this);
+}
+
+int _limit10FromJson(Object? value) => researchIntFromJsonNullable(value) ?? 10;
+
+bool _hasPredictionsOnlyFromJson(Object? value) =>
+    researchBoolFromJson(value, defaultValue: true);
+
+int _topNPredictionFromJson(Object? value) =>
+    researchIntFromJsonNullable(value) ?? kDefaultPredictionTopN;
+
+int _predictionSearchLimitFromJson(Object? value) =>
+    researchIntFromJsonNullable(value) ?? kDefaultPredictionSearchLimit;
