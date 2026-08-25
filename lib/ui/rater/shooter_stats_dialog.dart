@@ -233,7 +233,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchName += " (DQ)";
       }
 
-      entry.scaledRatingChange = widget.rating.scaleRatingChange(entry.ratingChange);
+      // already scaled
+      entry.scaledRatingChange = entry.ratingChange;
 
       widgets.add(ClickableLink(
         onTap: () {
@@ -827,6 +828,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
+      if(displayedStats.isCareer) Row(
+        children: [
+          Expanded(flex: 4, child: Text("Min-max rating (all time)", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.rating.formatNumericRating(widget.rating.careerMinimumRating)}-${widget.rating.formatNumericRating(widget.rating.careerMaximumRating)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      if(displayedStats.isCareer) Divider(height: 2, thickness: 1),
       if(byStage) Row(
         children: [
           Expanded(flex: 4, child: Text("Total stages/matches", style: Theme.of(context).textTheme.bodyMedium)),
