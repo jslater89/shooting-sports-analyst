@@ -87,6 +87,7 @@ import "db_oneoff_impl/loco_correspondence_command.dart";
 import "db_oneoff_impl/elite_head_to_head_command.dart";
 import "db_oneoff_impl/shot_both_years_command.dart";
 import "db_oneoff_impl/scoring_close_flips_command.dart";
+import "db_oneoff_impl/match_slope_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -216,6 +217,45 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "SLP") {
+      if(args.length < 3) {
+        console.print("Usage: SLP <startYear> <endYear> [projectName] [matchSearch] [minN]");
+        console.print("Example: SLP 2024 2026   # matches from 2024 through 2026");
+        return;
+      }
+      final startYear = int.tryParse(args[1]);
+      final endYear = int.tryParse(args[2]);
+      if(startYear == null) {
+        console.print("Invalid start year: ${args[1]}");
+        return;
+      }
+      if(endYear == null) {
+        console.print("Invalid end year: ${args[2]}");
+        return;
+      }
+      final slopeCmd = MatchSlopeCommand(db);
+      final defs = slopeCmd.arguments;
+      final startArg = defs[0] as IntMenuArgument;
+      final endArg = defs[1] as IntMenuArgument;
+      final projectArg = defs[2] as StringMenuArgument;
+      final searchArg = defs[3] as StringMenuArgument;
+      final minNArg = defs[4] as IntMenuArgument;
+      final projectName = args.length > 3 ? args[3] : (projectArg.getDefault() ?? "");
+      final matchSearch = args.length > 4 ? args[4] : (searchArg.getDefault() ?? "");
+      final minN = args.length > 5
+          ? (int.tryParse(args[5]) ?? minNArg.getDefault()!)
+          : minNArg.getDefault()!;
+      await slopeCmd.executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: startArg, value: startYear),
+          MenuArgumentValue<int>(argument: endArg, value: endYear),
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+          MenuArgumentValue<String>(argument: searchArg, value: matchSearch),
+          MenuArgumentValue<int>(argument: minNArg, value: minN),
+        ],
+      );
+    }
     else if(command == "IID") {
       var file = args[1];
       await ImportIcoreDumpCommand(db).executor(console, [
@@ -275,6 +315,7 @@ Future<void> main(List<String> args) async {
     LocoCorrespondenceCommand(db),
     ShotBothYearsCommand(db),
     ScoringCloseFlipsCommand(db),
+    MatchSlopeCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
