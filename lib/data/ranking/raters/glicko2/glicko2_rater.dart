@@ -117,10 +117,10 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   @override
   String ratingsToCsv(List<ShooterRating<RatingEvent>> ratings) {
     StringBuffer csv = StringBuffer();
-    csv.writeln("Member#,Name,Rating,RD,Volatility,Matches,Stages");
+    csv.writeln("Member#,Name,Rating,RD,Volatility,MinRating,MaxRating,Matches,Stages");
     for(var r in ratings) {
       r as Glicko2Rating;
-      csv.writeln("${r.memberNumber},${r.name},${r.rating},${r.currentInternalRD},${r.volatility},${r.lengthInMatches},${r.lengthInStages}");
+      csv.writeln("${r.memberNumber},${r.name},${r.rating},${r.currentInternalRD},${r.volatility},${r.formatNumericRating(r.careerMinimumRating)},${r.formatNumericRating(r.careerMaximumRating)},${r.lengthInMatches},${r.lengthInStages}");
     }
     return csv.toString();
   }

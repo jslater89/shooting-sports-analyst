@@ -96,10 +96,10 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
   @override
   String ratingsToCsv(List<ShooterRating<RatingEvent>> ratings) {
     StringBuffer csv = StringBuffer();
-    csv.writeln("Member#,Name,Marbles,Matches");
+    csv.writeln("Member#,Name,Marbles,MinRating,MaxRating,Matches");
     for(var r in ratings) {
       r as MarbleRating;
-      csv.writeln("${r.originalMemberNumber},${r.name},${r.marbles},${r.length}");
+      csv.writeln("${r.originalMemberNumber},${r.name},${r.marbles},${r.careerMinimumRating.round()},${r.careerMaximumRating.round()},${r.length}");
     }
     return csv.toString();
   }

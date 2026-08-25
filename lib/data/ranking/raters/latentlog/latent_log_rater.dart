@@ -195,11 +195,13 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   @override
   String ratingsToCsv(List<ShooterRating<RatingEvent>> ratings) {
     StringBuffer csv = StringBuffer();
-    csv.writeln("Member#,Name,Rating,Variance,Dispersion,Momentum,Matches,Stages");
+    csv.writeln("Member#,Name,Rating,Variance,Dispersion,Momentum,MinRating,MaxRating,Matches,Stages");
     for (var r in ratings) {
       r as LatentLogRating;
+      final displayMinimumRating = r.formatNumericRating(r.careerMinimumRating);
+      final displayMaximumRating = r.formatNumericRating(r.careerMaximumRating);
       csv.writeln(
-        '${r.memberNumber},"${r.name}",${r.displayAgedRating},${r.displayVariance},${r.displayDispersion},${r.displayMomentum},${r.lengthInMatches},${r.lengthInStages}',
+        '${r.memberNumber},"${r.name}",${r.displayAgedRating},${r.displayVariance},${r.displayDispersion},${r.displayMomentum},$displayMinimumRating,$displayMaximumRating,${r.lengthInMatches},${r.lengthInStages}',
       );
     }
     return csv.toString();

@@ -446,11 +446,13 @@ class LatentLogSettings extends RaterSettings {
     }
   }
 
+  /// Format a numeric rating as a string for display, scaling by the scale factor and offset.
   String formatNumericRating(double rating) {
     final decimals = decimalCount();
     return (rating * scaleFactor + scaleOffset).toStringAsFixed(decimals);
   }
 
+  /// Format a numeric rating change as a string for display, scaling by the scale factor only.
   String formatNumericRatingChange(double ratingChange) {
     final decimals = decimalCount() + 1;
     return (ratingChange * scaleFactor).toStringAsFixed(decimals);

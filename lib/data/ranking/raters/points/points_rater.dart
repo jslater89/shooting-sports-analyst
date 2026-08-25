@@ -111,7 +111,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    var contents = "Name,Member #,Class,Points,Matches,Points/Match\n";
+    var contents = "Name,Member #,Class,Points,MinRating,MaxRating,Matches,Points/Match\n";
 
     for(var s in ratings) {
       s as PointsRating;
@@ -119,6 +119,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
       contents += "${s.originalMemberNumber},";
       contents += "${s.lastClassification?.displayName ?? "(none)"},";
       contents += "${model.displayRating(s.rating)},";
+      contents += "${s.formatNumericRating(s.careerMinimumRating)},";
+      contents += "${s.formatNumericRating(s.careerMaximumRating)},";
       contents += "${s.length},";
       contents += "${(s.rating / s.length).toStringAsFixed(1)},";
       contents += "\n";

@@ -96,7 +96,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    String csv = "Member#,Name,Rating,Mu,Sigma,${byStage ? "Stages" : "Matches"}\n";
+    String csv = "Member#,Name,Rating,Mu,Sigma,MinRating,MaxRating,${byStage ? "Stages" : "Matches"}\n";
 
     for(var s in ratings) {
       s as OpenskillRating;
@@ -105,6 +105,8 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
       csv += "${s.ordinal.toStringAsFixed(2)},";
       csv += "${s.mu.toStringAsFixed(2)}";
       csv += "${s.sigma.toStringAsFixed(2)}";
+      csv += "${s.formatNumericRating(s.careerMinimumRating)},";
+      csv += "${s.formatNumericRating(s.careerMaximumRating)},";
       csv += "${s.length}\n";
     }
     return csv;
