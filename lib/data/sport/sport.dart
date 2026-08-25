@@ -126,6 +126,25 @@ class Sport {
   final FantasyScoringCalculator? fantasyScoresProvider;
   final ConnectivityCalculator? connectivityCalculator;
 
+  Map<ScoringEvent, int> mapForEvent(
+    ScoringEvent event, {
+      required Map<ScoringEvent, int> targetEvents,
+      required Map<ScoringEvent, int> penaltyEvents,
+      PowerFactor? powerFactor,
+    }) {
+
+    powerFactor ??= defaultPowerFactor;
+    if(powerFactor.targetEvents.lookupByName(event.name) != null) {
+      return targetEvents;
+    }
+    else if(powerFactor.penaltyEvents.lookupByName(event.name) != null) {
+      return penaltyEvents;
+    }
+    else {
+      throw ArgumentError("Event $event not found in power factor $powerFactor");
+    }
+  }
+
   Sport(this.name, {
     required this.matchScoring,
     required this.defaultStageScoring,

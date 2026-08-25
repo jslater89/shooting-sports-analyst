@@ -417,13 +417,13 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     for(var event in _targetControllers.keys) {
       var text = _targetControllers[event]!.text;
       if(text.isEmpty) text = "0";
-      score.updateEventCount(event, int.parse(text));
+      score.updateEventCount(sport: widget.sport, competitorPowerFactor: _pf, event: event, newCount: int.parse(text));
     }
 
     for(var event in _penaltyControllers.keys) {
       var text = _penaltyControllers[event]!.text;
       if(text.isEmpty) text = "0";
-      score.updateEventCount(event, int.parse(text));
+      score.updateEventCount(sport: widget.sport, competitorPowerFactor: _pf, event: event, newCount: int.parse(text));
     }
   }
 
