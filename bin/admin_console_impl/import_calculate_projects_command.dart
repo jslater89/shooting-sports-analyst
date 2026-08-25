@@ -1,5 +1,6 @@
 import "package:dart_console/dart_console.dart";
 import "package:shooting_sports_analyst/console/repl.dart";
+import "package:shooting_sports_analyst/data/cache/ratings/rating_cache.dart";
 import "package:shooting_sports_analyst/data/database/match/rating_project_database.dart";
 
 import "base.dart";
@@ -75,6 +76,10 @@ class ImportCalculateProjectsCommand extends AdminConsoleCommand {
       if(!calcOk) {
         anyFailed = true;
       }
+
+      // Between each project, clear the ratings cache: otherwise full calculations of several projects can OOM the
+      // server by keeping too many unnecessary ratings in memory.
+      RatingCache.instance.clear();
     }
 
     return !anyFailed;
