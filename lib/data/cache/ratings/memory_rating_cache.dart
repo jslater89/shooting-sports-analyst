@@ -20,6 +20,9 @@ final _log = SSALogger("MemoryRatingCache");
 /// This cache is not isolate-safe because each isolate has its own memory.
 /// Since we're storing DbShooterRating objects, however, we can't use a single
 /// isolate cache because they're not serializable (IsarLinks contain raw pointers).
+///
+/// Even if we were storing ShooterRating objects, we're still storing DbShooterRating
+/// under the hood because of the wrappedRating pattern.
 class MemoryRatingCache implements RatingCache {
   MemoryRatingCache() : this.lru = null;
   MemoryRatingCache.withLru(this.lru) {
