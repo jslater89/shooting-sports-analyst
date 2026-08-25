@@ -179,9 +179,13 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
               itemBuilder: (context, index) {
                 var rating = results[index];
                 var nameText = rating.name;
+                final location = rating.regionSubdivision ?? rating.region ?? null;
                 var inUse = widget.ratingsInUse.any((r) => r.equalsShooter(rating));
                 if(inUse) {
                   nameText = "${nameText} (already in use)";
+                }
+                if(location != null) {
+                  nameText = "$nameText ($location)";
                 }
                 return ListTile(
                   enabled: !inUse,
