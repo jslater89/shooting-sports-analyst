@@ -481,7 +481,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   }
 
   /// The standard scaler for the latent log rater.
-  RatingScaler get standardScaler => StandardizedMaximumScaler(info: null, scaleMin: 0, scaleMax: 150.0);
+  RatingScaler get standardScaler => StandardizedMaximumScaler(info: null, scaleMin: -1.0, scaleMax: 0.5);
 
   @override
   Future<Set<DbShooterRating>> ageRatings({

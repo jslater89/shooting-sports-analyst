@@ -13,12 +13,12 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
-import 'package:shooting_sports_analyst/logger.dart';
+// import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'player.g.dart';
 
-final _log = SSALogger("FantasyPlayer");
+// final _log = SSALogger("FantasyPlayer");
 final _db = AnalystDatabase();
 
 @collection

@@ -128,6 +128,9 @@ RgbColor? lerpRgbColor({
   else if(value > minValue && value < maxValue) {
     var fromBelow = (value - minValue) / (maxValue - minValue);
     var fromBelowSteps = (fromBelow * colorCount).floor();
+    if(fromBelowSteps >= colorCount) {
+      fromBelowSteps = colorCount - 1;
+    }
     color = dotColorRange[fromBelowSteps];
   }
   else if(value <= minValue) {

@@ -93,6 +93,23 @@ abstract interface class RatingDataSource {
 
   /// Get the standard rating scaler for the rating system.
   Future<DataSourceResult<RatingScaler>> getStandardScaler();
+
+  /// Scale a rating to a new range, if the rating system has a scaling
+  /// factor or offset.
+  ///
+  /// The default implementation returns the rating unchanged.
+  Future<DataSourceResult<double>> scaleRating(double rating);
+
+  /// Get a function that scales a number to a new range, if the rating system has a scaling
+  /// factor or offset.
+  ///
+  /// The default implementation returns the number unchanged.
+  Future<DataSourceResult<double Function(double number)>> getScaleNumberFunction();
+
+  /// Get a function that formats a numeric rating to a string.
+  ///
+  /// The default implementation returns the number unchanged.
+  Future<DataSourceResult<String Function(double number)>> getFormatNumericRatingFunction();
 }
 
 /// A PreloadedRatingDataSource is a rating data source that has precached its data locally.

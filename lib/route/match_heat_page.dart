@@ -205,6 +205,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     else if(_settings.xAxis == MatchHeatValue.averageClassification || _settings.xAxis == MatchHeatValue.matchSize) {
       _minX = 1;
     }
+    final scaleRatingFunction = _project!.settings.algorithm.scaleRating;
     for(var heat in _matchHeat.values) {
       var yValue = switch(_settings.yAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
@@ -218,6 +219,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         MatchHeatValue.medianRating => heat.weightedMedianRating,
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       };
+
+      yValue = scaleRatingFunction(yValue.toDouble());
 
       _minY = min(_minY, (yValue - yMinOffset).toDouble());
       _maxY = max(_maxY, (yValue + yMaxOffset).toDouble());
@@ -377,19 +380,20 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   charts.ScatterPlotChart? _chart;
 
   void _rebuildSeries(double uiScaleFactor) {
+    final scaleRatingFunction = _project!.settings.algorithm.scaleRating;
     _series = charts.Series<MatchHeat, num>(
       id: "matchHeat",
       data: _matchHeat.values.toList(),
       domainFn: (MatchHeat heat, _) => switch(_settings.xAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
-        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
-        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.topTenPercentAverageRating => scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
+        MatchHeatValue.medianRating => scaleRatingFunction(heat.weightedMedianRating),
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       },
       measureFn: (MatchHeat heat, _) => switch(_settings.yAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
-        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
-        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.topTenPercentAverageRating => scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
+        MatchHeatValue.medianRating => scaleRatingFunction(heat.weightedMedianRating),
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       },
       radiusPxFn: (MatchHeat heat, _) {
@@ -402,19 +406,21 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           }
         }
         else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating) {
-          if(heat.weightedMedianRating < _top10PercentReference) {
+          final scaledRating = scaleRatingFunction(heat.weightedTopTenPercentAverageRating);
+          if(scaledRating < _top10PercentReference) {
             return 1 * uiScaleFactor;
           }
           else {
-            return 1 * uiScaleFactor + ((heat.weightedMedianRating - _top10PercentReference) / _top10PercentReferenceDivisor);
+            return 1 * uiScaleFactor + ((scaledRating - _top10PercentReference) / _top10PercentReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.medianRating) {
-          if(heat.weightedMedianRating < _medianReference) {
+          final scaledRating = scaleRatingFunction(heat.weightedMedianRating);
+          if(scaledRating < _medianReference) {
             return 1 * uiScaleFactor;
           }
           else {
-            return 1 * uiScaleFactor + ((heat.weightedMedianRating - _medianReference) / _medianReferenceDivisor);
+            return 1 * uiScaleFactor + ((scaledRating - _medianReference) / _medianReferenceDivisor);
           }
         }
         else if(_settings.dotSize == MatchHeatValue.averageClassification) {
@@ -454,7 +460,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           }
           else if(_settings.dotColor == MatchHeatValue.topTenPercentAverageRating) {
             return _calculateLerpColor(
-              value: heat.weightedTopTenPercentAverageRating.toDouble(),
+              value: scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
               minValue: _minTopRating.toDouble(),
               maxValue: _maxTopRating.toDouble(),
               dimmed: !_isHighlighted(heat.matchPointer),
@@ -462,7 +468,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           }
           else if(_settings.dotColor == MatchHeatValue.medianRating) {
             return _calculateLerpColor(
-              value: heat.weightedMedianRating.toDouble(),
+              value: scaleRatingFunction(heat.weightedMedianRating),
               minValue: _minMedianRating.toDouble(),
               maxValue: _maxMedianRating.toDouble(),
               dimmed: !_isHighlighted(heat.matchPointer),
@@ -625,6 +631,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         }
 
         var finalBackgroundColor = ThemeColors.onBackgroundColor(context);
+        final ratingDisplayFormatter = _project!.settings.algorithm.formatNumericRating;
 
         return Stack(
           children: [
@@ -653,11 +660,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                         style: TextStyles.tooltipText(context),
                       ),
                       Text(
-                        "Top 10%: ${heat.weightedTopTenPercentAverageRating.round()}",
+                        "Top 10%: ${ratingDisplayFormatter(heat.weightedTopTenPercentAverageRating)}",
                         style: TextStyles.tooltipText(context),
                       ),
                       Text(
-                        "Median: ${heat.weightedMedianRating.round()}",
+                        "Median: ${ratingDisplayFormatter(heat.weightedMedianRating)}",
                         style: TextStyles.tooltipText(context),
                       ),
                       Text(

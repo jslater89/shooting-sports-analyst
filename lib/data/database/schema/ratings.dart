@@ -185,6 +185,21 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return DataSourceResult.ok(settings.algorithm.standardScaler);
   }
 
+  @override
+  Future<DataSourceResult<double>> scaleRating(double rating) async {
+    return DataSourceResult.ok(settings.algorithm.scaleRating(rating));
+  }
+
+  @override
+  Future<DataSourceResult<double Function(double number)>> getScaleNumberFunction() async {
+    return DataSourceResult.ok(settings.algorithm.scaleNumber);
+  }
+
+  @override
+  Future<DataSourceResult<String Function(double number)>> getFormatNumericRatingFunction() async {
+    return DataSourceResult.ok(settings.algorithm.formatNumericRating);
+  }
+
   void addReport(RatingReport report) {
     var dup = false;
     if(!recentReports.contains(report)) {

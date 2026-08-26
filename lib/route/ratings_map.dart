@@ -51,9 +51,13 @@ class _RatingsMapState extends State<RatingsMap> {
 
   Future<void> _loadData({bool allGroups = true, bool useStandardScaler = true}) async {
     if(allGroups && loadedAllGroups) {
+      _log.i("Setting data to all groups data");
+      _rebuildMap();
       return;
     }
     if(!allGroups && loadedLaunchGroup) {
+      _log.i("Setting data to launch group data");
+      _rebuildMap();
       return;
     }
 
@@ -131,7 +135,14 @@ class _RatingsMapState extends State<RatingsMap> {
         }
         totalRatings++;
         if(rating.regionSubdivision != null) {
-          ratingsByLocation.addToList(rating.regionSubdivision!, scaler?.scaleRating(rating.rating) ?? rating.rating);
+          final scaledResult = scaler?.scaleRating(rating.rating) ?? rating.rating;
+          final numericRatingResult = await dataSource.scaleRating(scaledResult);
+          if(numericRatingResult.isErr()) {
+            _log.w("Error scaling rating: ${numericRatingResult.unwrapErr()}");
+            continue;
+          }
+          final numericRating = numericRatingResult.unwrap();
+          ratingsByLocation.addToList(rating.regionSubdivision!, numericRating);
           knownLocations.add(rating.regionSubdivision!);
           classificationStrengthsByLocation.addToList(rating.regionSubdivision!, sport.ratingStrengthProvider?.strengthForClass(rating.lastClassification) ?? 1.0);
 
