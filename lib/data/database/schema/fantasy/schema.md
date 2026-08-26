@@ -16,6 +16,8 @@ The top-level entity representing a fantasy league.
   - `headToHeadPerMonth`: Number of head-to-head matchups per month
   - `creationDate`: When the league was created
   - `state`: Current league state (offseason, preseason, active, finished)
+  - `format`: Either `season` for traditional full-season fantasy leagues, or
+     `singleEvent` for one-match draft-and-watch scores.
 
 - **Relations**:
   - `rosterSlots`: Available roster positions

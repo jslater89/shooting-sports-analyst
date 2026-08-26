@@ -74,4 +74,6 @@ class FantasyManager {
   static Future<List<LeagueMonth>> createSchedule(League league, LeagueSeason season) async {
     throw UnimplementedError();
   }
+
+  /// Create a single-event league for a match prep.
 }

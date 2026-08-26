@@ -11,8 +11,19 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 
-Map<Id, FantasyPlayer> _fantasyPlayerCache = {};
+// TODO: need to extract this to a class with full and LRU implementations for
+// local and server.
+// Map of project ID -> group UUID -> member number -> player.
+Map<Id, Map<String, Map<String, FantasyPlayer>>> _fantasyPlayerCache = {};
+
 extension FantasyDatabase on AnalystDatabase {
+  FantasyPlayer? getPlayerByIdSync(Id id) {
+    return isar.fantasyPlayers.getSync(id);
+  }
+
+  Future<FantasyPlayer?> getPlayerById(Id id) async {
+    return await isar.fantasyPlayers.get(id);
+  }
 
   Future<League?> getLeague(Id leagueId) async {
     return isar.leagues.get(leagueId);
@@ -26,14 +37,6 @@ extension FantasyDatabase on AnalystDatabase {
 
   void clearFantasyPlayerCache() {
     _fantasyPlayerCache.clear();
-  }
-
-  FantasyPlayer? getPlayerByIdSync(Id id) {
-    return isar.fantasyPlayers.getSync(id);
-  }
-
-  Future<FantasyPlayer?> getPlayerById(Id id) async {
-    return await isar.fantasyPlayers.get(id);
   }
 
   Future<FantasyPlayer?> getPlayerFor({
@@ -50,33 +53,58 @@ extension FantasyDatabase on AnalystDatabase {
     if(translateIpscUuids && uuid.startsWith("ipsc")) {
       uuid = UspsaRatingGroupsProvider.translateIpscUuid(uuid);
     }
-    var id = FantasyPlayer.idFromEntityIdentifiers(
-      sportName: rating.sportName,
-      groupUuid: uuid,
-      memberNumber: rating.originalMemberNumber,
-      projectId: project.id,
-    );
 
     if(useCache) {
-      var cachedPlayer = _fantasyPlayerCache[id];
-      if(cachedPlayer != null) {
-        return cachedPlayer;
+      var standardCachedPlayer = _fantasyPlayerCache[project.id]?[uuid]?[rating.originalMemberNumber];
+      if(standardCachedPlayer != null) {
+        return standardCachedPlayer;
+      }
+      for(var memberNumber in rating.knownMemberNumbers) {
+        var cachedPlayer = _fantasyPlayerCache[project.id]?[uuid]?[memberNumber];
+        if(cachedPlayer != null) {
+          return cachedPlayer;
+        }
       }
     }
 
-    var player = await isar.fantasyPlayers.get(id);
+    var player = await isar.fantasyPlayers
+      .where()
+      .memberNumbersElementEqualTo(rating.originalMemberNumber)
+      .filter()
+      .projectIdEqualTo(project.id)
+      .groupUuidEqualTo(uuid)
+      .findFirst();
+    if(player == null) {
+      for(var memberNumber in rating.knownMemberNumbers) {
+        player = await isar.fantasyPlayers
+          .where()
+          .memberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .projectIdEqualTo(project.id)
+          .groupUuidEqualTo(uuid)
+          .findFirst();
+        if(player != null) {
+          break;
+        }
+      }
+    }
+
     if(player == null && createIfMissing) {
       player = FantasyPlayer.fromRating(rating, groupUuidOverride: uuid);
       if(saveCreatedPlayer) {
         await isar.writeTxn(() async {
           await isar.fantasyPlayers.put(player!);
-          await player.rating.save();
         });
       }
     }
 
     if(saveToCache && player != null) {
-      _fantasyPlayerCache[id] = player;
+      _fantasyPlayerCache[project.id] ??= {};
+      _fantasyPlayerCache[project.id]?[uuid] ??= {};
+      _fantasyPlayerCache[project.id]?[uuid]?[rating.originalMemberNumber] = player;
+      for(var memberNumber in rating.knownMemberNumbers) {
+        _fantasyPlayerCache[project.id]?[uuid]?[memberNumber] = player;
+      }
     }
     return player;
   }
@@ -95,21 +123,40 @@ extension FantasyDatabase on AnalystDatabase {
     if(translateIpscUuids && uuid.startsWith("ipsc")) {
       uuid = UspsaRatingGroupsProvider.translateIpscUuid(uuid);
     }
-    var id = FantasyPlayer.idFromEntityIdentifiers(
-      sportName: rating.sportName,
-      groupUuid: uuid,
-      memberNumber: rating.originalMemberNumber,
-      projectId: project.id,
-    );
 
     if(useCache) {
-      var cachedPlayer = _fantasyPlayerCache[id];
-      if(cachedPlayer != null) {
-        return cachedPlayer;
+      final standardCachedPlayer = _fantasyPlayerCache[project.id]?[uuid]?[rating.originalMemberNumber];
+      if(standardCachedPlayer != null) {
+        return standardCachedPlayer;
+      }
+      for(var memberNumber in rating.knownMemberNumbers) {
+        final cachedPlayer = _fantasyPlayerCache[project.id]?[uuid]?[memberNumber];
+        if(cachedPlayer != null) {
+          return cachedPlayer;
+        }
       }
     }
 
-    var player = isar.fantasyPlayers.getSync(id);
+    var player = isar.fantasyPlayers
+      .where()
+      .memberNumbersElementEqualTo(rating.originalMemberNumber)
+      .filter()
+      .projectIdEqualTo(project.id)
+      .groupUuidEqualTo(uuid)
+      .findFirstSync();
+    if(player == null) {
+      for(var memberNumber in rating.knownMemberNumbers) {
+        player = isar.fantasyPlayers.where()
+          .memberNumbersElementEqualTo(memberNumber)
+          .filter()
+          .projectIdEqualTo(project.id)
+          .groupUuidEqualTo(uuid)
+          .findFirstSync();
+        if(player != null) {
+          break;
+        }
+      }
+    }
     if(player == null && createIfMissing) {
       player = FantasyPlayer.fromRating(rating, groupUuidOverride: uuid);
       if(saveCreatedPlayer) {
@@ -119,7 +166,12 @@ extension FantasyDatabase on AnalystDatabase {
       }
     }
     if(saveToCache && player != null) {
-      _fantasyPlayerCache[id] = player;
+      _fantasyPlayerCache[project.id] ??= {};
+      _fantasyPlayerCache[project.id]?[uuid] ??= {};
+      _fantasyPlayerCache[project.id]?[uuid]?[rating.originalMemberNumber] = player;
+      for(var memberNumber in rating.knownMemberNumbers) {
+        _fantasyPlayerCache[project.id]?[uuid]?[memberNumber] = player;
+      }
     }
     return player;
   }

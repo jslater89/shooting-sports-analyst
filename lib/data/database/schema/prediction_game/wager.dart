@@ -588,6 +588,9 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   @override
   String memberNumber;
 
+  @override
+  List<String> get memberNumbers => knownMemberNumbers;
+
   List<String> knownMemberNumbers;
 
   Set<String> getAllPossibleMemberNumbersSync( AnalystDatabase db) {

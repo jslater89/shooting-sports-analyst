@@ -113,12 +113,10 @@ class FantasyProcessor {
     for(var roster in rosters.values) {
       var players = await roster.getPlayers();
       for(var player in players) {
-        var rating = await player.getRatingOrNull();
+        var rating = await player.getShooterRating(db);
         if(rating == null) {
-          var success = await player.resolveRating();
-          if(!success) {
-            _log.e("Failed to resolve rating for $player");
-          }
+          _log.w("Failed to resolve rating for ${player.name} ${player.memberNumber} ${player.memberNumbers}");
+          continue;
         }
       }
     }

@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/rating_carriers.dart';
 // import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
@@ -483,3 +484,128 @@ final _builtinRaterGroups = <RatingGroup>[
     sortOrder: 17,
   ),
 ];
+
+class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
+  @override
+  List<FantasyRosterSlotType> get slotTypes => [
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Any",
+      divisions: [
+        uspsaOpen,
+        uspsaLimited,
+        uspsaPcc,
+        uspsaCarryOptics,
+        uspsaLimitedOptics,
+        uspsaProduction,
+        uspsaSingleStack,
+        uspsaRevolver,
+        uspsaLimited10,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Open",
+      divisions: [
+        uspsaOpen,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Limited",
+      divisions: [
+        uspsaLimited,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "PCC",
+      divisions: [
+        uspsaPcc,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Limited Optics",
+      divisions: [
+        uspsaLimitedOptics,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Carry Optics",
+      divisions: [
+        uspsaCarryOptics,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "LOCO",
+      divisions: [
+        uspsaLimitedOptics,
+        uspsaCarryOptics,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Production",
+      divisions: [
+        uspsaProduction,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Single Stack",
+      divisions: [
+        uspsaSingleStack,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Revolver",
+      divisions: [
+        uspsaRevolver,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Limited 10",
+      divisions: [
+        uspsaLimited10,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Locap",
+      divisions: [
+        uspsaSingleStack,
+        uspsaLimited10,
+        uspsaProduction,
+        uspsaRevolver,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Lady Pistol",
+      femaleOnly: true,
+      divisions: [
+        uspsaOpen,
+        uspsaLimited,
+        uspsaCarryOptics,
+        uspsaLimitedOptics,
+        uspsaProduction,
+        uspsaSingleStack,
+        uspsaRevolver,
+        uspsaLimited10,
+      ],
+    ),
+    FantasyRosterSlotType.create(
+      sportName: uspsaName,
+      name: "Lady PCC",
+      femaleOnly: true,
+      divisions: [
+        uspsaPcc,
+      ],
+    ),
+  ];
+}

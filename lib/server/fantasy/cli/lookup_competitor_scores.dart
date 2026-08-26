@@ -110,13 +110,7 @@ Future<void> lookupCompetitorScores(Console console, List<MenuArgumentValue> arg
 }
 
 void _printFantasyHistory(Console console, AnalystDatabase db, DbRatingProject project, RatingGroup group, DbShooterRating rating) {
-  var playerId = FantasyPlayer.idFromEntities(
-    sport: project.sport,
-    group: group,
-    shooter: rating,
-    project: project,
-  );
-  var player = db.getPlayerByIdSync(playerId);
+  var player = db.getPlayerForSync(rating: rating, project: project, group: group);
   if(player == null) {
     console.print("No player found for $rating");
     return;

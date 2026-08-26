@@ -180,7 +180,7 @@ Future<void> _calculateForDates({
   console.print("Summing scores");
   Map<FantasyPlayer, double> yearlyTotals = {};
   for(var id in bestMonthlyPerformances.keys) {
-    var player = db.getPlayerByIdSync(id);
+    var player = db.getPlayerForSync(project: project, group: group, rating: rating);
     if(player == null) {
       continue;
     }

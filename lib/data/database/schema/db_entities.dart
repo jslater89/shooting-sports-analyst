@@ -39,7 +39,12 @@ mixin DbShooterRatingEntity {
   /// rating for this identity), the rating link will be updated to the new rating after it is re-resolved.
   ///
   /// If [useCache] is true, rating lookups for broken links will leverage in-memory caches if available.
-  DbShooterRating? getShooterRatingSync(AnalystDatabase db, {bool save = false, bool useCache = false}) {
+  DbShooterRating? getShooterRatingSync(
+    AnalystDatabase db, {
+    bool save = false,
+    bool useCache = false,
+    void Function(String currentMemberNumber, Set<String> knownMemberNumbers)? repairCallback,
+  }) {
     if(rating.value != null) {
       return rating.value!;
     }
@@ -61,6 +66,9 @@ mixin DbShooterRatingEntity {
         rating.saveSync();
       });
     }
+    if(repairCallback != null) {
+      repairCallback(memberNumber, ratingValue.knownMemberNumbers);
+    }
     return ratingValue;
   }
 
@@ -70,7 +78,12 @@ mixin DbShooterRatingEntity {
   /// rating for this identity), the rating link will be updated to the new rating after it is re-resolved.
   ///
   /// If [useCache] is true, rating lookups for broken links will leverage in-memory caches if available.
-  Future<DbShooterRating?> getShooterRating(AnalystDatabase db, {bool save = false, bool useCache = false}) async {
+  Future<DbShooterRating?> getShooterRating(
+    AnalystDatabase db, {
+    bool save = false,
+    bool useCache = false,
+    Future<void> Function(String currentMemberNumber, Set<String> knownMemberNumbers)? repairCallback,
+  }) async {
     await rating.load();
     if(rating.value != null) {
       return rating.value!;
@@ -95,6 +108,9 @@ mixin DbShooterRatingEntity {
         rating.save();
       });
     }
+    if(repairCallback != null) {
+      await repairCallback(memberNumber, ratingValue.knownMemberNumbers);
+    }
     return ratingValue;
   }
 }
@@ -105,6 +121,10 @@ mixin DbShooterRatingEntity {
 mixin EmbeddedDbShooterRatingEntity {
   /// A member number for this competitor.
   String get memberNumber;
+
+  /// Alternate member numbers for this competitor, to be used when data entry
+  /// errors or earlier history starts change [memberNumber].
+  List<String> get memberNumbers;
 
   /// The database ID for the project containing the shooter rating of interest.
   int get projectId;
@@ -119,7 +139,10 @@ mixin EmbeddedDbShooterRatingEntity {
   int get key => combineHashList64([projectId.stableHash64, groupUuid.stableHash64, memberNumber.stableHash64]);
 
   /// Gets the shooter rating of interest for the given project and group.
-  DbShooterRating? getShooterRatingSync(AnalystDatabase db) {
+  DbShooterRating? getShooterRatingSync(
+    AnalystDatabase db, {
+    void Function(String currentMemberNumber, Set<String> knownMemberNumbers)? repairCallback,
+  }) {
     if(_cachedRating != null) {
       return _cachedRating;
     }
@@ -130,12 +153,28 @@ mixin EmbeddedDbShooterRatingEntity {
       return null;
     }
 
-    _cachedRating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: memberNumber);
+    _cachedRating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: true);
+
+    if(_cachedRating == null && memberNumbers.isNotEmpty) {
+      for(var memberNumber in memberNumbers) {
+        _cachedRating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: true);
+        if(_cachedRating != null) {
+          break;
+        }
+      }
+    }
+
+    if(_cachedRating != null && repairCallback != null) {
+      repairCallback(memberNumber, _cachedRating!.knownMemberNumbers);
+    }
     return _cachedRating;
   }
 
   /// Gets the shooter rating of interest for the given project and group.
-  Future<DbShooterRating?> getShooterRating(AnalystDatabase db) async {
+  Future<DbShooterRating?> getShooterRating(
+    AnalystDatabase db, {
+    Future<void> Function(String currentMemberNumber, Set<String> knownMemberNumbers)? repairCallback,
+  }) async {
     if(_cachedRating != null) {
       return _cachedRating;
     }
@@ -147,6 +186,18 @@ mixin EmbeddedDbShooterRatingEntity {
     }
 
     _cachedRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: memberNumber);
+
+    if(_cachedRating == null && memberNumbers.isNotEmpty) {
+      for(var memberNumber in memberNumbers) {
+        _cachedRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: true);
+        if(_cachedRating != null) {
+          break;
+        }
+      }
+    }
+    if(_cachedRating != null && repairCallback != null) {
+      await repairCallback(memberNumber, _cachedRating!.knownMemberNumbers);
+    }
     return _cachedRating;
   }
 }

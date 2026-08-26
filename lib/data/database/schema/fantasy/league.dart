@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.da
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
@@ -33,6 +34,11 @@ enum MonthOfYear {
   december;
 
   int get monthNumber => index + 1;
+}
+
+enum LeagueFormat {
+  season,
+  singleEvent;
 }
 
 @collection
@@ -62,6 +68,10 @@ class League with DbSportEntity {
   @Enumerated(EnumType.ordinal)
   MonthOfYear endMonth = MonthOfYear.october;
 
+  /// The format of the league.
+  @Enumerated(EnumType.ordinal)
+  LeagueFormat format = LeagueFormat.season;
+
   LeagueScoringSettings scoringSettings;
 
   // #endregion Settings
@@ -82,6 +92,14 @@ class League with DbSportEntity {
 
   /// The rating project whose matches are used by this league.
   final ratingProject = IsarLink<DbRatingProject>();
+
+  /// For single-event leagues, the MatchPrep for the event.
+  final matchPrep = IsarLink<MatchPrep>();
+
+  // Single-event leagues are assumed to start at their creation
+  // date, lock rosters at midnight on the first day of the match,
+  // and end noon on the first day following the match when the match
+  // prep has linked scores.
 
   final teams = IsarLinks<Team>();
   final currentSeason = IsarLink<LeagueSeason>();
@@ -126,6 +144,7 @@ class League with DbSportEntity {
     required this.creationDate,
     this.maximumTeams = 8,
     this.state = LeagueState.offseason,
+    this.format = LeagueFormat.season,
   });
 }
 
