@@ -31,6 +31,7 @@ class TickerSettingsDialog extends StatelessWidget {
   static Future<BoothTickerModel?> show(BuildContext context, {required BroadcastBoothModel boothModel}) {
     return showDialog<BoothTickerModel>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => TickerSettingsDialog(boothModel: boothModel),
       barrierDismissible: false,
     );
@@ -251,6 +252,7 @@ class TickerCriterionEditDialog extends StatefulWidget {
   static Future<TickerEventCriterion?> show(BuildContext context, {required TickerEventCriterion criterion, required BroadcastBoothModel boothModel}) {
     return showDialog<TickerEventCriterion>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => TickerCriterionEditDialog(criterion: criterion, boothModel: boothModel),
     );
   }

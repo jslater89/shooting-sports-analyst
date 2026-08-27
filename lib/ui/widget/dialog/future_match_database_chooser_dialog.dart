@@ -55,11 +55,12 @@ class FutureMatchDatabaseChooserDialog extends StatefulWidget {
     bool showIds = false,
     Sport? sport,
     List<Sport>? sports,
+    bool useRootNavigator = false,
   }) {
     if(sport != null && sports != null) {
       throw ArgumentError("Cannot provide both sport and sports");
     }
-    return showDialog(context: context, builder: (context) => FutureMatchDatabaseChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => FutureMatchDatabaseChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,
@@ -78,11 +79,12 @@ class FutureMatchDatabaseChooserDialog extends StatefulWidget {
     bool showIds = false,
     Sport? sport,
     List<Sport>? sports,
+    bool useRootNavigator = false,
   }) {
     if(sport != null && sports != null) {
       throw ArgumentError("Cannot provide both sport and sports");
     }
-    return showDialog(context: context, builder: (context) => FutureMatchDatabaseChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => FutureMatchDatabaseChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,

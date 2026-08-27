@@ -37,6 +37,7 @@ import 'package:shooting_sports_analyst/route/match_prep_list_page.dart';
 import 'package:shooting_sports_analyst/route/ratings_map.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
@@ -239,7 +240,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var title = _projectName;
-    return MultiProvider(
+    return WorkspaceLabelReporter(
+      section: "Ratings",
+      detail: _projectName.isEmpty ? null : _projectName,
+      child: MultiProvider(
       providers: [
         ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
           create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
@@ -263,6 +267,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           body: _ratingView(uiScaleFactor),
         );
       },
+    ),
     );
   }
 
@@ -461,7 +466,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                     child: IconButton(
                       icon: Icon(Icons.filter_list),
                       onPressed: () async {
-                        var filters = await showDialog(context: context, builder: (context) =>
+                        var filters = await showDialog(context: context, useRootNavigator: false, builder: (context) =>
                           RatingFilterDialog(sport: _sport, filters: _filters),
                         );
 
@@ -513,7 +518,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               var tab = activeTabs[_tabController.index];
               var estimator = Provider.of<RaterViewDisplayModel>(context, listen: false).estimator;
               var statistics = getRatingStatistics(sport: _sport, algorithm: _settings.algorithm, group: tab, ratings: _ratings, estimator: estimator);
-              showDialog(context: context, builder: (context) {
+              showDialog(context: context, useRootNavigator: false, builder: (context) {
                 return RaterStatsDialog(sport: _sport, group: tab, statistics: statistics);
               });
             },
@@ -525,7 +530,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           icon: Icon(Icons.remove_red_eye_rounded),
           onPressed: () async {
             var existingHidden = _settings.hiddenShooters;
-            var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+            var hidden = await showDialog<List<String>>(context: context, useRootNavigator: false, builder: (context) {
               return MemberNumberDialog(
                 title: "Hide shooters",
                 helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
@@ -672,7 +677,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         );
 
       case _MenuEntry.dataErrors:
-        var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
+        var changed = await showDialog<bool>(barrierDismissible: false, context: context, useRootNavigator: false, builder: (context) => MemberNumberCorrectionListDialog(
           corrections: _settings.memberNumberCorrections,
           width: 700,
         ));

@@ -26,9 +26,10 @@ class ReportDialog extends StatefulWidget {
   @override
   State<ReportDialog> createState() => _ReportDialogState();
 
-  static Future<void> show(BuildContext context, RatingDataSource dataSource, {ReportFilters? initialFilters, void Function(ReportFilters filters)? onFiltersChanged}) {
+  static Future<void> show(BuildContext context, RatingDataSource dataSource, {ReportFilters? initialFilters, void Function(ReportFilters filters)? onFiltersChanged, bool useRootNavigator = false}) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: useRootNavigator,
       barrierDismissible: true,
       builder: (context) => ReportDialog(dataSource: dataSource, initialFilters: initialFilters, onFiltersChanged: onFiltersChanged),
     );

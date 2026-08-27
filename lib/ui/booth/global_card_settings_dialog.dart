@@ -82,6 +82,7 @@ class GlobalScorecardSettingsDialog extends StatelessWidget {
   }) {
     return showDialog<GlobalScorecardSettingsModel>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => GlobalScorecardSettingsDialog(settings: settings, ratingsContext: ratingsContext),
       barrierDismissible: false,
     );

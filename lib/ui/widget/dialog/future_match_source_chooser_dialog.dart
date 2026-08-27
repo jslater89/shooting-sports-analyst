@@ -76,9 +76,11 @@ class FutureMatchSourceChooserDialog extends StatelessWidget {
     String? hintText,
     String? initialSearch,
     void Function(FutureMatch)? onMatchDownloaded,
+    bool useRootNavigator = false,
   }) {
     return showDialog<(FutureMatchSource, FutureMatch)>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => FutureMatchSourceChooserDialog(
         sources: sources,
         title: title,

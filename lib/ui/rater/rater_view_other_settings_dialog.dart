@@ -27,9 +27,10 @@ class RaterViewOtherSettingsDialog extends StatefulWidget {
   @override
   State<RaterViewOtherSettingsDialog> createState() => _RaterViewOtherSettingsDialogState();
 
-  static Future<void> show(BuildContext context, RaterViewDisplayModel displayModel) async {
+  static Future<void> show(BuildContext context, RaterViewDisplayModel displayModel, {bool useRootNavigator = false}) async {
     return showDialog<void>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => RaterViewOtherSettingsDialog(displayModel: displayModel),
     );
   }

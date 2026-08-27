@@ -33,7 +33,16 @@ class ConfirmDialog extends StatelessWidget {
     );
   }
 
-  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width, bool barrierDismissible = true, bool getRootTheme = false}) async {
+  static Future<bool?> show(BuildContext context, {
+    String? title,
+    Widget? content,
+    String? positiveButtonLabel,
+    String? negativeButtonLabel,
+    double? width,
+    bool barrierDismissible = true,
+    bool getRootTheme = false,
+    bool useRootNavigator = false,
+  }) async {
     BuildContext? rootContext;
     if(getRootTheme) {
       rootContext = Navigator.of(context, rootNavigator: true).context;
@@ -41,15 +50,32 @@ class ConfirmDialog extends StatelessWidget {
     if(rootContext != null) {
       return showDialog<bool>(
         context: context,
+        useRootNavigator: useRootNavigator,
         barrierDismissible: barrierDismissible,
         builder: (context) => Theme(
           data: Theme.of(rootContext!),
-          child: ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width),
+          child: ConfirmDialog(
+            title: title,
+            content: content,
+            positiveButtonLabel: positiveButtonLabel,
+            negativeButtonLabel: negativeButtonLabel,
+            width: width,
+          ),
         )
       );
     }
     else {
-      return showDialog<bool>(context: context, builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width));
+      return showDialog<bool>(
+        context: context,
+        useRootNavigator: useRootNavigator,
+        builder: (context) => ConfirmDialog(
+          title: title,
+          content: content,
+          positiveButtonLabel: positiveButtonLabel,
+          negativeButtonLabel: negativeButtonLabel,
+          width: width,
+        ),
+      );
     }
   }
 }

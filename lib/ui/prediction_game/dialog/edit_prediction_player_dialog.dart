@@ -25,9 +25,11 @@ class EditPredictionPlayerDialog extends StatefulWidget {
 
   static Future<PredictionGamePlayer?> show(BuildContext context, {
     required PredictionGamePlayer player,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<PredictionGamePlayer>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => EditPredictionPlayerDialog(
         player: player,
       ),

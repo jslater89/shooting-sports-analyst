@@ -25,8 +25,8 @@ class NewMatchPrepDialog extends StatefulWidget {
   @override
   State<NewMatchPrepDialog> createState() => _NewMatchPrepDialogState();
 
-  static Future<MatchPrep?> show(BuildContext context, {bool saveOnPop = false, DbRatingProject? singleProject}) async {
-    return showDialog<MatchPrep>(context: context, builder: (context) => NewMatchPrepDialog(saveOnPop: saveOnPop, singleProject: singleProject));
+  static Future<MatchPrep?> show(BuildContext context, {bool saveOnPop = false, DbRatingProject? singleProject, bool useRootNavigator = false}) async {
+    return showDialog<MatchPrep>(context: context, useRootNavigator: useRootNavigator, builder: (context) => NewMatchPrepDialog(saveOnPop: saveOnPop, singleProject: singleProject));
   }
 }
 

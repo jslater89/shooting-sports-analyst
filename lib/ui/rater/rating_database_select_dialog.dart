@@ -44,8 +44,9 @@ class RatingDatabaseSelectDialog extends StatefulWidget {
     bool barrierDismissible = false,
     bool multiple = true,
     bool resortAgedRatings = true,
+    bool useRootNavigator = false,
   }) {
-    return showDialog<List<ShooterRating>>(context: context, builder: (context) =>
+    return showDialog<List<ShooterRating>>(context: context, useRootNavigator: useRootNavigator, builder: (context) =>
       RatingDatabaseSelectDialog(
         ratings: dataSource,
         group: group,

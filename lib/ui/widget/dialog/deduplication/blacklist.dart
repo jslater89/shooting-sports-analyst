@@ -17,12 +17,12 @@ class AddBlacklistEntryDialog extends StatefulWidget {
   @override
   State<AddBlacklistEntryDialog> createState() => _AddBlacklistEntryDialogState();
 
-  static Future<Blacklist?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<Blacklist>(context: context, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<Blacklist?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<Blacklist>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 
-  static Future<Blacklist?> edit(BuildContext context, Blacklist action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<Blacklist>(context: context, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers, editAction: action));
+  static Future<Blacklist?> edit(BuildContext context, Blacklist action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<Blacklist>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers, editAction: action));
   }
 }
 

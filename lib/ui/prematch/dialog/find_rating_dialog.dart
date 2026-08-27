@@ -44,6 +44,7 @@ class FindRatingDialog extends StatefulWidget {
     String? initialSearch,
     bool initialEndsWith = true,
     MatchRegistration? registration,
+    bool useRootNavigator = false,
   }) async {
     BuildContext? rootContext;
     if(getRootTheme) {
@@ -58,7 +59,7 @@ class FindRatingDialog extends StatefulWidget {
       registration: registration,
     );
     if(rootContext != null) {
-      return showDialog<ShooterRating>(context: context, builder: (context) =>
+      return showDialog<ShooterRating>(context: context, useRootNavigator: useRootNavigator, builder: (context) =>
         Theme(
           data: Theme.of(rootContext!),
           child: dialog,
@@ -66,7 +67,7 @@ class FindRatingDialog extends StatefulWidget {
       );
     }
     else {
-      return showDialog<ShooterRating>(context: context, builder: (context) =>
+      return showDialog<ShooterRating>(context: context, useRootNavigator: useRootNavigator, builder: (context) =>
         dialog,
       );
     }

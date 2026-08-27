@@ -80,9 +80,11 @@ class MatchSourceChooserDialog extends StatelessWidget {
     String? hintText,
     String? initialSearch,
     void Function(ShootingMatch)? onMatchDownloaded,
+    bool useRootNavigator = false,
   }) {
     return showDialog<(MatchSource, ShootingMatch)>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => MatchSourceChooserDialog(
         sources: sources,
         title: title,

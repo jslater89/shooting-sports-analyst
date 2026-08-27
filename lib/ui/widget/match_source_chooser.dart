@@ -90,7 +90,7 @@ class _MatchSourceChooserState extends State<MatchSourceChooser> {
             },
             onMatchDownloaded: widget.onMatchDownloaded,
             onError: (error) {
-              showDialog(context: context, builder: (context) => AlertDialog(
+              showDialog(context: context, useRootNavigator: false, builder: (context) => AlertDialog(
                 title: Text("Match source error"),
                 content: Text(error.message),
               ));

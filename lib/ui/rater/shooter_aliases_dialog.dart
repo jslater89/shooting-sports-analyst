@@ -124,7 +124,7 @@ class _ShooterAliasesDialogState extends State<ShooterAliasesDialog> {
               aliases.map((a) => MapEntry<String, String>(a.alias, a.name))
             );
             if(_nameController.text.isNotEmpty && _aliasController.text.isNotEmpty) {
-              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+              var confirm = await showDialog<bool>(context: context, useRootNavigator: false, builder: (c) =>
                   ConfirmDialog(
                     content: Text("The input fields contain unsubmitted information. Do you want to discard it?"),
                     positiveButtonLabel: "DISCARD",

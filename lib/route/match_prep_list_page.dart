@@ -34,6 +34,7 @@ class _MatchPrepListPageState extends State<MatchPrepListPage> {
   Widget build(BuildContext context) {
     return EmptyScaffold(
       title: "Match Prep",
+      workspaceSection: "Prep",
       actions: [
         IconButton(
           icon: Icon(Icons.add),

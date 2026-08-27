@@ -16,9 +16,15 @@ class InvitationalConfigChooserDialog extends StatefulWidget {
 
   final AnalystDatabase db;
 
-  static Future<DbInvitationalInviteConfig?> show(BuildContext context, {required AnalystDatabase db}) {
+  static Future<DbInvitationalInviteConfig?> show(
+    BuildContext context, {
+    required AnalystDatabase db,
+    bool useRootNavigator = false,
+    bool barrierDismissible = false,
+  }) {
     return showDialog<DbInvitationalInviteConfig>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => InvitationalConfigChooserDialog(db: db),
     );
   }

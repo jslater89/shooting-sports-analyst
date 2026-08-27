@@ -61,10 +61,12 @@ class UrlEntryDialog extends StatefulWidget {
     bool? showCacheCheckbox,
     bool? initialCacheValue,
     bool? barrierDismissible,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<String?>(
       context: context,
       barrierDismissible: barrierDismissible ?? true,
+      useRootNavigator: useRootNavigator,
       builder: (context) => UrlEntryDialog(
         hintText: hintText,
         sources: sources,

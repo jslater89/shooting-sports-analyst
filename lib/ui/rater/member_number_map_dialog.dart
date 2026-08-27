@@ -214,7 +214,7 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
           child: Text("OK"),
           onPressed: () async {
             if(sourceController.text.isNotEmpty && targetController.text.isNotEmpty) {
-              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+              var confirm = await showDialog<bool>(context: context, useRootNavigator: false, builder: (c) =>
                   ConfirmDialog(
                     content: Text("The input field contains unsubmitted information. Do you want to discard it?"),
                     positiveButtonLabel: "DISCARD",

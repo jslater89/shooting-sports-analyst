@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
+import 'package:shooting_sports_analyst/data/help/entries/about_help.dart';
 import 'package:shooting_sports_analyst/data/help/help_registry.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_dialogs.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/future_match_source_registry.dart';
@@ -132,6 +133,8 @@ class _HomePageState extends State<HomePage> {
 
     return EmptyScaffold(
       title: "Main Menu",
+      helpTopicId: aboutHelpId,
+      workspaceSection: "Home",
       actions: extraActions,
       operationInProgress: _operationInProgress,
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(

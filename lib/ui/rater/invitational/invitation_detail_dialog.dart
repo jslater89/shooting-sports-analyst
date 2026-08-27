@@ -42,9 +42,11 @@ class InvitationDetailDialog extends StatelessWidget {
     required bool combinedScoring,
     required InvitationalInviteResult result,
     required RatingDataSource dataSource,
+    bool useRootNavigator = false,
   }) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => InvitationDetailDialog(
         invitation: invitation,
         combinedScoring: combinedScoring,

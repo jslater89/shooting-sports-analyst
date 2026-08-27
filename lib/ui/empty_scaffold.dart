@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/help/entries/about_help.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 
 /// The normal scaffold for Analyst, with a title, list of actions, progress indicator, and body.
 class EmptyScaffold extends StatelessWidget {
@@ -16,7 +17,21 @@ class EmptyScaffold extends StatelessWidget {
   final String? helpTopicId;
   final List<Widget> actions;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title, this.actions = const [], this.helpTopicId}) : super(key: key);
+  /// When set, publishes this section (and optional [workspaceDetail]) to the
+  /// enclosing workspace tab while this route is current.
+  final String? workspaceSection;
+  final String? workspaceDetail;
+
+  const EmptyScaffold({
+    Key? key,
+    this.child,
+    this.operationInProgress = false,
+    this.title,
+    this.actions = const [],
+    this.helpTopicId,
+    this.workspaceSection,
+    this.workspaceDetail,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,20 +46,7 @@ class EmptyScaffold extends StatelessWidget {
     // We don't always use a bare EmptyScaffold, so we need a plainer wrapper we can
     // put in all the places we have plain Scaffolds.
 
-    // var toolbarHeight;
-    // // Grow by half the scale factor.
-    // if(uiScaleFactor > 1.0) {
-    //   toolbarHeight = kToolbarHeight * (1 + ((uiScaleFactor - 1) * 0.5));
-    // }
-    // else if(uiScaleFactor < 1.0) {
-    //   // shrink by 125% of the scale factor.
-    //   toolbarHeight = kToolbarHeight * (1 - ((uiScaleFactor - 1) * 1.25));
-    // }
-    // else {
-    //   toolbarHeight = kToolbarHeight;
-    // }
-
-    return Scaffold(
+    Widget scaffold = Scaffold(
       appBar: AppBar(
         // toolbarHeight: toolbarHeight,
         title: Text(title ?? "Shooting Sports Analyst"),
@@ -64,6 +66,17 @@ class EmptyScaffold extends StatelessWidget {
         },
       ),
     );
+
+    final section = workspaceSection;
+    if(section != null) {
+      scaffold = WorkspaceLabelReporter(
+        section: section,
+        detail: workspaceDetail,
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
 }

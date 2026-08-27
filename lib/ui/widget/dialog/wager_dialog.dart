@@ -87,9 +87,11 @@ class WagerDialog extends StatefulWidget {
     String? helpText,
     PredictionGameManager? manager,
     MatchPrep? matchPrep,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<WagerDialogResult>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => WagerDialog(
         player: player,
         manager: manager,
@@ -555,9 +557,11 @@ class EditPlaceWagerDialog extends StatefulWidget {
     required List<AlgorithmPrediction> availableCompetitors,
     required Map<ShooterRating, WagerIneligibilityReason> ineligibleCompetitors,
     PredictionGame? game,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<Wager>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) =>
         EditPlaceWagerDialog(
           wager: prediction,
@@ -728,11 +732,14 @@ class EditPercentageWagerDialog extends StatefulWidget {
     required List<AlgorithmPrediction> availableCompetitors,
     required Map<ShooterRating, WagerIneligibilityReason> ineligibleCompetitors,
     PredictionGame? game,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<Wager>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) =>
       EditPercentageWagerDialog(
+        game: game,
         wager: prediction,
         availableCompetitors: availableCompetitors,
         ineligibleCompetitors: ineligibleCompetitors,
@@ -889,9 +896,11 @@ class EditSpreadWagerDialog extends StatefulWidget {
     required List<AlgorithmPrediction> availableCompetitors,
     required Map<ShooterRating, WagerIneligibilityReason> ineligibleCompetitors,
     PredictionGame? game,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<Wager>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => EditSpreadWagerDialog(
         wager: prediction,
         availableCompetitors: availableCompetitors,
@@ -1073,8 +1082,8 @@ class EditParlayAmountDialog extends StatefulWidget {
 
   final Parlay parlay;
 
-  static Future<Parlay?> show(BuildContext context, {required Parlay parlay}) async {
-    return showDialog<Parlay>(context: context, builder: (context) => EditParlayAmountDialog(parlay: parlay));
+  static Future<Parlay?> show(BuildContext context, {required Parlay parlay, bool useRootNavigator = false}) async {
+    return showDialog<Parlay>(context: context, useRootNavigator: useRootNavigator, builder: (context) => EditParlayAmountDialog(parlay: parlay));
   }
 
   @override

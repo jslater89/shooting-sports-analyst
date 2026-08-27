@@ -17,9 +17,10 @@ class RollbackDialog extends StatefulWidget {
   @override
   State<RollbackDialog> createState() => _RollbackDialogState();
 
-  static Future<DateTime?> show(BuildContext context, DbRatingProject project) async {
+  static Future<DateTime?> show(BuildContext context, DbRatingProject project, {bool useRootNavigator = false}) async {
     return showDialog<DateTime>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => RollbackDialog(project: project),
     );
   }

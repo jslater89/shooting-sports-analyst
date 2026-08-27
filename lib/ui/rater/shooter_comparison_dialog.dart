@@ -19,8 +19,8 @@ class RatingComparisonDialog extends StatefulWidget {
   @override
   State<RatingComparisonDialog> createState() => _RatingComparisonDialogState();
 
-  static Future<void> show(BuildContext context, ShooterRating rating1, ShooterRating rating2) {
-    return showDialog<void>(context: context, builder: (context) => RatingComparisonDialog(rating1: rating1, rating2: rating2));
+  static Future<void> show(BuildContext context, ShooterRating rating1, ShooterRating rating2, {bool useRootNavigator = false}) {
+    return showDialog<void>(context: context, useRootNavigator: useRootNavigator, builder: (context) => RatingComparisonDialog(rating1: rating1, rating2: rating2));
   }
 }
 

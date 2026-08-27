@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/ui/booth/ticker.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("BroadcastBoothPage");
@@ -97,8 +98,12 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
   Widget build(BuildContext context) {
     var m = model;
     var c = controller;
+    final boothDetail = scaffoldTitle == "Broadcast Mode" ? null : scaffoldTitle;
     if(m == null || c == null) {
-      return Scaffold(
+      return WorkspaceLabelReporter(
+        section: "Booth",
+        detail: boothDetail,
+        child: Scaffold(
         appBar: AppBar(
           title: Center(child: Text(scaffoldTitle)),
         ),
@@ -145,22 +150,31 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
             ),
           ],
         ))
+      ),
       );
     }
     else if(!m.ready) {
-      return Scaffold(
+      return WorkspaceLabelReporter(
+        section: "Booth",
+        detail: boothDetail,
+        child: Scaffold(
         appBar: AppBar(
           title: Center(child: Text(scaffoldTitle)),
         ),
         body: Center(child: CircularProgressIndicator()),
+      ),
       );
     }
     else {
-      return ConfirmPopScope(
+      return WorkspaceLabelReporter(
+        section: "Booth",
+        detail: boothDetail,
+        child: ConfirmPopScope(
         onPopRequested: () async {
           // Show confirmation dialog
           final result = await showDialog<bool>(
             context: context,
+            useRootNavigator: false,
             builder: (BuildContext context) {
               return AlertDialog(
                 title: const Text("Exit broadcast mode?"),
@@ -224,6 +238,7 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
             ),
           ),
         ),
+      ),
       );
     }
   }

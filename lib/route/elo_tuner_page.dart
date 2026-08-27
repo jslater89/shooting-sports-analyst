@@ -174,7 +174,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
   Widget build(BuildContext context) {
     return ConfirmPopScope(
       onPopRequested: () async {
-        var quit = await showDialog<bool>(context: context, builder: (context) =>
+        var quit = await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) =>
           ConfirmDialog(
             title: "Quit?",
             content: Text("Are you sure?"),

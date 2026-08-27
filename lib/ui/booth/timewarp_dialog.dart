@@ -25,6 +25,7 @@ class TimewarpDialog extends StatefulWidget {
   static Future<DateTime?> show(BuildContext context, {required ShootingMatch match, DateTime? initialDateTime}) {
     return showDialog<DateTime>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => TimewarpDialog(match: match, initialDateTime: initialDateTime),
       barrierDismissible: false,
     );
@@ -127,7 +128,7 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
   }
 
   /// Get a histogram of the number of scores during each hour of the day.
-  /// 
+  ///
   /// All DateTimes will have YMD 0, 0, 0, and the time will be truncated to the hour.
   Map<int, int> _scoreTimeHistogram() {
     Map<int, int> histogram = {};
@@ -152,7 +153,7 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
 
   /// Estimate the match start time by finding the last hour in the largest
   /// contiguous block of hours with no scores.
-  /// 
+  ///
   /// To find contiguous blocks that may cross the midnight hour, we run
   /// the algorithm twice, once starting at the first hour and once starting
   /// at the middle hour.

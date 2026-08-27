@@ -46,6 +46,7 @@ import 'package:shooting_sports_analyst/data/help/entries/scalers_and_distributi
 import 'package:shooting_sports_analyst/data/help/entries/uspsa_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/welcome_100_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/welcome_80_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/workspaces_help.dart';
 import 'package:shooting_sports_analyst/data/help/help_directory.dart';
 import 'package:shooting_sports_analyst/data/help/help_registry.dart';
 
@@ -59,6 +60,7 @@ void registerHelpTopics() {
   root.addChild(helpBroadcastMode);
   root.addChild(helpWelcome80);
   root.addChild(helpWelcome100);
+  root.addChild(helpWorkspaces);
   root.addChild(helpMatchDatabaseManager);
   root.addChild(helpMatchFileImport);
   root.addChild(helpMatchSourceChooser);

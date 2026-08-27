@@ -46,9 +46,15 @@ class DeduplicationDialog extends StatefulWidget {
   @override
   State<DeduplicationDialog> createState() => _DeduplicationDialogState();
 
-  static Future<bool?> show(BuildContext context, {required Sport sport, required List<DeduplicationCollision> collisions, required RatingGroup group}) async {
+  static Future<bool?> show(BuildContext context, {
+    required Sport sport,
+    required List<DeduplicationCollision> collisions,
+    required RatingGroup group,
+    bool useRootNavigator = false,
+  }) async {
     return showDialog<bool?>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => DeduplicationDialog(sport: sport, collisions: collisions, group: group),
       barrierDismissible: false,
     );

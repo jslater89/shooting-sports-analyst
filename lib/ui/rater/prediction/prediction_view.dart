@@ -77,7 +77,7 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
   Widget build(BuildContext context) {
     return ConfirmPopScope(
       onPopRequested: () async {
-        return await showDialog<bool>(context: context, builder: (context) =>
+        return await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) =>
           ConfirmDialog(
             title: "Return to ratings?",
             content: Text("If you leave this page, you will need to recalculate predictions to view it again."),

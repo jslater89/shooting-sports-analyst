@@ -18,12 +18,12 @@ class AddMappingDialog extends StatefulWidget {
   @override
   State<AddMappingDialog> createState() => _AddMappingDialogState();
 
-  static Future<UserMapping?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<UserMapping>(context: context, builder: (context) => AddMappingDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<UserMapping?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<UserMapping>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddMappingDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 
-  static Future<UserMapping?> edit(BuildContext context, UserMapping action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<UserMapping>(context: context, builder: (context) => AddMappingDialog(editAction: action, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<UserMapping?> edit(BuildContext context, UserMapping action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<UserMapping>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddMappingDialog(editAction: action, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 }
 

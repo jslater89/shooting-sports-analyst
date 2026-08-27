@@ -84,7 +84,7 @@ class _FutureMatchSourceChooserState extends State<FutureMatchSourceChooser> {
             },
             onMatchDownloaded: widget.onMatchDownloaded,
             onError: (error) {
-              showDialog(context: context, builder: (context) => AlertDialog(
+              showDialog(context: context, useRootNavigator: false, builder: (context) => AlertDialog(
                 title: Text("Future match source error"),
                 content: Text(error.message),
               ));

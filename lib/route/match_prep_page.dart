@@ -50,6 +50,8 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
       value: _model,
       child: EmptyScaffold(
         title: _model.futureMatch.eventName,
+        workspaceSection: "Prep",
+        workspaceDetail: _model.futureMatch.eventName,
         actions: [
           if(_model.futureMatch.sourceCode?.isEmpty ?? true) Tooltip(
             message: "Link a match result to this match prep",

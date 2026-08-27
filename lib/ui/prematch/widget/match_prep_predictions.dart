@@ -163,7 +163,7 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> with TickerProvi
                 onPressed: () async {
                   final defaultName = programmerYmdHmFormat.format(DateTime.now());
                   final nameController = TextEditingController(text: defaultName);
-                  var predictionSetName = await showDialog<String>(context: context, builder: (context) {
+                  var predictionSetName = await showDialog<String>(context: context, useRootNavigator: false, builder: (context) {
                     return AlertDialog(
                       title: Text("Create prediction set"),
                       content: TextField(

@@ -43,9 +43,10 @@ bool matchImportFormatIsViewable(FileImportFormat format) {
 class MatchFileImportDialog extends StatefulWidget {
   const MatchFileImportDialog({super.key});
 
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {bool useRootNavigator = false}) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => const MatchFileImportDialog(),
     );
   }

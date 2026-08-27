@@ -30,7 +30,7 @@ class StageStatsDialog extends StatelessWidget {
 
   StageStatsDialog(this.stageStats);
 
-  static Future<void> show(BuildContext context, StageStats stats) {
-    return showDialog(context: context, builder: (context) => StageStatsDialog(stats));
+  static Future<void> show(BuildContext context, StageStats stats, {bool useRootNavigator = false}) {
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => StageStatsDialog(stats));
   }
 }

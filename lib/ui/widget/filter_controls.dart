@@ -215,6 +215,7 @@ class _FilterControlsState extends State<FilterControls> {
                           if(item == StageMenuItem.filter()) {
                             var stages = await showDialog<List<MatchStage>>(
                               context: context,
+                              useRootNavigator: false,
                               builder: (context) {
                                 var initialState = <MatchStage, bool>{};
                                 for(MatchStage s in widget.allStages) {
@@ -243,7 +244,7 @@ class _FilterControlsState extends State<FilterControls> {
                     child: TextButton(
                       child: Text("FILTERS"),
                       onPressed: () async {
-                        var filters = await showDialog<FilterSet>(context: context, builder: (context) {
+                        var filters = await showDialog<FilterSet>(context: context, useRootNavigator: false, builder: (context) {
                           return FilterDialog(currentFilters: this.widget.filters);
                         });
 
@@ -262,7 +263,7 @@ class _FilterControlsState extends State<FilterControls> {
   }
 
   void _showQueryHelp(Size screenSize) {
-    showDialog(context: context, builder: (BuildContext context) {
+    showDialog(context: context, useRootNavigator: false, builder: (BuildContext context) {
       return AlertDialog(
         title: Text("Search Help"),
         content: SizedBox(

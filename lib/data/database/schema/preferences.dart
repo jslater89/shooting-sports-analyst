@@ -125,6 +125,9 @@ class ApplicationPreferences {
 
   @ignore
   bool get shooterStatsHistoryDescending => !shooterStatsHistoryAscending;
+
+  /// Whether the workspace tab bar is expanded (vs. collapsed to the chevron strip).
+  bool workspaceBarExpanded = true;
 }
 
 @embedded

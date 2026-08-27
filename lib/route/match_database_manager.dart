@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dar
 import 'package:shooting_sports_analyst/ui/database/stats/db_statistics_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final _log = SSALogger("MatchDatabaseManagerPage");
@@ -52,7 +53,9 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
         ChangeNotifierProvider.value(value: listModel),
       ],
       builder: (context, child) {
-        return Scaffold(
+        return WorkspaceLabelReporter(
+          section: "Database",
+          child: Scaffold(
           appBar: AppBar(
             title: Text("Match Database"),
             centerTitle: true,
@@ -66,6 +69,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                     var stats = await db.getBasicDatabaseStatistics();
                     showDialog(
                       context: context,
+                      useRootNavigator: false,
                       builder: (context) => DbStatisticsDialog(stats: stats),
                     );
                   },
@@ -117,6 +121,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
             ],
           ),
           body: MatchDatabaseListView(),
+        ),
         );
       }
     );
