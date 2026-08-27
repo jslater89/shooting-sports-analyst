@@ -4,7 +4,7 @@ if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* || TERM_PROGRAM == *vsc
   FLUTTER_COMMAND="flutter"
 fi
 if [ -z "$VERSION" ]; then
-    VERSION=$(grep -m 1 'version:' pubspec.yaml | sed -r 's/version: ([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]+)?)\+[0-9]+/\1/')
+    VERSION=$(grep -m 1 'version:' pubspec.yaml | sed -r 's/version: ([0-9]+\.[0-9]+\.[0-9]+(-[.a-z0-9]+)?)\+[0-9]+/\1/')
 fi
 
 PROJ_ROOT=$(pwd)
