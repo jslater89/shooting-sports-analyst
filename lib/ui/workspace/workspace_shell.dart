@@ -266,7 +266,7 @@ class _WorkspaceTab extends StatelessWidget {
             child: IconButton(
               padding: EdgeInsets.zero,
               iconSize: 16 * uiScaleFactor,
-              tooltip: "Close Workspace",
+              tooltip: "Close workspace",
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close),
               onPressed: onClose,
