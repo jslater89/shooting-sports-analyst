@@ -61,8 +61,8 @@ class MatchHeatSettingsDialog extends StatefulWidget {
 
   final MatchHeatSettings settings;
 
-  static Future<MatchHeatSettings?> show({required BuildContext context, required MatchHeatSettings settings}) {
-    return showDialog<MatchHeatSettings>(context: context, builder: (context) => MatchHeatSettingsDialog(settings: settings));
+  static Future<MatchHeatSettings?> show({required BuildContext context, required MatchHeatSettings settings, bool useRootNavigator = false}) {
+    return showDialog<MatchHeatSettings>(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchHeatSettingsDialog(settings: settings));
   }
 
   @override

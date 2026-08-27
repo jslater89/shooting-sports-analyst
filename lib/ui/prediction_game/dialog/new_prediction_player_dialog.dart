@@ -40,9 +40,11 @@ class NewPredictionPlayerDialog extends StatefulWidget {
     required PredictionGame predictionGame,
     double initialBalance = 50.0,
     bool returnInitialTransactionSeparately = true,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<PredictionGamePlayer>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => NewPredictionPlayerDialog(
         predictionGame: predictionGame,
         initialBalance: initialBalance,

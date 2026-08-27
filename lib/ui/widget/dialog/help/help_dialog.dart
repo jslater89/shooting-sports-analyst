@@ -23,12 +23,13 @@ class HelpDialog extends StatelessWidget {
     );
   }
 
-  static Future<void> show(BuildContext context, {String initialTopic = aboutHelpId}) {
+  static Future<void> show(BuildContext context, {String initialTopic = aboutHelpId, bool useRootNavigator = true}) {
     if(kDebugMode) {
       HelpTopicRegistry().reload();
     }
     return showDialog(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => HelpDialog(initialTopic: initialTopic),
     );
   }

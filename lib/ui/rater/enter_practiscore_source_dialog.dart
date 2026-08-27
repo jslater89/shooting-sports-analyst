@@ -32,7 +32,7 @@ class _EnterPractiscoreSourceDialogState extends State<EnterPractiscoreSourceDia
           IconButton(
             icon: Icon(Icons.help),
             onPressed: () {
-              showDialog(context: context, builder: (context) => AlertDialog(
+              showDialog(context: context, useRootNavigator: false, builder: (context) => AlertDialog(
                 title: Text("How-to"),
                 content: Text(
                   "Open a Practiscore page, copy the HTML source code, and paste into the text field.\n"

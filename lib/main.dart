@@ -38,6 +38,8 @@ import 'package:shooting_sports_analyst/research/mcp/research_mcp_host.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_manager.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_shell.dart';
 import 'package:shooting_sports_analyst/version.dart';
 import 'package:window_manager/window_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
@@ -399,18 +401,18 @@ class _MyAppState extends State<MyApp> {
     else {
       return MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(config.uiScaleFactor)),
-        child: MultiProvider(
+          child: MultiProvider(
           providers: [
             Provider.value(value: _prefs!),
             ChangeNotifierProvider(create: (context) => RatingContext()),
+            ChangeNotifierProvider(create: (context) => WorkspaceManager()),
           ],
           child: MaterialApp(
             title: 'Shooting Sports Analyst',
             theme: lightTheme,
             darkTheme: darkTheme,
             themeMode: config.themeMode,
-            initialRoute: '/',
-            onGenerateRoute: globals.router.generator,
+            home: const WorkspaceShell(),
           ),
         )
       );

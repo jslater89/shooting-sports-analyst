@@ -46,8 +46,9 @@ class MatchPointerChooserDialog extends StatefulWidget {
     String? helpText,
     bool showIds = false,
     bool selectDateRange = false,
+    bool useRootNavigator = false,
   }) {
-    return showDialog(context: context, builder: (context) => MatchPointerChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchPointerChooserDialog(
       selectDateRange: selectDateRange,
       showIds: showIds,
       showStats: showStats,
@@ -63,8 +64,9 @@ class MatchPointerChooserDialog extends StatefulWidget {
     bool showStats = false,
     String? helpText,
     bool showIds = false,
+    bool useRootNavigator = false,
   }) {
-    return showDialog(context: context, builder: (context) => MatchPointerChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchPointerChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,

@@ -510,7 +510,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
 
     var editButton = IconButton(icon: Icon(Icons.edit), onPressed: () async {
-      var newName = await showDialog<List<String>>(context: context, builder: (context) {
+      var newName = await showDialog<List<String>>(context: context, useRootNavigator: false, builder: (context) {
         var firstNameController = TextEditingController(text: shooter.firstName);
         var lastNameController = TextEditingController(text: shooter.lastName);
         return AlertDialog(

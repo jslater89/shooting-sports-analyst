@@ -57,7 +57,7 @@ class _CompareShooterResultsPageState extends State<CompareShooterResultsPage> {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
         onPressed: () async {
-          var score = await showDialog<RelativeMatchScore>(context: context, builder: (context) =>
+          var score = await showDialog<RelativeMatchScore>(context: context, useRootNavigator: false, builder: (context) =>
               AddComparisonDialog(widget.scores)
           );
           if(score != null) {

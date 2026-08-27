@@ -19,12 +19,12 @@ class AddDataEntryFixDialog extends StatefulWidget {
   @override
   State<AddDataEntryFixDialog> createState() => _AddDataEntryFixDialogState();
 
-  static Future<DataEntryFix?> show(BuildContext context, String deduplicatorName, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<DataEntryFix>(context: context, builder: (context) => AddDataEntryFixDialog(deduplicatorName: deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<DataEntryFix?> show(BuildContext context, String deduplicatorName, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<DataEntryFix>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddDataEntryFixDialog(deduplicatorName: deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 
-  static Future<DataEntryFix?> edit(BuildContext context, DataEntryFix action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<DataEntryFix>(context: context, builder: (context) => AddDataEntryFixDialog(editAction: action, deduplicatorName: action.deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<DataEntryFix?> edit(BuildContext context, DataEntryFix action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const [], bool useRootNavigator = false}) async {
+    return showDialog<DataEntryFix>(context: context, useRootNavigator: useRootNavigator, builder: (context) => AddDataEntryFixDialog(editAction: action, deduplicatorName: action.deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 }
 

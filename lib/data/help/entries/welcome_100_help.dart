@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/help/entries/local_mcp_server_help.
 import 'package:shooting_sports_analyst/data/help/entries/match_file_import_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/match_preps/match_preps_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/prediction_games/prediction_games_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/workspaces_help.dart';
 import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const welcome100HelpId = "welcome100";
@@ -79,6 +80,12 @@ As part of research work on the 2027 Cardinal Cup, I built out some infrastructu
 to an invitational match based on prior match finishes and ratings. Thanks to the wonders of AI-assisted
 development, that work is now available with a user interface inside of ratings projects. See the
 [invitational invites]($invitationalInvitesHelpLink) help page for more.
+
+## Workspaces
+You can keep related screens open side by side in one process using
+[workspaces]($workspacesHelpLink): for example match results in one tab and a ratings
+project in another. Use **+** to open another main menu, and the skinny chevron bar to
+hide the tab strip when you want more vertical space.
 
 ## Local MCP Server
 Shooting Sports Analyst now supports a local MCP server, allowing you to connect AI agents to the application.

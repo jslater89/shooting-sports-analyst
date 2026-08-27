@@ -55,8 +55,9 @@ class MatchOrFutureMatchSourceChooserDialog extends StatefulWidget {
     String? initialSearch,
     void Function(ShootingMatch)? onMatchDownloaded,
     void Function(FutureMatch)? onFutureMatchDownloaded,
+    bool useRootNavigator = false,
   }) {
-    return showDialog<MatchOrFutureMatch>(context: context, builder: (context) => MatchOrFutureMatchSourceChooserDialog(
+    return showDialog<MatchOrFutureMatch>(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchOrFutureMatchSourceChooserDialog(
       matchSources: matchSources,
       futureMatchSources: futureMatchSources,
       title: title,

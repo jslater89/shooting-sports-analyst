@@ -30,7 +30,12 @@ class HtmlOr {
 
   static void navigateTo(BuildContext context, String path) {
     lastContext = context;
-    controller.navigateTo(path);
+    if(!needsProxy) {
+      Navigator.of(context).pushNamed(path);
+    }
+    else {
+      controller.navigateTo(path);
+    }
   }
 
   static Future<Directory?> pickDirectory() async {

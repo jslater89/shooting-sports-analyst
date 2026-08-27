@@ -18,8 +18,8 @@ class SelectProjectDialog extends StatefulWidget {
   @override
   State<SelectProjectDialog> createState() => _SelectProjectDialogState();
 
-  static Future<DbRatingProject?> show(BuildContext context, {bool showSort = true}) {
-    return showDialog<DbRatingProject>(context: context, builder: (context) => SelectProjectDialog(showSort: showSort));
+  static Future<DbRatingProject?> show(BuildContext context, {bool showSort = true, bool useRootNavigator = false}) {
+    return showDialog<DbRatingProject>(context: context, useRootNavigator: useRootNavigator, builder: (context) => SelectProjectDialog(showSort: showSort));
   }
 }
 

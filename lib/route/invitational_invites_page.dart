@@ -201,6 +201,7 @@ class _InvitationalInvitesPageState extends State<InvitationalInvitesPage> with 
   Future<void> _showMessageDialog(String title, String message) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => AlertDialog(
         title: Text(title),
         content: SizedBox(

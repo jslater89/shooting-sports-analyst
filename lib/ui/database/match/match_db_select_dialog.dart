@@ -17,8 +17,8 @@ class MatchDbSelectDialog extends StatefulWidget {
   State<MatchDbSelectDialog> createState() => _MatchDbSelectDialogState();
 
 
-  static Future<ShootingMatch?> show(BuildContext context) async {
-    return showDialog<ShootingMatch>(context: context, builder: (context) => MatchDbSelectDialog(), barrierDismissible: false);
+  static Future<ShootingMatch?> show(BuildContext context, {bool useRootNavigator = false}) async {
+    return showDialog<ShootingMatch>(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchDbSelectDialog(), barrierDismissible: false);
   }
 }
 

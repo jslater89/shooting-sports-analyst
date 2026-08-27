@@ -75,6 +75,7 @@ import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
@@ -266,7 +267,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-    return ConfirmPopScope(
+    return WorkspaceLabelReporter(
+      section: "Ratings",
+      detail: _lastProjectName,
+      child: ConfirmPopScope(
       onPopRequested: () async {
         if(_loadedProject != null) {
           await _saveProject(_loadedProject!.name, onPop: true);
@@ -286,6 +290,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
         body: _body(),
       ),
+    ),
     );
   }
 
@@ -542,7 +547,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     child: IconButton(
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
-                                        var groupResult = await showDialog<IsarLinksChange<RatingGroup>>(context: context, builder: (context) {
+                                        var groupResult = await showDialog<IsarLinksChange<RatingGroup>>(context: context, useRootNavigator: false, builder: (context) {
                                           return RatingGroupsDialog(selectedGroups: _currentGroups, groupProvider: sport.builtinRatingGroupsProvider);
                                         });
 
@@ -665,7 +670,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   child: Icon(Icons.dataset),
                                   onPressed: () async {
                                     var sports = sport.name == uspsaSport.name ? [sport, ipscSport] : [sport];
-                                    var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
+                                    var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, useRootNavigator: false, builder: (context) {
                                       return MatchDatabaseChooserDialog(multiple: true, sports: sports);
                                     }, barrierDismissible: false);
 
@@ -691,7 +696,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 child: TextButton(
                                   child: Icon(Icons.remove),
                                   onPressed: () async {
-                                    var delete = await showDialog<bool>(context: context, builder: (context) {
+                                    var delete = await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) {
                                       return ConfirmDialog(
                                         content: Text("This will clear all currently-selected matches."),
                                       );
@@ -898,7 +903,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> confirmChangeRater (_ConfigurableRater v) async {
-    var confirm = await showDialog<bool>(context: context, builder: (context) =>
+    var confirm = await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) =>
         ConfirmDialog(
           title: "Change algorithm?",
           content: Text("Current settings will be lost."),
@@ -1052,7 +1057,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           icon: Icon(Icons.create_new_folder_outlined),
           onPressed: () async {
             var controller = TextEditingController();
-            var confirm = await showDialog<bool>(context: context, builder: (context) =>
+            var confirm = await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) =>
               ConfirmDialog(
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1097,7 +1102,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.save),
           onPressed: () async {
-            var name = await showDialog<String>(context: context, builder: (context) {
+            var name = await showDialog<String>(context: context, useRootNavigator: false, builder: (context) {
               return EnterNameDialog(initial: _lastProjectName);
             });
 
@@ -1119,7 +1124,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.folder_open),
           onPressed: () async {
-            var project = await showDialog<DbRatingProject>(context: context, builder: (context) {
+            var project = await showDialog<DbRatingProject>(context: context, useRootNavigator: false, builder: (context) {
               return SelectProjectDialog();
             });
 
@@ -1194,7 +1199,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           bool proceed = true;
           bool overwrote = false;
           if(existingProject != null) {
-            var confirm = await showDialog<bool>(context: context, builder: (context) => ConfirmDialog(
+            var confirm = await showDialog<bool>(context: context, useRootNavigator: false, builder: (context) => ConfirmDialog(
               content: Text("A project with that name already exists. Overwrite?"),
               positiveButtonLabel: "OVERWRITE",
             ));
@@ -1234,7 +1239,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
       case _MenuEntry.numberWhitelist:
-        var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
+        var whitelist = await showDialog<List<String>>(context: context, useRootNavigator: false, builder: (context) {
           return MemberNumberDialog(
             title: "Whitelist member numbers",
             helpText: "Whitelisted member numbers will be included in the ratings, even if they fail "
@@ -1250,15 +1255,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
         break;
 
-      case _MenuEntry.clearCache:
-        showDialog(context: context, builder: (context) => AlertDialog(
-          title: Text("Pending reimplementation"),
-          content: Text("This feature is pending reimplementation. It will be available soon."),
-        ));
-        break;
-
       case _MenuEntry.migrateFromOldProject:
-        var request = await showDialog<ProjectMigrateRequest>(context: context, builder: (context) {
+        var request = await showDialog<ProjectMigrateRequest>(context: context, useRootNavigator: false, builder: (context) {
           return MigrateOldProjectDialog();
         });
 
@@ -1273,7 +1271,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   action: SnackBarAction(
                     label: "SHOW",
                     onPressed: () {
-                      showDialog(context: context, builder: (context) =>
+                      showDialog(context: context, useRootNavigator: false, builder: (context) =>
                         AlertDialog(
                           title: Text("Failed to migrate matches"),
                           content: ConstrainedBox(
@@ -1365,7 +1363,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
       case _MenuEntry.numberMappings:
-        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
+        var mappings = await showDialog<Map<String, String>>(context: context, useRootNavigator: false, builder: (context) {
           return MemberNumberMapDialog(
             sport: sport,
             title: "Manual member number mappings",
@@ -1386,7 +1384,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.autoMappings:
-        var mappings = await showDialog<List<DbMemberNumberMapping>>(context: context, builder: (context) {
+        var mappings = await showDialog<List<DbMemberNumberMapping>>(context: context, useRootNavigator: false, builder: (context) {
           if(_loadedProject == null) {
             return AlertDialog(
               title: Text("Save project first"),
@@ -1409,7 +1407,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.numberMappingBlacklist:
-        var mappings = await showDialog<Map<String, List<String>>>(context: context, builder: (context) {
+        var mappings = await showDialog<Map<String, List<String>>>(context: context, useRootNavigator: false, builder: (context) {
           return MemberNumberBlacklistDialog(
             sport: sport,
             title: "Member number mapping blacklist",
@@ -1431,7 +1429,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
       case _MenuEntry.hiddenShooters:
-        var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+        var hidden = await showDialog<List<String>>(context: context, useRootNavigator: false, builder: (context) {
           return MemberNumberDialog(
             sport: sport,
             title: "Hide shooters",
@@ -1450,7 +1448,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
       case _MenuEntry.shooterAliases:
-        var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
+        var aliases = await showDialog<Map<String, String>>(context: context, useRootNavigator: false, builder: (context) {
           return ShooterAliasesDialog(_shooterAliases);
         }, barrierDismissible: false);
 
@@ -1460,7 +1458,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.dataEntryErrors:
-        showDialog(context: context, builder: (context) => MemberNumberCorrectionListDialog(
+        showDialog(context: context, useRootNavigator: false, builder: (context) => MemberNumberCorrectionListDialog(
           sport: sport,
           corrections: _memNumCorrections,
           width: 700,
@@ -1495,7 +1493,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.importDeduplication:
-        var otherProject = await showDialog<DbRatingProject>(context: context, builder: (context) {
+        var otherProject = await showDialog<DbRatingProject>(context: context, useRootNavigator: false, builder: (context) {
           return SelectProjectDialog();
         });
 
@@ -1539,7 +1537,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.importMatches:
-        var otherProject = await showDialog<DbRatingProject>(context: context, builder: (context) {
+        var otherProject = await showDialog<DbRatingProject>(context: context, useRootNavigator: false, builder: (context) {
           return SelectProjectDialog();
         });
 
@@ -1595,8 +1593,7 @@ enum _MenuEntry {
   shooterAliases,
   reloadProjectMatches,
   migrateFromOldProject,
-  clearDeduplication,
-  clearCache;
+  clearDeduplication;
 
   static List<_MenuEntry> get menu => [
     hiddenShooters,
@@ -1612,7 +1609,6 @@ enum _MenuEntry {
     reloadProjectMatches,
     migrateFromOldProject,
     clearDeduplication,
-    clearCache,
   ];
 
   String get label {
@@ -1641,8 +1637,6 @@ enum _MenuEntry {
         return "Member number whitelist";
       case _MenuEntry.reloadProjectMatches:
         return "Reload matches in project";
-      case _MenuEntry.clearCache:
-        return "Clear cache";
       case _MenuEntry.shooterAliases:
         return "Shooter aliases";
       case _MenuEntry.migrateFromOldProject:

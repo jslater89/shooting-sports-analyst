@@ -35,6 +35,7 @@ class _PredictionGameListPageState extends State<PredictionGameListPage> {
   Widget build(BuildContext context) {
     return EmptyScaffold(
       title: "Prediction Games",
+      workspaceSection: "Games",
       actions: [
         IconButton(
           icon: Icon(Icons.add),
@@ -64,6 +65,7 @@ class PredictionGameCreationDialog extends StatefulWidget {
   static Future<PredictionGame?> show(BuildContext context) async {
     return showDialog<PredictionGame>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => PredictionGameCreationDialog(),
       barrierDismissible: false,
     );

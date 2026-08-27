@@ -15,9 +15,10 @@ class TextInputDialog extends StatefulWidget {
   @override
   State<TextInputDialog> createState() => _TextInputDialogState();
 
-  static Future<String?> show(BuildContext context, {required String title, String? initialValue}) {
+  static Future<String?> show(BuildContext context, {required String title, String? initialValue, bool useRootNavigator = false}) {
     return showDialog<String>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => TextInputDialog(title: title, initialValue: initialValue),
     );
   }

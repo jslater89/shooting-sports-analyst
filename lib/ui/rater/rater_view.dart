@@ -308,15 +308,14 @@ class _RaterViewState extends State<RaterView> {
                 onTap: () {
                   if(rating.length == 0) return;
 
-                  showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(
-                      rating: rating,
-                      match: widget.currentMatch,
-                      ratings: widget.dataSource,
-                      showDivisions: widget.group.divisions.length > 1,
-                      comparableRatings: allSorted,
-                    );
-                  });
+                  ShooterStatsDialog.show(
+                    context, rating,
+                    match: widget.currentMatch,
+                    ratings: widget.dataSource,
+                    showDivisions: widget.group.divisions.length > 1,
+                    comparableRatings: allSorted,
+                  );
+
                 },
                 child: RatingSystemUiBuilder.buildRatingRow(
                   settings.algorithm,

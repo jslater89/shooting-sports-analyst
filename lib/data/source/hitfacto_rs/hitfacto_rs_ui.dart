@@ -91,6 +91,7 @@ class _HitfactoRsMatchSearchControlsState
     final controller = TextEditingController(text: cfg.hitfactoRsApiKey);
     final ok = await showDialog<bool>(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) {
         return AlertDialog(
           title: Text("Hitfacto.rs API Key"),

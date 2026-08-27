@@ -24,9 +24,10 @@ class AppSettingsDialog extends StatefulWidget {
   @override
   State<AppSettingsDialog> createState() => _AppSettingsDialogState();
 
-  static Future<(SerializedConfig, SerializedUIConfig)?> show(BuildContext context) {
+  static Future<(SerializedConfig, SerializedUIConfig)?> show(BuildContext context, {bool useRootNavigator = false}) {
     return showDialog<(SerializedConfig, SerializedUIConfig)?>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => AppSettingsDialog(),
     );
   }

@@ -46,6 +46,7 @@ class ScorecardSettingsDialog extends StatelessWidget {
     _log.i("Showing scorecard settings dialog for ${scorecard.name} id:${scorecard.id}");
     return showDialog<ScorecardModel>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => ScorecardSettingsDialog(scorecard: scorecard, match: match, ratingsContext: ratingsContext),
       barrierDismissible: false,
     );
@@ -366,6 +367,7 @@ class MatchEntrySelectDialog<T> extends StatefulWidget {
   static Future<List<MatchEntry>?> show<T>(BuildContext context, {required ShootingMatch match, required FilterSet filters, required List<T> previousSelection}) {
     return showDialog<List<MatchEntry>>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => MatchEntrySelectDialog<T>(match: match, filters: filters, previousSelection: previousSelection),
     );
   }

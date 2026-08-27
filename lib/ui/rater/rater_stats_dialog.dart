@@ -154,7 +154,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
             SizedBox(width: 16 * uiScaleFactor),
             ClickableLink(
               onTap: () {
-                showDialog(context: context, builder: (context) => RatingDistributionDialog(
+                showDialog(context: context, useRootNavigator: false, builder: (context) => RatingDistributionDialog(
                   sport: widget.sport,
                   group: widget.group,
                   statistics: widget.statistics,

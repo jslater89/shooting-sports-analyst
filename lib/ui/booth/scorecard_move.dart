@@ -57,6 +57,7 @@ class ScorecardMoveDialog extends StatelessWidget {
   static Future<MoveDirection?> show(BuildContext context, {required ScorecardModel scorecard, required List<MoveDirection> validMoves}) {
     return showDialog<MoveDirection>(
       context: context,
+      useRootNavigator: false,
       builder: (context) => ScorecardMoveDialog(scorecard: scorecard, validMoves: validMoves),
     );
   }

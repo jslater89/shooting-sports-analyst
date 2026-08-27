@@ -33,9 +33,10 @@ class MatchListFilterDialog extends StatefulWidget {
   @override
   State<MatchListFilterDialog> createState() => _MatchListFilterDialogState();
 
-  static Future<MatchListFilters?> show(BuildContext context, MatchListFilters filters) {
+  static Future<MatchListFilters?> show(BuildContext context, MatchListFilters filters, {bool useRootNavigator = false}) {
     return showDialog<MatchListFilters>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => MatchListFilterDialog(filters: filters),
       barrierDismissible: false,
     );

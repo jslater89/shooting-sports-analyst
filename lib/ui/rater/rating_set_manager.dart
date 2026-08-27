@@ -32,8 +32,19 @@ class RatingSetManagerDialog extends StatefulWidget {
   @override
   State<RatingSetManagerDialog> createState() => _RatingSetManagerDialogState();
 
-  static Future<List<RatingSet>?> show(BuildContext context, {required AnalystDatabase db, required List<ShooterRating> validRatings, List<RatingSet> initialSelection = const []}) {
-    return showDialog<List<RatingSet>>(context: context, builder: (context) => RatingSetManagerDialog(db: db, validRatings: validRatings, initialSelection: initialSelection));
+  static Future<List<RatingSet>?> show(
+    BuildContext context, {
+    required AnalystDatabase db,
+    required List<ShooterRating> validRatings,
+    List<RatingSet> initialSelection = const [],
+    bool useRootNavigator = false,
+  }) {
+    return showDialog<List<RatingSet>>(
+      context: context,
+      useRootNavigator: useRootNavigator,
+      builder: (context) => RatingSetManagerDialog(db: db, validRatings: validRatings, initialSelection: initialSelection),
+      barrierDismissible: false,
+    );
   }
 }
 

@@ -30,6 +30,7 @@ class RatingListSelectDialog extends StatefulWidget {
     bool showDivision = false,
     bool barrierDismissible = false,
     bool multiple = true,
+    bool useRootNavigator = false,
   }) {
     List<ShooterRating> ratingsList = [];
     if(ratings is List<ShooterRating>) {
@@ -38,7 +39,7 @@ class RatingListSelectDialog extends StatefulWidget {
     else {
       ratingsList = ratings.toList();
     }
-    return showDialog<List<ShooterRating>>(context: context, builder: (context) =>
+    return showDialog<List<ShooterRating>>(context: context, useRootNavigator: useRootNavigator, builder: (context) =>
       RatingListSelectDialog(
         ratings: ratingsList,
         showDivision: showDivision,

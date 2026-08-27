@@ -21,9 +21,11 @@ class MatchPrepWagerDialog extends StatefulWidget {
     required BuildContext context,
     required MatchPrep matchPrep,
     required PredictionGameManagerModel predictionGameModel,
+    bool useRootNavigator = false,
   }) async {
     return showDialog<List<DbWager>>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => MatchPrepWagerDialog(matchPrep: matchPrep, predictionGameModel: predictionGameModel),
       barrierDismissible: false,
     );

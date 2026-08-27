@@ -320,7 +320,7 @@ class _ScoreListState extends State<ScoreList> {
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
-          var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
+          var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, useRootNavigator: false, builder: (context) {
             return EditableShooterCard(sport: widget.match!.sport, matchScore: score, scoreDQ: widget.scoreDQ);
           }));
 
@@ -340,7 +340,7 @@ class _ScoreListState extends State<ScoreList> {
           }
         }
         else {
-          var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
+          var action = await showDialog<ShooterDialogAction>(context: context, useRootNavigator: false, builder: (context) {
             return ShooterResultCard(
               sport: widget.match!.sport,
               match: widget.match,
@@ -544,7 +544,7 @@ class _ScoreListState extends State<ScoreList> {
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
-          var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
+          var action = await (showDialog<ShooterDialogAction>(context: context, useRootNavigator: false, barrierDismissible: false, builder: (context) {
             return EditableShooterCard(sport: widget.match!.sport, stageScore: stageScore, scoreDQ: widget.scoreDQ,);
           }));
 
@@ -565,7 +565,7 @@ class _ScoreListState extends State<ScoreList> {
           }
         }
         else {
-          var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
+          var action = await showDialog<ShooterDialogAction>(context: context, useRootNavigator: false, builder: (context) {
             return ShooterResultCard(sport: widget.match!.sport, stageScore: stageScore, scoreDQ: widget.scoreDQ,);
           });
 

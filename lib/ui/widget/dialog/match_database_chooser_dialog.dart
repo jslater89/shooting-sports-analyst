@@ -57,11 +57,12 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     bool showIds = false,
     Sport? sport,
     List<Sport>? sports,
+    bool useRootNavigator = false,
   }) {
     if(sport != null && sports != null) {
       throw ArgumentError("Cannot provide both sport and sports");
     }
-    return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchDatabaseChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,
@@ -80,11 +81,12 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     bool showIds = false,
     Sport? sport,
     List<Sport>? sports,
+    bool useRootNavigator = false,
   }) {
     if(sport != null && sports != null) {
       throw ArgumentError("Cannot provide both sport and sports");
     }
-    return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchDatabaseChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,

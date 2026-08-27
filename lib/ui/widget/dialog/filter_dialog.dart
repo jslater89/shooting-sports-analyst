@@ -19,8 +19,8 @@ class FilterDialog extends StatefulWidget {
     return _FilterDialogState();
   }
 
-  static Future<FilterSet?> show(BuildContext context, FilterSet currentFilters) {
-    return showDialog<FilterSet>(context: context, builder: (context) => FilterDialog(currentFilters: currentFilters));
+  static Future<FilterSet?> show(BuildContext context, FilterSet currentFilters, {bool useRootNavigator = false}) {
+    return showDialog<FilterSet>(context: context, useRootNavigator: useRootNavigator, builder: (context) => FilterDialog(currentFilters: currentFilters));
   }
 }
 
@@ -392,8 +392,8 @@ class SquadSelectDialog extends StatefulWidget {
   @override
   State<SquadSelectDialog> createState() => _SquadSelectDialogState();
 
-  static Future<List<int>?> show(BuildContext context, {required List<int> knownSquads, List<int> selectedSquads = const []}) {
-    return showDialog(context: context, builder: (context) => SquadSelectDialog(knownSquads: knownSquads, selectedSquads: selectedSquads));
+  static Future<List<int>?> show(BuildContext context, {required List<int> knownSquads, List<int> selectedSquads = const [], bool useRootNavigator = false}) {
+    return showDialog(context: context, useRootNavigator: useRootNavigator, builder: (context) => SquadSelectDialog(knownSquads: knownSquads, selectedSquads: selectedSquads));
   }
 }
 

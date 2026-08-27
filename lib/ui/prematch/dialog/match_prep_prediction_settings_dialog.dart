@@ -25,12 +25,14 @@ class MatchPrepPredictionSettingsDialog extends StatefulWidget {
   static Future<bool> show(BuildContext context, {
     required MatchPrep prep,
     required Sport sport,
+    bool useRootNavigator = false,
   }) async {
     if(!MatchPrepUspsaPredictionSettings.isSupportedSport(sport)) {
       return false;
     }
     final saved = await showDialog<bool>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => MatchPrepPredictionSettingsDialog(prep: prep, sport: sport),
     );
     return saved ?? false;

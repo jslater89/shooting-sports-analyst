@@ -34,6 +34,8 @@ class _PredictionGamePageState extends State<PredictionGamePage> {
       value: _model,
       child: EmptyScaffold(
         title: _model.predictionGame.name,
+        workspaceSection: "Games",
+        workspaceDetail: _model.predictionGame.name,
         child: PredictionGameManagerUI(),
       ),
     );

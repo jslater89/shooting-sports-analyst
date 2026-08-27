@@ -48,6 +48,7 @@ import 'package:shooting_sports_analyst/ui/widget/confirm_pop_scope.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/workspace/workspace_label_reporter.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
@@ -530,7 +531,7 @@ class _ResultPageState extends State<ResultPage> {
         HelpDialog.show(context, initialTopic: resultsHelpId);
         break;
       case _MenuEntry.plotDistribution:
-        showDialog(context: context, builder: (context) => ScoresDistributionDialog(
+        showDialog(context: context, useRootNavigator: false, builder: (context) => ScoresDistributionDialog(
           matchScores: _searchedScores,
           sport: sport,
           stage: _stage,
@@ -804,7 +805,7 @@ class _ResultPageState extends State<ResultPage> {
           child: IconButton(
             icon: Icon(Icons.table_chart),
             onPressed: () {
-              showDialog(context: context, builder: (context) {
+              showDialog(context: context, useRootNavigator: false, builder: (context) {
                 return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch.shooters);
               });
             },
@@ -904,7 +905,10 @@ class _ResultPageState extends State<ResultPage> {
 
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
-    return KeyboardListener(
+    return WorkspaceLabelReporter(
+      section: "Match",
+      detail: _currentMatch.name,
+      child: KeyboardListener(
       onKeyEvent: (KeyEvent e) {
         if(e is KeyDownEvent) {
           if (_appFocus!.hasPrimaryFocus) {
@@ -989,6 +993,7 @@ class _ResultPageState extends State<ResultPage> {
           ),
         ),
       ),
+    ),
     );
   }
 }

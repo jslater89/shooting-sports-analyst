@@ -43,9 +43,11 @@ class SSADateRangePickerDialog extends StatefulWidget {
     DateTime? initialEnd,
     DateFormat? dateFormat,
     bool barrierDismissible = true,
+    bool useRootNavigator = false,
   }) {
     return showDialog<(DateTime, DateTime)?>(
       context: context,
+      useRootNavigator: useRootNavigator,
       barrierDismissible: barrierDismissible,
       builder: (context) => SSADateRangePickerDialog(
         startLimit: startLimit,

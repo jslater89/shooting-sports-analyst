@@ -17,9 +17,10 @@ class TopupPlayerDialog extends StatefulWidget {
   @override
   State<TopupPlayerDialog> createState() => _TopupPlayerDialogState();
 
-  static Future<double?> show(BuildContext context, {required PredictionGamePlayer player}) async {
+  static Future<double?> show(BuildContext context, {required PredictionGamePlayer player, bool useRootNavigator = false}) async {
     return showDialog<double>(
       context: context,
+      useRootNavigator: useRootNavigator,
       builder: (context) => TopupPlayerDialog(player: player),
     );
   }

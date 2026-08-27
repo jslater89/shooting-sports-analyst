@@ -16,8 +16,8 @@ class MatchPrepSelectDialog extends StatefulWidget {
   @override
   State<MatchPrepSelectDialog> createState() => _MatchPrepSelectDialogState();
 
-  static Future<MatchPrep?> show(BuildContext context) async {
-    return showDialog<MatchPrep>(context: context, builder: (context) => MatchPrepSelectDialog());
+  static Future<MatchPrep?> show(BuildContext context, {bool useRootNavigator = false}) async {
+    return showDialog<MatchPrep>(context: context, useRootNavigator: useRootNavigator, builder: (context) => MatchPrepSelectDialog());
   }
 }
 
