@@ -37,7 +37,11 @@ You can have up to four workspaces. Closing a tab uses the **X** on the tab; the
 remaining workspace cannot be closed. Drag the handle on a tab to reorder workspaces.
 
 ## Tab Titles
-
 Each tab shows a short label for its primary content, such as `Ratings · L2s Main LLR`
 or `Match · Area 6 Championship`.
+
+## Limitations
+In general, workspaces should just work. The only expected limitation is that viewing
+a rating set while recalculating the same rating set may cause the recalculation to fail,
+or provide stale or erroneous data in the rating view.
 """;
