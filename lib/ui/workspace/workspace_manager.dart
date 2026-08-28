@@ -150,12 +150,10 @@ class WorkspaceManager extends ChangeNotifier {
   Workspace _createWorkspace() => Workspace();
 
   void _attach(Workspace workspace) {
-    workspace.addListener(notifyListeners);
     _workspaces.add(workspace);
   }
 
   void _detach(Workspace workspace) {
-    workspace.removeListener(notifyListeners);
   }
 
   @override

@@ -30,6 +30,7 @@ class _WorkspaceLabelReporterState extends State<WorkspaceLabelReporter> with Ro
   Workspace? _workspace;
   bool _isCurrent = false;
   bool _subscribed = false;
+  bool _publishScheduled = false;
 
   @override
   void didChangeDependencies() {
@@ -52,7 +53,7 @@ class _WorkspaceLabelReporterState extends State<WorkspaceLabelReporter> with Ro
     // already-current route, so didPush will not fire again.
     if(route.isCurrent) {
       _isCurrent = true;
-      _publish();
+      _schedulePublish();
     }
   }
 
@@ -66,7 +67,7 @@ class _WorkspaceLabelReporterState extends State<WorkspaceLabelReporter> with Ro
   void didUpdateWidget(covariant WorkspaceLabelReporter oldWidget) {
     super.didUpdateWidget(oldWidget);
     if(oldWidget.section != widget.section || oldWidget.detail != widget.detail) {
-      _publish();
+      _schedulePublish();
     }
   }
 
@@ -77,16 +78,31 @@ class _WorkspaceLabelReporterState extends State<WorkspaceLabelReporter> with Ro
     _workspace?.setLabel(section: widget.section, detail: widget.detail);
   }
 
+  /// Route callbacks and [didChangeDependencies] can fire during pop transitions;
+  /// defer publishing so tab updates do not relayout chrome mid-activation.
+  void _schedulePublish() {
+    if(_publishScheduled) {
+      return;
+    }
+    _publishScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _publishScheduled = false;
+      if(mounted) {
+        _publish();
+      }
+    });
+  }
+
   @override
   void didPush() {
     _isCurrent = true;
-    _publish();
+    _schedulePublish();
   }
 
   @override
   void didPopNext() {
     _isCurrent = true;
-    _publish();
+    _schedulePublish();
   }
 
   @override

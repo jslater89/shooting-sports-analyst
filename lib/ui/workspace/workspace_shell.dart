@@ -201,7 +201,7 @@ class _WorkspaceTabBarState extends State<_WorkspaceTabBar> with TickerProviderS
                     height: 46 * uiScaleFactor,
                     child: _WorkspaceTab(
                       index: i,
-                      title: manager.workspaces[i].tabTitle,
+                      workspace: manager.workspaces[i],
                       canReorder: manager.workspaces.length > 1,
                       canClose: manager.workspaces.length > 1,
                       uiScaleFactor: uiScaleFactor,
@@ -221,7 +221,7 @@ class _WorkspaceTabBarState extends State<_WorkspaceTabBar> with TickerProviderS
 class _WorkspaceTab extends StatelessWidget {
   const _WorkspaceTab({
     required this.index,
-    required this.title,
+    required this.workspace,
     required this.canReorder,
     required this.canClose,
     required this.uiScaleFactor,
@@ -230,7 +230,7 @@ class _WorkspaceTab extends StatelessWidget {
   });
 
   final int index;
-  final String title;
+  final Workspace workspace;
   final bool canReorder;
   final bool canClose;
   final double uiScaleFactor;
@@ -239,69 +239,75 @@ class _WorkspaceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tabBody = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if(canReorder) ...[
-          _TabDragHandle(
-            index: index,
-            title: title,
-            uiScaleFactor: uiScaleFactor,
-          ),
-          SizedBox(width: 2 * uiScaleFactor),
-        ],
-        ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 320 * uiScaleFactor),
-          child: Text(
-            title,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if(canClose) ...[
-          SizedBox(width: 4 * uiScaleFactor),
-          SizedBox(
-            width: 28 * uiScaleFactor,
-            height: 28 * uiScaleFactor,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              iconSize: 16 * uiScaleFactor,
-              tooltip: "Close workspace",
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.close),
-              onPressed: onClose,
+    return ListenableBuilder(
+      listenable: workspace,
+      builder: (context, _) {
+        final title = workspace.tabTitle;
+        final theme = Theme.of(context);
+        final tabBody = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if(canReorder) ...[
+              _TabDragHandle(
+                index: index,
+                title: title,
+                uiScaleFactor: uiScaleFactor,
+              ),
+              SizedBox(width: 2 * uiScaleFactor),
+            ],
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 320 * uiScaleFactor),
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
-      ],
-    );
-
-    if(!canReorder) {
-      return tabBody;
-    }
-
-    return DragTarget<int>(
-      onWillAcceptWithDetails: (details) => details.data != index,
-      onAcceptWithDetails: (details) => onReorder(details.data, index),
-      builder: (context, candidateData, rejectedData) {
-        final from = candidateData.whereType<int>().firstOrNull;
-        final showLeading = from != null && index < from;
-        final showTrailing = from != null && index > from;
-        final indicator = BorderSide(
-          color: theme.colorScheme.primary,
-          width: 2 * uiScaleFactor,
+            if(canClose) ...[
+              SizedBox(width: 4 * uiScaleFactor),
+              SizedBox(
+                width: 28 * uiScaleFactor,
+                height: 28 * uiScaleFactor,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  iconSize: 16 * uiScaleFactor,
+                  tooltip: "Close workspace",
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close),
+                  onPressed: onClose,
+                ),
+              ),
+            ],
+          ],
         );
-        return AnimatedContainer(
-          duration: Duration.zero,
-          decoration: (showLeading || showTrailing)
-              ? BoxDecoration(
-                  border: Border(
-                    left: showLeading ? indicator : BorderSide.none,
-                    right: showTrailing ? indicator : BorderSide.none,
-                  ),
-                )
-              : null,
-          child: tabBody,
+
+        if(!canReorder) {
+          return tabBody;
+        }
+
+        return DragTarget<int>(
+          onWillAcceptWithDetails: (details) => details.data != index,
+          onAcceptWithDetails: (details) => onReorder(details.data, index),
+          builder: (context, candidateData, rejectedData) {
+            final from = candidateData.whereType<int>().firstOrNull;
+            final showLeading = from != null && index < from;
+            final showTrailing = from != null && index > from;
+            final indicator = BorderSide(
+              color: theme.colorScheme.primary,
+              width: 2 * uiScaleFactor,
+            );
+            return AnimatedContainer(
+              duration: Duration.zero,
+              decoration: (showLeading || showTrailing)
+                  ? BoxDecoration(
+                      border: Border(
+                        left: showLeading ? indicator : BorderSide.none,
+                        right: showTrailing ? indicator : BorderSide.none,
+                      ),
+                    )
+                  : null,
+              child: tabBody,
+            );
+          },
         );
       },
     );
@@ -380,19 +386,11 @@ class _WorkspaceNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: workspace,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final media = MediaQuery.of(context);
-          return MediaQuery(
-            data: media.copyWith(size: constraints.biggest),
-            child: Navigator(
-              key: workspace.navigatorKey,
-              observers: [workspace.routeObserver],
-              initialRoute: "/",
-              onGenerateRoute: globals.router.generator,
-            ),
-          );
-        },
+      child: Navigator(
+        key: workspace.navigatorKey,
+        observers: [workspace.routeObserver],
+        initialRoute: "/",
+        onGenerateRoute: globals.router.generator,
       ),
     );
   }

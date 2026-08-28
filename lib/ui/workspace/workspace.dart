@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
 /// Label and navigation state for one workspace tab.
@@ -67,14 +66,9 @@ class Workspace extends ChangeNotifier {
     _scheduleNotify();
   }
 
-  /// [WorkspaceLabelReporter] may call [setLabel] from [State.didChangeDependencies],
-  /// which runs during build — defer [notifyListeners] until after the frame.
+  /// [WorkspaceLabelReporter] may call [setLabel] from route callbacks that run
+  /// during transitions — defer [notifyListeners] until after the frame.
   void _scheduleNotify() {
-    final phase = SchedulerBinding.instance.schedulerPhase;
-    if(phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks) {
-      notifyListeners();
-      return;
-    }
     if(_notifyScheduled) {
       return;
     }
