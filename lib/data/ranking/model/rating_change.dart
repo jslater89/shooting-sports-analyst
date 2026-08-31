@@ -136,10 +136,10 @@ abstract class RatingEvent implements IRatingEvent, IConnectivityEvent {
         wrappedEvent.owner.loadSync();
       }
       var owner = wrappedEvent.owner.value!;
-      if(!owner.group.isLoaded) {
-        owner.group.loadSync();
+      if(!owner.ratingGroup.isLoaded) {
+        owner.ratingGroup.loadSync();
       }
-      var filters = owner.group.value!.filters;
+      var filters = owner.ratingGroup.value!.filters;
       var scores = match.getScoresFromFilters(filters);
       _cachedScore = scores[entry];
     }

@@ -105,7 +105,7 @@ class BackfillWagerScoringGroups extends Migration {
     }
 
     var rating = await target.getShooterRating(db);
-    return rating?.group.value;
+    return rating?.ratingGroup.value;
   }
 
   Set<String> _memberNumbersForWager(DbWager wager) {

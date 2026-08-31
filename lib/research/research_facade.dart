@@ -1399,13 +1399,13 @@ class ResearchFacade implements ResearchQueries {
       if (rating == null) {
         return Result.err(ResearchError("Shooter rating not found: id=$ratingId", statusCode: 404));
       }
-      if (!rating.group.isLoaded) {
-        await rating.group.load();
+      if (!rating.ratingGroup.isLoaded) {
+        await rating.ratingGroup.load();
       }
       if (!rating.project.isLoaded) {
         await rating.project.load();
       }
-      final group = rating.group.value;
+      final group = rating.ratingGroup.value;
       final proj = rating.project.value;
       if (group == null || proj == null) {
         return Result.err(ResearchError("Shooter rating $ratingId missing project/group links", statusCode: 500));

@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
+
 /// Permissions for various flavors of Analyst server.
 ///
 /// Certain trivial permissions are implicit: there is no e.g. "user:edit:own"
@@ -63,7 +65,19 @@ enum Permission {
   predictionWagerResolveManaged("wagers:resolve:managed"),
 
   /// Permission to resolve wagers in all prediction games.
-  predictionWagerResolveAll("wagers:resolve:all");
+  predictionWagerResolveAll("wagers:resolve:all"),
+
+  /// Permission to view the top 50 competitors on the rating leaderboard.
+  ratingLeaderboardTop50("leaderboard:viewtop50"),
+
+  /// Permission to view and search the rating leaderboard.
+  ratingLeaderboardDeep("leaderboard:viewdeep"),
+
+  /// Permission to view the history of a competitor on the rating leaderboard.
+  ratingLeaderboardCompetitorHistory("leaderboard:drilldown"),
+
+  /// Permission to view nondefault projects on the rating leaderboard.
+  ratingLeaderboardChangeProjects("leaderboard:changeprojects");
 
   /// The name of the permission, for use in the database and other contexts
   /// where the enum name is over-long.
@@ -75,6 +89,14 @@ enum Permission {
   ///
   /// Scope/subject values are typically one of 'own', 'managed', or 'all'.
   final String permissionName;
+
+  String get resource => permissionName.split(':')[0];
+  String get action => permissionName.split(':')[1];
+  String? get scope => permissionName.split(':').length > 2 ? permissionName.split(':')[2] : null;
+
+  static Permission? lookup(String permissionName) {
+    return Permission.values.firstWhereOrNull((permission) => permission.permissionName == permissionName);
+  }
 
   const Permission(this.permissionName);
 }

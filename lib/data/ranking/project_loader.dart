@@ -770,14 +770,14 @@ class RatingProjectLoader {
             }
             targetRating.copyVitalsFrom(sourceRating);
             targetRating.copyRatingFrom(sourceRating);
-            targetRating.group.value = sourceRating.group.value;
+            targetRating.ratingGroup.value = sourceRating.ratingGroup.value;
             targetRating.project.value = project;
 
             targetRating.addKnownMemberNumbers(knownMemberNumbers);
             targetRating.memberNumber = mapping.targetNumber;
 
-            if(targetRating.group.value == null) {
-              targetRating.group.value = group;
+            if(targetRating.ratingGroup.value == null) {
+              targetRating.ratingGroup.value = group;
             }
             db.upsertDbShooterRatingSync(targetRating);
           }
@@ -790,10 +790,10 @@ class RatingProjectLoader {
           }
         }
 
-        if(!targetRating.group.isLoaded) {
-          targetRating.group.loadSync();
-          if(targetRating.group.value == null) {
-            targetRating.group.value = group;
+        if(!targetRating.ratingGroup.isLoaded) {
+          targetRating.ratingGroup.loadSync();
+          if(targetRating.ratingGroup.value == null) {
+            targetRating.ratingGroup.value = group;
           }
         }
 

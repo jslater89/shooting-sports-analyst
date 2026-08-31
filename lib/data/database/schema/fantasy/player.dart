@@ -28,7 +28,7 @@ class FantasyPlayer with DbSportEntity, EmbeddedDbShooterRatingEntity {
   FantasyPlayer.fromRating(DbShooterRating rating, {String? groupUuidOverride}) :
     sportName = rating.sportName,
     name = rating.name,
-    groupUuid = groupUuidOverride ?? rating.group.value?.uuid ?? "",
+    groupUuid = groupUuidOverride ?? rating.ratingGroup.value?.uuid ?? "",
     memberNumber = rating.originalMemberNumber,
     memberNumbers = [...rating.knownMemberNumbers],
     projectId = rating.project.value!.id {

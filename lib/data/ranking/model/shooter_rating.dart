@@ -93,11 +93,11 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   DbShooterRating wrappedRating;
 
   RatingGroup get group {
-    if(!wrappedRating.group.isLoaded) {
-      wrappedRating.group.loadSync();
+    if(!wrappedRating.ratingGroup.isLoaded) {
+      wrappedRating.ratingGroup.loadSync();
     }
 
-    return wrappedRating.group.value!;
+    return wrappedRating.ratingGroup.value!;
   }
 
   /// Whether the data contained by [wrappedRating] has been persisted.

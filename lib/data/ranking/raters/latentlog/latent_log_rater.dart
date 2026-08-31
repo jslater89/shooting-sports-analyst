@@ -1588,7 +1588,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       RatingRowData(data: "Last ±", alignment: AbstractAlignment.end, flex: _lastChangeFlex),
       RatingRowData(
         data: "Uncertainty",
-        tooltip: "Approximate standard deviation of the rating..",
+        tooltip: "Approximate standard deviation of the rating. Uncertainty grows over time. Rows show uncertainty at the last rating update. Tooltips show uncertainty today.",
         alignment: AbstractAlignment.end,
         flex: _varianceFlex,
       ),

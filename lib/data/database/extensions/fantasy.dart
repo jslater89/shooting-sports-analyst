@@ -49,7 +49,7 @@ extension FantasyDatabase on AnalystDatabase {
     bool saveCreatedPlayer = true,
     bool translateIpscUuids = false,
   }) async {
-    var uuid = rating.group.value?.uuid ?? "";
+    var uuid = rating.ratingGroup.value?.uuid ?? "";
     if(translateIpscUuids && uuid.startsWith("ipsc")) {
       uuid = UspsaRatingGroupsProvider.translateIpscUuid(uuid);
     }
@@ -119,7 +119,7 @@ extension FantasyDatabase on AnalystDatabase {
     bool saveCreatedPlayer = true,
     bool translateIpscUuids = false,
   }) {
-    var uuid = rating.group.value?.uuid ?? "";
+    var uuid = rating.ratingGroup.value?.uuid ?? "";
     if(translateIpscUuids && uuid.startsWith("ipsc")) {
       uuid = UspsaRatingGroupsProvider.translateIpscUuid(uuid);
     }

@@ -12,18 +12,20 @@ import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 
 class ServerDebugProvider implements DebugModeProvider, IsolateModeProvider {
   @override
-  bool get kDebugMode => true;
+  bool get kDebugMode => _isDebugMode;
 
   @override
-  bool get kReleaseMode => false;
+  bool get kReleaseMode => !_isDebugMode;
 
   @override
   bool get kMultiIsolateMode => _isMultiIsolate;
 
   bool _isMultiIsolate = true;
+  bool _isDebugMode = true;
 
-  ServerDebugProvider({bool isMultiIsolate = true}) {
+  ServerDebugProvider({bool isMultiIsolate = true, bool isDebugMode = true}) {
     _isMultiIsolate = isMultiIsolate;
+    _isDebugMode = isDebugMode;
   }
 }
 

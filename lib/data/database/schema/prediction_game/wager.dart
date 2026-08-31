@@ -621,7 +621,7 @@ class DbPredictionTarget with EmbeddedDbShooterRatingEntity {
   factory DbPredictionTarget.fromShooterRating(ShooterRating shooter) {
     return DbPredictionTarget(
       projectId: shooter.wrappedRating.project.value!.id,
-      groupUuid: shooter.wrappedRating.group.value!.uuid,
+      groupUuid: shooter.wrappedRating.ratingGroup.value!.uuid,
       memberNumber: shooter.memberNumber,
       knownMemberNumbers: [...shooter.knownMemberNumbers],
       firstName: shooter.firstName,

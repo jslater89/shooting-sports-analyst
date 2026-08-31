@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_repo
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
@@ -392,19 +393,139 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
   }
 
+  /// Query the rating list for a given group, doing as much as possible in the database
+  /// for contexts that can't afford a full rating list in memory.
+  Future<List<DbShooterRating>> queryRatingList(
+    // The group to search in.
+    RatingGroup group,
+    {
+      // Search for a name or member number containing this string.
+      //
+      // [name] and [memberNumber] are ignored if [search] is provided.
+      String? search,
+      // Search for a name exactly matching this string.
+      String? name,
+      // Search for a member number exactly matching this string.
+      String? memberNumber,
+      // A last-seen-after date.
+      DateTime? lastSeenAfter,
+      // The number of results to return.
+      int limit = 50,
+      // The offset of the first result to return.
+      int offset = 0,
+      // The sort mode to use.
+      RatingSortMode sort = RatingSortMode.rating,
+      // Whether to sort ascending or descending.
+      bool ascending = false,
+    }
+  ) async {
+    var query = _generateSearchedRatingQuery(group, search: search, name: name, memberNumber: memberNumber, lastSeenAfter: lastSeenAfter);
+
+    QueryBuilder<DbShooterRating, DbShooterRating, QAfterSortBy>? sortedQuery;
+    if(sort == RatingSortMode.rating) {
+      if(ascending) {
+        sortedQuery = query.sortByRating();
+      }
+      else {
+        sortedQuery = query.sortByRatingDesc();
+      }
+    }
+    else if(sort == RatingSortMode.agedRating) {
+      if(ascending) {
+        sortedQuery = query.sortByAgedRating();
+      }
+      else {
+        sortedQuery = query.sortByAgedRatingDesc();
+      }
+    }
+    else if(sort == RatingSortMode.lastName) {
+      if(ascending) {
+        sortedQuery = query.sortByLastName();
+      }
+      else {
+        sortedQuery = query.sortByLastNameDesc();
+      }
+    }
+    else if(sort == RatingSortMode.error) {
+      if(ascending) {
+        sortedQuery = query.sortByError();
+      }
+      else {
+        sortedQuery = query.sortByErrorDesc();
+      }
+    }
+    else if(sort == RatingSortMode.stages) {
+      if(ascending) {
+        sortedQuery = query.sortByCachedLength();
+      }
+      else {
+        sortedQuery = query.sortByCachedLengthDesc();
+      }
+    }
+
+    if(sortedQuery != null) {
+      return sortedQuery.offset(offset).limit(limit).findAll();
+    }
+    else {
+      return query.offset(offset).limit(limit).findAll();
+    }
+  }
+
+  Future<int> countRatingList(
+    RatingGroup group,
+    {
+      String? search,
+      String? name,
+      String? memberNumber,
+      DateTime? lastSeenAfter,
+    }
+  ) async {
+    var query = _generateSearchedRatingQuery(group, search: search, name: name, memberNumber: memberNumber, lastSeenAfter: lastSeenAfter);
+    return query.count();
+  }
+
+  QueryBuilder<DbShooterRating, DbShooterRating, QAfterFilterCondition> _generateSearchedRatingQuery(
+    RatingGroup group,
+    {
+      String? search,
+      String? name,
+      String? memberNumber,
+      DateTime? lastSeenAfter,
+  }) {
+    var query = ratings.filter().ratingGroup((q) => q.idEqualTo(group.id));
+
+    if(search != null) {
+      query = query.group((q) => q.nameContains(search, caseSensitive: false).or().dbAllPossibleMemberNumbersElementContains(search, caseSensitive: false));
+    }
+    else {
+      if(name != null) {
+        query = query.nameContains(name, caseSensitive: false);
+      }
+      if(memberNumber != null) {
+        query = query.dbAllPossibleMemberNumbersElementMatches(memberNumber, caseSensitive: false);
+      }
+    }
+
+    if(lastSeenAfter != null) {
+      query = query.lastSeenGreaterThan(lastSeenAfter, include: true);
+    }
+
+    return query;
+  }
+
   // TODO: we can make these more efficient by querying the Ratings collection
   // (since we can probably composite-index that by interesting queries)
   @override
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
     return DataSourceResult.ok(await ratings.filter()
-      .group((q) => q.idEqualTo(group.id))
+      .ratingGroup((q) => q.idEqualTo(group.id))
       .findAll());
   }
 
   @override
   Future<DataSourceResult<List<DbShooterRating>>> getRatingsLastSeenBefore(RatingGroup group, DateTime date) async {
     return DataSourceResult.ok(await ratings.filter()
-      .group((q) => q.idEqualTo(group.id))
+      .ratingGroup((q) => q.idEqualTo(group.id))
       .lastSeenLessThan(date)
       .findAll());
   }
@@ -412,19 +533,19 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   @override
   Future<DataSourceResult<List<DbShooterRating>>> getTopRatings(RatingGroup group, {int limit = 10}) async {
     return DataSourceResult.ok(await ratings.filter()
-      .group((q) => q.idEqualTo(group.id))
+      .ratingGroup((q) => q.idEqualTo(group.id))
       .sortByRatingDesc()
       .limit(limit)
       .findAll());
   }
 
   DataSourceResult<List<DbShooterRating>> getRatingsSync(RatingGroup group) {
-    return DataSourceResult.ok(ratings.filter().group((q) => q.idEqualTo(group.id)).findAllSync());
+    return DataSourceResult.ok(ratings.filter().ratingGroup((q) => q.idEqualTo(group.id)).findAllSync());
   }
 
   Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
     return DataSourceResult.ok(await ratings.filter()
-      .group((q) => q.idEqualTo(group.id))
+      .ratingGroup((q) => q.idEqualTo(group.id))
       .deduplicatorNameEqualTo(deduplicatorName)
       .findAll());
   }
@@ -519,7 +640,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         .filter()
         .dbAllPossibleMemberNumbersElementMatches(memberNumber)
         .and()
-        .group((q) => q.idEqualTo(group.id))
+        .ratingGroup((q) => q.idEqualTo(group.id))
         .findAll();
     }
     else {
@@ -527,7 +648,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         .filter()
         .dbKnownMemberNumbersElementMatches(memberNumber)
         .and()
-        .group((q) => q.idEqualTo(group.id))
+        .ratingGroup((q) => q.idEqualTo(group.id))
         .findAll();
     }
     return DataSourceResult.ok(results.firstOrNull);
