@@ -644,6 +644,40 @@ class AnalystDatabase {
     return isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).findFirstSync();
   }
 
+  Future<Map<String, String>> getMatchNamesByAnySourceIds(Iterable<String> ids) async {
+    final idList = ids.toList();
+    if(idList.isEmpty) {
+      return {};
+    }
+    final query = isar.dbShootingMatchs.where().anyOf(idList, (q, id) => q.sourceIdsElementEqualTo(id));
+    final sourceIdsByRow = await query.sourceIdsProperty().findAll();
+    final namesByRow = await query.eventNameProperty().findAll();
+    final nameBySourceId = <String, String>{};
+    for(var i = 0; i < namesByRow.length; i++) {
+      for(final sourceId in sourceIdsByRow[i]) {
+        nameBySourceId[sourceId] = namesByRow[i];
+      }
+    }
+    return nameBySourceId;
+  }
+
+  Map<String, String> getMatchNamesByAnySourceIdsSync(Iterable<String> ids) {
+    final idList = ids.toList();
+    if(idList.isEmpty) {
+      return {};
+    }
+    final query = isar.dbShootingMatchs.where().anyOf(idList, (q, id) => q.sourceIdsElementEqualTo(id));
+    final sourceIdsByRow = query.sourceIdsProperty().findAllSync();
+    final namesByRow = query.eventNameProperty().findAllSync();
+    final nameBySourceId = <String, String>{};
+    for(var i = 0; i < namesByRow.length; i++) {
+      for(final sourceId in sourceIdsByRow[i]) {
+        nameBySourceId[sourceId] = namesByRow[i];
+      }
+    }
+    return nameBySourceId;
+  }
+
   Future<DbShootingMatch?> getMatchBySourceId(String id) {
     return getMatchByAnySourceId([id]);
   }
