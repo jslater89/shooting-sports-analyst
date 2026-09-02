@@ -695,10 +695,10 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       );
     }
 
-    final observedPerformance =
-        shooterScoreEvidence +
+    final observedBaseline =
         (1 - pairwiseBlendWeight) * looBaseline +
         pairwiseBlendWeight * localBaseline;
+    final observedPerformance = shooterScoreEvidence + observedBaseline;
     var innovation = observedPerformance - agedRating;
 
     var pairwiseBlendWeightSquared = pairwiseBlendWeight * pairwiseBlendWeight;
@@ -855,7 +855,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         LatentLogRater.stagesKey: stagesForEvent,
       },
       infoLines: [
-        "@tpl:llrV1",
+        "@tpl:llrV2",
       ],
       infoData: [
         RatingEventInfoElement.double(
@@ -953,6 +953,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         RatingEventInfoElement.double(
           name: "pairwiseAlpha",
           doubleValue: pairwiseBlendWeight,
+          numberFormat: "%00.2f",
+        ),
+        RatingEventInfoElement.double(
+          name: "pairwiseAlphaSquared",
+          doubleValue: pairwiseBlendWeightSquared,
+          numberFormat: "%00.3f",
+        ),
+        RatingEventInfoElement.double(
+          name: "observedBaseline",
+          doubleValue: observedBaseline,
           numberFormat: "%00.2f",
         ),
         RatingEventInfoElement.double(
