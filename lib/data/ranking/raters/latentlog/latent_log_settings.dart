@@ -28,14 +28,14 @@ class LatentLogSettings extends RaterSettings {
   static const defaultStartingVariance = 0.0300;
   static const defaultMaximumVariance = 0.0400;
   static const defaultStartingDispersion = 0.000120;
-  static const defaultIntraclassCorrelation = 0.6;
+  static const defaultIntraclassCorrelation = 0.45;
   static const defaultDispersionAdaptationRate = 0.15;
   static const defaultMomentumAdaptationRate = 0.25;
-  static const defaultSurpriseAdaptationRate = 0.15;
+  static const defaultSurpriseAdaptationRate = 0.25;
   static const defaultPairwiseBlendWeight = 0.2;
   static const defaultStudentTNu = 4.0;
-  static const defaultStudentTCutoffUpperZ = 2.0;
-  static const defaultStudentTCutoffLowerZ = 1.0;
+  static const defaultStudentTCutoffUpperZ = 2.5;
+  static const defaultStudentTCutoffLowerZ = 1.25;
 
   static const defaultBaselineRobustnessZ = 2.5;
   static const defaultTailNoiseStartPercent = 0.40;
