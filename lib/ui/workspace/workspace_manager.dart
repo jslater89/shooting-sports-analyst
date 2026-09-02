@@ -11,7 +11,7 @@ import 'package:shooting_sports_analyst/ui/workspace/workspace.dart';
 
 /// Owns the list of workspaces, selection, and tab-bar expand/collapse.
 class WorkspaceManager extends ChangeNotifier {
-  static const maxWorkspaces = 4;
+  static const maxWorkspaces = 6;
 
   WorkspaceManager() {
     final prefs = AnalystDatabase().getPreferencesSync();
