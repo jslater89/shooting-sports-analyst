@@ -190,7 +190,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// The default implementation calls [formatNumericRating] on the rating's
   /// numeric rating.
   String formatRating(ShooterRating rating) {
-    return "${formatNumericRating(rating.rating)}";
+    return defaultRatingFormatter(rating.rating);
   }
 
   /// Scale a rating to a new range, if the rating system has a scaling
@@ -221,7 +221,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// 1 decimal place for numbers >10, 2 decimal places for numbers >1, and 3
   /// decimal places otherwise, mirrored on the other side of zero.
   String formatNumericRating(double rating) {
-    return rating.toStringWithSignificantDigits(3);
+    return defaultRatingFormatter(rating);
   }
 
   /// Return a representation of a numeric rating change suitable for display in e.g.
@@ -230,7 +230,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// The default implementation calls [formatNumericRating] on the rating change.
   /// Rating systems with scaling factors or offsets may need an alternative implementation.
   String formatNumericRatingChange(double ratingChange) {
-    return ratingChange.toStringWithSignificantDigits(3);
+    return defaultRatingFormatter(ratingChange);
   }
 
   /// Return [AlgorithmPrediction]s for the list of shooters.
@@ -420,3 +420,20 @@ class PredictionSettings {
     this.spreadSigmaMultiplier = 2.0,
   });
 }
+
+/// The default implementation of [formatNumericRating] and [formatNumericRatingChange],
+/// which returns a string with at least 3 significant digits if the rating is finite,
+/// and otherwise returns "(n/a)".
+///
+/// Numbers with more than 3 significant digits on the left of the decimal point are
+/// rounded to the nearest integer. Numbers with fewer than 3 significant digits on the
+/// left side of the decimal point return a string with a total of 3 significant digits
+/// between the left and right of the decimal point.
+final defaultRatingFormatter = (double rating) {
+  if(rating.isFinite) {
+    return rating.toStringWithSignificantDigits(3);
+  }
+  else {
+    return "(n/a)";
+  }
+};

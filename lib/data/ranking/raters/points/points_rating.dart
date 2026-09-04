@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -150,6 +151,16 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
   // TODO: combine this in more intelligent fashion, preserving order where possible
   // TODO: ... like with database queries, maybe
   List<PointsRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+
+  @override
+  String formatNumericRating(double rating) {
+    return pointsRatingFormatter(rating);
+  }
+
+  @override
+  String formatNumericRatingChange(double ratingChange) {
+    return pointsRatingFormatter(ratingChange);
+  }
 
   @override
   String toString() {

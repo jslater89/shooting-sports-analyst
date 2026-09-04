@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   PointsRater(this.settings) : model = PointsModel.fromSettings(settings);
@@ -200,6 +201,21 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   static const _trailPaddingFlex = 4;
 
   @override
+  String formatNumericRating(double rating) {
+    return pointsRatingFormatter(rating);
+  }
+
+  @override
+  String formatNumericRatingChange(double ratingChange) {
+    return pointsRatingFormatter(ratingChange);
+  }
+
+  @override
+  String formatRating(ShooterRating rating) {
+    return pointsRatingFormatter(rating.rating);
+  }
+
+  @override
   List<RatingRowData> buildRatingKeyData({DateTime? trendDate, RatingSortMode? sortMode}) {
     return [
       RatingRowData(data: "", flex: _leadPaddingFlex + _placeFlex),
@@ -267,3 +283,12 @@ abstract class PointsModel {
     }
   }
 }
+
+final pointsRatingFormatter = (double rating) {
+  if(rating.isFinite) {
+    return rating.toStringWithSignificantDigits(4);
+  }
+  else {
+    return "(n/a)";
+  }
+};

@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
@@ -155,8 +156,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   }
 
   /// Format a numeric rating for display.
+  ///
+  /// The default implementation calls [defaultRatingFormatter] on the rating.
   String formatNumericRating(double rating) {
-    return rating.round().toString();
+    return defaultRatingFormatter(rating);
   }
 
   double scaleRatingChange(double ratingChange) {
@@ -165,7 +168,12 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// Format a numeric rating change for display.
   String formatNumericRatingChange(double ratingChange) {
-    return ratingChange.round().toString();
+    if(ratingChange.isFinite) {
+      return ratingChange.round().toString();
+    }
+    else {
+      return "(n/a)";
+    }
   }
 
   /// All of the rating events in this shooter's history, ordered
