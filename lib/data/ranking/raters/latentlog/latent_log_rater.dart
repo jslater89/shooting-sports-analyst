@@ -242,6 +242,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     double baselineResidual = 0.0;
     double weightedMaturitySum = 0.0;
     double totalWeight = 0.0;
+    double totalRobustWeight = 0.0;
     double weightedSquareRootVarianceSum = 0.0;
     double squaredWeightedVarianceSum = 0.0;
     Map<ShooterRating, double> competitorScoreEvidence = {};
@@ -287,7 +288,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       weightedSquareRootVarianceSum += weight * sqrt(shooterVariance);
       squaredWeightedVarianceSum += weight * weight * shooterVariance;
       totalWeight += weight;
-      // Per-competitor logarithmic maturity μ_i, then precision-weighted
+      // Per-competitor logarithmic maturity μ_i, precision-weighted
       // into field maturity μ̄ (paper Step 6).
       weightedMaturitySum += weight * _graphMaturity(shooter.length.toDouble());
 
@@ -356,7 +357,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
       final rawBaseline = baselineResidual / totalWeight;
       double robustResidualSum = 0.0;
       double robustWeightSum = 0.0;
-      double robustWeightedMaturitySum = 0.0;
       for (var shooter in validShooters) {
         final baseWeight = competitorWeights[shooter];
         final residual = competitorBaselineResiduals[shooter];
@@ -378,14 +378,16 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         competitorWeights[shooter] = effectiveWeight;
         robustResidualSum += effectiveWeight * residual;
         robustWeightSum += effectiveWeight;
-        robustWeightedMaturitySum +=
-            effectiveWeight * _graphMaturity(shooter.length.toDouble());
       }
       if (robustWeightSum > 0) {
         baselineResidual = robustResidualSum;
-        totalWeight = robustWeightSum;
-        weightedMaturitySum = robustWeightedMaturitySum;
+        totalRobustWeight = robustWeightSum;
       }
+    }
+    else {
+      // If baseline robustness is disabled, put the total weight into the robust
+      // weight var for minimum impact later on in this function.
+      totalRobustWeight = totalWeight;
     }
 
     // If weak field observation variance is enabled, calculate additional
@@ -397,8 +399,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
 
     // Field maturity μ̄ ∈ [0, 1]: precision-weighted mean of per-competitor
     // logarithmic maturity fractions. Novelty scales by (1 - μ̄).
-    final fieldMaturity =
-        totalWeight > 0 ? (weightedMaturitySum / totalWeight).clamp(0.0, 1.0) : 0.0;
+    final fieldMaturity = (weightedMaturitySum / totalWeight).clamp(0.0, 1.0);
     final newFieldVariance = settings.noveltyVariance * (1.0 - fieldMaturity);
 
     if (Timings.enabled) {
@@ -420,7 +421,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
         baselineResidualSum: baselineResidual,
         weightedSquareRootVarianceSum: weightedSquareRootVarianceSum,
         squaredWeightedVarianceSum: squaredWeightedVarianceSum,
-        totalBaselineWeight: totalWeight,
+        totalBaselineWeight: totalRobustWeight,
         weakFieldVariance: weakFieldVariance,
         fieldMaturity: fieldMaturity,
         newFieldVariance: newFieldVariance,
@@ -565,7 +566,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     /// The weak field observation variance.
     required double weakFieldVariance,
 
-    /// The field maturity (i.e. precision-weighted mean history length).
+    /// The field maturity (i.e. precision-weighted mean log-history length).
     required double fieldMaturity,
 
     /// The new field variance.
