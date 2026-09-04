@@ -274,15 +274,27 @@ class MiffExporter implements AbstractMiffExporter {
       "time": score.rawTime,
     };
 
-    // Always include targetEvents (even if empty) to indicate representation method
-    // Zero-value entries within the map are omitted by _eventCountsToJson
-    var targetEventsJson = _eventCountsToJson(score.targetEvents, stage);
-    scoreJson["targetEvents"] = targetEventsJson;
+    var hasOverrides = score.pointsOverride != null || score.finalTimeOverride != null;
+    if(hasOverrides) {
+      // Override mode forbids targetEvents, targets, and penaltyEvents.
+      if(score.pointsOverride != null) {
+        scoreJson["totalPointsOverride"] = score.pointsOverride;
+      }
+      if(score.finalTimeOverride != null) {
+        scoreJson["finalTimeOverride"] = score.finalTimeOverride;
+      }
+    }
+    else {
+      // Always include targetEvents (even if empty) to indicate representation method
+      // Zero-value entries within the map are omitted by _eventCountsToJson
+      var targetEventsJson = _eventCountsToJson(score.targetEvents, stage);
+      scoreJson["targetEvents"] = targetEventsJson;
 
-    // penaltyEvents can be omitted if all entries are zero
-    var penaltyEventsJson = _eventCountsToJson(score.penaltyEvents, stage);
-    if (penaltyEventsJson.isNotEmpty) {
-      scoreJson["penaltyEvents"] = penaltyEventsJson;
+      // penaltyEvents can be omitted if all entries are zero
+      var penaltyEventsJson = _eventCountsToJson(score.penaltyEvents, stage);
+      if(penaltyEventsJson.isNotEmpty) {
+        scoreJson["penaltyEvents"] = penaltyEventsJson;
+      }
     }
 
     if (score.scoring.dbString != stage.scoring.dbString) {

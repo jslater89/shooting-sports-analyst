@@ -465,19 +465,42 @@ class MiffImporter implements AbstractMiffImporter {
         scoring = parsedScoring;
       }
 
-      // Parse target events (treat missing as empty map)
-      var targetEventsJson = (json["targetEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
-      var targetEvents = _parseEventCounts(targetEventsJson, stage, powerFactor, importState, true);
+      int? pointsOverride;
+      double? finalTimeOverride;
+      Map<ScoringEvent, int> targetEvents = {};
+      Map<ScoringEvent, int> penaltyEvents = {};
 
-      // Parse penalty events (treat missing as empty map)
-      var penaltyEventsJson = (json["penaltyEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
-      var penaltyEvents = _parseEventCounts(penaltyEventsJson, stage, powerFactor, importState, false);
+      var hasTotalPointsOverride = json.containsKey("totalPointsOverride");
+      var hasFinalTimeOverride = json.containsKey("finalTimeOverride");
+      var hasOverrides = hasTotalPointsOverride || hasFinalTimeOverride;
+
+      if(hasOverrides) {
+        if(hasTotalPointsOverride) {
+          pointsOverride = (json["totalPointsOverride"] as num).toInt();
+        }
+        if(hasFinalTimeOverride) {
+          finalTimeOverride = (json["finalTimeOverride"] as num).toDouble();
+        }
+        // If finalTimeOverride is omitted, RawScore.finalTime already falls back
+        // to [time] (rawTime) when there are no event time adjustments.
+      }
+      else {
+        // Parse target events (treat missing as empty map)
+        var targetEventsJson = (json["targetEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
+        targetEvents = _parseEventCounts(targetEventsJson, stage, powerFactor, importState, true);
+
+        // Parse penalty events (treat missing as empty map)
+        var penaltyEventsJson = (json["penaltyEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
+        penaltyEvents = _parseEventCounts(penaltyEventsJson, stage, powerFactor, importState, false);
+      }
 
       var score = RawScore(
         scoring: scoring,
         rawTime: time,
         targetEvents: targetEvents,
         penaltyEvents: penaltyEvents,
+        pointsOverride: pointsOverride,
+        finalTimeOverride: finalTimeOverride,
         stringTimes: (json["stringTimes"] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [],
         dq: json["dq"] as bool? ?? false,
         modified: json["modified"] != null ? DateTime.parse(json["modified"] as String) : null,

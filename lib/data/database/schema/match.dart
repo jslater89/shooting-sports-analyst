@@ -775,6 +775,8 @@ class DbRawScore {
   String scoringType;
   int stageId;
   double rawTime;
+  double? finalTimeOverride;
+  int? pointsOverride;
   List<DbScoringEventCount> scoringEvents;
   List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
@@ -789,6 +791,8 @@ class DbRawScore {
     this.penaltyEvents = const [],
     this.stringTimes = const [],
     this.splitTimes = const [],
+    this.finalTimeOverride,
+    this.pointsOverride,
     this.modified,
   });
 
@@ -798,6 +802,8 @@ class DbRawScore {
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
     splitTimes = score.splitTimes.map((e) => DbStringSplits(splits: e.toList())).toList(),
+    finalTimeOverride = score.finalTimeOverride,
+    pointsOverride = score.pointsOverride,
     scoringEvents = score.targetEvents.keys.map((event) {
       if(event.nondefaultPoints || event.nondefaultTime) {
         return DbScoringEventCount.fromNondefault(event, count: score.targetEvents[event]!);
@@ -816,6 +822,8 @@ class DbRawScore {
     return Result.ok(RawScore(
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
+      finalTimeOverride: finalTimeOverride,
+      pointsOverride: pointsOverride,
       stringTimes: []..addAll(stringTimes),
       splitTimes: splitTimes.map((e) => e.toList()).toList(),
       scoringOverrides: stage.scoringOverrides,

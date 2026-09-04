@@ -1304,6 +1304,8 @@ void expectShootersEqual(MatchEntry actual, MatchEntry expected, {String? reason
 void expectScoresEqual(RawScore actual, RawScore expected, {String? reason}) {
   expect(actual.scoring.dbString, equals(expected.scoring.dbString), reason: reason != null ? "$reason: scoring type" : "scoring type");
   expect(actual.rawTime, equals(expected.rawTime), reason: reason != null ? "$reason: raw time" : "raw time");
+  expect(actual.pointsOverride, equals(expected.pointsOverride), reason: reason != null ? "$reason: points override" : "points override");
+  expect(actual.finalTimeOverride, equals(expected.finalTimeOverride), reason: reason != null ? "$reason: final time override" : "final time override");
   expect(actual.dq, equals(expected.dq), reason: reason != null ? "$reason: dq" : "dq");
   expect(actual.stringTimes, equals(expected.stringTimes), reason: reason != null ? "$reason: string times" : "string times");
 

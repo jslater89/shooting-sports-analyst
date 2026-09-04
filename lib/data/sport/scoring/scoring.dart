@@ -199,6 +199,10 @@ class RawScore {
   /// The raw time on the shot timer. Use 0 for untimed sports.
   double rawTime;
 
+  /// An overriden final time for the score. If present, it will be used
+  /// instead of calculating final time from raw time and scoring events.
+  double? finalTimeOverride;
+
   /// Scoring events for this score: that is, events caused by a hit or
   /// lack of hit on a target.
   Map<ScoringEvent, int> targetEvents;
@@ -209,6 +213,10 @@ class RawScore {
 
   /// Scoring event overrides for this score.
   Map<String, ScoringEventOverride> scoringOverrides;
+
+  /// An overriden points total for the score. If present, it will be used
+  /// instead of calculating points from scoring events.
+  int? pointsOverride;
 
   /// Whether this score resulted in a DQ.
   bool dq;
@@ -264,6 +272,8 @@ class RawScore {
   /// The total points for this score, considering both hits on target
   /// and non-target penalties.
   int get points {
+    if(pointsOverride != null) return pointsOverride!;
+
     if(_cachedPoints == null && scoringOverrides.isEmpty) {
       _cachedPoints = _scoreMaps.points;
     }
@@ -282,6 +292,8 @@ class RawScore {
 
   double? _cachedTimeAdjustment;
   double get finalTime {
+    if(finalTimeOverride != null) return finalTimeOverride!;
+
     if(_cachedTimeAdjustment == null && scoringOverrides.isEmpty) {
       _cachedTimeAdjustment = _scoreMaps.timeAdjustment;
     }
@@ -309,6 +321,8 @@ class RawScore {
   ///
   /// If [countPenalties] is false, [includeTargetPenalties] is ignored.
   int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
+    if(pointsOverride != null) return pointsOverride!;
+
     int total;
     if(countPenalties && includeTargetPenalties) {
       total = points;
@@ -341,6 +355,8 @@ class RawScore {
     this.scoringOverrides = const {},
     this.modified,
     this.dq = false,
+    this.finalTimeOverride,
+    this.pointsOverride,
   });
 
   bool get dnf {
@@ -365,7 +381,7 @@ class RawScore {
 
     return false;
   }
-      // IgnoredScoring and TimePlusChronoScoring are never DNFs.
+  // IgnoredScoring and TimePlusChronoScoring are never DNFs.
 
   /// The hit factor represented by this score.
   ///
@@ -400,6 +416,8 @@ class RawScore {
       splitTimes: splitTimes.map((e) => e.toList()).toList(),
       modified: modified,
       scoringOverrides: {...scoringOverrides},
+      finalTimeOverride: finalTimeOverride,
+      pointsOverride: pointsOverride,
     );
   }
 
@@ -419,12 +437,28 @@ class RawScore {
       penaltyEvents.incrementBy(entry.key, entry.value);
     }
 
+    // Final time override is contagious: if either score has an override, the
+    // output score has an override that is the sum of final time from both scores.
+    // The final time getter uses the override if present, so use it to get the final
+    // time from both scores and set it as an override.
+    double? newFinalTimeOverride;
+    if(this.finalTimeOverride != null || other.finalTimeOverride != null) {
+      newFinalTimeOverride = this.finalTime + other.finalTime;
+    }
+
+    int? newPointsOverride;
+    if(this.pointsOverride != null || other.pointsOverride != null) {
+      newPointsOverride = this.points + other.points;
+    }
+
     var s = RawScore(
       scoring: this.scoring,
       rawTime: this.rawTime + other.rawTime,
       stringTimes: []..addAll(this.stringTimes)..addAll(other.stringTimes),
       targetEvents: targetEvents,
       penaltyEvents: penaltyEvents,
+      finalTimeOverride: newFinalTimeOverride,
+      pointsOverride: newPointsOverride,
     );
 
     return s;
@@ -707,8 +741,29 @@ extension ScoreListUtilities on Iterable<RawScore> {
     double rawTime = 0;
     StageScoring scoring = HitFactorScoring();
 
+    bool anyPointsOverridden = false;
+    bool anyFinalTimeOverridden = false;
+
+    int pointsOverride = 0;
+    double finalTimeOverride = 0;
+
     for(var s in this) {
       scoring = s.scoring;
+
+      // Keep a running sum of points and final time for use as overrides;
+      // since overrides are contagious, any individual score with an override
+      // should produce an override on the sum that is the sum of all points/time
+      // from all scores, including those without overrides.
+      pointsOverride += s.points;
+      finalTimeOverride += s.finalTime;
+
+      if(s.pointsOverride != null) {
+        anyPointsOverridden = true;
+      }
+      if(s.finalTimeOverride != null) {
+        anyFinalTimeOverridden = true;
+      }
+
       for(var e in s.targetEvents.keys) {
         var event = e;
 
@@ -734,7 +789,14 @@ extension ScoreListUtilities on Iterable<RawScore> {
       rawTime += s.rawTime;
     }
 
-    return RawScore(scoring: scoring, targetEvents: scoringEvents, penaltyEvents: penaltyEvents, rawTime: rawTime);
+    return RawScore(
+      scoring: scoring,
+      targetEvents: scoringEvents,
+      penaltyEvents: penaltyEvents,
+      rawTime: rawTime,
+      finalTimeOverride: anyFinalTimeOverridden ? finalTimeOverride : null,
+      pointsOverride: anyPointsOverridden ? pointsOverride : null,
+    );
   }
 }
 
