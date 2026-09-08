@@ -38,11 +38,6 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
   bool get byStage => false;
 
   @override
-  MarbleRating copyShooterRating(MarbleRating rating) {
-    return MarbleRating.copy(rating);
-  }
-
-  @override
   void encodeToJson(Map<String, dynamic> json) {
     json[DbRatingProject.algorithmKey] = DbRatingProject.marbleValue;
     settings.encodeToJson(json);

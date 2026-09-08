@@ -115,9 +115,6 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
 
   // ****** Self-describing data classes ******
 
-  /// Return a deep copy of the provided shooter rating.
-  ShooterRating copyShooterRating(T rating);
-
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date});
 

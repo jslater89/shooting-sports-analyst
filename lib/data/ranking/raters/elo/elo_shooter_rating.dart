@@ -301,13 +301,6 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     // }
   }
 
-  void copyRatingFrom(EloShooterRating other) {
-    super.copyRatingFrom(other);
-    this.rating = other.rating;
-    this.variance = other.variance;
-    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e)).toList());
-  }
-
   EloShooterRating.copy(EloShooterRating other) :
         super.copy(other) {
     this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e)).toList());

@@ -90,11 +90,9 @@ The good news is that, because ratings are persisted across application restarts
 should not _need_ to perform full calculations very often. The two most common scenarios
 (starting the application to look at ratings, and appending matches that all occur after
 the most recently calculated ratings) are much faster in 8.0, because they no longer
-require calculating ratings entirely from scratch every time. Even if you miss a recent
-match and append matches that occur after it, the application now supports rolling back
-ratings to an earlier date. You can roll back to before the match you missed, append it,
-and append the remaining matches that occur after it, in lieu of performing a full
-calculation.
+require calculating ratings entirely from scratch every time. If you miss a match
+in the middle of the calendar, force a full recalculation so the new match is
+inserted in date order.
 
 ### Available Rating Algorithms
 All of the rating algorithms that were available in 7.0 are also available in 8.0, and

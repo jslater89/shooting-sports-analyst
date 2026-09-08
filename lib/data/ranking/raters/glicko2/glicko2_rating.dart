@@ -200,14 +200,6 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
     throw Exception("Must use wrapDbRatingWithSettings for Glicko2Rating");
   }
 
-  Glicko2Rating.copy(Glicko2Rating other) : this.settings = other.settings, super.copy(other) {
-    this.volatility = other.volatility;
-    this.currentInternalRD = other.currentInternalRD;
-    this.lastCommitTimestamp = other.lastCommitTimestamp;
-    this.currentRDTimestamp = other.currentRDTimestamp;
-    this.committedInternalRD = other.committedInternalRD;
-  }
-
   @override
   String toString() {
     return "$name $memberNumber ${rating.round()}/${committedRD.round()}/${volatility.toStringAsFixed(4)} ($hashCode)";

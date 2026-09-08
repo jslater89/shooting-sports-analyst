@@ -7,10 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_rollback.dart';
 import 'package:shooting_sports_analyst/route/configure_ratings.dart';
 import 'package:shooting_sports_analyst/route/load_ratings.dart';
-import 'package:shooting_sports_analyst/route/rollback_ratings.dart';
 import 'package:shooting_sports_analyst/route/view_ratings.dart';
 
 class RatingsContainerPage extends StatefulWidget {
@@ -27,60 +25,38 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
   bool calculated = false;
   bool forceRecalculate = false;
   bool skipDeduplication = false;
-  DateTime? rollbackDate;
 
   @override
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (DbRatingProject project, {bool forceRecalculate = false, bool skipDeduplication = false, DateTime? rollbackDate}) async {
+        onSettingsReady: (DbRatingProject project, {bool forceRecalculate = false, bool skipDeduplication = false}) async {
           setState(() {
             this.project = project;
             this.forceRecalculate = forceRecalculate;
             this.skipDeduplication = skipDeduplication;
-            this.rollbackDate = rollbackDate;
           });
         }
       );
     }
     else if(!calculated) {
-      if(rollbackDate == null) {
-        return LoadRatingsPage(
-          project: project!,
-          forceRecalculate: forceRecalculate,
-          skipDeduplication: skipDeduplication,
-          onRatingsComplete: () {
-            setState(() {
-              calculated = true;
-            });
-          },
-          onError: (RatingProjectLoadError error) {
-            setState(() {
-              // return to configure page
-              calculated = false;
-              project = null;
-            });
-          },
-        );
-      }
-      else {
-        return RollbackRatingsPage(
-          project: project!,
-          rollbackDate: rollbackDate!,
-          onRatingsComplete: () {
-            setState(() {
-              calculated = true;
-            });
-          },
-          onError: (RatingProjectRollbackError error) {
-            setState(() {
-              // return to configure page
-              calculated = false;
-              project = null;
-            });
-          },
-        );
-      }
+      return LoadRatingsPage(
+        project: project!,
+        forceRecalculate: forceRecalculate,
+        skipDeduplication: skipDeduplication,
+        onRatingsComplete: () {
+          setState(() {
+            calculated = true;
+          });
+        },
+        onError: (RatingProjectLoadError error) {
+          setState(() {
+            // return to configure page
+            calculated = false;
+            project = null;
+          });
+        },
+      );
     }
     else {
       return RatingsViewPage(

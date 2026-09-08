@@ -588,7 +588,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       var zip = ZipEncoder().encode(archive, autoClose: true);
 
       return HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
-    } catch(e) {
+    } catch(e, st) {
+      _log.w("Failed to encode archive", error: e, stackTrace: st);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
       return false;
     }
@@ -606,7 +607,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       var zip = ZipEncoder().encode(archive, autoClose: true);
 
       return HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
-    } catch(e) {
+    } catch(e, st) {
+      _log.w("Failed to encode archive", error: e, stackTrace: st);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
       return false;
     }

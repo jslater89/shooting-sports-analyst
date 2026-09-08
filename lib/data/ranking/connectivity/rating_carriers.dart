@@ -113,24 +113,6 @@ class RatingCarrierConnectivityCalculator implements ConnectivityCalculator {
   @override
   double get defaultBaselineConnectivity => 1.0;
 
-  @override
-  bool rollbackCompetitorData({
-    required DbShooterRating rating,
-    List<ShootingMatch>? matchesRemoved,
-    List<MatchPointer>? matchPointers,
-    Iterable<Iterable<DbShooterRating>>? competitorsRemoved,
-    Iterable<int>? competitorCountsRemoved,
-  }) {
-    for(var count in competitorCountsRemoved!) {
-      rating.aggregateConnectivityData.removeMatch(count);
-    }
-    return true;
-  }
-
-  // This is simple enough that we don't need to use history for rollback.
-  @override
-  bool get useHistoryForRollback => false;
-
   double getConnectivityScore(AggregateConnectivityData data) {
     if (data.matchCount == 0) return 0.0;
 

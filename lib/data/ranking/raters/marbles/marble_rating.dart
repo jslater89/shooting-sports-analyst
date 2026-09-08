@@ -92,9 +92,6 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
     agedRating = rating;
   }
 
-  // TODO: support rollback?
-  // might already do enough
-
   @override
   void updateTrends(List<RatingEvent> changes) {
     var trendWindow = ShooterRating.baseTrendWindow;
@@ -128,9 +125,4 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
   }
 
   MarbleRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
-
-  MarbleRating.copy(MarbleRating other) : super.copy(other) {
-    this.replaceAllRatingEvents(other.ratingEvents.map((e) => MarbleRatingEvent.copy(e)).toList());
-    this.marbles = other.marbles;
-  }
 }

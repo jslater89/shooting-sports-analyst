@@ -13,9 +13,7 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
-import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
@@ -24,7 +22,6 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -220,21 +217,9 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// Called by the rating project loader when rating events change, so that
   /// the shooter rating can clear any relevant caches.
-  ///
-  /// When rolling back ratings, the caller can pass in the DbRatingEvents that
-  /// were removed, to avoid having to re-query the database.
   @mustCallSuper
-  void ratingEventsChanged({List<DbRatingEvent>? removedEvents}) {
-    if(removedEvents != null) {
-      if(_ratingEvents != null) {
-        List<int> wrappedEventIds = removedEvents.map((e) => e.id).toList();
-        _ratingEvents!.removeWhere((e) => wrappedEventIds.contains(e.wrappedEvent.id));
-      }
-    }
-    else {
-      _ratingEvents = null;
-    }
-
+  void ratingEventsChanged() {
+    _ratingEvents = null;
     _lastMatchChange = null;
     _ratingForDateCache.clear();
   }
@@ -421,90 +406,6 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     wrappedRating.cachedLength += events.length;
   }
 
-  /// Roll back the given rating events, deleting them from the database,
-  /// invalidating any cached data, and recalculating trends.
-  ///
-  /// Implementations must call super.rollbackEvents, and should call it
-  /// before doing any work on their own. Implementations should also call
-  /// AnalystDatabase().upsertDbShooterRating() if they make changes that
-  /// should be persisted to the DB.
-  @mustCallSuper
-  Future<void> rollbackEvents(List<DbRatingEvent> events, List<ShootingMatch> matchesRemoved, {bool updateConnectivity = true, required bool byStage}) async {
-    await AnalystDatabase().deleteRatingEvents(wrappedRating, events);
-
-    ratingEventsChanged(removedEvents: events);
-
-    // Some ratings do error calculations immediately in updateFromEvents.
-    updateFromEvents([]);
-    updateTrends([]);
-
-    if(updateConnectivity && sport.connectivityCalculator != null) {
-      var calc = sport.connectivityCalculator!;
-
-      List<int>? competitorCountsRemoved;
-      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.competitorCount)) {
-        competitorCountsRemoved = [];
-        for(var m in matchesRemoved) {
-          competitorCountsRemoved.add(m.connectivityCompetitors(group).length);
-        }
-      }
-
-      List<List<DbShooterRating>>? allCompetitorsRemoved;
-      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.competitorRatings)) {
-        allCompetitorsRemoved = [];
-        var project = wrappedRating.project.value!;
-        for(var m in matchesRemoved) {
-          List<DbShooterRating> matchCompetitorsRemoved = [];
-          var filters = group.filters;
-          var shooters = m.applyFilterSet(filters);
-          for(var s in shooters) {
-            var rating = await project.lookupRating(group, s.memberNumber);
-            if(rating.isOk() && rating.unwrap() != null) {
-              matchCompetitorsRemoved.add(rating.unwrap()!);
-            }
-          }
-          allCompetitorsRemoved.add(matchCompetitorsRemoved);
-        }
-      }
-
-      List<MatchPointer>? matchPointers;
-      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.matchPointers)) {
-        // Earlier parts of the rollback process have already removed the rolled-back pointers.
-        matchPointers = wrappedRating.project.value?.matchPointers;
-        if(matchPointers == null) {
-          _log.w("No match pointers found for ${wrappedRating.project.value}");
-        }
-      }
-
-      if(calc.useHistoryForRollback) {
-        var latestEvent = latestRatingEvent;
-        var matchForEvent = latestEvent?.match;
-        if(matchForEvent != null) {
-          var historicalConnectivity = wrappedRating.getHistoricalConnectivityForMatch(matchForEvent);
-          if(historicalConnectivity != null) {
-            this.connectivity = historicalConnectivity.connectivity;
-            this.rawConnectivity = historicalConnectivity.rawConnectivity;
-          }
-        }
-      }
-      calc.rollbackCompetitorData(
-        rating: wrappedRating,
-        matchesRemoved: matchesRemoved,
-        matchPointers: matchPointers,
-        competitorCountsRemoved: competitorCountsRemoved,
-        competitorsRemoved: allCompetitorsRemoved,
-      );
-      if(!calc.useHistoryForRollback) {
-        var newConnectivity = calc.calculateRatingConnectivity(wrappedRating);
-        this.connectivity = newConnectivity.connectivity;
-        this.rawConnectivity = newConnectivity.rawConnectivity;
-      }
-    }
-
-    await AnalystDatabase().upsertDbShooterRating(wrappedRating);
-  }
-
-
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
     double lowestPoint = rating;
     double highestPoint = rating;
@@ -577,13 +478,6 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   void updateTrends(List<RatingEvent> changes);
   double get trend => rating - averageRating().firstRating;
-
-  void copyRatingFrom(covariant ShooterRating other) {
-    this.lastClassification = other.lastClassification;
-    this.lastSeen = other.lastSeen;
-    this.wrappedRating.copyRatingFrom(other.wrappedRating);
-    this.knownMemberNumbers.add(other.originalMemberNumber);
-  }
 
   double? _lastMatchChange = null;
   double get lastMatchChange {

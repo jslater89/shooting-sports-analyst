@@ -43,11 +43,6 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
   bool get byStage => settings.byStage;
 
   @override
-  OpenskillRating copyShooterRating(OpenskillRating rating) {
-    return OpenskillRating.copy(rating);
-  }
-
-  @override
   encodeToJson(Map<String, dynamic> json) {
     json[DbRatingProject.algorithmKey] = DbRatingProject.openskillValue;
     settings.encodeToJson(json);

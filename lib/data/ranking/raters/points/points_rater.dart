@@ -43,11 +43,6 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   bool get byStage => settings.byStage;
 
   @override
-  PointsRating copyShooterRating(PointsRating rating) {
-    return PointsRating.copy(rating);
-  }
-
-  @override
   void encodeToJson(Map<String, dynamic> json) {
     json[DbRatingProject.algorithmKey] = DbRatingProject.pointsValue;
     settings.encodeToJson(json);

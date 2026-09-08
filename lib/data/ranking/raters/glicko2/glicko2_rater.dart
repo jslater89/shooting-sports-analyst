@@ -60,11 +60,6 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   bool get byStage => settings.byStage;
 
   @override
-  ShooterRating<RatingEvent> copyShooterRating(Glicko2Rating rating) {
-    return Glicko2Rating.copy(rating);
-  }
-
-  @override
   void encodeToJson(Map<String, dynamic> json) {
     json[DbRatingProject.algorithmKey] = DbRatingProject.glicko2Value;
     settings.encodeToJson(json);

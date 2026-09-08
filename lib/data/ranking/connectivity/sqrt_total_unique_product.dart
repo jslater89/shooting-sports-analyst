@@ -141,26 +141,4 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
 
     return true;
   }
-
-  @override
-  bool rollbackCompetitorData({
-    required DbShooterRating rating,
-    List<ShootingMatch>? matchesRemoved,
-    Iterable<Iterable<DbShooterRating>>? competitorsRemoved,
-    Iterable<int>? competitorCountsRemoved,
-    List<MatchPointer>? matchPointers,
-  }) {
-    for(var match in matchesRemoved!) {
-      rating.matchWindows.remove(match);
-    }
-
-    // TODO: this is an incomplete implementation
-    // Getting it actually correct may be extremely hard, though, as we'll need
-    // to rebuild connectivity data for old matches to get up to the correct window.
-    return true;
-  }
-
-
-  @override
-  bool get useHistoryForRollback => true;
 }

@@ -57,11 +57,6 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   bool get byStage => settings.byStage;
 
   @override
-  ShooterRating<RatingEvent> copyShooterRating(rating) {
-    return LatentLogRating.copy(rating);
-  }
-
-  @override
   void encodeToJson(Map<String, dynamic> json) {
     json[DbRatingProject.algorithmKey] = DbRatingProject.latentLogValue;
     settings.encodeToJson(json);

@@ -147,13 +147,6 @@ class RatingProjectLoaderHost {
   RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback, required this.unableToAppendCallback, required this.fullRecalculationRequiredCallback});
 }
 
-// TODO (a big one): track ratings and events added during an 'append' calculation
-// That way we can roll back on cancellation or error.
-// 2025-02-07: I don't think we actually need to track things, with all that we're
-// storing: we should be able to pick a match and roll back to it with the data we
-// have in events. This also suggests a mechanism we can use for live rating updates
-// in broadcast mode: apply partial/in-progress match for display, roll back to prior
-// state.
 class RatingProjectLoader {
   final DbRatingProject project;
   final RatingProjectLoaderHost host;

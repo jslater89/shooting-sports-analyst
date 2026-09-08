@@ -504,7 +504,7 @@ class AggregateConnectivityData {
   /// Sum of cubed match sizes (for skewness calculation)
   double sumCubedMatchSizes = 0.0;
 
-  /// All match sizes (for perfect min/max tracking and rollback)
+  /// All match sizes (for perfect min/max tracking)
   List<int> matchSizes = [];
 
   void addMatch(int competitorCount) {
@@ -515,23 +515,6 @@ class AggregateConnectivityData {
     sumCubedMatchSizes += size * size * size;
 
     matchSizes = [...matchSizes, competitorCount];
-  }
-
-  void removeMatch(int competitorCount) {
-    if (matchCount <= 0) return;
-
-    matchCount--;
-    totalEncounters -= competitorCount;
-    double size = competitorCount.toDouble();
-    sumSquaredMatchSizes -= size * size;
-    sumCubedMatchSizes -= size * size * size;
-
-    var index = matchSizes.lastIndexWhere((e) => e == competitorCount);
-    if(index != -1) {
-      var newSizes = [...matchSizes];
-      newSizes.removeAt(index);
-      matchSizes = newSizes;
-    }
   }
 
   @ignore

@@ -251,15 +251,6 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
     throw Exception("Must use wrapDbRatingWithSettings for LatentLogRating");
   }
 
-  LatentLogRating.copy(LatentLogRating other) : this.settings = other.settings, super.copy(other) {
-    this.momentum = other.momentum;
-    this.dispersion = other.dispersion;
-    this.varianceToday = other.varianceToday;
-    this.lastCommitTimestamp = other.lastCommitTimestamp;
-    this.varianceTodayTimestamp = other.varianceTodayTimestamp;
-    this.lengthInStages = other.lengthInStages;
-  }
-
   @override
   String toString() {
     return "$name $memberNumber ${displayRating.round()}/${variance.toStringAsFixed(2)}/${dispersion.toStringAsFixed(2)} ($hashCode)";

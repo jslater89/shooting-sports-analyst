@@ -107,9 +107,10 @@ abstract interface class ConnectivityCalculator {
   List<BaselineConnectivityRequiredData> get requiredBaselineData;
 
   /// The data required for this calculator to calculate
-  /// a competitor connectivity score. This is used primarily by
-  /// the project rollback system to determine what data is necessary
-  /// to provide to [rollbackCompetitorData].
+  /// a competitor connectivity score.
+  ///
+  /// Data not requested here may be null when provided to
+  /// [updateCompetitorData].
   List<CompetitorConnectivityRequiredData> get requiredCompetitorData;
 
   /// Calculate the baseline connectivity score for a rating
@@ -148,31 +149,6 @@ abstract interface class ConnectivityCalculator {
     List<MatchPointer>? matchPointers,
   });
 
-  /// Rollback the data structures on DbShooterRating that this calculator requires.
-  ///
-  /// Data not requested in [requiredCompetitorData] may be null.
-  ///
-  /// Return true if the project loader needs to save the rating after this call.
-  /// Project loaders may batch updates, so updates made here may not be immediately
-  /// persisted.
-  ///
-  /// Unlike [updateCompetitorData], this method is called with a list of matches,
-  /// since step-by-step rollback may be computationally expensive.
-  bool rollbackCompetitorData({
-    required DbShooterRating rating,
-    List<ShootingMatch>? matchesRemoved,
-    List<MatchPointer>? matchPointers,
-    Iterable<Iterable<DbShooterRating>>? competitorsRemoved,
-    Iterable<int>? competitorCountsRemoved,
-  });
-
-  /// Whether to use historical connectivity data for rollback.
-  ///
-  /// If true, the connectivity calculator expects the rollback system to
-  /// use the historical connectivity data to update the rating's connectivity and
-  /// rawConnectivity prior to calling [rollbackCompetitorData].
-  bool get useHistoryForRollback;
-
   /// Calculate the connectivity score for a match, given a list of
   /// connectivity scores.
   double calculateMatchConnectivity(List<double> connectivityScores);
@@ -208,10 +184,9 @@ enum CompetitorConnectivityRequiredData {
   competitorCount,
   /// An iterable of the rating objects for each competitor in the match.
   competitorRatings,
-  /// The match being added, or matches being rolled back.
+  /// The match being added.
   match,
-  /// The list of match pointers for the rating project. When rolling back, this list will
-  /// contain the match pointers after removing the rolled-back matches.
+  /// The list of match pointers for the rating project.
   matchPointers,
 }
 

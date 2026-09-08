@@ -91,7 +91,7 @@ var _log = SSALogger("ConfigureRatingsPage");
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(DbRatingProject project, {bool forceRecalculate, bool skipDeduplication, DateTime? rollbackDate}) onSettingsReady;
+  final void Function(DbRatingProject project, {bool forceRecalculate, bool skipDeduplication}) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -385,22 +385,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                 ),
               ),
               SizedBox(width: 20),
-              // Tooltip(
-              //   message: "Roll back to a previous date, removing ratings after that date.",
-              //   child: ElevatedButton(
-              //     child: Text("ROLL BACK"),
-              //     onPressed: () async {
-              //       var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
-              //       if(rollbackDate != null) {
-              //         var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
-              //         if(project != null) {
-              //           widget.onSettingsReady(project, rollbackDate: rollbackDate);
-              //         }
-              //       }
-              //     },
-              //   ),
-              // ),
-              // SizedBox(width: 20),
               ElevatedButton(
                 child: Text("RESTORE DEFAULTS"),
                 onPressed: () {
