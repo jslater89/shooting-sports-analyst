@@ -360,7 +360,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                       onPressed: () async {
                         final rating2Result = await _selectRating();
                         if(rating2Result != null) {
-                          RatingComparisonDialog.show(context, widget.rating, rating2Result);
+                          RatingComparisonDialog.show(
+                            context,
+                            widget.rating,
+                            rating2Result,
+                            ratings: widget.ratings,
+                            comparableRatings: widget.comparableRatings,
+                          );
                         }
                       },
                     ),

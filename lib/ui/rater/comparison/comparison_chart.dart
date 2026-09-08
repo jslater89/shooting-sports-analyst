@@ -28,25 +28,24 @@ import 'package:shooting_sports_analyst/ui_util.dart';
 
 final NumberFormat _nf = NumberFormat("####");
 
+final List<charts.Color> _comparisonSeriesColors = [
+  charts.MaterialPalette.blue.shadeDefault,
+  charts.MaterialPalette.green.shadeDefault,
+  charts.MaterialPalette.deepOrange.shadeDefault,
+];
+
 class RatingComparisonChart extends StatefulWidget {
   const RatingComparisonChart({
     super.key,
-    required this.rating1,
-    required this.careerStats1,
-    required this.displayedStats1,
-    required this.rating2,
-    required this.careerStats2,
-    required this.displayedStats2,
+    required this.ratings,
+    required this.careerStats,
+    required this.displayedStats,
     this.onMatchIdHighlighted,
   });
 
-  final ShooterRating rating1;
-  final CareerStats careerStats1;
-  final PeriodicStats displayedStats1;
-
-  final ShooterRating rating2;
-  final CareerStats careerStats2;
-  final PeriodicStats displayedStats2;
+  final List<ShooterRating> ratings;
+  final List<CareerStats> careerStats;
+  final List<PeriodicStats> displayedStats;
 
   final void Function(String?)? onMatchIdHighlighted;
 
@@ -65,63 +64,70 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
   }
 
   charts.LineChart? _chart;
-  // The domain axis is a unix timestamp
-  charts.Series<AccumulatedRatingEvent, int>? _series1;
-  charts.Series<AccumulatedRatingEvent, int>? _series2;
+  List<charts.Series<AccumulatedRatingEvent, int>?> _series = [];
+  List<AccumulatedRatingResult?> _accumulatedResults = [];
+  int _builtForCount = 0;
 
-  // We keep both accumulated results so that we can set identical axis ranges for both series.
-  AccumulatedRatingResult? _accumulatedResult1;
-  AccumulatedRatingResult? _accumulatedResult2;
+  void _ensureCapacity(int count) {
+    if(_series.length != count || _builtForCount != count) {
+      _series = List.filled(count, null);
+      _accumulatedResults = List.filled(count, null);
+      _chart = null;
+      _builtForCount = count;
+    }
+  }
 
   void _buildChart(BuildContext context) {
-    if(_accumulatedResult1 == null) {
-      _accumulatedResult1 = accumulateRatingEvents(
-        rating: widget.rating1,
-        careerStats: widget.careerStats1,
-        displayedStats: widget.displayedStats1,
-      );
-    }
-    if(_accumulatedResult2 == null) {
-      _accumulatedResult2 = accumulateRatingEvents(
-        rating: widget.rating2,
-        careerStats: widget.careerStats2,
-        displayedStats: widget.displayedStats2,
-      );
-    }
-    if(_series1 == null) {
-      _series1 = _buildSeries(_accumulatedResult1!, widget.rating1, charts.MaterialPalette.blue.shadeDefault);
-    }
-    if(_series2 == null) {
-      _series2 = _buildSeries(_accumulatedResult2!, widget.rating2, charts.MaterialPalette.green.shadeDefault);
+    final count = widget.ratings.length;
+    _ensureCapacity(count);
+
+    final showErrorBands = true; //count <= 2;
+
+    for(int i = 0; i < count; i++) {
+      if(_accumulatedResults[i] == null) {
+        _accumulatedResults[i] = accumulateRatingEvents(
+          rating: widget.ratings[i],
+          careerStats: widget.careerStats[i],
+          displayedStats: widget.displayedStats[i],
+        );
+      }
+      if(_series[i] == null) {
+        _series[i] = _buildSeries(
+          _accumulatedResults[i]!,
+          widget.ratings[i],
+          _comparisonSeriesColors[i % _comparisonSeriesColors.length],
+          showErrorBands: showErrorBands,
+        );
+      }
     }
 
     if(_chart == null) {
+      double measureMinimum = _accumulatedResults.map((r) => r!.minimumChartValue).reduce(min);
+      double measureMaximum = _accumulatedResults.map((r) => r!.maximumChartValue).reduce(max);
 
-      double measureMinimum = min(_accumulatedResult1!.minimumChartValue, _accumulatedResult2!.minimumChartValue);
-      double measureMaximum = max(_accumulatedResult1!.maximumChartValue, _accumulatedResult2!.maximumChartValue);
-
-      int domainMinimum = min(_accumulatedResult1!.rating.firstSeen.millisecondsSinceEpoch ~/ 1000, _accumulatedResult2!.rating.firstSeen.millisecondsSinceEpoch ~/ 1000);
-      int domainMaximum = max(_accumulatedResult1!.rating.lastSeen.millisecondsSinceEpoch ~/ 1000, _accumulatedResult2!.rating.lastSeen.millisecondsSinceEpoch ~/ 1000);
+      int domainMinimum = _accumulatedResults
+        .map((r) => r!.rating.firstSeen.millisecondsSinceEpoch ~/ 1000)
+        .reduce(min);
+      int domainMaximum = _accumulatedResults
+        .map((r) => r!.rating.lastSeen.millisecondsSinceEpoch ~/ 1000)
+        .reduce(max);
 
       final domainCenter = (domainMinimum + domainMaximum) / 2;
 
       Set<int> years = {};
-      years.addAll(_accumulatedResult1!.yearIndices.keys);
-      years.addAll(_accumulatedResult2!.yearIndices.keys);
+      for(var result in _accumulatedResults) {
+        years.addAll(result!.yearIndices.keys);
+      }
       final sortedYears = years.toList()..sort();
 
       List<charts.LineAnnotationSegment<Object>> yearAnnotations = [];
       for(var year in sortedYears) {
-
         var yearTimestamp = DateTime(year, 1, 1).millisecondsSinceEpoch ~/ 1000;
 
-        // Draw the first year annotation at the first event
         if(yearTimestamp < domainMinimum) {
           yearTimestamp = domainMinimum;
         }
 
-        // No need for the index/adjust flow from the shooter stats dialog because
-        // we're using timestamps for the domain axis.
         yearAnnotations.add(charts.LineAnnotationSegment<Object>(
           yearTimestamp,
           charts.RangeAnnotationAxisType.domain,
@@ -134,14 +140,30 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
         ));
       }
 
-      _ComparisonTooltipRenderer.rating1 = widget.rating1;
-      _ComparisonTooltipRenderer.rating2 = widget.rating2;
-      _ComparisonTooltipRenderer.uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+      final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+      _ComparisonTooltipRenderer.ratings = [...widget.ratings];
+      _ComparisonTooltipRenderer.uiScaleFactor = uiScaleFactor;
+
+      final seriesList = _series.map((s) => s!).toList();
 
       _chart = charts.LineChart(
-        [_series1!, _series2!],
+        seriesList,
         animate: false,
         behaviors: [
+          charts.SeriesLegend(
+            position: charts.BehaviorPosition.top,
+            outsideJustification: charts.OutsideJustification.middleDrawArea,
+            horizontalFirst: true,
+            desiredMaxColumns: count,
+            cellPadding: EdgeInsets.only(
+              right: 12 * uiScaleFactor,
+              bottom: 4 * uiScaleFactor,
+            ),
+            entryTextStyle: charts.TextStyleSpec(
+              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColor(context).toHex()),
+              fontSize: (13 * uiScaleFactor).round(),
+            ),
+          ),
           charts.SelectNearest(
             eventTrigger: charts.SelectionTrigger.hover,
             selectionModelType: charts.SelectionModelType.info,
@@ -166,39 +188,34 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
               type: charts.SelectionModelType.info,
               updatedListener: (model) {
                 if(model.hasDatumSelection) {
-                  AccumulatedRatingEvent? picked1;
-                  AccumulatedRatingEvent? picked2;
+                  final picked = List<AccumulatedRatingEvent?>.filled(count, null);
                   for(var datum in model.selectedDatum) {
-                    if(datum.series.id == _series1!.id) {
-                      picked1 = datum.series.data[datum.index!];
-                    }
-                    else if(datum.series.id == _series2!.id) {
-                      picked2 = datum.series.data[datum.index!];
+                    for(int i = 0; i < count; i++) {
+                      if(datum.series.id == _series[i]!.id) {
+                        picked[i] = datum.series.data[datum.index!];
+                      }
                     }
                   }
 
-                  if(picked1 == null && picked2 == null) {
+                  if(picked.every((e) => e == null)) {
                     widget.onMatchIdHighlighted?.call(null);
                     return;
                   }
 
-                  String? referenceMatchId;
-                  int referenceDateMillis;
-                  if(picked1 != null) {
-                    referenceDateMillis = picked1.date.millisecondsSinceEpoch ~/ 1000;
-                    referenceMatchId = picked1.baseEvent.match.sourceIds.first;
-                  }
-                  else {
-                    referenceDateMillis = picked2!.date.millisecondsSinceEpoch ~/ 1000;
-                    referenceMatchId = picked2.baseEvent.match.sourceIds.first;
+                  AccumulatedRatingEvent? reference;
+                  for(var e in picked) {
+                    if(e != null) {
+                      reference = e;
+                      break;
+                    }
                   }
 
-                  widget.onMatchIdHighlighted?.call(referenceMatchId);
+                  widget.onMatchIdHighlighted?.call(reference!.baseEvent.match.sourceIds.first);
 
                   _ComparisonTooltipRenderer.context = context;
-                  _ComparisonTooltipRenderer.event1 = picked1;
-                  _ComparisonTooltipRenderer.event2 = picked2;
-                  _ComparisonTooltipRenderer.renderToLeft = referenceDateMillis > domainCenter;
+                  _ComparisonTooltipRenderer.events = picked;
+                  _ComparisonTooltipRenderer.renderToLeft =
+                    (reference!.date.millisecondsSinceEpoch ~/ 1000) > domainCenter;
                 }
               },
             ),
@@ -206,30 +223,25 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
               type: charts.SelectionModelType.action,
               updatedListener: (model) {
                 if(model.hasDatumSelection) {
-                  AccumulatedRatingEvent? picked1;
-                  AccumulatedRatingEvent? picked2;
-                  for(var datum in model.selectedDatum) {
-                    if(datum.series.id == _series1!.id) {
-                      picked1 = datum.series.data[datum.index!];
-                    }
-                    else if(datum.series.id == _series2!.id) {
-                      picked2 = datum.series.data[datum.index!];
-                    }
-                  }
-
-                  if(picked1 == null && picked2 == null) {
-                    return;
-                  }
-
                   AccumulatedRatingEvent? referenceEvent;
-                  if(picked1 != null) {
-                    referenceEvent = picked1;
-                  }
-                  else {
-                    referenceEvent = picked2;
+                  for(var datum in model.selectedDatum) {
+                    for(int i = 0; i < count; i++) {
+                      if(datum.series.id == _series[i]!.id) {
+                        referenceEvent = datum.series.data[datum.index!];
+                        break;
+                      }
+                    }
+                    if(referenceEvent != null) break;
                   }
 
-                  _launchScoreView(context, referenceEvent!.baseEvent.entry.division, referenceEvent.baseEvent.match, stage: referenceEvent.baseEvent.stage);
+                  if(referenceEvent == null) return;
+
+                  _launchScoreView(
+                    context,
+                    referenceEvent.baseEvent.entry.division,
+                    referenceEvent.baseEvent.match,
+                    stage: referenceEvent.baseEvent.stage,
+                  );
                 }
               },
             )
@@ -271,6 +283,28 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
   }
 
   @override
+  void didUpdateWidget(covariant RatingComparisonChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final competitorsChanged = oldWidget.ratings.length != widget.ratings.length
+      || !_sameCompetitors(oldWidget.ratings, widget.ratings);
+    if(competitorsChanged) {
+      // Competitor list changed — rebuild chart from scratch.
+      _series = [];
+      _accumulatedResults = [];
+      _chart = null;
+      _builtForCount = 0;
+    }
+  }
+
+  bool _sameCompetitors(List<ShooterRating> a, List<ShooterRating> b) {
+    if(a.length != b.length) return false;
+    for(int i = 0; i < a.length; i++) {
+      if(a[i].wrappedRating.id != b[i].wrappedRating.id) return false;
+    }
+    return true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     _buildChart(context);
     return SizedBox(
@@ -280,7 +314,12 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
     );
   }
 
-  charts.Series<AccumulatedRatingEvent, int> _buildSeries(AccumulatedRatingResult accumulatedResult, ShooterRating rating, charts.Color color) {
+  charts.Series<AccumulatedRatingEvent, int> _buildSeries(
+    AccumulatedRatingResult accumulatedResult,
+    ShooterRating rating,
+    charts.Color color, {
+    required bool showErrorBands,
+  }) {
     return charts.Series<AccumulatedRatingEvent, int>(
       id: accumulatedResult.rating.name,
       data: accumulatedResult.events,
@@ -289,12 +328,12 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
         return rating.scaleRating(e.baseEvent.newRating);
       },
       domainFn: (e, __) => e.date.millisecondsSinceEpoch ~/ 1000,
-      measureLowerBoundFn: (e, __) {
+      measureLowerBoundFn: showErrorBands ? (e, __) {
         return rating.scaleRating(e.baseEvent.newRating - e.errorAt);
-      },
-      measureUpperBoundFn: (e, __) {
+      } : null,
+      measureUpperBoundFn: showErrorBands ? (e, __) {
         return rating.scaleRating(e.baseEvent.newRating + e.errorAt);
-      },
+      } : null,
     );
   }
 
@@ -318,13 +357,10 @@ class _RatingComparisonChartState extends State<RatingComparisonChart> {
 class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
   static BuildContext? context;
   static double uiScaleFactor = 1.0;
-  static ShooterRating? rating1;
-  static ShooterRating? rating2;
-  static AccumulatedRatingEvent? event1;
-  static AccumulatedRatingEvent? event2;
+  static List<ShooterRating> ratings = [];
+  static List<AccumulatedRatingEvent?> events = [];
   static bool renderToLeft = false;
 
-  // Add this flag to prevent drawing multiple times for the same hover
   static int _lastDrawHash = 0;
 
   @override
@@ -337,7 +373,6 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
     charts.Color? strokeColor,
     double? strokeWidthPx,
   }) {
-    // Draw the highlight circle for this series
     super.paint(
       canvas,
       bounds,
@@ -347,62 +382,45 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
       strokeWidthPx: strokeWidthPx ?? 2.0,
     );
 
-    if (event1 == null && event2 == null) return;
-    if (context == null) return;
+    if(events.every((e) => e == null)) return;
+    if(context == null) return;
 
-    // Create a simple hash to detect if we already drew the tooltip for this selection
-    final currentHash = Object.hash(event1?.date, event2?.date);
-    if (currentHash == _lastDrawHash) {
-      return; // Already drew tooltip for this exact selection
+    final currentHash = Object.hashAll(events.map((e) => e?.date));
+    if(currentHash == _lastDrawHash) {
+      return;
     }
     _lastDrawHash = currentHash;
 
-    // Build tooltip text (same as before, but cleaner)
-    final rating1Value = event1 != null
-        ? event1!.baseEvent.newRating
-        : null;
-
-    final rating2Value = event2 != null
-        ? event2!.baseEvent.newRating
-        : null;
-
     final lines = <String>[];
 
-    final date = event1?.date ?? event2?.date;
-    if (date != null) {
+    DateTime? date;
+    for(var e in events) {
+      if(e != null) {
+        date = e.date;
+        break;
+      }
+    }
+    if(date != null) {
       lines.add(DateFormat.yMMMd().format(date));
     }
 
-    String? rating1Line;
-    String? rating2Line;
-    if (rating1Value != null) {
-      rating1Line = "${rating1!.name}: ${rating1!.formatNumericRating(rating1Value)}±${rating1!.formatNumericRatingChange(event1!.errorAt)}";
+    // Collect (ratingValue, line) pairs and sort by rating descending.
+    final ratingLines = <(double, String)>[];
+    for(int i = 0; i < ratings.length && i < events.length; i++) {
+      final event = events[i];
+      if(event == null) continue;
+      final rating = ratings[i];
+      final value = event.baseEvent.newRating;
+      final line = "${rating.name}: ${rating.formatNumericRating(value)}±${rating.formatNumericRatingChange(event.errorAt)}";
+      ratingLines.add((value, line));
     }
-    if (rating2Value != null) {
-      rating2Line = "${rating2!.name}: ${rating2!.formatNumericRating(rating2Value)}±${rating2!.formatNumericRatingChange(event2!.errorAt)}";
-    }
-
-    if(rating1Value != null && rating2Value != null) {
-      if(rating1Value > rating2Value) {
-        lines.add(rating1Line!);
-        lines.add(rating2Line!);
-      }
-      else {
-        lines.add(rating2Line!);
-        lines.add(rating1Line!);
-      }
-    }
-    else {
-      if(rating1Value != null) {
-        lines.add(rating1Line!);
-      }
-      else if(rating2Value != null) {
-        lines.add(rating2Line!);
-      }
+    ratingLines.sort((a, b) => b.$1.compareTo(a.$1));
+    for(var entry in ratingLines) {
+      lines.add(entry.$2);
     }
 
     final tooltipText = lines.join('\n');
-    if (tooltipText.isEmpty) return;
+    if(tooltipText.isEmpty) return;
 
     final textStyle = style.TextStyle()
       ..color = charts.Color.fromHex(code: ThemeColors.onBackgroundColor(context!).toHex())
@@ -411,14 +429,12 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
     final textElement = element.TextElement(tooltipText, style: textStyle);
     final textMeasurement = textElement.measurement;
 
-    // Positioning
     final offsetX = renderToLeft ? -textMeasurement.horizontalSliceWidth - 25 * uiScaleFactor : 18 * uiScaleFactor;
     final offsetY = -textMeasurement.verticalSliceWidth - 45 * uiScaleFactor;
 
     final tx = (bounds.left + offsetX).round();
     final ty = (bounds.top + offsetY).round();
 
-    // Background box
     final padding = 10 * uiScaleFactor;
     final bgRect = Rectangle<num>(
       tx - padding,
@@ -439,7 +455,6 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
       strokeWidthPx: 2,
     );
 
-    // Draw text
     canvas.drawText(textElement, tx, ty);
   }
 }

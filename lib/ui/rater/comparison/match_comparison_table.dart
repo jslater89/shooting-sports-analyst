@@ -26,6 +26,7 @@ class RatingMatchComparisonTable extends StatefulWidget {
 
 class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable> {
   late ScrollController _scrollController;
+  late RatingComparisonModel _model;
 
   late final double _uiScaleFactor;
   final double _rowHeight = 40;
@@ -39,13 +40,13 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
 
     _uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
-    context.read<RatingComparisonModel>().addListener(_updateHighlightedMatch);
+    _model = context.read<RatingComparisonModel>();
+    _model.addListener(_updateHighlightedMatch);
   }
 
   String? _lastHighlightedMatchId;
   void _updateHighlightedMatch() {
-    final model = context.read<RatingComparisonModel>();
-    final highlightedMatchId = model.highlightedMatchId;
+    final highlightedMatchId = _model.highlightedMatchId;
     if(highlightedMatchId == null) {
       _lastHighlightedMatchId = null;
       return;
@@ -68,6 +69,7 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
 
   @override
   void dispose() {
+    _model.removeListener(_updateHighlightedMatch);
     _scrollController.dispose();
     super.dispose();
   }
@@ -75,19 +77,27 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
   @override
   Widget build(BuildContext context) {
     final model = Provider.of<RatingComparisonModel>(context);
+    final competitorCount = model.competitorCount;
 
     final List<ShootingMatch> matches;
-    if(model.showOnlyMatchesWithBothResults) {
-      matches = model.matchesWithBothResults.values.map((e) => e.match).nonNulls.toList();
+    if(model.showOnlyMatchesWithAllResults) {
+      matches = model.matchesWithAllResults.values.map((e) => e.match).nonNulls.toList();
     }
     else {
-      matches = model.pairedMatchResults.values.map((e) => e.match).nonNulls.toList();
+      matches = model.sharedMatchResults.values.map((e) => e.match).nonNulls.toList();
     }
 
     _sortedMatches = matches..sort(ShootingMatch.dateComparator);
-    final _uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
-    const columnWidths = [0.20, 0.10, 0.50, 0.20];
+    // Columns: date, name, then one result column per competitor.
+    final columnCount = competitorCount + 2;
+    final resultWidth = 0.55 / competitorCount;
+    final columnWidths = <double>[
+      0.12,
+      0.33,
+      for(int i = 0; i < competitorCount; i++) resultWidth,
+    ];
 
     return Scrollbar(
       thumbVisibility: true,
@@ -96,10 +106,8 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
         verticalDetails: ScrollableDetails.vertical(
           controller: _scrollController,
         ),
-        // 3 columns: result 1 or n/a, match date, match name, result 2 or n/a
-        columnCount: 4,
+        columnCount: columnCount,
         pinnedRowCount: 1,
-        // plus one for the header row
         rowCount: matches.length + 1,
         columnBuilder: (column) {
           return TableSpan(
@@ -113,7 +121,7 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
               border: TableSpanBorder(
                 trailing: BorderSide(
                   color: ThemeColors.onBackgroundColor(context),
-                  width: 1 * _uiScaleFactor,
+                  width: 1 * uiScaleFactor,
                 ),
               ),
             );
@@ -123,14 +131,14 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
               border: TableSpanBorder(
                 trailing: BorderSide(
                   color: ThemeColors.onBackgroundColorFaded(context),
-                  width: 1 * _uiScaleFactor,
+                  width: 1 * uiScaleFactor,
                 ),
               ),
             );
           }
           return TableSpan(
             backgroundDecoration: decoration,
-            extent: FixedTableSpanExtent(_rowHeight * _uiScaleFactor),
+            extent: FixedTableSpanExtent(_rowHeight * uiScaleFactor),
           );
         },
         cellBuilder: (context, vicinity) {
@@ -143,7 +151,6 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
               model,
               _sortedMatches,
               vicinity,
-              model.pairedMatchResults,
             )));
           }
         },
@@ -152,25 +159,26 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
   }
 
   Widget _buildHeaderCell(BuildContext context, RatingComparisonModel model, TableVicinity vicinity) {
+    final competitorCount = model.competitorCount;
     if(vicinity.column == 0) {
-      return Text("${model.rating1.name}", style: TextStyle(fontWeight: FontWeight.w500));
-    }
-    else if(vicinity.column == 1) {
       return Text("Match Date", style: TextStyle(fontWeight: FontWeight.w500));
     }
-    else if(vicinity.column == 2) {
+    else if(vicinity.column == 1) {
+      final filterLabel = competitorCount > 2
+        ? "Tap to toggle showing only matches with all results"
+        : "Tap to toggle showing only matches with both results";
       return Tooltip(
-        message: "Tap to toggle showing only matches with both results",
+        message: filterLabel,
         child: GestureDetector(
           onTap: () {
-            model.showOnlyMatchesWithBothResults = !model.showOnlyMatchesWithBothResults;
+            model.showOnlyMatchesWithAllResults = !model.showOnlyMatchesWithAllResults;
           },
           child: Text("Match Name", style: TextStyle(fontWeight: FontWeight.w500))
         ),
       );
     }
     else {
-      return Text("${model.rating2.name}", style: TextStyle(fontWeight: FontWeight.w500));
+      return Text("${model.ratings[vicinity.column - 2].name}", style: TextStyle(fontWeight: FontWeight.w500));
     }
   }
 
@@ -179,46 +187,26 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
     RatingComparisonModel model,
     List<ShootingMatch> matches,
     TableVicinity vicinity,
-    Map<String, PairedMatchHistory> pairedMatchResults,
   ) {
     final match = matches[vicinity.row - 1];
-    final pairedResult = pairedMatchResults[match.sourceIds.first];
+    final shared = model.sharedMatchResults[match.sourceIds.first]!;
 
-    final TextStyle? dimmedStyle = pairedResult!.hasBothResults ? null : TextStyle(color: ThemeColors.fadedTextColor(context));
-
-    // Null if it's not head to head, true if head to head and rating1 wins, false if head to head and rating2 wins.
-    bool? rating1Wins;
-    if(pairedResult.hasBothResults) {
-      if(pairedResult.match1!.place < pairedResult.match2!.place) {
-        rating1Wins = true;
-      }
-      else if(pairedResult.match1!.place > pairedResult.match2!.place) {
-        rating1Wins = false;
-      }
-    }
+    final TextStyle? dimmedStyle = shared.hasAllResults ? null : TextStyle(color: ThemeColors.fadedTextColor(context));
 
     if(vicinity.column == 0) {
-      TextStyle? style = dimmedStyle;
-      if(rating1Wins == true) {
-        style = TextStyle(color: ThemeColors.equalContrastGreen(context));
-      }
-      else if(rating1Wins == false) {
-        style = TextStyle(color: ThemeColors.equalContrastRed(context));
-      }
-      if(pairedResult.match1 != null) {
-        return Center(child: Text("${pairedResult.match1!.place} (${pairedResult.match1!.displayPercentage})", style: style));
-      }
-      else {
-        return Center(child: Text("-", style: style));
-      }
-    }
-    else if(vicinity.column == 1) {
       return Text("${programmerYmdFormat.format(match.date)}", textAlign: TextAlign.start, style: dimmedStyle);
     }
-    else if(vicinity.column == 2) {
+    else if(vicinity.column == 1) {
+      Division? division;
+      for(var entry in shared.entries) {
+        if(entry != null) {
+          division = entry.divisionEntered;
+          break;
+        }
+      }
       return ClickableLink(
         onTap: () {
-          _launchScoreView(pairedResult.match1?.divisionEntered, match);
+          _launchScoreView(division, match);
         },
         child: Text(
           key: GlobalObjectKey(match.sourceIds.first),
@@ -229,20 +217,45 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
       );
     }
     else {
-      TextStyle? style = dimmedStyle;
-      if(pairedResult.match2 != null) {
-        if(rating1Wins == false) {
-          style = TextStyle(color: ThemeColors.equalContrastGreen(context));
-        }
-        else if(rating1Wins == true) {
-          style = TextStyle(color: ThemeColors.equalContrastRed(context));
-        }
-        return Center(child: Text("${pairedResult.match2!.place} (${pairedResult.match2!.displayPercentage})", style: style));
+      return _buildResultCell(context, model, shared, vicinity.column - 2, dimmedStyle);
+    }
+  }
+
+  Widget _buildResultCell(
+    BuildContext context,
+    RatingComparisonModel model,
+    SharedMatchHistory shared,
+    int competitorIndex,
+    TextStyle? dimmedStyle,
+  ) {
+    final entry = shared.entries[competitorIndex];
+    if(entry == null) {
+      return Center(child: Text("-", style: dimmedStyle));
+    }
+
+    TextStyle? style = dimmedStyle;
+    final competitorCount = model.competitorCount;
+
+    if(competitorCount == 2 && shared.hasAllResults) {
+      // Pairwise green/red winner-loser coloring.
+      final otherIndex = competitorIndex == 0 ? 1 : 0;
+      final other = shared.entries[otherIndex]!;
+      if(entry.place < other.place) {
+        style = TextStyle(color: ThemeColors.equalContrastGreen(context));
       }
-      else {
-        return Center(child: Text("-", style: style));
+      else if(entry.place > other.place) {
+        style = TextStyle(color: ThemeColors.equalContrastRed(context));
       }
     }
+    else if(competitorCount > 2 && shared.presentCount >= 2) {
+      // Best-of-present green; others default.
+      final winners = shared.bestPlaceIndices();
+      if(winners.contains(competitorIndex) && winners.length < shared.presentCount) {
+        style = TextStyle(color: ThemeColors.equalContrastGreen(context));
+      }
+    }
+
+    return Center(child: Text("${entry.place} (${entry.displayPercentage})", style: style));
   }
 
   void _launchScoreView(Division? division, ShootingMatch match, {MatchStage? stage}) {

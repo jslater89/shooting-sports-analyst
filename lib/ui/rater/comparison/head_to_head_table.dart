@@ -20,40 +20,99 @@ class HeadToHeadStatsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final model = Provider.of<RatingComparisonModel>(context);
-
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    final count = model.competitorCount;
 
-    final careerStats1 = model.careerStats1;
-    final careerStats2 = model.careerStats2;
-    final totalMatches1 = careerStats1.annualStats.map((e) => e.matchHistory).flattened.length;
-    final totalMatches2 = careerStats2.annualStats.map((e) => e.matchHistory).flattened.length;
-    final totalWins1 = careerStats1.annualStats.map((e) => e.matchHistory).flattened.where((e) => e.place == 1).length;
-    final totalWins2 = careerStats2.annualStats.map((e) => e.matchHistory).flattened.where((e) => e.place == 1).length;
-    final pairedMatchResults = model.pairedMatchResults;
-
-    final currentRating1 = model.rating1.rating;
-    final currentRating2 = model.rating2.rating;
-
-    bool byStage = careerStats1.byStage;
-    int averageWindow = byStage ? 30 : 5;
-    final recentAverage1 = model.rating1.averageRating(window: averageWindow);
-    final recentAverage2 = model.rating2.averageRating(window: averageWindow);
-    final lifetimeAverage1 = model.rating1.averageRating(window: careerStats1.careerStats.events.length);
-    final lifetimeAverage2 = model.rating2.averageRating(window: careerStats2.careerStats.events.length);
-
-    final surname1 = model.rating1.lastName;
-    final surname2 = model.rating2.lastName;
-
-    final headToHeadMatches = pairedMatchResults.values.where((e) => e.hasBothResults).toList();
-    final headToHead1Wins = pairedMatchResults.values
-      .where((e) => e.hasBothResults)
-      .where((e) => e.match1!.place < e.match2!.place)
-      .length;
-
+    final surnames = model.ratings.map((r) => r.lastName).toList();
     final fR = model.rating1.formatNumericRating;
-    // final fRc = model.rating1.formatNumericRatingChange;
 
-    const columnWidths = [0.55, 0.45];
+    // Per-person stats
+    final totalMatches = <int>[];
+    final totalWins = <int>[];
+    final currentRatings = <double>[];
+    final recentAverages = <double>[];
+    final careerPeaks = <double>[];
+    final dqs = <int>[];
+    final alphaPcts = <String>[];
+
+    for(int i = 0; i < count; i++) {
+      final career = model.careerStatsAt(i);
+      final rating = model.ratings[i];
+      final byStage = career.byStage;
+      final averageWindow = byStage ? 30 : 5;
+
+      totalMatches.add(career.annualStats.map((e) => e.matchHistory).flattened.length);
+      totalWins.add(career.annualStats.map((e) => e.matchHistory).flattened.where((e) => e.place == 1).length);
+      currentRatings.add(rating.rating);
+      recentAverages.add(rating.averageRating(window: averageWindow).averageOfIntermediates);
+      careerPeaks.add(rating.averageRating(window: career.careerStats.events.length).maxRating);
+      dqs.add(career.careerStats.dqs.length);
+      alphaPcts.add(career.careerStats.totalScore?.hitPercentagesText(rating.sport, bestOnly: true) ?? "-");
+    }
+
+    final showAlpha = model.rating1.sport.type.isHitFactor || model.rating1.sport.type == SportType.icore;
+
+    // Column widths: label + one per competitor
+    final labelWidth = count == 2 ? 0.40 : 0.28;
+    final personWidth = (1.0 - labelWidth) / count;
+    final columnWidths = [labelWidth, for(int i = 0; i < count; i++) personWidth];
+
+    final cells = <List<TableViewCell>>[
+      // Header
+      [
+        TableViewCell(child: _LeftAlignedText(text: "Stat", style: TextStyle(fontWeight: FontWeight.w500))),
+        for(int i = 0; i < count; i++)
+          TableViewCell(child: _RightAlignedText(text: surnames[i], style: TextStyle(fontWeight: FontWeight.w500))),
+      ],
+      _statRow("Total matches", totalMatches.map((v) => "$v").toList()),
+      _statRow("Total wins", totalWins.map((v) => "$v").toList()),
+      _statRow("Current rating", currentRatings.map((v) => fR(v)).toList()),
+      _statRow("Recent average", recentAverages.map((v) => fR(v)).toList()),
+      _statRow("Career peak", careerPeaks.map((v) => fR(v)).toList()),
+      if(showAlpha)
+        _statRow("Alpha percentage", alphaPcts),
+      _statRow("DQs", dqs.map((v) => "$v").toList()),
+    ];
+
+    // Pairwise H2H block
+    final pairwiseRows = <List<TableViewCell>>[];
+    if(count == 2) {
+      final (wins0, wins1) = model.pairwiseRecord(0, 1);
+      final h2hMatches = model.matchesWithAllResults.length;
+      pairwiseRows.add([
+        TableViewCell(child: _LeftAlignedText(text: "H2H matches")),
+        TableViewCell(child: _RightAlignedText(text: "$h2hMatches")),
+        TableViewCell(child: SizedBox.shrink()),
+      ]);
+      pairwiseRows.add([
+        TableViewCell(child: _LeftAlignedText(text: "H2H wins")),
+        TableViewCell(child: _RightAlignedText(text: "$wins0")),
+        TableViewCell(child: _RightAlignedText(text: "$wins1")),
+      ]);
+    }
+    else {
+      // N=3: all-three count + pairwise records spanning columns
+      pairwiseRows.add([
+        TableViewCell(child: _LeftAlignedText(text: "H2H (all three)")),
+        TableViewCell(child: _RightAlignedText(text: "${model.allCompetitorMatchCount}")),
+        for(int i = 1; i < count; i++)
+          TableViewCell(child: SizedBox.shrink()),
+      ]);
+      for(int i = 0; i < count; i++) {
+        for(int j = i + 1; j < count; j++) {
+          final (winsI, winsJ) = model.pairwiseRecord(i, j);
+          pairwiseRows.add([
+            TableViewCell(child: _LeftAlignedText(text: "${surnames[i]} vs ${surnames[j]}")),
+            TableViewCell(child: _RightAlignedText(text: "$winsI-$winsJ")),
+            for(int k = 1; k < count; k++)
+              TableViewCell(child: SizedBox.shrink()),
+          ]);
+        }
+      }
+    }
+
+    cells.addAll(pairwiseRows);
+
     return TableView.list(
       columnBuilder: (column) {
         return TableSpan(
@@ -87,49 +146,16 @@ class HeadToHeadStatsTable extends StatelessWidget {
           extent: FixedTableSpanExtent(40 * uiScaleFactor),
         );
       },
-      cells: [
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Stat", style: TextStyle(fontWeight: FontWeight.w500))),
-          TableViewCell(child: _RightAlignedText(text: "$surname1/$surname2", style: TextStyle(fontWeight: FontWeight.w500))),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Head to head matches")),
-          TableViewCell(child: _RightAlignedText(text: "${headToHeadMatches.length}")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Head to head wins")),
-          TableViewCell(child: _RightAlignedText(text: "$headToHead1Wins/${headToHeadMatches.length - headToHead1Wins}")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Total matches")),
-          TableViewCell(child: _RightAlignedText(text: "$totalMatches1/$totalMatches2")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Total wins")),
-          TableViewCell(child: _RightAlignedText(text: "$totalWins1/$totalWins2")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Current rating")),
-          TableViewCell(child: _RightAlignedText(text: "${fR(currentRating1)}/${fR(currentRating2)}")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Recent average")),
-          TableViewCell(child: _RightAlignedText(text: "${fR(recentAverage1.averageOfIntermediates)}/${fR(recentAverage2.averageOfIntermediates)}")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "Career peak")),
-          TableViewCell(child: _RightAlignedText(text: "${fR(lifetimeAverage1.maxRating)}/${fR(lifetimeAverage2.maxRating)}")),
-        ],
-        if(model.rating1.sport.type.isHitFactor || model.rating1.sport.type == SportType.icore) [
-          TableViewCell(child: _LeftAlignedText(text: "Alpha percentage")),
-          TableViewCell(child: _RightAlignedText(text: "${careerStats1.careerStats.totalScore?.hitPercentagesText(model.rating1.sport, bestOnly: true)}/${careerStats2.careerStats.totalScore?.hitPercentagesText(model.rating2.sport, bestOnly: true)}")),
-        ],
-        [
-          TableViewCell(child: _LeftAlignedText(text: "DQs")),
-          TableViewCell(child: _RightAlignedText(text: "${careerStats1.careerStats.dqs.length}/${careerStats2.careerStats.dqs.length}")),
-        ]
-      ],
+      cells: cells,
     );
+  }
+
+  List<TableViewCell> _statRow(String label, List<String> values) {
+    return [
+      TableViewCell(child: _LeftAlignedText(text: label)),
+      for(var v in values)
+        TableViewCell(child: _RightAlignedText(text: v)),
+    ];
   }
 }
 

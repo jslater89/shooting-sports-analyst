@@ -46,15 +46,19 @@ class _RatingComparisonViewState extends State<RatingComparisonView> {
     if(!ready) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final h2hFlex = model.competitorCount > 2 ? 2 : 1;
+
     return Column(
       children: [
         RatingComparisonChart(
-          rating1: model.rating1,
-          careerStats1: model.careerStats1,
-          displayedStats1: model.displayedStats1!,
-          rating2: model.rating2,
-          careerStats2: model.careerStats2,
-          displayedStats2: model.displayedStats2!,
+          ratings: model.ratings,
+          careerStats: [
+            for(int i = 0; i < model.competitorCount; i++) model.careerStatsAt(i),
+          ],
+          displayedStats: [
+            for(int i = 0; i < model.competitorCount; i++) model.displayedStatsAt(i)!,
+          ],
           onMatchIdHighlighted: (matchId) {
             model.highlightedMatchId = matchId;
           },
@@ -62,7 +66,7 @@ class _RatingComparisonViewState extends State<RatingComparisonView> {
         Expanded(
           child: Row(
             children: [
-              Expanded(flex: 1, child: HeadToHeadStatsTable()),
+              Expanded(flex: h2hFlex, child: HeadToHeadStatsTable()),
               SizedBox(width: 10),
               Expanded(flex: 3, child: RatingMatchComparisonTable()),
             ],
