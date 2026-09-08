@@ -140,15 +140,12 @@ class SearchShootersArgs {
     this.includeInternal = false,
   });
 
-  @JsonKey(defaultValue: "")
   final String query;
   final String? memberNumber;
   final String? project;
   final String? group;
   final String? groupUuid;
-  @JsonKey(defaultValue: 20)
   final int limit;
-  @JsonKey(defaultValue: false)
   final bool includeInternal;
 
   factory SearchShootersArgs.fromJson(Map<String, dynamic> json) =>
@@ -252,7 +249,6 @@ class GetMatchScoresArgs {
   final bool femaleOnly;
   final String? ageCategory;
   final String? category;
-  @JsonKey(defaultValue: kDefaultMatchPoolTopN)
   final int topN;
   @JsonKey(defaultValue: false)
   final bool includeStages;

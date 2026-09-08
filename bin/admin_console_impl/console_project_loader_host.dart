@@ -65,7 +65,7 @@ RatingProjectLoaderHost consoleRatingProjectLoaderHost(Console console) {
     },
     fullRecalculationRequiredCallback: (FullRecalculationReason reason) async {
       console.print("Full recalculation required (${reason.name}), recalculating");
-      return (true, true);
+      return (true, false);
     },
   );
 }
