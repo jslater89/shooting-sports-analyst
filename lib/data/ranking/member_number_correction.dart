@@ -90,6 +90,11 @@ class MemberNumberCorrectionContainer {
     _byInvalidNumber.clear();
   }
 
+  MemberNumberCorrection? resolve(String name, String number) {
+    var corrections = getByName(name);
+    return corrections.firstWhereOrNull((e) => e.invalidNumber == number);
+  }
+
   /// Name should be processed.
   List<MemberNumberCorrection> getByName(String name) {
     return _byName[name] ?? [];

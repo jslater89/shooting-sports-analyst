@@ -88,6 +88,7 @@ import "db_oneoff_impl/elite_head_to_head_command.dart";
 import "db_oneoff_impl/shot_both_years_command.dart";
 import "db_oneoff_impl/scoring_close_flips_command.dart";
 import "db_oneoff_impl/match_slope_command.dart";
+import "db_oneoff_impl/distinct_area_champions_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -262,6 +263,9 @@ Future<void> main(List<String> args) async {
         MenuArgumentValue<String>(argument: StringMenuArgument(label: "file"), value: file),
       ]);
     }
+    else if(command == "DAC") {
+      await DistinctAreaChampionsCommand(db).executor(console, []);
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -316,6 +320,7 @@ Future<void> main(List<String> args) async {
     ShotBothYearsCommand(db),
     ScoringCloseFlipsCommand(db),
     MatchSlopeCommand(db),
+    DistinctAreaChampionsCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {

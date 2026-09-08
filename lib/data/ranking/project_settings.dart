@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -80,6 +81,20 @@ class RatingProjectSettings {
   ///
   /// Match IDs should be a valid source ID for a match in the local database.
   Map<String, List<Division>> recognizedDivisions;
+
+  /// A resolved data entry fix for the given shooter name and member number.
+  ///
+  /// Data entry fixes/MemberNumberCorrections are used to rectify data entry errors for rating
+  /// projects. Given a name/number pair with a correction, the incorrect number never enters the
+  /// rating system at all, but the match result remains unedited/incorrect. So, to correctly look
+  /// up a shooter rating from a match, it is necessary to call this function to verify whether or
+  /// not a correction exists.
+  ///
+  /// Takes a member number and name. Returns the corrected member number, or null if no correction exists.
+  String? resolveMemberNumberCorrection(String name, String number) {
+    final processedName = ShooterDeduplicator.processNameString(name);
+    return memberNumberCorrections.resolve(processedName, number)?.correctedNumber;
+  }
 
   RatingProjectSettings({
     this.preserveHistory = false,
