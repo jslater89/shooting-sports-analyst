@@ -16,8 +16,9 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 enum _DoubleKeys {
-  variance,
+  // variance is stored in wrappedRating.spread
   shortTrend,
+  // medium trend is stored in wrappedRating.trend
   mediumTrend,
   longTrend,
   shortDirection,
@@ -28,8 +29,8 @@ enum _DoubleKeys {
 class EloShooterRating extends ShooterRating<EloRatingEvent> {
   static late double errorScale;
 
-  double get variance => wrappedRating.doubleData[_DoubleKeys.variance.index];
-  set variance(double v) => wrappedRating.doubleData[_DoubleKeys.variance.index] = v;
+  double get variance => wrappedRating.spread;
+  set variance(double v) => wrappedRating.spread = v;
 
   double get direction => wrappedRating.doubleData[_DoubleKeys.mediumDirection.index];
   set direction(double v) => wrappedRating.doubleData[_DoubleKeys.mediumDirection.index] = v;
@@ -64,8 +65,8 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
   double get shortTrend => wrappedRating.doubleData[_DoubleKeys.shortTrend.index];
   set shortTrend(double v) => wrappedRating.doubleData[_DoubleKeys.shortTrend.index] = v;
 
-  double get mediumTrend => wrappedRating.doubleData[_DoubleKeys.mediumTrend.index];
-  set mediumTrend(double v) => wrappedRating.doubleData[_DoubleKeys.mediumTrend.index] = v;
+  double get mediumTrend => wrappedRating.trend;
+  set mediumTrend(double v) => wrappedRating.trend = v;
 
   double get longTrend => wrappedRating.doubleData[_DoubleKeys.longTrend.index];
   set longTrend(double v) => wrappedRating.doubleData[_DoubleKeys.longTrend.index] = v;

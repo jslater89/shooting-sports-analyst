@@ -45,6 +45,12 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// The change in rating from a rating event.
   static const ratingChangeKey = "rating";
 
+  /// A schema version for the rating system. It should include both the
+  /// rating system's name and a version indicator of some kind. UI should force
+  /// full recalculation when the schema version from a previous calculation is
+  /// different from the current schema version.
+  String get schemaVersion;
+
   RatingMode get mode;
   bool get byStage;
 

@@ -38,6 +38,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   Timings timings = Timings();
 
   @override
+  String get schemaVersion => "elo-1.0";
+
+  @override
   RatingMode get mode => RatingMode.oneShot;
 
   final EloSettings settings;
@@ -90,11 +93,17 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   String formatNumericRating(double rating) {
+    if(rating.isNaN || rating.isInfinite) {
+      return "n/a";
+    }
     return rating.round().toString();
   }
 
   @override
   String formatNumericRatingChange(double ratingChange) {
+    if(ratingChange.isNaN || ratingChange.isInfinite) {
+      return "n/a";
+    }
     return ratingChange.toStringAsFixed(1);
   }
 
@@ -575,11 +584,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       csv += "${s.originalMemberNumber},";
       csv += "${s.lastClassification?.name ?? "?"},";
       csv += "${s.getName(suffixes: false).replaceAll(RegExp(r'[",]', caseSensitive: false), "")},"; // sanitize for CSV
-      csv += "${s.rating.round()},${lastMatchChange.round()},"
-          "${error.toStringAsFixed(2)},"
-          "${trend.toStringAsFixed(2)},"
-          "${s.careerMinimumRating.round()},${s.careerMaximumRating.round()},"
-          "${s.direction.toStringAsFixed(2)},"
+      csv += "${formatNumericRating(s.rating)},${formatNumericRatingChange(lastMatchChange)},"
+          "${formatNumericRatingChange(error)},"
+          "${formatNumericRatingChange(trend)},"
+          "${formatNumericRating(s.careerMinimumRating)},${formatNumericRating(s.careerMaximumRating)},"
+          "${formatNumericRatingChange(s.direction)},"
           "${s.length}\n";
     }
     return csv;

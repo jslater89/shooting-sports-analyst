@@ -173,6 +173,14 @@ class DbShooterRating extends Shooter with DbSportEntity {
   /// The error for this competitor. If the system makes a distinction between internal
   /// and scaled ratings, this will be the error for the internal rating.
   double error;
+  /// The trend in the competitor's recent rating changes.
+  double trend;
+  /// The spread parameter for this competitor expressed in internal units. Spread is the
+  /// normal, non-signal variation in a competitor's rating.
+  double spread;
+  /// The change in this competitor's rating from the last match (not necessarily the last
+  /// single rating event!).
+  double lastMatchChange;
 
   /// The aged rating for this competitor, for rating algorithms that implement rating
   /// decay.
@@ -329,6 +337,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required super.female,
     required this.rating,
     required this.error,
+    required this.trend,
+    required this.spread,
+    required this.lastMatchChange,
     required this.agedRating,
     required this.careerMinimumRating,
     required this.careerMaximumRating,
@@ -349,6 +360,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
     super.female = false,
     this.rating = 0.0,
     this.error = 0.0,
+    this.trend = 0.0,
+    this.spread = 0.0,
+    this.lastMatchChange = 0.0,
     this.agedRating = 0.0,
     this.careerMinimumRating = 0.0,
     this.careerMaximumRating = 0.0,
@@ -374,6 +388,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
     // biographical info won't change
     this.rating = other.rating;
     this.error = other.error;
+    this.trend = other.trend;
+    this.spread = other.spread;
+    this.lastMatchChange = other.lastMatchChange;
     this.connectivity = other.connectivity;
     if(other.firstSeen.isBefore(this.firstSeen)) {
       this.firstSeen = other.firstSeen;

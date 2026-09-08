@@ -160,7 +160,7 @@ class LadyRatingAnalysisCommand extends DbOneoffCommand {
       var wrappedRating = project.wrapDbRatingSync(rating);
       if(wrappedRating is Glicko2Rating) {
         stageCount = wrappedRating.lengthInStages;
-        rd = wrappedRating.committedRD; // Use committed RD in display units
+        rd = wrappedRating.committedDisplayRD; // Use committed RD in display units
       }
       else {
         // Fallback to counting events if wrapping fails

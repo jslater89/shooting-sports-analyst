@@ -57,6 +57,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   final Glicko2Settings settings;
 
   @override
+  String get schemaVersion => "glicko2-1.0";
+
+  @override
   bool get byStage => settings.byStage;
 
   @override
@@ -1260,7 +1263,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       RatingRowData(data: rating.rating.round().toString(), alignment: AbstractAlignment.end, flex: _ratingFlex),
       RatingRowData(data: rating.lastMatchChange.round().toString(), alignment: AbstractAlignment.end, flex: _lastChangeFlex),
       RatingRowData(
-        data: settings.scaleToDisplay(rating.currentInternalRD).round().toString(),
+        data: settings.scaleToDisplay(rating.committedInternalRD).round().toString(),
         alignment: AbstractAlignment.end,
         flex: _rdFlex,
       ),

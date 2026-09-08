@@ -18,7 +18,6 @@ import 'package:shooting_sports_analyst/util.dart';
 enum _IntKeys {
   marbles,
   trend3,
-  trend30,
 }
 
 class MarbleRating extends ShooterRating<MarbleRatingEvent> {
@@ -41,8 +40,8 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
   set marbles(int v) => wrappedRating.intData[_IntKeys.marbles.index] = v;
 
   @override
-  double get trend => wrappedRating.intData[_IntKeys.trend30.index].toDouble();
-  set trend(double v) => wrappedRating.intData[_IntKeys.trend30.index] = v.round();
+  double get trend => wrappedRating.trend;
+  set trend(double v) => wrappedRating.trend = v;
 
   double get trend3 => wrappedRating.intData[_IntKeys.trend3.index].toDouble();
   set trend3(double v) => wrappedRating.intData[_IntKeys.trend3.index] = v.round();

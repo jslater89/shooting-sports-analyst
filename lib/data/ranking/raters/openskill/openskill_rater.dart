@@ -40,6 +40,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings> {
   }
 
   @override
+  String get schemaVersion => "openskill-1.0";
+
+  @override
   bool get byStage => settings.byStage;
 
   @override

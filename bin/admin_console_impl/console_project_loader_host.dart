@@ -63,9 +63,9 @@ RatingProjectLoaderHost consoleRatingProjectLoaderHost(Console console) {
       console.print("Unable to append, recalculating");
       return true;
     },
-    fullRecalculationRequiredCallback: () async {
-      console.print("Full recalculation required, recalculating");
-      return true;
+    fullRecalculationRequiredCallback: (FullRecalculationReason reason) async {
+      console.print("Full recalculation required (${reason.name}), recalculating");
+      return (true, true);
     },
   );
 }

@@ -54,6 +54,9 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
   final LatentLogSettings settings;
 
   @override
+  String get schemaVersion => "llr-1.0";
+
+  @override
   bool get byStage => settings.byStage;
 
   @override

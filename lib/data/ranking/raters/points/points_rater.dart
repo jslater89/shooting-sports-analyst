@@ -40,6 +40,9 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   }
 
   @override
+  String get schemaVersion => "points-1.0";
+
+  @override
   bool get byStage => settings.byStage;
 
   @override

@@ -97,17 +97,84 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
-  Future<bool> fullRecalculationRequiredCallback() async {
-    var shouldRecalculate = await ConfirmDialog.show(
-      context,
-      title: "Full recalculation required",
-      content: Text("The project must be recalculated in full. Do you want to proceed?"),
-      negativeButtonLabel: "CANCEL",
-      positiveButtonLabel: "RECALCULATE",
-      barrierDismissible: false,
-    ) ?? false;
+  Future<(bool, bool)> fullRecalculationRequiredCallback(FullRecalculationReason reason) async {
+    bool recalc = false;
+    bool dedup = false;
 
-    return shouldRecalculate;
+    String title = "Full recalculation required";
+    String content = switch (reason) {
+      FullRecalculationReason.loadNotCompleted =>
+        "The project must be recalculated in full. Do you want to proceed?",
+      FullRecalculationReason.ratingsSchemaChanged =>
+        "The project must be recalculated in full because the ratings schema has changed. Do you want to proceed?",
+    };
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        List<Widget> actions = [];
+
+        // Always add CANCEL first now, to be leftmost according to order (CANCEL RECALCULATE DEDUPLICATE)
+        actions.add(
+          TextButton(
+            onPressed: () {
+              recalc = false;
+              Navigator.of(context).pop();
+            },
+            child: const Text("CANCEL"),
+          ),
+        );
+
+        if (reason == FullRecalculationReason.ratingsSchemaChanged) {
+          actions.add(
+            Tooltip(
+              message: "Recalculate without deduplication.",
+              child: TextButton(
+                onPressed: () {
+                  dedup = false;
+                  recalc = true;
+                  Navigator.of(context).pop();
+                },
+                child: const Text("RECALCULATE"),
+              ),
+            ),
+          );
+          actions.add(
+            Tooltip(
+              message: "Run deduplication and then recalculate ratings.",
+              child: TextButton(
+                onPressed: () {
+                  dedup = true;
+                  recalc = true;
+                  Navigator.of(context).pop();
+                },
+                child: const Text("DEDUPLICATE"),
+              ),
+            ),
+          );
+        } else {
+          actions.add(
+            TextButton(
+              onPressed: () {
+                dedup = false;
+                recalc = true;
+                Navigator.of(context).pop();
+              },
+              child: const Text("RECALCULATE"),
+            ),
+          );
+        }
+
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: actions,
+        );
+      },
+    );
+
+    return (recalc, dedup);
   }
 
   Future<bool> unableToAppendCallback(List<MatchPointer> lastUsedMatches, List<MatchPointer> newMatches) async {

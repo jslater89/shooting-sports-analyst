@@ -115,7 +115,11 @@ typedef RatingProjectLoaderDeduplicationCallback = Future<Result<List<Deduplicat
 
 typedef RatingProjectLoaderUnableToAppendCallback = Future<bool> Function(List<MatchPointer> lastUsedMatches, List<MatchPointer> newMatches);
 
-typedef RatingProjectLoaderFullRecalculationRequiredCallback = Future<bool> Function();
+enum FullRecalculationReason {
+  loadNotCompleted,
+  ratingsSchemaChanged,
+}
+typedef RatingProjectLoaderFullRecalculationRequiredCallback = Future<(bool, bool)> Function(FullRecalculationReason reason);
 
 /// RatingProjectLoaderHost contains a number of callbacks that the RatingProjectLoader
 /// will call as it progresses, both to update the UI and to allow for user interaction
@@ -139,9 +143,12 @@ class RatingProjectLoaderHost {
   /// or false if the loader should return 'complete' without adding any matches.
   RatingProjectLoaderUnableToAppendCallback unableToAppendCallback;
 
-  /// A callback called if this project has not completed a full calculation, and the user requested a
-  /// non-full recalculation. The callback should return true if the project should be recalculated
-  /// anyway, or false if the loader should cancel the calculation.
+  /// A callback called if this project must be fully recalculated for other reasons. See [FullRecalculationReason]
+  /// for possible reasons.
+  ///
+  /// If recalculate is true, the project should be recalculated.
+  /// If deduplicate is also true, the project should be deduplicated before recalculating. Deduplicate
+  /// is ignored if recalculate is false.
   RatingProjectLoaderFullRecalculationRequiredCallback fullRecalculationRequiredCallback;
 
   RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback, required this.unableToAppendCallback, required this.fullRecalculationRequiredCallback});
@@ -188,13 +195,17 @@ class RatingProjectLoader {
 
     var matchPointers = project.matchesToUse();
 
+    final sortedMatchPointers = matchPointers.sorted((a, b) => a.date!.compareTo(b.date!));
+
     // We want to add matches in ascending order, from oldest to newest.
-    var matchesToAdd = matchPointers.sorted((a, b) => a.date!.compareTo(b.date!));
+    var matchesToAdd = [...sortedMatchPointers];
 
     // We're interested in the most recent match in addition to the full list,
     // so sort by descending date for convenience.
     var lastUsed = project.lastUsedMatches.sorted((a, b) => b.date!.compareTo(a.date!));
     bool canAppend = false;
+
+    bool schemaChanged = !project.schemaMatches;
 
     // TODO: check consistency of project settings and reset if needed
     // Things to check:
@@ -229,7 +240,7 @@ class RatingProjectLoader {
     }
 
     // nothing to do
-    if(matchesToAdd.isEmpty) {
+    if(matchesToAdd.isEmpty && !schemaChanged) {
       _log.i("No new matches, ${lastUsed.length} last used matches");
       host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
@@ -238,26 +249,54 @@ class RatingProjectLoader {
       return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
     }
 
-    if(!fullRecalc && !project.completedFullCalculation) {
-      Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
-      var recalculate = await host.fullRecalculationRequiredCallback();
-      wallStart = DateTime.now();
-      if(!recalculate) {
-        _log.i("User canceled calculation, returning canceled error");
-        host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
-        return Result.err(CanceledError());
+    if(!fullRecalc) {
+      if(!project.completedFullCalculation) {
+        Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+        var (recalculate, deduplicate) = await host.fullRecalculationRequiredCallback(FullRecalculationReason.loadNotCompleted);
+        wallStart = DateTime.now();
+        if(!recalculate) {
+          _log.i("User canceled calculation, returning canceled error");
+          host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+          return Result.err(CanceledError());
+        }
+        else {
+          if(!deduplicate) {
+            skipDeduplication = true;
+          }
+          fullRecalc = true;
+          canAppend = false;
+          matchesToAdd = sortedMatchPointers;
+        }
       }
-    }
-    else if(!canAppend && !fullRecalc) {
-      Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
-      var recalculate = await host.unableToAppendCallback(lastUsed, matchesToAdd);
-      wallStart = DateTime.now();
-      if(!recalculate) {
-        _log.i("User asked to advance without calculation, returning OK");
-        host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
-        project.loaded = DateTime.now();
-        await db.saveRatingProject(project, checkName: true);
-        return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
+      else if(!project.schemaMatches) {
+        Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+        var (recalculate, deduplicate) = await host.fullRecalculationRequiredCallback(FullRecalculationReason.ratingsSchemaChanged);
+        wallStart = DateTime.now();
+        if(!recalculate) {
+          _log.i("User canceled calculation, returning canceled error");
+          host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+          return Result.err(CanceledError());
+        }
+        else {
+          if(!deduplicate) {
+            skipDeduplication = true;
+          }
+          fullRecalc = true;
+          canAppend = false;
+          matchesToAdd = sortedMatchPointers;
+        }
+      }
+      else if(!canAppend) {
+        Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+        var recalculate = await host.unableToAppendCallback(lastUsed, matchesToAdd);
+        wallStart = DateTime.now();
+        if(!recalculate) {
+          _log.i("User asked to advance without calculation, returning OK");
+          host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+          project.loaded = DateTime.now();
+          await db.saveRatingProject(project, checkName: true);
+          return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
+        }
       }
     }
 
@@ -266,7 +305,6 @@ class RatingProjectLoader {
       project.eventCount = 0;
       project.reports = [];
       project.recentReports = [];
-      project.completedFullCalculation = false;
       project.connectivityContainer.reset();
       if(fullRecalc) {
         _log.i("Unable to append: full recalculation requested");
@@ -277,18 +315,7 @@ class RatingProjectLoader {
       else {
         _log.i("Unable to append: new matches occur before the last existing match");
       }
-      await host.progressCallback(
-        progress: 0,
-        total: 1,
-        state: LoadingState.clearingOldRatings,
-      );
-      await project.resetRatings(progressCallback: (progress, total) async {
-        await host.progressCallback(
-          progress: progress,
-          total: total,
-          state: LoadingState.clearingOldRatings,
-        );
-      });
+      project.completedFullCalculation = false;
     }
     else {
       // Fixed-length list on DB load
@@ -298,85 +325,113 @@ class RatingProjectLoader {
       inFullRecalc = false;
     }
 
-    var readMatchesSteps = matchesToAdd.length;
-    var loadCompetitorsSteps = matchesToAdd.length * project.groups.length;
-    // Main rating steps are 10 per group per match, because it's much harder than all the rest
-    var mainRatingsSteps = project.groups.length * matchesToAdd.length * 10;
-    var deduplicationSteps = project.groups.length;
-    _totalMatchSteps = readMatchesSteps + loadCompetitorsSteps + mainRatingsSteps + deduplicationSteps;
+    project.calculating = true;
+    await db.saveRatingProject(project, checkName: true, saveLinks: false);
 
-    // If we're appending, matchesToAdd will be only the new matches.
-    // If we're not appending, this will be all the matches, and
-    // clearing the old list happens in the resetRatings call above.
-    project.lastUsedMatches = [...project.lastUsedMatches, ...matchesToAdd];
-    await db.saveRatingProject(project, checkName: true);
-
-    if(project.sport.connectivityCalculator != null) {
-      connectivityOverlay.primeConnectivityScores(project);
-    }
-
-    await host.progressCallback(
-      progress: 0,
-      total: _totalMatchSteps,
-      state: LoadingState.readingMatches,
-      subProgress: 0,
-      subTotal: readMatchesSteps,
-    );
-    List<ShootingMatch> hydratedMatches = [];
-    for(var matchPointer in matchesToAdd) {
-      var dbMatch = await matchPointer.getDbMatch(db, downloadIfMissing: true, ignoreUnknownDivisions: true);
-      if(dbMatch.isErr()) {
-        return Result.err(MatchLoadFailureError(
-          cause: MatchLoadFailureCause.invalidData,
-          failedMatchPointer: matchPointer,
-          underlying: dbMatch.unwrapErr(),
-        ));
-      }
-
-      var matchRes = dbMatch.unwrap().hydrateSync(useCache: true);
-      if(matchRes.isErr()) {
-        var err = matchRes.unwrapErr();
-        return Result.err(MatchLoadFailureError(
-          cause: MatchLoadFailureCause.invalidData,
-          failedMatchPointer: matchPointer,
-          underlying: err,
-        ));
-      }
-      else {
-        var match = matchRes.unwrap();
-        hydratedMatches.add(match);
-        _currentMatchStep += 1;
+    try {
+      if(!canAppend) {
         await host.progressCallback(
-          progress: _currentMatchStep,
-          total: _totalMatchSteps,
-          state: LoadingState.readingMatches,
-          eventName: match.name,
-          subProgress: hydratedMatches.length,
-          subTotal: readMatchesSteps,
+          progress: 0,
+          total: 1,
+          state: LoadingState.clearingOldRatings,
         );
+        await project.resetRatings(progressCallback: (progress, total) async {
+          await host.progressCallback(
+            progress: progress,
+            total: total,
+            state: LoadingState.clearingOldRatings,
+          );
+        });
+      }
+
+      var readMatchesSteps = matchesToAdd.length;
+      var loadCompetitorsSteps = matchesToAdd.length * project.groups.length;
+      // Main rating steps are 10 per group per match, because it's much harder than all the rest
+      var mainRatingsSteps = project.groups.length * matchesToAdd.length * 10;
+      var deduplicationSteps = project.groups.length;
+      _totalMatchSteps = readMatchesSteps + loadCompetitorsSteps + mainRatingsSteps + deduplicationSteps;
+
+      // If we're appending, matchesToAdd will be only the new matches.
+      // If we're not appending, this will be all the matches, and
+      // clearing the old list happens in the resetRatings call above.
+      project.lastUsedMatches = [...project.lastUsedMatches, ...matchesToAdd];
+      await db.saveRatingProject(project, checkName: true);
+
+      if(project.sport.connectivityCalculator != null) {
+        connectivityOverlay.primeConnectivityScores(project);
+      }
+
+      await host.progressCallback(
+        progress: 0,
+        total: _totalMatchSteps,
+        state: LoadingState.readingMatches,
+        subProgress: 0,
+        subTotal: readMatchesSteps,
+      );
+      List<ShootingMatch> hydratedMatches = [];
+      for(var matchPointer in matchesToAdd) {
+        var dbMatch = await matchPointer.getDbMatch(db, downloadIfMissing: true, ignoreUnknownDivisions: true);
+        if(dbMatch.isErr()) {
+          return Result.err(MatchLoadFailureError(
+            cause: MatchLoadFailureCause.invalidData,
+            failedMatchPointer: matchPointer,
+            underlying: dbMatch.unwrapErr(),
+          ));
+        }
+
+        var matchRes = dbMatch.unwrap().hydrateSync(useCache: true);
+        if(matchRes.isErr()) {
+          var err = matchRes.unwrapErr();
+          return Result.err(MatchLoadFailureError(
+            cause: MatchLoadFailureCause.invalidData,
+            failedMatchPointer: matchPointer,
+            underlying: err,
+          ));
+        }
+        else {
+          var match = matchRes.unwrap();
+          hydratedMatches.add(match);
+          _currentMatchStep += 1;
+          await host.progressCallback(
+            progress: _currentMatchStep,
+            total: _totalMatchSteps,
+            state: LoadingState.readingMatches,
+            eventName: match.name,
+            subProgress: hydratedMatches.length,
+            subTotal: readMatchesSteps,
+          );
+        }
+      }
+
+      if(Timings.enabled) timings.add(TimingType.retrieveMatches, DateTime.now().difference(start).inMicroseconds);
+
+      host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
+      var result = await _addMatches(hydratedMatches);
+      if(result.isErr()) return Result.errFrom(result);
+
+      host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
+      timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+
+      project.completedFullCalculation = true;
+      project.loaded = DateTime.now();
+      project.updated = project.loaded;
+      project.calculating = false;
+      project.schemaVersion = project.settings.algorithm.schemaVersion;
+      await db.saveRatingProject(project, checkName: true);
+
+      if(dumpMatchConnectivities && _matchConnectivityCsv.isNotEmpty) {
+        var csv = _matchConnectivityCsv.join("\n");
+        var file = File("match_connectivity.csv");
+        await file.writeAsString(csv);
+      }
+      return Result.ok(RatingsCalculationComplete(matchesAdded: matchesToAdd, wasFullRecalc: fullRecalc, wasAppend: canAppend && !fullRecalc));
+    }
+    finally {
+      if(project.calculating) {
+        project.calculating = false;
+        await db.saveRatingProject(project, checkName: true, saveLinks: false);
       }
     }
-
-    if(Timings.enabled) timings.add(TimingType.retrieveMatches, DateTime.now().difference(start).inMicroseconds);
-
-    host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
-    var result = await _addMatches(hydratedMatches);
-    if(result.isErr()) return Result.errFrom(result);
-
-    host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
-    timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
-
-    project.completedFullCalculation = true;
-    project.loaded = DateTime.now();
-    project.updated = project.loaded;
-    await db.saveRatingProject(project, checkName: true);
-
-    if(dumpMatchConnectivities && _matchConnectivityCsv.isNotEmpty) {
-      var csv = _matchConnectivityCsv.join("\n");
-      var file = File("match_connectivity.csv");
-      await file.writeAsString(csv);
-    }
-    return Result.ok(RatingsCalculationComplete(matchesAdded: matchesToAdd, wasFullRecalc: fullRecalc, wasAppend: canAppend && !fullRecalc));
   }
 
   void cancel() {
@@ -1543,6 +1598,7 @@ class RatingProjectLoader {
     if(Timings.enabled) start = DateTime.now();
     // Process ratings for each shooter.
     if(settings.byStage) {
+      Set<DbShooterRating> seenThisMatch = {};
       for(MatchStage s in match.stages) {
 
         var innerStart = DateTime.now();
@@ -1611,8 +1667,16 @@ class RatingProjectLoader {
 
         changeCount += changes.length;
         var updateStart = DateTime.now();
+
         for(var r in changes.keys) {
           var changeStart = DateTime.now();
+
+          if(!seenThisMatch.contains(r)) {
+            r.lastMatchChange = 0.0;
+            seenThisMatch.add(r);
+          }
+          double priorRating = r.rating;
+
           if(!r.events.isLoaded) r.events.loadSync();
           if(Timings.enabled) timings.add(TimingType.loadEvents, DateTime.now().difference(changeStart).inMicroseconds);
 
@@ -1620,6 +1684,10 @@ class RatingProjectLoader {
           var wrapped = ratingSystem.wrapDbRating(r);
           wrapped.updateFromEvents(changes[r]!.values.toList());
           wrapped.updateTrends(changes[r]!.values.toList());
+
+          double updatedRating = r.rating;
+          r.lastMatchChange += (updatedRating - priorRating);
+
           if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
         }
 
@@ -1776,6 +1844,8 @@ class RatingProjectLoader {
       changeCount += changes.length;
       for(var r in changes.keys) {
         var changeStart = DateTime.now();
+
+        double priorRating = r.rating;
         if(!r.events.isLoaded) r.events.loadSync();
         if(Timings.enabled) timings.add(TimingType.loadEvents, DateTime.now().difference(changeStart).inMicroseconds);
 
@@ -1783,6 +1853,10 @@ class RatingProjectLoader {
         var wrapped = ratingSystem.wrapDbRating(r);
         wrapped.updateFromEvents(changes[r]!.values.toList());
         wrapped.updateTrends(changes[r]!.values.toList());
+
+        double updatedRating = r.rating;
+        r.lastMatchChange = updatedRating - priorRating;
+
         if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
       }
 

@@ -33,6 +33,9 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings> {
   static const matchStakeKey = "match";
   static const totalCompetitorsKey = "opponents";
 
+  @override
+  String get schemaVersion => "marbles-1.0";
+
   // TODO: allow by stage later?
   @override
   bool get byStage => false;

@@ -17,14 +17,12 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 enum _DoubleKeys {
-  // rating and rating deviation are stored in wrappedRating.rating and wrappedRating.error
-  /// The volatility parameter for this competitor.
-  volatility,
+  // rating and committed rating deviation are stored in wrappedRating.rating and wrappedRating.error
+  // volatility is stored in wrappedRating.spread
+
   /// The current RD for this competitor, calculated on demand based on the difference between
   /// the current time and the last commit, in internal units.
   currentRD,
-  /// The committed RD for this competitor, in internal units.
-  committedRD,
   /// The current rating for this competitor, in internal units.
   rating,
 }
@@ -67,8 +65,8 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
     this.currentRDTimestamp = super.firstSeen.millisecondsSinceEpoch ~/ 1000;
   }
 
-  double get volatility => wrappedRating.doubleData[_DoubleKeys.volatility.index];
-  set volatility(double v) => wrappedRating.doubleData[_DoubleKeys.volatility.index] = v;
+  double get volatility => wrappedRating.spread;
+  set volatility(double v) => wrappedRating.spread = v;
 
   /// This getter is current as of the current clock time.
   double get currentInternalRD {
@@ -98,11 +96,11 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   set currentRDTimestamp(int v) => wrappedRating.intData[_IntKeys.currentRDTimestamp.index] = v;
 
   /// The RD that was calculated at the end of the last rating event commit, in display units.
-  double get committedRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index] * settings.scalingFactor;
+  double get committedDisplayRD => wrappedRating.error * settings.scalingFactor;
 
   /// The RD that was calculated at the end of the last rating event commit, in internal units.
-  double get committedInternalRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index];
-  set committedInternalRD(double v) => wrappedRating.doubleData[_DoubleKeys.committedRD.index] = v;
+  double get committedInternalRD => wrappedRating.error;
+  set committedInternalRD(double v) => wrappedRating.error = v;
 
   /// The number of matches shot.
   int get lengthInMatches => wrappedRating.length;
@@ -202,6 +200,6 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
 
   @override
   String toString() {
-    return "$name $memberNumber ${rating.round()}/${committedRD.round()}/${volatility.toStringAsFixed(4)} ($hashCode)";
+    return "$name $memberNumber ${rating.round()}/${committedDisplayRD.round()}/${volatility.toStringAsFixed(4)} ($hashCode)";
   }
 }

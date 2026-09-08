@@ -19,15 +19,10 @@ import 'package:shooting_sports_analyst/util.dart';
 
 enum _DoubleKeys {
   // rating and variance are stored in wrappedRating.rating and wrappedRating.error
-
-  /// The dispersion parameter for this competitor.
-  dispersion,
+  // momentum and dispersion are stored in wrappedRating.trend and wrappedRating.spread
 
   /// The current variance for this competitor, accounting for time since the last update.
   currentVariance,
-
-  /// The momentum parameter for this competitor.
-  momentum,
 }
 
 enum _IntKeys {
@@ -146,11 +141,11 @@ class LatentLogRating extends ShooterRating<LatentLogRatingEvent> {
   double get variance => wrappedRating.error;
   set variance(double v) => wrappedRating.error = v;
 
-  double get dispersion => wrappedRating.doubleData[_DoubleKeys.dispersion.index];
-  set dispersion(double v) => wrappedRating.doubleData[_DoubleKeys.dispersion.index] = v;
+  double get dispersion => wrappedRating.spread;
+  set dispersion(double v) => wrappedRating.spread = v;
 
-  double get momentum => wrappedRating.doubleData[_DoubleKeys.momentum.index];
-  set momentum(double v) => wrappedRating.doubleData[_DoubleKeys.momentum.index] = v;
+  double get momentum => wrappedRating.trend;
+  set momentum(double v) => wrappedRating.trend = v;
 
   double get varianceToday {
     if(varianceTodayTimestamp.isSameDay(DateTime.now())) {

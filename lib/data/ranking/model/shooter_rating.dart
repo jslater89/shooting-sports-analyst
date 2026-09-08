@@ -10,7 +10,6 @@ import 'package:isar_community/isar.dart';
 import 'package:meta/meta.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
@@ -22,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -106,6 +106,17 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// The number of stages which makes up a nominal match.
   static const trendStagesPerMatch = 6;
+
+  /// The number of rating events (stages or matches) over which trend/variance should be
+  /// calculated by default.
+  int trendWindow(bool byStage) {
+    if(byStage) {
+      return baseTrendWindow;
+    }
+    else {
+      return baseTrendWindow ~/ trendStagesPerMatch;
+    }
+  }
 
   /// The time after which a shooter will no longer be counted in connectedness.
   static const connectionExpiration = const Duration(days: 60);
@@ -220,7 +231,6 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   @mustCallSuper
   void ratingEventsChanged() {
     _ratingEvents = null;
-    _lastMatchChange = null;
     _ratingForDateCache.clear();
   }
 
@@ -477,17 +487,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   set rawConnectivity(double v) => wrappedRating.rawConnectivity = v;
 
   void updateTrends(List<RatingEvent> changes);
-  double get trend => rating - averageRating().firstRating;
 
-  double? _lastMatchChange = null;
-  double get lastMatchChange {
-    if(_lastMatchChange != null) return _lastMatchChange!;
-    if(length == 0) return 0;
+  double get trend => wrappedRating.trend;
 
-    var lastEvent = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: 1).first;
-    _lastMatchChange = matchChange(DbShootingMatch.sourcePlaceholder(sport: sport, sourceCode: "<n/a>", sourceIds: [lastEvent.matchId]));
-    return _lastMatchChange!;
-  }
+  double get lastMatchChange => wrappedRating.lastMatchChange;
 
   double matchChange(SourceIdsProvider match) {
     var matchEvents = this.matchEvents(match);

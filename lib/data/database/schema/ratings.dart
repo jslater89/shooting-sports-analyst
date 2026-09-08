@@ -122,6 +122,18 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     dbUpdated = value;
   }
 
+  /// The schema version last used to calculate ratings for this project.
+  ///
+  /// If this differs from the schema version of the current rating system, a full
+  /// recalculation is required.
+  String schemaVersion = "";
+
+  /// True if the schema version last used to calculate ratings for this project
+  /// is current. If false, accessing ratings will likely yield invalid data and
+  /// may cause uncaught exceptions.
+  @ignore
+  bool get schemaMatches => schemaVersion == settings.algorithm.schemaVersion;
+
   /// An internal field for storing [loaded].
   @Index()
   DateTime? dbLoaded;
@@ -151,6 +163,13 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// loader). A project with this flag set to false cannot have matches appended, and
   /// must complete a full calculation before it can be used.
   bool completedFullCalculation = false;
+
+  /// True while a rating calculation is in progress for this project.
+  ///
+  /// Set by the project loader at the start of a calculation and cleared when it
+  /// finishes (success, error, or cancel). May remain true if the process is killed
+  /// mid-calculation.
+  bool calculating = false;
 
   /// The list of matches to use for calculating ratings for this project. If
   /// [filteredMatchPointers] is not empty, it will be used. If it is empty, [matchPointers] will
