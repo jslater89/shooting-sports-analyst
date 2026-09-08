@@ -89,6 +89,7 @@ import "db_oneoff_impl/shot_both_years_command.dart";
 import "db_oneoff_impl/scoring_close_flips_command.dart";
 import "db_oneoff_impl/match_slope_command.dart";
 import "db_oneoff_impl/distinct_area_champions_command.dart";
+import "db_oneoff_impl/tight_podium_span_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -266,6 +267,26 @@ Future<void> main(List<String> args) async {
     else if(command == "DAC") {
       await DistinctAreaChampionsCommand(db).executor(console, []);
     }
+    else if(command == "TPS") {
+      final tpsCmd = TightPodiumSpanCommand(db);
+      final defs = tpsCmd.arguments;
+      final threshArg = defs[0] as StringMenuArgument;
+      final minArg = defs[1] as IntMenuArgument;
+      final projectArg = defs[2] as StringMenuArgument;
+      final threshold = args.length > 1 ? args[1] : (threshArg.getDefault() ?? "0.99");
+      final minCompetitors = args.length > 2
+          ? (int.tryParse(args[2]) ?? minArg.getDefault()!)
+          : minArg.getDefault()!;
+      final projectName = args.length > 3 ? args[3] : (projectArg.getDefault() ?? "");
+      await tpsCmd.executor(
+        console,
+        [
+          MenuArgumentValue<String>(argument: threshArg, value: threshold),
+          MenuArgumentValue<int>(argument: minArg, value: minCompetitors),
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+        ],
+      );
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -321,6 +342,7 @@ Future<void> main(List<String> args) async {
     ScoringCloseFlipsCommand(db),
     MatchSlopeCommand(db),
     DistinctAreaChampionsCommand(db),
+    TightPodiumSpanCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
