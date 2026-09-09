@@ -158,7 +158,7 @@ class SerializedConfig {
 
   /// When true, the Flutter app hosts a localhost-only research MCP server over
   /// the already-open AnalystDatabase. Agents typically use the headless stdio
-  /// MCP, which opens the DB itself rather than proxying here.
+  /// MCP, which proxies to the local research REST API rather than opening Isar.
   @JsonKey(defaultValue: false)
   bool researchMcpServerEnabled;
 

@@ -6,8 +6,9 @@
 
 /// SSA research MCP server (stdio).
 ///
-/// Prefers the desktop app's loopback research REST API when available;
-/// otherwise opens AnalystDatabase in-process. This is the usual agent path.
+/// Prefers the desktop app's loopback research REST API. Does not open
+/// AnalystDatabase unless SSA_MCP_ALLOW_LOCAL_ISAR is set. This is the usual
+/// agent path.
 ///
 /// Build: `./build-mcp.sh` → `dist/ssa_mcp_server`
 ///
@@ -26,7 +27,8 @@
 /// }
 /// ```
 ///
-/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_DB_PATH, SSA_RESEARCH_API_BASE.
+/// Env: SSA_MCP_DEFAULT_PROJECT, SSA_RESEARCH_API_BASE, SSA_MCP_ALLOW_LOCAL_ISAR,
+/// SSA_DB_PATH (local Isar only).
 library;
 
 import "dart:async";
@@ -55,15 +57,19 @@ Future<void> main(List<String> args) async {
       io.Platform.environment["SSA_MCP_DEFAULT_PROJECT"] ?? kDefaultResearchProjectName;
   final apiBase =
       io.Platform.environment[kResearchApiBaseEnv] ?? kDefaultResearchApiBase;
+  final allowLocalIsar = SwitchingResearchFacade.allowLocalIsarFromEnvironment();
 
-  _log.i("stdio MCP starting (prefer research API at $apiBase)");
+  _log.i(
+    "stdio MCP starting (prefer research API at $apiBase, "
+    "local Isar ${allowLocalIsar ? "allowed" : "disabled"})",
+  );
   await ConfigLoader().readyFuture;
 
   // Keep the server object alive for the process lifetime.
   // ignore: unused_local_variable
   final server = SsaResearchMcpServer(
     stdioChannel(input: io.stdin, output: io.stdout),
-    facade: SwitchingResearchFacade(),
+    facade: SwitchingResearchFacade(allowLocalIsar: allowLocalIsar),
     defaultProject: defaultProject,
   );
   await Completer<void>().future;

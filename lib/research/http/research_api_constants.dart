@@ -21,3 +21,8 @@ const String kResearchApiBaseEnv = "SSA_RESEARCH_API_BASE";
 
 /// Default base URL when [kResearchApiBaseEnv] is unset.
 const String kDefaultResearchApiBase = "http://127.0.0.1:$kDefaultResearchApiPort";
+
+/// Env var to let the stdio MCP process open the Analyst database when the
+/// desktop research API is down. Unset/false by default so a long-lived
+/// agent process cannot reopen `db/` with stale schema code.
+const String kMcpAllowLocalIsarEnv = "SSA_MCP_ALLOW_LOCAL_ISAR";

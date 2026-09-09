@@ -36,8 +36,8 @@ final _log = SSALogger("ResearchFacade");
 
 /// Read-only research queries over [AnalystDatabase].
 ///
-/// Shared by the stdio MCP server (local fallback), the optional in-app
-/// localhost MCP host, and the local research HTTP API.
+/// Shared by the optional in-app localhost MCP host, the local research HTTP
+/// API, and the stdio MCP process when local Isar fallback is explicitly enabled.
 class ResearchFacade implements ResearchQueries {
   ResearchFacade(this.db);
 

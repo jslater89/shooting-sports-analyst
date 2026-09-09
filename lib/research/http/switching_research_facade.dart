@@ -11,26 +11,37 @@ import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/http/http_research_facade.dart";
+import "package:shooting_sports_analyst/research/http/research_api_constants.dart";
 import "package:shooting_sports_analyst/research/research_facade.dart";
 import "package:shooting_sports_analyst/research/research_queries.dart";
 
 final _log = SSALogger("SwitchingResearchFacade");
 
-/// Prefers the desktop app's local research REST API; falls back to opening
-/// Isar in-process when the app is unavailable.
+/// Prefers the desktop app's local research REST API.
 ///
-/// Intended for the standalone stdio MCP process only. Do not use from the
-/// in-app MCP host (that already owns [AnalystDatabase]).
+/// Does not open Isar unless [allowLocalIsar] is true (typically
+/// [kMcpAllowLocalIsarEnv]). Intended for the standalone stdio MCP process
+/// only. Do not use from the in-app MCP host (that already owns
+/// [AnalystDatabase]).
 class SwitchingResearchFacade implements ResearchQueries {
   SwitchingResearchFacade({
     HttpResearchFacade? httpFacade,
     this.dbPath,
     this.healthCacheTtl = const Duration(seconds: 2),
-  }) : _http = httpFacade ?? HttpResearchFacade();
+    bool? allowLocalIsar,
+  })  : _http = httpFacade ?? HttpResearchFacade(),
+        allowLocalIsar = allowLocalIsar ?? allowLocalIsarFromEnvironment();
 
   final HttpResearchFacade _http;
   final String? dbPath;
   final Duration healthCacheTtl;
+  final bool allowLocalIsar;
+
+  /// True when [kMcpAllowLocalIsarEnv] is `1`, `true`, or `yes`.
+  static bool allowLocalIsarFromEnvironment() {
+    final raw = Platform.environment[kMcpAllowLocalIsarEnv]?.trim().toLowerCase();
+    return raw == "1" || raw == "true" || raw == "yes";
+  }
 
   ResearchFacade? _local;
   bool? _cachedHealthy;
@@ -348,6 +359,15 @@ class SwitchingResearchFacade implements ResearchQueries {
       await _closeLocalIfOpen();
       return body(_http);
     }
+    if(!allowLocalIsar) {
+      return ResearchError.result(
+        "Desktop Analyst is not running (research API at ${_http.baseUrl} is "
+        "unavailable). Start the app so MCP can query through it, or set "
+        "$kMcpAllowLocalIsarEnv=1 to open Isar in this process (unsafe while "
+        "developing schema changes).",
+        statusCode: 503,
+      );
+    }
     final local = await _ensureLocal();
     return body(local);
   }
@@ -367,8 +387,11 @@ class SwitchingResearchFacade implements ResearchQueries {
     if(healthy) {
       _log.v("Local research API healthy; using HTTP");
     }
-    else {
+    else if(allowLocalIsar) {
       _log.v("Local research API unavailable; using local Isar");
+    }
+    else {
+      _log.v("Local research API unavailable; local Isar disabled");
     }
     return healthy;
   }
@@ -386,6 +409,9 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   Future<ResearchFacade> _ensureLocal() async {
+    if(!allowLocalIsar) {
+      throw StateError("Local Isar open requested while $kMcpAllowLocalIsarEnv is off");
+    }
     final existing = _local;
     if(existing != null && AnalystDatabase.isOpen) {
       return existing;

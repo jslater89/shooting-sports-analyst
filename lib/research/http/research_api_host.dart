@@ -19,7 +19,7 @@ final _log = SSALogger("ResearchApiHost");
 /// Loopback-only local research REST host owned by the desktop app process.
 ///
 /// Always started when the app opens the database. The stdio MCP process
-/// health-checks this host and prefers it over opening Isar itself.
+/// health-checks this host and uses it by default, without opening Isar.
 class ResearchApiHost {
   static ResearchApiHost? _instance;
   factory ResearchApiHost() {
