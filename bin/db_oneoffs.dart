@@ -90,6 +90,7 @@ import "db_oneoff_impl/scoring_close_flips_command.dart";
 import "db_oneoff_impl/match_slope_command.dart";
 import "db_oneoff_impl/distinct_area_champions_command.dart";
 import "db_oneoff_impl/tight_podium_span_command.dart";
+import "db_oneoff_impl/weekend_double_ratings_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -267,6 +268,21 @@ Future<void> main(List<String> args) async {
     else if(command == "DAC") {
       await DistinctAreaChampionsCommand(db).executor(console, []);
     }
+    else if(command == "WKD") {
+      final wkdCmd = WeekendDoubleRatingsCommand(db);
+      final defs = wkdCmd.arguments;
+      final projectArg = defs[0] as StringMenuArgument;
+      final pctArg = defs[1] as StringMenuArgument;
+      final projectName = args.length > 1 ? args[1] : (projectArg.getDefault() ?? "");
+      final percentile = args.length > 2 ? args[2] : (pctArg.getDefault() ?? "75");
+      await wkdCmd.executor(
+        console,
+        [
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+          MenuArgumentValue<String>(argument: pctArg, value: percentile),
+        ],
+      );
+    }
     else if(command == "TPS") {
       final tpsCmd = TightPodiumSpanCommand(db);
       final defs = tpsCmd.arguments;
@@ -343,6 +359,7 @@ Future<void> main(List<String> args) async {
     MatchSlopeCommand(db),
     DistinctAreaChampionsCommand(db),
     TightPodiumSpanCommand(db),
+    WeekendDoubleRatingsCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
