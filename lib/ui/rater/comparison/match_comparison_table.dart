@@ -146,12 +146,12 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
             return TableViewCell(child: Center(child: _buildHeaderCell(context, model, vicinity)));
           }
           else {
-            return TableViewCell(child: Center(child: _buildCell(
+            return TableViewCell(child: _buildCell(
               context,
               model,
               _sortedMatches,
               vicinity,
-            )));
+            ));
           }
         },
       ),
@@ -194,7 +194,7 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
     final TextStyle? dimmedStyle = shared.hasAllResults ? null : TextStyle(color: ThemeColors.fadedTextColor(context));
 
     if(vicinity.column == 0) {
-      return Text("${programmerYmdFormat.format(match.date)}", textAlign: TextAlign.start, style: dimmedStyle);
+      return Center(child: Text("${programmerYmdFormat.format(match.date)}", textAlign: TextAlign.start, style: dimmedStyle));
     }
     else if(vicinity.column == 1) {
       Division? division;
@@ -204,20 +204,23 @@ class _RatingMatchComparisonTableState extends State<RatingMatchComparisonTable>
           break;
         }
       }
-      return ClickableLink(
-        onTap: () {
-          _launchScoreView(division, match);
-        },
-        child: Text(
-          key: GlobalObjectKey(match.sourceIds.first),
-          "${match.name}",
-          textAlign: TextAlign.start,
-          style: dimmedStyle
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: ClickableLink(
+          onTap: () {
+            _launchScoreView(division, match);
+          },
+          child: Text(
+            key: GlobalObjectKey(match.sourceIds.first),
+            "${match.name}",
+            textAlign: TextAlign.start,
+            style: dimmedStyle,
+          ),
         ),
       );
     }
     else {
-      return _buildResultCell(context, model, shared, vicinity.column - 2, dimmedStyle);
+      return Center(child: _buildResultCell(context, model, shared, vicinity.column - 2, dimmedStyle));
     }
   }
 
