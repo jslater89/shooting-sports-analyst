@@ -361,7 +361,8 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
   static List<AccumulatedRatingEvent?> events = [];
   static bool renderToLeft = false;
 
-  static int _lastDrawHash = 0;
+  static bool _drawnThisFrame = false;
+  static bool _resetScheduled = false;
 
   @override
   void paint(
@@ -385,11 +386,19 @@ class _ComparisonTooltipRenderer extends charts.CircleSymbolRenderer {
     if(events.every((e) => e == null)) return;
     if(context == null) return;
 
-    final currentHash = Object.hashAll(events.map((e) => e?.date));
-    if(currentHash == _lastDrawHash) {
+    // LinePointHighlighter paints once per series. Draw the tooltip on the
+    // first call and skip the rest of this frame so boxes don't stack.
+    if(_drawnThisFrame) {
       return;
     }
-    _lastDrawHash = currentHash;
+    _drawnThisFrame = true;
+    if(!_resetScheduled) {
+      _resetScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _drawnThisFrame = false;
+        _resetScheduled = false;
+      });
+    }
 
     final lines = <String>[];
 

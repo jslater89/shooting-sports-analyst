@@ -91,6 +91,9 @@ class RatingComparisonModel extends ChangeNotifier {
   String? _highlightedMatchId;
   String? get highlightedMatchId => _highlightedMatchId;
   set highlightedMatchId(String? value) {
+    if(_highlightedMatchId == value) {
+      return;
+    }
     _highlightedMatchId = value;
     notifyListeners();
   }
