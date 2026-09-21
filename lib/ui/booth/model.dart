@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:shooting_sports_analyst/data/booth/shooter_overrides.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
@@ -73,7 +74,7 @@ class BroadcastBoothModel with ChangeNotifier {
   BroadcastBoothModel({
     required ShootingMatch match,
   }) :
-    _latestMatch = match,
+    _latestMatch = copyMatchForLocalEdit(match),
     matchId = match.sourceIds.first,
     matchSource = match.sourceCode {
       _readyCompleter.complete();
@@ -97,6 +98,11 @@ class BroadcastBoothModel with ChangeNotifier {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   ShootingMatch? previousMatch;
+
+  /// Bumped when a local competitor override changes, so scorecards rescore
+  /// without treating it as a server update.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  int shooterOverrideEpoch = 0;
 
   void update() {
     notifyListeners();
