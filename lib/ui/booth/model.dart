@@ -98,6 +98,11 @@ class BroadcastBoothModel with ChangeNotifier {
   @JsonKey(includeFromJson: false, includeToJson: false)
   ShootingMatch? previousMatch;
 
+  /// Bumped when a local competitor override changes, so scorecards rescore
+  /// without treating it as a server update.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  int shooterOverrideEpoch = 0;
+
   void update() {
     notifyListeners();
   }
