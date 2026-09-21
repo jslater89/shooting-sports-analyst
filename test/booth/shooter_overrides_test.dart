@@ -115,6 +115,39 @@ void main() {
     expect(shooter.scores.values.single.points, 0);
   });
 
+  test("a booth edit does not change the downloaded match", () {
+    var updated = DateTime.utc(2026, 9, 21, 18);
+    var match = ShootingMatch(
+      name: "Booth Dummy Match",
+      rawDate: "2026-09-21",
+      date: DateTime.utc(2026, 9, 21),
+      sourceLastUpdated: updated,
+      sourceCode: "ssa_server",
+      sourceIds: const ["booth-dummy-1"],
+      sport: sport,
+      stages: [stage],
+      shooters: [shooterOnSubminor()],
+    );
+    var edited = copyMatchForLocalEdit(match);
+    expect(edited.sourceLastUpdated, updated);
+    expect(
+      ShooterOverrideStore.instance.applyOverride(
+        sport,
+        edited.shooters.single,
+        ShooterOverride(
+          sourceId: "sailer-1",
+          powerFactorName: "Minor",
+          originalPowerFactorName: "Subminor",
+        ),
+      ),
+      isTrue,
+    );
+    expect(match.shooters.single.powerFactor.name, "Subminor");
+    expect(match.shooters.single.scores.values.single.points, 0);
+    expect(edited.shooters.single.powerFactor.name, "Minor");
+    expect(edited.shooters.single.scores.values.single.points, greaterThan(0));
+  });
+
   test("saving the server values is not an override", () {
     var same = ShooterOverride(
       powerFactorName: "Subminor",

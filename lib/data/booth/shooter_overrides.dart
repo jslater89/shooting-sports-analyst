@@ -16,6 +16,18 @@ import 'package:shooting_sports_analyst/logger.dart';
 
 var _log = SSALogger("ShooterOverrides");
 
+/// Copy [match] before a booth edit.
+///
+/// [AnalystDatabase.saveMatch] keeps the downloaded instance in the hydrated
+/// match cache. Editing that instance would show the local power factor to
+/// ratings, the result page, and anything else that reads the cache.
+ShootingMatch copyMatchForLocalEdit(ShootingMatch match) {
+  var copy = match.copy();
+  copy.endDate = match.endDate;
+  copy.sourceLastUpdated = match.sourceLastUpdated;
+  return copy;
+}
+
 /// Local, match-scoped edits to competitor fields (power factor, division).
 ///
 /// Broadcast refresh replaces the whole match from the server, so these

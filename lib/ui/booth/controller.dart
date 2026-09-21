@@ -71,7 +71,7 @@ class BroadcastBoothController {
       return false;
     }
 
-    var freshMatch = matchRes.unwrap();
+    var freshMatch = copyMatchForLocalEdit(matchRes.unwrap());
     try {
       await ShooterOverrideStore.instance.ensureLoaded();
       ShooterOverrideStore.instance.applyToMatch(freshMatch);
