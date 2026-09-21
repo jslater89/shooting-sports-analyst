@@ -708,10 +708,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         ? Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Tooltip(
-                message: "Local override active (long-press to edit)",
-                child: Icon(Icons.edit, size: 14 * _finalTextScaleFactor, color: Colors.orange[700]),
-              ),
+              Icon(Icons.edit, size: 14 * _finalTextScaleFactor, color: Colors.orange[700]),
               child,
             ],
           )
@@ -745,14 +742,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
       );
     }
 
-    return Tooltip(
-      waitDuration: const Duration(milliseconds: 800),
-      message: "Long-press to change power factor or division",
-      child: GestureDetector(
-        onLongPress: editShooter,
-        onSecondaryTap: editShooter,
-        child: tappable,
-      ),
+    return GestureDetector(
+      onLongPress: editShooter,
+      onSecondaryTap: editShooter,
+      child: tappable,
     );
   }
 
