@@ -95,15 +95,15 @@ class _USDataMapState extends State<USDataMap> {
     var size = MediaQuery.of(context).size;
     if(widget.data.isEmpty) {
       return InteractiveSvg(
-      assetPath: USDataMap.svgAsset,
-      colorMapper: _StateColorMapper(
-        darkMode: Theme.of(context).brightness == Brightness.dark,
-        context: context,
-        stateColors: {},
-      ),
-      width: size.width * widget.sizeMultiplier,
-      height: size.height * widget.sizeMultiplier,
-    );
+        assetPath: USDataMap.svgAsset,
+        colorMapper: _StateColorMapper(
+          darkMode: Theme.of(context).brightness == Brightness.dark,
+          context: context,
+          stateColors: {},
+        ),
+        width: size.width * widget.sizeMultiplier,
+        height: size.height * widget.sizeMultiplier,
+      );
     }
     var minValue = widget.data.values.min;
     var maxValue = widget.data.values.max;
