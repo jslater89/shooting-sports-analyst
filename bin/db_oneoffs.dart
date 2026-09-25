@@ -92,6 +92,7 @@ import "db_oneoff_impl/distinct_area_champions_command.dart";
 import "db_oneoff_impl/tight_podium_span_command.dart";
 import "db_oneoff_impl/weekend_double_ratings_command.dart";
 import "db_oneoff_impl/bomb_fail_to_finish_command.dart";
+import "db_oneoff_impl/most_stages_in_month_command.dart";
 import "db_oneoff_impl/match_heat_debug_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
@@ -322,6 +323,23 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "MSM") {
+      final msmCmd = MostStagesInMonthCommand(db);
+      final defs = msmCmd.arguments;
+      final projectArg = defs[0] as StringMenuArgument;
+      final topArg = defs[1] as IntMenuArgument;
+      final projectName = args.length > 1 ? args[1] : (projectArg.getDefault() ?? "");
+      final topN = args.length > 2
+          ? (int.tryParse(args[2]) ?? topArg.getDefault()!)
+          : topArg.getDefault()!;
+      await msmCmd.executor(
+        console,
+        [
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+          MenuArgumentValue<int>(argument: topArg, value: topN),
+        ],
+      );
+    }
     else if(command == "TPS") {
       final tpsCmd = TightPodiumSpanCommand(db);
       final defs = tpsCmd.arguments;
@@ -417,6 +435,7 @@ Future<void> main(List<String> args) async {
     TightPodiumSpanCommand(db),
     WeekendDoubleRatingsCommand(db),
     BombFailToFinishCommand(db),
+    MostStagesInMonthCommand(db),
     MatchHeatDebugCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
