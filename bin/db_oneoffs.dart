@@ -91,6 +91,7 @@ import "db_oneoff_impl/match_slope_command.dart";
 import "db_oneoff_impl/distinct_area_champions_command.dart";
 import "db_oneoff_impl/tight_podium_span_command.dart";
 import "db_oneoff_impl/weekend_double_ratings_command.dart";
+import "db_oneoff_impl/bomb_fail_to_finish_command.dart";
 import "db_oneoff_impl/match_heat_debug_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
@@ -284,6 +285,43 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "BF") {
+      if(args.length < 3) {
+        console.print("Usage: BF <startYear> <endYear> [projectName]");
+        console.print("Example: BF 2022 2026");
+        return;
+      }
+      final startYear = int.tryParse(args[1]);
+      final endYear = int.tryParse(args[2]);
+      if(startYear == null) {
+        console.print("Invalid start year: ${args[1]}");
+        return;
+      }
+      if(endYear == null) {
+        console.print("Invalid end year: ${args[2]}");
+        return;
+      }
+      final bfCmd = BombFailToFinishCommand(db);
+      final defs = bfCmd.arguments;
+      final startArg = defs[0] as IntMenuArgument;
+      final endArg = defs[1] as IntMenuArgument;
+      final projectArg = defs[2] as StringMenuArgument;
+      final bombArg = defs[3] as StringMenuArgument;
+      final minArg = defs[4] as IntMenuArgument;
+      final minMatchesArg = defs[5] as IntMenuArgument;
+      final projectName = args.length > 3 ? args[3] : (projectArg.getDefault() ?? "");
+      await bfCmd.executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: startArg, value: startYear),
+          MenuArgumentValue<int>(argument: endArg, value: endYear),
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+          MenuArgumentValue<String>(argument: bombArg, value: bombArg.getDefault()!),
+          MenuArgumentValue<int>(argument: minArg, value: minArg.getDefault()!),
+          MenuArgumentValue<int>(argument: minMatchesArg, value: minMatchesArg.getDefault()!),
+        ],
+      );
+    }
     else if(command == "TPS") {
       final tpsCmd = TightPodiumSpanCommand(db);
       final defs = tpsCmd.arguments;
@@ -378,6 +416,7 @@ Future<void> main(List<String> args) async {
     DistinctAreaChampionsCommand(db),
     TightPodiumSpanCommand(db),
     WeekendDoubleRatingsCommand(db),
+    BombFailToFinishCommand(db),
     MatchHeatDebugCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
