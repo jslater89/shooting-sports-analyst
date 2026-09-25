@@ -55,14 +55,14 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with Automa
     mainModel = context.read<MatchPrepPageModel>();
     localModel = _MatchPrepPredictionsModel(matchPrepModel: mainModel);
     localModel.init();
-    mainModel.addListener(localModel.reloadPredictionSets);
+    mainModel.addListener(localModel.onMatchPrepChanged);
     final groups = mainModel.getNonexcludedRatingGroups();
     tabController = TabController(length: groups.length, vsync: this, animationDuration: Duration.zero);
   }
 
   @override
   void dispose() {
-    mainModel.removeListener(localModel.reloadPredictionSets);
+    mainModel.removeListener(localModel.onMatchPrepChanged);
     tabController.dispose();
     super.dispose();
   }
@@ -263,7 +263,10 @@ class _PredictionBody extends StatelessWidget {
     }
     else {
       return TabBarView(
-        children: groups.map((g) => _PredictionSetTab(group: g)).toList(),
+        children: groups.map((g) => _PredictionSetTab(
+          key: ValueKey("${model.selectedPredictionSet?.id}-${g.uuid}"),
+          group: g,
+        )).toList(),
         controller: tabController,
       );
     }
@@ -271,7 +274,7 @@ class _PredictionBody extends StatelessWidget {
 }
 
 class _PredictionSetTab extends StatefulWidget {
-  const _PredictionSetTab({required this.group});
+  const _PredictionSetTab({super.key, required this.group});
   final RatingGroup group;
 
   @override
@@ -280,25 +283,49 @@ class _PredictionSetTab extends StatefulWidget {
 
 class _PredictionSetTabState extends State<_PredictionSetTab> with AutomaticKeepAliveClientMixin {
   PredictionViewModel? model;
-  late int lastPredictionSetId;
-  late String lastRatingGroupUuid;
+  int lastPredictionSetId = -1;
+  String lastRatingGroupUuid = "";
   bool lastHadOutcomes = false;
+  int _loadGeneration = 0;
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  void initState() {
-    super.initState();
-    final outerModel = Provider.of<_MatchPrepPredictionsModel>(context, listen: false);
-    lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
-    lastRatingGroupUuid = widget.group.uuid;
-    outerModel.ensureTabModelLoaded(widget.group).then((model) {
-      setState(() {
-        this.model = model;
-      });
-      updatePredictionViewModel(outerModel);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Linking a match notifies MatchPrepPageModel, not the local prediction-set
+    // model. Depend on both so the already-visible keep-alive tab reloads ticks.
+    Provider.of<MatchPrepPageModel>(context);
+    final outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
+    final currentSetId = outerModel.selectedPredictionSet?.id ?? 0;
+    final currentGroupUuid = widget.group.uuid;
+
+    if(currentSetId != lastPredictionSetId || currentGroupUuid != lastRatingGroupUuid) {
+      lastPredictionSetId = currentSetId;
+      lastRatingGroupUuid = currentGroupUuid;
+      model = null;
+      lastHadOutcomes = false;
+      _load(outerModel);
+    }
+    else if(model != null) {
+      bool outerModelHasOutcomes = outerModel.matchLinked;
+      if(outerModelHasOutcomes != lastHadOutcomes) {
+        _updateOutcomes(outerModel);
+      }
+    }
+  }
+
+  Future<void> _load(_MatchPrepPredictionsModel outerModel) async {
+    final generation = ++_loadGeneration;
+    final loaded = await outerModel.ensureTabModelLoaded(widget.group);
+    if(!mounted || generation != _loadGeneration) {
+      return;
+    }
+    setState(() {
+      model = loaded;
     });
+    await _updateOutcomes(outerModel);
   }
 
   Future<void> _updateOutcomes(_MatchPrepPredictionsModel outerModel) async {
@@ -307,25 +334,10 @@ class _PredictionSetTabState extends State<_PredictionSetTab> with AutomaticKeep
     }
 
     await outerModel.ensureOutcomesLoaded(widget.group);
-    lastHadOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
-  }
-
-  Future<void> updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) async {
-    if(model == null) {
+    if(!mounted) {
       return;
     }
-
-    if(outerModel.selectedPredictionSet?.id != lastPredictionSetId || widget.group.uuid != lastRatingGroupUuid) {
-      lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
-      lastRatingGroupUuid = widget.group.uuid;
-      var groupPredictions = await outerModel.getPredictionsForGroup(widget.group);
-      model!.setPredictions(groupPredictions, notify: false);
-    }
-
-    bool outerModelHasOutcomes = outerModel.matchPrepModel.futureMatch.sourceCode != null;
-    if(outerModelHasOutcomes != lastHadOutcomes) {
-      _updateOutcomes(outerModel);
-    }
+    lastHadOutcomes = outerModel.matchLinked;
   }
 
   @override
@@ -356,22 +368,43 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   Map<RatingGroup, PredictionViewModel> tabModels = {};
   Map<RatingGroup, Future<PredictionViewModel?>> tabModelLoadingFutures = {};
   Set<RatingGroup> outcomesLoadedGroups = {};
+  int _cacheGeneration = 0;
+  bool _lastMatchLinked = false;
 
   _MatchPrepPredictionsModel({required this.matchPrepModel});
 
   List<PredictionSet> get predictionSets => matchPrepModel.prep.sortedPredictionSets;
   PredictionSet? selectedPredictionSet;
 
+  bool get matchLinked {
+    final sourceCode = matchPrepModel.futureMatch.sourceCode;
+    return sourceCode != null && sourceCode.isNotEmpty;
+  }
+
   Map<RatingGroup, List<AlgorithmPrediction>> _algorithmPredictionCache = {};
+
+  void _invalidateTabCaches() {
+    _cacheGeneration++;
+    _algorithmPredictionCache.clear();
+    outcomesLoadedGroups.clear();
+    tabModels.clear();
+    tabModelLoadingFutures.clear();
+  }
 
   Future<List<AlgorithmPrediction>> getPredictionsForGroup(RatingGroup group) async {
     if(_algorithmPredictionCache.containsKey(group)) {
       return _algorithmPredictionCache[group]!;
     }
 
-    var predictions = selectedPredictionSet?.algorithmPredictions.where((p) => p.effectiveScoringGroup == group).toList();
-    _algorithmPredictionCache[group] = (await predictions?.mapAsync((p) async => p.hydrateAsync()))?.nonNulls.toList() ?? [];
-    return _algorithmPredictionCache[group]!;
+    final generation = _cacheGeneration;
+    final predictionSet = selectedPredictionSet;
+    var predictions = predictionSet?.algorithmPredictions.where((p) => p.effectiveScoringGroup == group).toList();
+    final hydrated = (await predictions?.mapAsync((p) async => p.hydrateAsync()))?.nonNulls.toList() ?? [];
+    if(generation != _cacheGeneration) {
+      return hydrated;
+    }
+    _algorithmPredictionCache[group] = hydrated;
+    return hydrated;
   }
 
   Future<PredictionViewModel?> ensureTabModelLoaded(RatingGroup group) async {
@@ -390,12 +423,18 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       return await future;
     }
     finally {
-      tabModelLoadingFutures.remove(group);
+      if(identical(tabModelLoadingFutures[group], future)) {
+        tabModelLoadingFutures.remove(group);
+      }
     }
   }
 
   Future<PredictionViewModel?> _loadTabModel(RatingGroup group) async {
+    final generation = _cacheGeneration;
     var predictions = await getPredictionsForGroup(group);
+    if(generation != _cacheGeneration) {
+      return null;
+    }
     tabModels[group] = PredictionViewModel(
       dataSource: matchPrepModel.ratingProject,
       matchId: matchPrepModel.futureMatch.matchId,
@@ -414,12 +453,11 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       return;
     }
 
-    final matchLinked = matchPrepModel.futureMatch.sourceCode != null;
     if(!matchLinked) {
-      if(outcomesLoadedGroups.contains(group)) {
+      if(tabModel.hasOutcomes) {
         tabModel.setOutcomes({}, notify: notify);
-        outcomesLoadedGroups.remove(group);
       }
+      outcomesLoadedGroups.remove(group);
       return;
     }
 
@@ -481,15 +519,37 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     }
   }
 
+  Future<void> onMatchPrepChanged() async {
+    await matchPrepModel.prep.predictionSets.load();
+    await _syncOutcomesWithMatchLink();
+    notifyListeners();
+  }
+
+  /// Push linked-match results into already-mounted tab models so the visible
+  /// keep-alive tab updates without requiring a leave/return.
+  Future<void> _syncOutcomesWithMatchLink() async {
+    final linked = matchLinked;
+    if(linked == _lastMatchLinked) {
+      return;
+    }
+    _lastMatchLinked = linked;
+    outcomesLoadedGroups.clear();
+    for(final group in [...tabModels.keys]) {
+      await ensureOutcomesLoaded(group);
+    }
+  }
+
   Future<void> reloadPredictionSets() async {
     await matchPrepModel.prep.predictionSets.load();
     notifyListeners();
   }
 
   void setSelectedPredictionSet(PredictionSet value) {
+    if(selectedPredictionSet?.id == value.id) {
+      return;
+    }
     selectedPredictionSet = value;
-    _algorithmPredictionCache.clear();
-    outcomesLoadedGroups.clear();
+    _invalidateTabCaches();
     notifyListeners();
   }
 
@@ -502,13 +562,14 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     final result = await matchPrepModel.deletePredictionSet(predictionSet);
     if(result.isOk() && selectedPredictionSet == predictionSet) {
       selectedPredictionSet = null;
-      _algorithmPredictionCache.clear();
+      _invalidateTabCaches();
       notifyListeners();
     }
     return result;
   }
 
   void init() {
+    _lastMatchLinked = matchLinked;
     if(predictionSets.isNotEmpty) {
       predictionSets.sort((a, b) => b.created.compareTo(a.created));
       selectedPredictionSet = predictionSets.first;
@@ -521,7 +582,6 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     }
 
     final groups = matchPrepModel.getNonexcludedRatingGroups();
-    final matchLinked = matchPrepModel.futureMatch.sourceCode != null;
     Map<String, String> csvFiles = {};
 
     for(var group in groups) {
