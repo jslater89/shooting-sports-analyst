@@ -10,6 +10,7 @@ import "package:shooting_sports_analyst/research/dtos.dart"
         kDefaultMatchPoolTopN,
         kDefaultPredictionSearchLimit,
         kDefaultPredictionTopN,
+        researchArgsJson,
         researchBoolFromJson,
         researchDateOnlyFromJsonNullable,
         researchDateOnlyToJson,
@@ -33,7 +34,7 @@ T parseMcpArgs<T>(
   Map<String, Object?>? arguments,
   T Function(Map<String, dynamic> json) fromJson,
 ) {
-  return fromJson(mcpArgumentsToJsonMap(arguments));
+  return fromJson(researchArgsJson(mcpArgumentsToJsonMap(arguments)));
 }
 
 @JsonSerializable()
@@ -48,7 +49,7 @@ class ListRatingProjectsArgs {
   final int limit;
 
   factory ListRatingProjectsArgs.fromJson(Map<String, dynamic> json) =>
-      _$ListRatingProjectsArgsFromJson(json);
+      _$ListRatingProjectsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$ListRatingProjectsArgsToJson(this);
 }
 
@@ -65,7 +66,7 @@ class SearchMatchesArgs {
   final int limit;
 
   factory SearchMatchesArgs.fromJson(Map<String, dynamic> json) =>
-      _$SearchMatchesArgsFromJson(json);
+      _$SearchMatchesArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$SearchMatchesArgsToJson(this);
 }
 
@@ -88,7 +89,7 @@ class GetMatchWinnersArgs {
   final int topN;
 
   factory GetMatchWinnersArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetMatchWinnersArgsFromJson(json);
+      _$GetMatchWinnersArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetMatchWinnersArgsToJson(this);
 }
 
@@ -124,7 +125,7 @@ class GetMatchResultsArgs {
   final int topN;
 
   factory GetMatchResultsArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetMatchResultsArgsFromJson(json);
+      _$GetMatchResultsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetMatchResultsArgsToJson(this);
 }
 
@@ -149,7 +150,7 @@ class SearchShootersArgs {
   final bool includeInternal;
 
   factory SearchShootersArgs.fromJson(Map<String, dynamic> json) =>
-      _$SearchShootersArgsFromJson(json);
+      _$SearchShootersArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$SearchShootersArgsToJson(this);
 }
 
@@ -181,7 +182,7 @@ class ShooterLookupArgs {
   final bool bestFirst;
 
   factory ShooterLookupArgs.fromJson(Map<String, dynamic> json) =>
-      _$ShooterLookupArgsFromJson(json);
+      _$ShooterLookupArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$ShooterLookupArgsToJson(this);
 }
 
@@ -215,7 +216,7 @@ class GetLeaderboardArgs {
   final DateTime? changeSince;
 
   factory GetLeaderboardArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetLeaderboardArgsFromJson(json);
+      _$GetLeaderboardArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetLeaderboardArgsToJson(this);
 }
 
@@ -256,7 +257,7 @@ class GetMatchScoresArgs {
   final bool includeScoringEventCounts;
 
   factory GetMatchScoresArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetMatchScoresArgsFromJson(json);
+      _$GetMatchScoresArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetMatchScoresArgsToJson(this);
 }
 
@@ -289,7 +290,7 @@ class GetCompetitorStageScoresArgs {
   final bool includeScoringEventCounts;
 
   factory GetCompetitorStageScoresArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetCompetitorStageScoresArgsFromJson(json);
+      _$GetCompetitorStageScoresArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetCompetitorStageScoresArgsToJson(this);
 }
 
@@ -316,7 +317,7 @@ class SearchMatchPrepsArgs {
   final bool hasPredictionsOnly;
 
   factory SearchMatchPrepsArgs.fromJson(Map<String, dynamic> json) =>
-      _$SearchMatchPrepsArgsFromJson(json);
+      _$SearchMatchPrepsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$SearchMatchPrepsArgsToJson(this);
 }
 
@@ -330,7 +331,7 @@ class ListPredictionSetsArgs {
   final String prepId;
 
   factory ListPredictionSetsArgs.fromJson(Map<String, dynamic> json) =>
-      _$ListPredictionSetsArgsFromJson(json);
+      _$ListPredictionSetsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$ListPredictionSetsArgsToJson(this);
 }
 
@@ -354,7 +355,7 @@ class GetPredictionsArgs {
   final int topN;
 
   factory GetPredictionsArgs.fromJson(Map<String, dynamic> json) =>
-      _$GetPredictionsArgsFromJson(json);
+      _$GetPredictionsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$GetPredictionsArgsToJson(this);
 }
 
@@ -391,7 +392,7 @@ class SearchPredictionsArgs {
   final int limit;
 
   factory SearchPredictionsArgs.fromJson(Map<String, dynamic> json) =>
-      _$SearchPredictionsArgsFromJson(json);
+      _$SearchPredictionsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$SearchPredictionsArgsToJson(this);
 }
 

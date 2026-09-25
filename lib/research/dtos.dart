@@ -1011,6 +1011,56 @@ List<int>? researchIntListFromJson(Object? value) {
   return out.isEmpty ? null : out;
 }
 
+/// JSON keys that generated request DTOs decode as [int] / [int?].
+const kResearchIntArgKeys = {
+  "limit",
+  "matchId",
+  "topN",
+  "ratingId",
+  "minMatches",
+};
+
+/// JSON keys that generated request DTOs decode as [bool].
+const kResearchBoolArgKeys = {
+  "byRatingGroup",
+  "overall",
+  "femaleOnly",
+  "includeInternal",
+  "bestFirst",
+  "includeStages",
+  "includeScoringEventCounts",
+  "hasPredictionsOnly",
+};
+
+/// Coerce HTTP query / MCP JSON argument maps so generated `as String?` /
+/// `as num?` casts succeed.
+///
+/// Query-string parsers often turn `"2024"` into an [int], which then fails
+/// `json['query'] as String?`. Conversely, `limit=10` must remain an [int].
+Map<String, dynamic> researchArgsJson(Map<String, dynamic> json) {
+  final out = <String, dynamic>{};
+  json.forEach((key, value) {
+    out[key] = _coerceResearchArgValue(key, value);
+  });
+  return out;
+}
+
+dynamic _coerceResearchArgValue(String key, dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (kResearchBoolArgKeys.contains(key)) {
+    return researchBoolFromJson(value);
+  }
+  if (kResearchIntArgKeys.contains(key)) {
+    return researchIntFromJsonNullable(value);
+  }
+  if (value is List) {
+    return value;
+  }
+  return researchIdFromJsonNullable(value);
+}
+
 /// Coerce a wire id (string or number) to a decimal string.
 ///
 /// Synthetic MatchPrep / PredictionSet ids are full 64-bit hashes; JSON/JS

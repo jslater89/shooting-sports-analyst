@@ -310,31 +310,7 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
 }
 
 Map<String, dynamic> _queryMap(Request request) {
-  final out = <String, dynamic>{};
-  request.url.queryParameters.forEach((key, value) {
-    out[key] = _coerceQueryValue(value);
-  });
-  return out;
-}
-
-/// Coerce common query-string forms into JSON-friendly values for request DTOs.
-dynamic _coerceQueryValue(String value) {
-  final lower = value.toLowerCase();
-  if(lower == "true") {
-    return true;
-  }
-  if(lower == "false") {
-    return false;
-  }
-  final asInt = int.tryParse(value);
-  if(asInt != null) {
-    return asInt;
-  }
-  final asDouble = double.tryParse(value);
-  if(asDouble != null && value.contains(".")) {
-    return asDouble;
-  }
-  return value;
+  return researchArgsJson(Map<String, dynamic>.from(request.url.queryParameters));
 }
 
 Future<Response> _run(Future<ResearchResult<Map<String, dynamic>>> Function() body) async {
