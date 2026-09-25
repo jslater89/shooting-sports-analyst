@@ -483,8 +483,15 @@ class ResearchFacade implements ResearchQueries {
     final groups = groupsRes.unwrap();
     final hits = <ShooterHitDto>[];
 
-    final mn = memberNumber?.trim();
-    if (mn != null && mn.isNotEmpty) {
+    final seen = <int>{};
+    void addHit(DbShooterRating rating, RatingGroup group) {
+      if (seen.add(rating.id)) {
+        hits.add(_shooterHit(project, rating, group, includeInternal: includeInternal));
+      }
+    }
+
+    final mn = _processedMemberNumber(project, memberNumber);
+    if (mn.isNotEmpty) {
       for (final group in groups) {
         final rating = await db.maybeKnownShooter(
           project: project,
@@ -493,7 +500,7 @@ class ResearchFacade implements ResearchQueries {
           usePossibleMemberNumbers: true,
         );
         if (rating != null) {
-          hits.add(_shooterHit(project, rating, group, includeInternal: includeInternal));
+          addHit(rating, group);
         }
       }
       return Result.ok(hits.take(limit).toList());
@@ -503,6 +510,21 @@ class ResearchFacade implements ResearchQueries {
     if (q.length < 2) {
       return Result.err(ResearchError("query must be at least 2 characters (or pass memberNumber)"));
     }
+
+    final processedQuery = _processedMemberNumber(project, q);
+    if (_looksLikeMemberNumber(processedQuery)) {
+      for (final group in groups) {
+        final rating = await db.maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: processedQuery,
+          usePossibleMemberNumbers: true,
+        );
+        if (rating != null) {
+          addHit(rating, group);
+        }
+      }
+    }
     for (final group in groups) {
       final found = await db.findShooterRatings(
         project: project,
@@ -511,7 +533,7 @@ class ResearchFacade implements ResearchQueries {
         limit: limit,
       );
       for (final rating in found) {
-        hits.add(_shooterHit(project, rating, group, includeInternal: includeInternal));
+        addHit(rating, group);
       }
     }
     return Result.ok(hits.take(limit).toList());
@@ -1344,6 +1366,20 @@ class ResearchFacade implements ResearchQueries {
     ));
   }
 
+  String _processedMemberNumber(DbRatingProject project, String? raw) {
+    final trimmed = raw?.trim() ?? "";
+    if (trimmed.isEmpty) {
+      return "";
+    }
+    return ShooterDeduplicator.numberProcessor(project.sport)(trimmed);
+  }
+
+  // TODO: make this a property of sports rather than an inline here
+  // not all sports have numeric member numbers; ICORE can have fully alphabetic member IDs
+  bool _looksLikeMemberNumber(String processed) {
+    return processed.isNotEmpty && processed.contains(RegExp(r"[0-9]"));
+  }
+
   Future<ResearchResult<DbRatingProject>> _requireProject(String name) async {
     final project = await db.getRatingProjectByName(name);
     if (project == null) {
@@ -1422,8 +1458,8 @@ class ResearchFacade implements ResearchQueries {
       await project.dbGroups.load();
     }
 
-    final mn = memberNumber?.trim();
-    if (mn == null || mn.isEmpty) {
+    final mn = _processedMemberNumber(project, memberNumber);
+    if (mn.isEmpty) {
       return Result.err(ResearchError("memberNumber or ratingId is required"));
     }
 
