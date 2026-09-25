@@ -160,6 +160,8 @@ Built-in uuid: `uspsa-lo-co`. Resolve with `project.groups.firstWhereOrNull((g) 
 - Include project name, filters, and identity method in the header.
 - Use `_pct(numerator, denominator)` helpers for percentage lines with counts.
 - For long loops over ratings/matches, use `LabeledProgressBar` from `console/labeled_progress_bar.dart`.
+- Do not write large amounts of incremental output. Prefer progress bars and the final output only if
+  incremental output is desired.
 
 ## Code Style (Project)
 
