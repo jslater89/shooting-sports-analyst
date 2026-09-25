@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/string_similarity.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class FindRatingDialog extends StatefulWidget {
   FindRatingDialog({
@@ -188,10 +189,11 @@ class _FindRatingDialogState extends State<FindRatingDialog> {
                 if(location != null) {
                   nameText = "$nameText ($location)";
                 }
+                final lastSeenText = programmerYmdFormat.format(rating.lastSeen);
                 return ListTile(
                   enabled: !inUse,
                   title: Text(nameText),
-                  subtitle: Text("${rating.lastClassification?.shortDisplayName ?? "(n/a)"} - ${rating.formattedRating} - ${rating.memberNumber}"),
+                  subtitle: Text("${rating.lastClassification?.shortDisplayName ?? "(n/a)"} - ${rating.formattedRating} - ${rating.memberNumber} - $lastSeenText"),
                   onTap: () => Navigator.of(context).pop(rating),
                 );
               },
