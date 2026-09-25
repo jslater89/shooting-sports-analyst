@@ -93,6 +93,7 @@ import "db_oneoff_impl/tight_podium_span_command.dart";
 import "db_oneoff_impl/weekend_double_ratings_command.dart";
 import "db_oneoff_impl/bomb_fail_to_finish_command.dart";
 import "db_oneoff_impl/most_stages_in_month_command.dart";
+import "db_oneoff_impl/nationals_points_champion_command.dart";
 import "db_oneoff_impl/match_heat_debug_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
@@ -271,6 +272,9 @@ Future<void> main(List<String> args) async {
     else if(command == "DAC") {
       await DistinctAreaChampionsCommand(db).executor(console, []);
     }
+    else if(command == "NPC") {
+      await NationalsPointsChampionCommand(db).executor(console, []);
+    }
     else if(command == "WKD") {
       final wkdCmd = WeekendDoubleRatingsCommand(db);
       final defs = wkdCmd.arguments;
@@ -436,6 +440,7 @@ Future<void> main(List<String> args) async {
     WeekendDoubleRatingsCommand(db),
     BombFailToFinishCommand(db),
     MostStagesInMonthCommand(db),
+    NationalsPointsChampionCommand(db),
     MatchHeatDebugCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
