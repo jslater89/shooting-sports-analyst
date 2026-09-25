@@ -352,7 +352,12 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
       final result = await body();
       if (result.isErr()) {
         final err = result.unwrapErr();
-        _log.w("Tool error: ${err.message}");
+        if (err.statusCode >= 500) {
+          _log.w("Tool error: ${err.message}");
+        }
+        else {
+          _log.i("Tool ${err.statusCode}: ${err.message}");
+        }
         return CallToolResult(
           isError: true,
           content: [TextContent(text: jsonEncode(researchErrorJson(err)))],

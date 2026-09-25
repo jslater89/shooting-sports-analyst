@@ -318,7 +318,12 @@ Future<Response> _run(Future<ResearchResult<Map<String, dynamic>>> Function() bo
     final result = await body();
     if (result.isErr()) {
       final err = result.unwrapErr();
-      _log.w("Research API error: ${err.message}");
+      if (err.statusCode >= 500) {
+        _log.w("Research API error: ${err.message}");
+      }
+      else {
+        _log.i("Research API ${err.statusCode}: ${err.message}");
+      }
       return Response(
         err.statusCode,
         body: jsonEncode(researchErrorJson(err)),
