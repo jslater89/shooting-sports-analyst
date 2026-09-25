@@ -91,6 +91,7 @@ import "db_oneoff_impl/match_slope_command.dart";
 import "db_oneoff_impl/distinct_area_champions_command.dart";
 import "db_oneoff_impl/tight_podium_span_command.dart";
 import "db_oneoff_impl/weekend_double_ratings_command.dart";
+import "db_oneoff_impl/match_heat_debug_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -303,6 +304,23 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "MHD") {
+      final mhdCmd = MatchHeatDebugCommand(db);
+      final defs = mhdCmd.arguments;
+      final yearArg = defs[0] as IntMenuArgument;
+      final projectArg = defs[1] as StringMenuArgument;
+      final year = args.length > 1
+          ? (int.tryParse(args[1]) ?? yearArg.getDefault()!)
+          : yearArg.getDefault()!;
+      final projectName = args.length > 2 ? args[2] : (projectArg.getDefault() ?? "");
+      await mhdCmd.executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: yearArg, value: year),
+          MenuArgumentValue<String>(argument: projectArg, value: projectName),
+        ],
+      );
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -360,6 +378,7 @@ Future<void> main(List<String> args) async {
     DistinctAreaChampionsCommand(db),
     TightPodiumSpanCommand(db),
     WeekendDoubleRatingsCommand(db),
+    MatchHeatDebugCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
