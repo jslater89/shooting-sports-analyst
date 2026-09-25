@@ -36,10 +36,18 @@ class CustomTooltip<T> {
 
   WidgetBuilder get builder => (context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    var windowSize = MediaQuery.of(context).size;
     var mousePosition = this.mousePosition;
     if(mousePosition == null) {
       mousePosition = Offset(0, 0);
+    }
+
+    // Nested workspace navigators own a smaller overlay than the window.
+    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    final overlaySize = (overlayBox != null && overlayBox.hasSize)
+        ? overlayBox.size
+        : MediaQuery.of(context).size;
+    if(overlayBox != null && overlayBox.hasSize) {
+      mousePosition = overlayBox.globalToLocal(mousePosition);
     }
 
     // Measure the container size after the first frame
@@ -60,16 +68,16 @@ class CustomTooltip<T> {
 
     var offset = 25 * uiScaleFactor;
     // tooltip is to the right of the mouse position
-    var left = offset + mousePosition.dx;
-    // tooltip is above the mouse position
-    var top = mousePosition.dy - offset;
-    if(left + tooltipWidth > windowSize.width) {
+    var left = mousePosition.dx + offset;
+    // tooltip is below the mouse position
+    var top = mousePosition.dy + offset;
+    if(left + tooltipWidth > overlaySize.width) {
       // move the tooltip to the left when close to the right
-      left -= (tooltipWidth + offset * 2);
+      left = mousePosition.dx - tooltipWidth - offset;
     }
-    if(top - tooltipHeight < 0) {
-      // move the tooltip down when close to the top
-      top += (tooltipHeight + offset * 2);
+    if(top + tooltipHeight > overlaySize.height) {
+      // move the tooltip above the mouse when close to the bottom
+      top = mousePosition.dy - tooltipHeight - offset;
     }
 
     var finalBackgroundColor = ThemeColors.onBackgroundColor(context);
@@ -88,9 +96,9 @@ class CustomTooltip<T> {
               key: _containerKey,
               decoration: BoxDecoration(
                 color: finalBackgroundColor.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(4 * uiScaleFactor),
               ),
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.all(8 * uiScaleFactor),
               child: Material(
                 color: Colors.transparent,
                 child: child,
@@ -121,6 +129,9 @@ class CustomTooltip<T> {
     this.data = data;
     if(width != null) {
       this.width = width;
+    }
+    if(height != null) {
+      this.height = height;
     }
     if(child != null) {
       this.child = child;
