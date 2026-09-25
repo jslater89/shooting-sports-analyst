@@ -9,30 +9,36 @@ import 'package:shooting_sports_analyst/config/config.dart';
 
 enum MatchHeatValue {
   topTenPercentAverageRating,
+  topContenderAverageRating,
   medianRating,
   averageClassification,
   matchSize;
 
   String get label => switch(this) {
-    topTenPercentAverageRating => "Top 10% average rating",
-    medianRating => "Median rating",
-    averageClassification => "Average classification",
-    matchSize => "Match size",
+    topTenPercentAverageRating => "Top 10% Average Rating",
+    topContenderAverageRating => "Top Contender Average Rating",
+    medianRating => "Median Rating",
+    averageClassification => "Average Classification",
+    matchSize => "Match Size",
   };
 
   String get axisLabel => switch(this) {
-    topTenPercentAverageRating => "Average of Top Ratings",
+    topTenPercentAverageRating => "Top 10% Average Rating",
+    topContenderAverageRating => "Top Contender Average Rating",
     medianRating => "Median Rating",
     averageClassification => "Average Classification",
     matchSize => "Competitor Count",
   };
 
   String get tooltip => switch(this) {
-    topTenPercentAverageRating => "The average rating of the top 10% of competitors at the match.",
+    topTenPercentAverageRating => "The average rating of the best-finishing 10% in each division, at least 3.",
+    topContenderAverageRating => "The average rating of the best finishers in each division, from 3 up to 24 at 400 or more rated competitors.",
     medianRating => "The median rating of the competitors at the match.",
     averageClassification => "The average classification of the competitors at the match.",
     matchSize => "The number of competitors at the match.",
   };
+
+  bool get isRatingValued => this == topTenPercentAverageRating || this == topContenderAverageRating || this == medianRating;
 }
 
 class MatchHeatSettings {

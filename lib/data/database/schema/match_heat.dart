@@ -21,6 +21,10 @@ class MatchHeat {
   MatchPointer matchPointer;
   double topTenPercentAverageRating;
   double weightedTopTenPercentAverageRating;
+  /// Average rating of the best finishers in each division. The count grows
+  /// from 3 to 24 as the rated field grows from 0 to 400, then stays at 24.
+  double topContenderAverageRating;
+  double weightedTopContenderAverageRating;
   double medianRating;
   double weightedMedianRating;
   double classificationStrength;
@@ -35,6 +39,8 @@ class MatchHeat {
     required this.matchPointer,
     required this.topTenPercentAverageRating,
     required this.weightedTopTenPercentAverageRating,
+    required this.topContenderAverageRating,
+    required this.weightedTopContenderAverageRating,
     required this.medianRating,
     required this.weightedMedianRating,
     required this.classificationStrength,
@@ -49,6 +55,7 @@ class MatchHeat {
     return
 """MatchHeat(
   topTenPercentAverageRating: $topTenPercentAverageRating,
+  topContenderAverageRating: $topContenderAverageRating,
   medianRating: $medianRating,
   classificationStrength: $classificationStrength,
   ratedCompetitorCount: $ratedCompetitorCount,

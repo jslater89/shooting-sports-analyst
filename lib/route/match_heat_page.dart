@@ -65,6 +65,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   int _maxCompetitorCount = 0;
   double _minTopRating = 2e32;
   double _maxTopRating = -2e32;
+  double _minContenderRating = 2e32;
+  double _maxContenderRating = -2e32;
   double _minMedianRating = 2e32;
   double _maxMedianRating = -2e32;
   double _minY = 1200;
@@ -169,6 +171,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     _maxCompetitorCount = 0.toInt();
     _minTopRating = 2e32;
     _maxTopRating = -2e32;
+    _minContenderRating = 2e32;
+    _maxContenderRating = -2e32;
     _minMedianRating = 2e32;
     _maxMedianRating = -2e32;
 
@@ -177,24 +181,28 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     var yMinOffset = switch(_settings.yAxis) {
       MatchHeatValue.matchSize => 0,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.topContenderAverageRating => isLatentLog ? 5 : 100,
       MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0,
     };
     var yMaxOffset = switch(_settings.yAxis) {
       MatchHeatValue.matchSize => 10,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.topContenderAverageRating => isLatentLog ? 5 : 100,
       MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0.5,
     };
     var xMinOffset = switch(_settings.xAxis) {
       MatchHeatValue.matchSize => 0,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.topContenderAverageRating => isLatentLog ? 5 : 100,
       MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0,
     };
     var xMaxOffset = switch(_settings.xAxis) {
       MatchHeatValue.matchSize => 10,
       MatchHeatValue.topTenPercentAverageRating => isLatentLog ? 5 : 100,
+      MatchHeatValue.topContenderAverageRating => isLatentLog ? 5 : 100,
       MatchHeatValue.medianRating => isLatentLog ? 2.5 : 100,
       MatchHeatValue.averageClassification => 0.5,
     };
@@ -210,17 +218,25 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       var yValue = switch(_settings.yAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
         MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.topContenderAverageRating => heat.weightedTopContenderAverageRating,
         MatchHeatValue.medianRating => heat.weightedMedianRating,
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       };
       var xValue = switch(_settings.xAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
         MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.topContenderAverageRating => heat.weightedTopContenderAverageRating,
         MatchHeatValue.medianRating => heat.weightedMedianRating,
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       };
 
-      yValue = scaleRatingFunction(yValue.toDouble());
+      if(_settings.yAxis.isRatingValued) {
+        yValue = scaleRatingFunction(yValue.toDouble());
+      }
+
+      if(_settings.xAxis.isRatingValued) {
+        xValue = scaleRatingFunction(xValue.toDouble());
+      }
 
       _minY = min(_minY, (yValue - yMinOffset).toDouble());
       _maxY = max(_maxY, (yValue + yMaxOffset).toDouble());
@@ -232,6 +248,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       _maxCompetitorCount = max(_maxCompetitorCount, heat.rawCompetitorCount);
       _minTopRating = min(_minTopRating, heat.weightedTopTenPercentAverageRating);
       _maxTopRating = max(_maxTopRating, heat.weightedTopTenPercentAverageRating);
+      _minContenderRating = min(_minContenderRating, heat.weightedTopContenderAverageRating);
+      _maxContenderRating = max(_maxContenderRating, heat.weightedTopContenderAverageRating);
       _minMedianRating = min(_minMedianRating, heat.weightedMedianRating);
       _maxMedianRating = max(_maxMedianRating, heat.weightedMedianRating);
     }
@@ -259,10 +277,10 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
               icon: Icon(Icons.save_alt),
               onPressed: () {
                 List<String> lines = [];
-                lines.add("Match, Date, Top 10% Average Rating, Median Rating, Average Classification, Match Size");
+                lines.add("Match, Date, Top 10% Average Rating, Top Contender Average Rating, Median Rating, Average Classification, Match Size");
                 for(var heat in _matchHeat.values) {
                   var safeName = heat.matchPointer.name.replaceAll('"', "'");
-                  lines.add('"${safeName}",${heat.matchPointer.date?.toIso8601String() ?? "(no date)"},${heat.weightedTopTenPercentAverageRating},${heat.weightedMedianRating},${heat.weightedClassificationStrength},${heat.rawCompetitorCount}');
+                  lines.add('"${safeName}",${heat.matchPointer.date?.toIso8601String() ?? "(no date)"},${heat.weightedTopTenPercentAverageRating},${heat.weightedTopContenderAverageRating},${heat.weightedMedianRating},${heat.weightedClassificationStrength},${heat.rawCompetitorCount}');
                 }
                 HtmlOr.saveFile("match-heat-${_project!.name.safeFilename()}.csv", lines.join("\n"));
               }
@@ -387,12 +405,14 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       domainFn: (MatchHeat heat, _) => switch(_settings.xAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
         MatchHeatValue.topTenPercentAverageRating => scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
+        MatchHeatValue.topContenderAverageRating => scaleRatingFunction(heat.weightedTopContenderAverageRating),
         MatchHeatValue.medianRating => scaleRatingFunction(heat.weightedMedianRating),
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       },
       measureFn: (MatchHeat heat, _) => switch(_settings.yAxis) {
         MatchHeatValue.matchSize => heat.rawCompetitorCount,
         MatchHeatValue.topTenPercentAverageRating => scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
+        MatchHeatValue.topContenderAverageRating => scaleRatingFunction(heat.weightedTopContenderAverageRating),
         MatchHeatValue.medianRating => scaleRatingFunction(heat.weightedMedianRating),
         MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
       },
@@ -405,8 +425,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
             return 1 * uiScaleFactor + ((heat.rawCompetitorCount - 50) / 50);
           }
         }
-        else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating) {
-          final scaledRating = scaleRatingFunction(heat.weightedTopTenPercentAverageRating);
+        else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating || _settings.dotSize == MatchHeatValue.topContenderAverageRating) {
+          final rating = _settings.dotSize == MatchHeatValue.topContenderAverageRating
+              ? heat.weightedTopContenderAverageRating
+              : heat.weightedTopTenPercentAverageRating;
+          final scaledRating = scaleRatingFunction(rating);
           if(scaledRating < _top10PercentReference) {
             return 1 * uiScaleFactor;
           }
@@ -458,17 +481,18 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
               dimmed: !_isHighlighted(heat.matchPointer),
             ) ?? charts.MaterialPalette.blue.shadeDefault;
           }
-          else if(_settings.dotColor == MatchHeatValue.topTenPercentAverageRating) {
+          else if(_settings.dotColor == MatchHeatValue.topTenPercentAverageRating || _settings.dotColor == MatchHeatValue.topContenderAverageRating) {
+            final contenders = _settings.dotColor == MatchHeatValue.topContenderAverageRating;
             return _calculateLerpColor(
-              value: scaleRatingFunction(heat.weightedTopTenPercentAverageRating),
-              minValue: _minTopRating.toDouble(),
-              maxValue: _maxTopRating.toDouble(),
+              value: contenders ? heat.weightedTopContenderAverageRating : heat.weightedTopTenPercentAverageRating,
+              minValue: (contenders ? _minContenderRating : _minTopRating).toDouble(),
+              maxValue: (contenders ? _maxContenderRating : _maxTopRating).toDouble(),
               dimmed: !_isHighlighted(heat.matchPointer),
             ) ?? charts.MaterialPalette.blue.shadeDefault;
           }
           else if(_settings.dotColor == MatchHeatValue.medianRating) {
             return _calculateLerpColor(
-              value: scaleRatingFunction(heat.weightedMedianRating),
+              value: heat.weightedMedianRating,
               minValue: _minMedianRating.toDouble(),
               maxValue: _maxMedianRating.toDouble(),
               dimmed: !_isHighlighted(heat.matchPointer),
@@ -664,6 +688,10 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                         style: TextStyles.tooltipText(context),
                       ),
                       Text(
+                        "Top contenders: ${ratingDisplayFormatter(heat.weightedTopContenderAverageRating)}",
+                        style: TextStyles.tooltipText(context),
+                      ),
+                      Text(
                         "Median: ${ratingDisplayFormatter(heat.weightedMedianRating)}",
                         style: TextStyles.tooltipText(context),
                       ),
@@ -791,6 +819,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       matchPointer: MatchPointer(),
       topTenPercentAverageRating: 0,
       weightedTopTenPercentAverageRating: 0,
+      topContenderAverageRating: 0,
+      weightedTopContenderAverageRating: 0,
       medianRating: 0,
       weightedMedianRating: 0,
       classificationStrength: 0,
@@ -808,6 +838,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       }
       total.topTenPercentAverageRating += heat.topTenPercentAverageRating;
       total.weightedTopTenPercentAverageRating += heat.weightedTopTenPercentAverageRating;
+      total.topContenderAverageRating += heat.topContenderAverageRating;
+      total.weightedTopContenderAverageRating += heat.weightedTopContenderAverageRating;
       total.medianRating += heat.medianRating;
       total.weightedMedianRating += heat.weightedMedianRating;
       total.classificationStrength += heat.classificationStrength;
@@ -824,6 +856,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
     total.topTenPercentAverageRating /= totalMatches;
     total.weightedTopTenPercentAverageRating /= totalMatches;
+    total.topContenderAverageRating /= totalMatches;
+    total.weightedTopContenderAverageRating /= totalMatches;
     total.medianRating /= totalMatches;
     total.weightedMedianRating /= totalMatches;
     total.classificationStrength /= totalMatches;
@@ -833,6 +867,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     total.rawCompetitorCount = total.rawCompetitorCount ~/ totalMatches;
 
     return "Top 10%: ${total.weightedTopTenPercentAverageRating.round()}\n"
+        "Top contenders: ${total.weightedTopContenderAverageRating.round()}\n"
         "Median: ${total.weightedMedianRating.round()}\n"
         "Classification: ${_calculateClassificationLabel(total.weightedClassificationStrength)}\n"
         "Competitors: ${total.rawCompetitorCount}${total.usedCompetitorCount != total.rawCompetitorCount ? " (${total.usedCompetitorCount})" : ""}";
