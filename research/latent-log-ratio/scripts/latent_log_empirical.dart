@@ -30,6 +30,7 @@ import "package:shooting_sports_analyst/data/database/match/rating_project_datab
 import "package:shooting_sports_analyst/data/math/distribution_tools.dart";
 import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/ipsc.dart";
+import "package:shooting_sports_analyst/data/sport/builtins/links/registry.dart";
 import "package:shooting_sports_analyst/data/sport/builtins/uspsa.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
@@ -159,8 +160,13 @@ Future<void> main(List<String> args) async {
 
     for(var group in groupsList) {
       var filters = group.filters;
+      // Special case for USPSA/IPSC compatibility; since this is a research
+      // script I'll allow the special case.
       if(sport.name == uspsaSport.name && hydratedMatch.sport.name == ipscSport.name) {
-        filters = group.ipscCompatibleFilters();
+        final link = SportLinkRegistry().linkFor(source: hydratedMatch.sport, target: group.sport);
+        if(link != null) {
+          filters = link.targetCompatibleFiltersFor(group.divisions);
+        }
       }
       Map<MatchEntry, RelativeMatchScore> scores;
       try {

@@ -75,10 +75,26 @@ class FilterSet {
   Iterable<AgeCategory> get activeAgeCategories => ageCategories.keys.where((c) => ageCategories[c] ?? false);
   Iterable<CompetitorCategory> get activeCategories => categories.keys.where((c) => categories[c] ?? false);
 
-  static Map<Division, bool> divisionListToMap(Sport sport, List<Division> divisions) {
+  /// Create a map of divisions to true/false, where true means the division is active.
+  ///
+  /// If validate is true, the default, only divisions that are in [sport] will be included in the map.
+  /// If validate is false, all divisions in [divisions] will be included in the map. All divisions in [sport]
+  /// will also be included in the map; any not present in [divisions] will be set to false.
+  static Map<Division, bool> divisionListToMap(Sport sport, List<Division> divisions, {bool validate = true}) {
     Map<Division, bool> map = {};
-    for(var d in sport.divisions.values) {
-      map[d] = divisions.contains(d);
+
+    if(validate) {
+      for(var d in sport.divisions.values) {
+        map[d] = divisions.contains(d);
+      }
+    }
+    else {
+      for(var d in sport.divisions.values) {
+        map[d] = false;
+      }
+      for(var d in divisions) {
+        map[d] = true;
+      }
     }
 
     return map;

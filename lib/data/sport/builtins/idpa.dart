@@ -17,17 +17,17 @@ final _idpaPenalties = [
   const ScoringEvent("FTDR", timeChange: 30, alternateNames: ["Failure to Do Right"]),
 ];
 
-final idpaSportName = "IDPA";
+const idpaSportName = "IDPA";
 const idpaDivisions = [
-  const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP", alternateNames: ["Stock Service Pistol (SSP)"]),
-  const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC", alternateNames: ["PCC10", "Pistol Caliber Carbine (PCC)"]),
-  const Division(name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP", alternateNames: ["Enhanced Service Pistol (ESP)"]),
-  const Division(name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP", alternateNames: ["Custom Defensive Pistol (CDP)"]),
-  const Division(name: "CO", longName: "Carry Optics", shortName: "CO", alternateNames: ["Carry Optics (CO)"]),
-  const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP", alternateNames: ["Compact Carry Pistol (CCP)"]),
-  const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG", alternateNames: ["Backup Gun (BUG)", "Back-Up Gun (BUG)"]),
-  const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR", "Revolver (REV)"]),
-  const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD", "Not For Competition (NFC)", "N/A"], fallback: true),
+  const Division(sportName: idpaSportName, name: "SSP", longName: "Stock Service Pistol", shortName: "SSP", alternateNames: ["Stock Service Pistol (SSP)"]),
+  const Division(sportName: idpaSportName, name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC", alternateNames: ["PCC10", "Pistol Caliber Carbine (PCC)"]),
+  const Division(sportName: idpaSportName, name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP", alternateNames: ["Enhanced Service Pistol (ESP)"]),
+  const Division(sportName: idpaSportName, name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP", alternateNames: ["Custom Defensive Pistol (CDP)"]),
+  const Division(sportName: idpaSportName, name: "CO", longName: "Carry Optics", shortName: "CO", alternateNames: ["Carry Optics (CO)"]),
+  const Division(sportName: idpaSportName, name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP", alternateNames: ["Compact Carry Pistol (CCP)"]),
+  const Division(sportName: idpaSportName, name: "BUG", longName: "Backup Gun", shortName: "BUG", alternateNames: ["Backup Gun (BUG)", "Back-Up Gun (BUG)"]),
+  const Division(sportName: idpaSportName, name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR", "Revolver (REV)"]),
+  const Division(sportName: idpaSportName, name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD", "Not For Competition (NFC)", "N/A"], fallback: true),
 ];
 
 const _icoreDM = const Classification(index: 0, name: "Distinguished Master", shortName: "DM");

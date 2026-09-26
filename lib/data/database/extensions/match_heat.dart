@@ -16,8 +16,9 @@ import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart' show ipscSport, ipscDivisionForUspsaDivision;
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart' show ipscSport;
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart' show uspsaSport, uspsaA;
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -359,21 +360,21 @@ extension MatchHeatDatabase on AnalystDatabase {
       draftByName[division.name] = draft;
 
       DataSourceResult<RatingGroup?> groupRes;
-      Division finalDivision = division;
-      if(sport == uspsaSport && match.sport == ipscSport) {
-        var ipscDivision = ipscDivisionForUspsaDivision(division);
-        if(ipscDivision == null) {
-          _log.w("No IPSC division found for USPSA division: ${division.name}");
-          draft.skipReason = "No IPSC division for this USPSA division";
+      List<Division> finalDivisions = [division];
+      final targetSport = sport;
+      final sourceSport = match.sport;
+      final link = SportLinkRegistry().linkFor(source: sourceSport, target: targetSport);
+      if(link != null) {
+        var sourceDivisions = link.sourceCompatibleDivisions(division);
+        if(sourceDivisions.isEmpty) {
+          _log.w("No source sport divisions found for target sport division: ${division.name} with source sport ${sourceSport.name} and target sport ${targetSport.name}");
+          draft.skipReason = "No source sport divisions found for target sport division: ${division.name} with source sport ${sourceSport.name} and target sport ${targetSport.name}";
           continue;
         }
-        groupRes = await project.groupForDivision(division);
-        finalDivision = ipscDivision;
+        finalDivisions = sourceDivisions;
       }
-      else {
-        groupRes = await project.groupForDivision(division);
-      }
-      draft.scoredDivisionName = finalDivision.name;
+      groupRes = await project.groupForDivision(division);
+      draft.scoredDivisionName = division.name;
 
       if(groupRes.isErr()) {
         _log.w("Error getting group for division ${division.name}: ${groupRes.unwrapErr()}");
@@ -407,7 +408,7 @@ extension MatchHeatDatabase on AnalystDatabase {
         shortCompetitorHistory = 5;
       }
 
-      var divisionEntries = match.filterShooters(divisions: [finalDivision]);
+      var divisionEntries = match.filterShooters(divisions: finalDivisions);
       draft.rosterCount = divisionEntries.length;
       if(divisionEntries.length < 5) {
         draft.skipReason = "Fewer than 5 roster entries (${divisionEntries.length})";
@@ -454,18 +455,21 @@ extension MatchHeatDatabase on AnalystDatabase {
     // For each division, calculate divisional heat.
     for(var division in sport.divisions.values) {
       final draft = draftByName[division.name];
-      Division finalDivision = division;
-      if(sport == uspsaSport && match.sport == ipscSport) {
-        var ipscDivision = ipscDivisionForUspsaDivision(division);
-        if(ipscDivision == null) {
-          _log.w("No IPSC division found for USPSA division: ${division.name}");
+      List<Division> finalDivisions = [division];
+      final targetSport = sport;
+      final sourceSport = match.sport;
+      final link = SportLinkRegistry().linkFor(source: sourceSport, target: targetSport);
+      if(link != null) {
+        var sourceDivisions = link.sourceCompatibleDivisions(division);
+        if(sourceDivisions.isEmpty) {
+          _log.w("No source sport division found for target sport division: ${division.name} with source sport ${sourceSport.name} and target sport ${targetSport.name}");
           continue;
         }
-        finalDivision = ipscDivision;
+        finalDivisions = sourceDivisions;
       }
-      var scores = match.getScoresFromFilters(FilterSet(match.sport, divisions: [finalDivision]));
+      var scores = match.getScoresFromFilters(FilterSet(match.sport, divisions: finalDivisions));
 
-      var competitors = scores.keys.where((e) => e.division == finalDivision).toList();
+      var competitors = scores.keys.where((e) => finalDivisions.contains(e.division)).toList();
       var ratedCompetitors = competitors.where((e) => shooterRatings.containsKey(e));
       if(draft != null) {
         draft.scoreCount = competitors.length;

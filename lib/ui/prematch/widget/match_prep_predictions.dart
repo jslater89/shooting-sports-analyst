@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/math/ratio_forecast_stats.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -470,7 +471,15 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
       if(matchRes.isOk()) {
         Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
         var match = matchRes.unwrap();
+
         var filters = group.filters;
+        if(group.sport.name != match.sport.name) {
+          final link = SportLinkRegistry().linkFor(source: match.sport, target: group.sport);
+          if(link != null) {
+            filters = link.targetCompatibleFiltersFor(group.divisions);
+          }
+        }
+
         var shooters = match.filterShooters(
           filterMode: FilterMode.and,
           divisions: filters.activeDivisions.toList(),

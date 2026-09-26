@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/registra
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/name_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -107,12 +107,21 @@ class FutureMatch {
   /// Find the registrations for a given sport and rating group.
   List<MatchRegistration> getRegistrationsFor(Sport sport, {RatingGroup? group = null, List<String>? squads = null, bool fallbackDivision = true}) {
     List<MatchRegistration> matchedRegistrations = [];
+    Sport lookupSport;
+    bool differentSport = false;
+    if(sport.name == this.sportName) {
+      lookupSport = sport;
+    }
+    else {
+      lookupSport = SportRegistry().lookup(sportName) ?? sport;
+      differentSport = lookupSport.name != sport.name;
+    }
     if(group == null) {
       matchedRegistrations = registrations.toList();
     }
     else {
       for(var registration in registrations) {
-        var division = sport.divisions.lookupByName(registration.shooterDivisionName, fallback: fallbackDivision);
+        var division = lookupSport.divisions.lookupByName(registration.shooterDivisionName, fallback: differentSport ? false : fallbackDivision);
         if(division == null) {
           continue;
         }
@@ -139,35 +148,12 @@ class FutureMatch {
     return unmatched;
   }
 
-  /// Attempt to match registrations (optionally for a given rating group) to known
-  /// competitors from a list of possible shooter ratings, by comparing name, division, and classification.
-  ///
-  /// Saves updated registrations to the database.
-  Future<void> matchRegistrationsToRatings(Sport sport, List<ShooterRating> ratings, {RatingGroup? group}) async {
-    var unmatched = getUnmatchedRegistrationsFor(sport, group);
-
-    List<MatchRegistration> updateRequired = [];
-    for(var registration in unmatched) {
-      var rating = ratings.firstWhereOrNull((r) =>
-        r.name.toLowerCase() == registration.shooterName?.toLowerCase()
-        && r.division?.name == registration.shooterDivisionName
-        && r.lastClassification?.name == registration.shooterClassificationName
-      );
-      if(rating != null) {
-        registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
-        updateRequired.add(registration);
-      }
-    }
-
-    if(updateRequired.isNotEmpty) {
-      await AnalystDatabase().saveMatchRegistrations(updateRequired);
-    }
-  }
-
   /// Attempt to match registrations from the given rating group to known competitors
   /// in the given rating project, by comparing deduplicator name and classification.
+  /// (Note that when [sport] is different from the sport of this match, name only
+  /// is considered an exact match.)
   ///
-  /// Returns a tuple of the number of registrations matched and the number of unmatched registrations
+  /// Returns a tuple of the registrations matched and the unmatched registrations
   /// at the start of the process.
   ///
   /// If [searchForUnmatchedRatings] is true, registrations without an exact match will extract the surname
@@ -180,6 +166,16 @@ class FutureMatch {
       bool searchForUnmatchedRatings = false,
     }
   ) async {
+
+    Sport lookupSport;
+    bool differentSport = false;
+    if(sport.name == this.sportName) {
+      lookupSport = sport;
+    }
+    else {
+      lookupSport = SportRegistry().lookup(sportName) ?? sport;
+      differentSport = lookupSport.name != sport.name;
+    }
 
     List<MatchRegistration> unmatchedRegistrations = getUnmatchedRegistrationsFor(sport, group);
 
@@ -208,7 +204,11 @@ class FutureMatch {
       for(var rating in ratings) {
         matchingRatingsByName.add(rating);
         var registrationClassification = sport.classifications.lookupByName(registration.shooterClassificationName);
-        if(rating.lastClassification?.name == registrationClassification?.name) {
+
+        // Fall back to name matching only if the sport is different; otherwise require both a name and class match to be
+        // considered an exact match. (i.e. we'll only exact-match a rating from Sport X and a registration from Sport Y if
+        // only one person with the registration name exists in the Sport X data.)
+        if(differentSport || rating.lastClassification?.name == registrationClassification?.name) {
           exactMatchingRatings.add(rating);
         }
       }

@@ -104,11 +104,12 @@ const icoreStandardPowerFactor = PowerFactor.constant(_icoreStandardName,
   },
 );
 
-const icoreOpen = Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]);
-const icoreLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]);
-const icoreLimited6 = Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]);
-const icoreClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]);
+const icoreOpen = Division(sportName: icoreSportName, name: "Open", shortName: "OPEN", alternateNames: ["O"]);
+const icoreLimited = Division(sportName: icoreSportName, name: "Limited", shortName: "LIM", alternateNames: ["L"]);
+const icoreLimited6 = Division(sportName: icoreSportName, name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]);
+const icoreClassic = Division(sportName: icoreSportName, name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]);
 const icoreBig6 = Division(
+  sportName: icoreSportName,
   name: "Big 6",
   shortName: "BIG6",
   alternateNames: ["B6", "Heavy Metal", "HM"],

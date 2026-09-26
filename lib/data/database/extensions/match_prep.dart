@@ -303,7 +303,7 @@ extension MatchPrepDatabase on AnalystDatabase {
         if(!foundCachedRating) {
           DbShooterRating? rating;
           for(var memberNumber in r.shooterMemberNumbers) {
-            rating = await maybeKnownShooter(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber, useCache: true);
+            rating = await maybeKnownShooter(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber, useCache: true, usePossibleMemberNumbers: true);
             if(rating != null) {
               break;
             }

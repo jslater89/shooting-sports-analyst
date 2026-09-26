@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -49,8 +50,17 @@ class CareerStats {
     final totalSw = Stopwatch()..start();
     annualStats = [];
 
+    List<Division> compatibleDivisions = [...rating.group.divisions];
+    final links = SportLinkRegistry().linksToTarget(rating.group.sport, canIngest: true);
+    for(var link in links) {
+      final inboundDivisions = rating.group.divisions.map((e) =>
+        link.sourceCompatibleDivisions(e)
+      ).flattenedToSet;
+      compatibleDivisions.addAll(inboundDivisions);
+    }
+
     final historySw = Stopwatch()..start();
-    List<MatchHistoryEntry> matchHistory = rating.careerHistory(matchScoreCache: matchScoreCache, divisions: rating.group.ipscCompatibleDivisions());
+    List<MatchHistoryEntry> matchHistory = rating.careerHistory(matchScoreCache: matchScoreCache, divisions: compatibleDivisions);
     matchHistory.sort((a, b) => a.match.date.compareTo(b.match.date));
     historySw.stop();
     _log.v("careerHistory: ${historySw.elapsedMilliseconds}ms (${matchHistory.length} matches)");
@@ -244,9 +254,18 @@ class PeriodicStats {
 
     Map<String, bool> countedMatchResults = {};
 
+    List<Division> compatibleDivisions = [...rating.group.divisions];
+    final links = SportLinkRegistry().linksToTarget(rating.group.sport, canIngest: true);
+    for(var link in links) {
+      final inboundDivisions = rating.group.divisions.map((e) =>
+        link.sourceCompatibleDivisions(e)
+      ).flattenedToSet;
+      compatibleDivisions.addAll(inboundDivisions);
+    }
+
     for(var event in combinedEvents) {
       var match = event.match;
-      var divisions = rating.group.ipscCompatibleDivisions();
+      var divisions = compatibleDivisions;
       RelativeScore eventScore;
 
       // We need a match score

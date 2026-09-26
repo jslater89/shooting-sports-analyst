@@ -6,21 +6,20 @@
 
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const ipscSportName = "IPSC";
-const ipscOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
-const ipscPccOptics = Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]);
-const ipscPccIrons = Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]);
-const ipscStandard = Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]);
-const ipscProductionOptics = Division(name: "Production Optics", longName: "Production Optics", shortName: "PO");
-const ipscOptics = Division(name: "Optics", longName: "Optics", shortName: "OP");
-const ipscProduction = Division(name: "Production", shortName: "PROD");
-const ipscClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]);
-const ipscRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
+const ipscOpen = Division(sportName: ipscSportName, name: "Open", shortName: "OPEN", fallback: true);
+const ipscPccOptics = Division(sportName: ipscSportName, name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]);
+const ipscPccIrons = Division(sportName: ipscSportName, name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]);
+const ipscStandard = Division(sportName: ipscSportName, name: "Standard", shortName: "STD", alternateNames: ["STA"]);
+const ipscProductionOptics = Division(sportName: ipscSportName, name: "Production Optics", longName: "Production Optics", shortName: "PO");
+const ipscOptics = Division(sportName: ipscSportName, name: "Optics", longName: "Optics", shortName: "OP");
+const ipscProduction = Division(sportName: ipscSportName, name: "Production", shortName: "PROD");
+const ipscClassic = Division(sportName: ipscSportName, name: "Classic", shortName: "CLS", alternateNames: ["CLS"]);
+const ipscRevolver = Division(sportName: ipscSportName, name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const ipscDivisions = [
   ipscOpen,
   ipscPccOptics,
@@ -116,106 +115,3 @@ final ipscSport = Sport(
   ],
   builtinRatingGroupsProvider: DivisionRatingGroupProvider(ipscSportName, ipscDivisions)
 );
-
-/// Retrieve the USPSA division that corresponds to an IPSC division.
-Division? uspsaDivisionForIpscDivision(Division? division) {
-  if(division == null) return null;
-  if(division == ipscOpen) return uspsaOpen;
-  if(division == ipscStandard) return uspsaLimited;
-  if(division == ipscProduction) return uspsaProduction;
-  if(division == ipscProductionOptics) return uspsaCarryOptics;
-  if(division == ipscOptics) return uspsaLimitedOptics;
-  if(division == ipscClassic) return uspsaSingleStack;
-  if(division == ipscRevolver) return uspsaRevolver;
-  if(division == ipscPccOptics) return uspsaPcc;
-  if(division == ipscPccIrons) return uspsaPcc;
-  return null;
-}
-
-/// Retrieve the IPSC division that corresponds to a USPSA division.
-Division? ipscDivisionForUspsaDivision(Division? division) {
-  if(division == null) return null;
-  if(division == uspsaOpen) return ipscOpen;
-  if(division == uspsaLimited) return ipscStandard;
-  if(division == uspsaProduction) return ipscProduction;
-  if(division == uspsaCarryOptics) return ipscProductionOptics;
-  if(division == uspsaLimitedOptics) return ipscOptics;
-  if(division == uspsaSingleStack) return ipscClassic;
-  if(division == uspsaRevolver) return ipscRevolver;
-  if(division == uspsaPcc) return ipscPccOptics;
-  return null;
-}
-
-/// Retrieve the USPSA division that corresponds to an IPSC division name.
-///
-/// Internally, looks up the IPSC division by name and then calls [uspsaDivisionForIpscDivision].
-Division? uspsaDivisionForIpscDivisionName(String name) {
-  var ipscDivision = ipscSport.divisions.lookupByName(name);
-  if(ipscDivision == null) return null;
-  return uspsaDivisionForIpscDivision(ipscDivision);
-}
-
-/// Given a list of USPSA divisions, return a list that contains both the original
-/// divisions and any IPSC divisions that correspond to those divisions.
-List<Division> addUspsaCompatibleIpscDivisions(List<Division> divisions) {
-  List<Division> outDivisions = [...divisions];
-  if(divisions.contains(uspsaOpen)) {
-    outDivisions.add(ipscOpen);
-  }
-  if(divisions.contains(uspsaLimited)) {
-    outDivisions.add(ipscStandard);
-  }
-  if(divisions.contains(uspsaProduction)) {
-    outDivisions.add(ipscProduction);
-  }
-  if(divisions.contains(uspsaCarryOptics)) {
-    outDivisions.add(ipscProductionOptics);
-  }
-  if(divisions.contains(uspsaLimitedOptics)) {
-    outDivisions.add(ipscOptics);
-  }
-  if(divisions.contains(uspsaSingleStack)) {
-    outDivisions.add(ipscClassic);
-  }
-  if(divisions.contains(uspsaRevolver)) {
-    outDivisions.add(ipscRevolver);
-  }
-  if(divisions.contains(uspsaPcc)) {
-    outDivisions.add(ipscPccOptics);
-  }
-  return outDivisions;
-}
-
-/// Given a list of IPSC divisions, return a list that contains both the original
-/// divisions and any USPSA divisions that correspond to those divisions.
-List<Division> addIpscCompatibleUspsaDivisions(List<Division> divisions) {
-  List<Division> outDivisions = [...divisions];
-  if(divisions.contains(ipscOpen)) {
-    outDivisions.add(uspsaOpen);
-  }
-  if(divisions.contains(ipscStandard)) {
-    outDivisions.add(uspsaLimited);
-  }
-  if(divisions.contains(ipscProduction)) {
-    outDivisions.add(uspsaProduction);
-  }
-  if(divisions.contains(ipscProductionOptics)) {
-    outDivisions.add(uspsaCarryOptics);
-  }
-  if(divisions.contains(ipscOptics)) {
-    outDivisions.add(uspsaLimitedOptics);
-  }
-  if(divisions.contains(ipscClassic)) {
-    outDivisions.add(uspsaSingleStack);
-  }
-  if(divisions.contains(ipscRevolver)) {
-    outDivisions.add(uspsaRevolver);
-  }
-  if(divisions.contains(ipscPccOptics)) {
-    outDivisions.add(uspsaPcc);
-  }
-  if(divisions.contains(ipscPccIrons)) {
-    outDivisions.add(uspsaPcc);
-  }
-  return outDivisions;
-}

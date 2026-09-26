@@ -26,8 +26,7 @@ import 'package:shooting_sports_analyst/data/ranking/member_number_correction.da
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -568,10 +567,18 @@ class RatingProjectLoader {
       if(_canceled) {
         return Result.err(CanceledError());
       }
+      final link = SportLinkRegistry().linkFor(source: match.sport, target: group.sport);
+
       // 3.1.1. Check recognized divisions
       var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
       if(onlyDivisions != null) {
-        var divisionsOfInterest = group.ipscCompatibleFilters().divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+        List<Division> divisionsOfInterest;
+        if(link != null && link.canIngest) {
+          divisionsOfInterest = link.targetCompatibleFiltersFor(group.divisions).divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+        }
+        else {
+          divisionsOfInterest = group.divisions;
+        }
 
         // Process this iff onlyDivisions contains at least one division of interest
         // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
@@ -1403,8 +1410,9 @@ class RatingProjectLoader {
 
   List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
     var filters = group.filters;
-    if(sport.name == uspsaSport.name && match.sport.name == ipscSport.name) {
-      filters = group.ipscCompatibleFilters();
+    final link = SportLinkRegistry().linkFor(source: match.sport, target: group.sport);
+    if(link != null && link.canIngest) {
+      filters = link.targetCompatibleFiltersFor(group.divisions);
     }
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(

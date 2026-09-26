@@ -376,6 +376,7 @@ Future<ShooterRating?> lookupDisplayRating({
       group: ratingSourceGroup,
       memberNumber: memberNumber,
       useCache: true,
+      usePossibleMemberNumbers: true,
     );
     if(rating != null) {
       return project.wrapDbRatingSync(rating);

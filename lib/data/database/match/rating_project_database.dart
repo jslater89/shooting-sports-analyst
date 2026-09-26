@@ -972,7 +972,7 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     DbRatingProject p = DbRatingProject(
       name: projectName,
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       settings: RatingProjectSettings.fromOld(project),
     );
 

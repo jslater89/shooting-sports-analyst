@@ -29,29 +29,34 @@ const _pcslNS = ScoringEvent("NS", pointChange: -10);
 const pcslSportName = "PCSL";
 const pcslDivisions = [
   const Division(
+    sportName: pcslSportName,
     name: "Open",
     longName: "Open",
     shortName: "OPEN",
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Practical",
     longName: "2-Gun Practical",
     shortName: "2GP",
     alternateNames: ["Practical (2-Gun)"],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "2-Gun Comp.",
     longName: "2-Gun Competition",
     shortName: "2GC",
     alternateNames: ["Competition (2-Gun)"],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Competition",
     shortName: "COMP",
     alternateNames: ["Competition (COMP)", "1-Gun Competition"],
     fallback: true,
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Practical Optics",
     shortName: "PO",
     alternateNames: [
@@ -61,6 +66,7 @@ const pcslDivisions = [
     ],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Practical Irons",
     shortName: "PI",
     alternateNames: [
@@ -70,6 +76,7 @@ const pcslDivisions = [
     ],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Actual Carry Pistol",
     shortName: "ACP",
     alternateNames: [
@@ -79,6 +86,7 @@ const pcslDivisions = [
     ],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "PCC",
     shortName: "PCC",
     alternateNames: [
@@ -88,11 +96,13 @@ const pcslDivisions = [
     ],
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Defensive Practical",
     shortName: "DPRAC",
     displayName: "D. Prac.",
   ),
   const Division(
+    sportName: pcslSportName,
     name: "Defensive Competition",
     shortName: "DCOMP",
     displayName: "D. Comp.",

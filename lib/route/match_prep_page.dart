@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
@@ -58,6 +60,12 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
             child: IconButton(
               icon: Icon(Icons.link),
               onPressed: () async {
+                List<Sport> compatibleSports = [];
+                compatibleSports = [_model.sport];
+                final links = SportLinkRegistry().linksToTarget(_model.sport, canPredict: true);
+                for(var link in links) {
+                  compatibleSports.add(link.sourceSport);
+                }
                 var match = await MatchDatabaseChooserDialog.showSingle(context: context, sport: _model.sport);
                 if(match != null) {
                   _model.linkMatch(match);

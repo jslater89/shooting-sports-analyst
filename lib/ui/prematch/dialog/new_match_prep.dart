@@ -12,6 +12,8 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/future_match_database_chooser_dialog.dart';
 
@@ -76,7 +78,15 @@ class _NewMatchPrepDialogState extends State<NewMatchPrepDialog> {
   }
 
   Future<void> _selectMatch() async {
-    var match = await FutureMatchDatabaseChooserDialog.showSingle(context: context, sport: project?.sport);
+    List<Sport> compatibleSports = [];
+    if(project != null) {
+      compatibleSports = [project!.sport];
+      final links = SportLinkRegistry().linksToTarget(project!.sport, canPredict: true);
+      for(var link in links) {
+        compatibleSports.add(link.sourceSport);
+      }
+    }
+    var match = await FutureMatchDatabaseChooserDialog.showSingle(context: context, sports: compatibleSports);
     if(match == null) {
       return;
     }

@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/registra
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -233,21 +234,33 @@ class MatchPrepPageModel extends ChangeNotifier {
       }
     }
 
+    Sport lookupSport;
+    bool differentSport = false;
+    if(sport.name == futureMatch.sportName) {
+      lookupSport = sport;
+    }
+    else {
+      lookupSport = SportRegistry().lookup(futureMatch.sportName) ?? sport;
+      differentSport = lookupSport.name != sport.name;
+    }
+
     int matched = 0;
     for(var registration in registrations) {
       if(registration.shooterMemberNumbers.isNotEmpty) {
-        var division = sport.divisions.lookupByName(registration.shooterDivisionName);
+        var division = lookupSport.divisions.lookupByName(registration.shooterDivisionName, fallback: !differentSport);
         if(division == null) {
           continue;
         }
+
         var scoringGroup = ratingProject.groupForDivisionSync(division);
         if(scoringGroup == null) {
           continue;
         }
+
         var ratingSourceGroup = prep.ratingSourceGroupFor(ratingProject, scoringGroup);
         DbShooterRating? rating;
         for(var memberNumber in registration.shooterMemberNumbers) {
-          rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber);
+          rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber, usePossibleMemberNumbers: true);
           if(rating != null) {
             break;
           }

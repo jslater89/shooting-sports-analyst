@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -123,19 +122,11 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
   List<RatingGroup>? _ratingGroupsCache;
 
   RatingGroup? groupForDivisionSync(Division? d) {
-    if(d == null && _ratingGroupsCache != null) return _ratingGroupsCache!.first;
-
-    if(d != null) {
-      for(var g in _ratingGroupsCache!) {
-        if(g.divisionNames.contains(d.name)) return g;
-      }
+    if(_ratingGroupsCache == null) return null;
+    if(d == null) return _ratingGroupsCache!.first;
+    for(var g in _ratingGroupsCache!) {
+      if(g.containsDivision(d)) return g;
     }
-
-    if(d != null && ipscSport.divisions.values.contains(d)) {
-      var uspsaDivision = uspsaDivisionForIpscDivision(d);
-      return groupForDivisionSync(uspsaDivision);
-    }
-
     return null;
   }
 

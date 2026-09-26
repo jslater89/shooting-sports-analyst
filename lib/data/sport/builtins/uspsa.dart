@@ -24,15 +24,15 @@ const _uspsaPenalties = [
 ];
 
 // Too bad, 'not for score' shooters, you're in Open now
-const uspsaOpen = Division(name: "Open", shortName: "OPEN", alternateNames: ["NFS"], fallback: true);
-const uspsaPcc = Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine", "pistolcalibercarbine"]);
-const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD", "Standard"]);
-const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
-const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics", "Carry-Optic", "Carry Optic", "Production Optics"]);
-const uspsaProduction = Division(name: "Production", shortName: "PROD");
-const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack", "Classic"]);
-const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
-const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
+const uspsaOpen = Division(sportName: uspsaSportName, name: "Open", shortName: "OPEN", alternateNames: ["NFS"], fallback: true);
+const uspsaPcc = Division(sportName: uspsaSportName, name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine", "pistolcalibercarbine"]);
+const uspsaLimited = Division(sportName: uspsaSportName, name: "Limited", shortName: "LIM", alternateNames: ["LTD", "Standard"]);
+const uspsaLimitedOptics = Division(sportName: uspsaSportName, name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
+const uspsaCarryOptics = Division(sportName: uspsaSportName, name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics", "Carry-Optic", "Carry Optic", "Production Optics"]);
+const uspsaProduction = Division(sportName: uspsaSportName, name: "Production", shortName: "PROD");
+const uspsaSingleStack = Division(sportName: uspsaSportName, name: "Single Stack", shortName: "SS", alternateNames: ["singlestack", "Classic"]);
+const uspsaRevolver = Division(sportName: uspsaSportName, name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
+const uspsaLimited10 = Division(sportName: uspsaSportName, name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
 
 /// Offset for the empirically-derived Bayesian priors for LLR, chosen to make the ratings
 /// match the original population mean of -0.11 with uninformed priors when the informed
@@ -78,10 +78,10 @@ final uspsaMinorPF = PowerFactor("Minor",
   penaltyEvents: _uspsaPenalties,
 );
 
-final String uspsaName = "USPSA";
+const String uspsaSportName = "USPSA";
 
 final uspsaSport = Sport(
-  uspsaName,
+  uspsaSportName,
   type: SportType.uspsa,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
@@ -287,7 +287,7 @@ class UspsaRatingGroupsProvider implements RatingGroupsProvider {
 final _builtinRaterGroups = <RatingGroup>[
   RatingGroup.newBuiltIn(
     uuid: "uspsa-open",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Open",
     displayName: "OPEN",
     sortOrder: 0,
@@ -297,7 +297,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-limited",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited",
     displayName: "LIM",
     sortOrder: 1,
@@ -307,7 +307,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-pcc",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "PCC",
     divisionNames: [
       uspsaPcc.name,
@@ -316,7 +316,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-optics",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited Optics",
     displayName: "LO",
     divisionNames: [
@@ -326,7 +326,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-carryoptics",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Carry Optics",
     displayName: "CO",
     divisionNames: [
@@ -336,7 +336,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-production",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Production",
     displayName: "PROD",
     divisionNames: [
@@ -346,7 +346,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-singlestack",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Single Stack",
     displayName: "SS",
     divisionNames: [
@@ -356,7 +356,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-revolver",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Revolver",
     displayName: "REVO",
     divisionNames: [
@@ -366,7 +366,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-limited10",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited 10",
     displayName: "L10",
     divisionNames: [
@@ -376,7 +376,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-locap",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Locap",
     divisionNames: [
       uspsaSingleStack.name,
@@ -388,7 +388,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-optic-handguns",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Optic Handguns",
     displayName: "Optics",
     divisionNames: [
@@ -401,7 +401,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-irons-handguns",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Irons Handguns",
     displayName: "Irons",
     divisionNames: [
@@ -414,7 +414,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-open-pcc",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Open/PCC",
     divisionNames: [
       uspsaOpen.name,
@@ -424,7 +424,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-co",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited/Carry Optics",
     displayName: "LIM/CO",
     divisionNames: [
@@ -435,7 +435,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-lo-co",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "LO/CO",
     divisionNames: [
       uspsaLimitedOptics.name,
@@ -445,7 +445,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-lim-lo-co",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited/LO/CO",
     displayName: "LIM/LO/CO",
     divisionNames: [
@@ -457,7 +457,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-lo",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Limited/LO",
     displayName: "LIM/LO",
     divisionNames: [
@@ -468,7 +468,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.newBuiltIn(
     uuid: "uspsa-combined",
-    sportName: uspsaName,
+    sportName: uspsaSportName,
     name: "Combined",
     divisionNames: [
       uspsaOpen.name,
@@ -489,7 +489,7 @@ class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
   @override
   List<FantasyRosterSlotType> get slotTypes => [
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Any",
       divisions: [
         uspsaOpen,
@@ -504,42 +504,42 @@ class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Open",
       divisions: [
         uspsaOpen,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Limited",
       divisions: [
         uspsaLimited,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "PCC",
       divisions: [
         uspsaPcc,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Limited Optics",
       divisions: [
         uspsaLimitedOptics,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Carry Optics",
       divisions: [
         uspsaCarryOptics,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "LOCO",
       divisions: [
         uspsaLimitedOptics,
@@ -547,35 +547,35 @@ class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Production",
       divisions: [
         uspsaProduction,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Single Stack",
       divisions: [
         uspsaSingleStack,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Revolver",
       divisions: [
         uspsaRevolver,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Limited 10",
       divisions: [
         uspsaLimited10,
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Locap",
       divisions: [
         uspsaSingleStack,
@@ -585,7 +585,7 @@ class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Lady Pistol",
       femaleOnly: true,
       divisions: [
@@ -600,7 +600,7 @@ class USPSARosterSlotProvider implements FantasyRosterSlotProvider {
       ],
     ),
     FantasyRosterSlotType.create(
-      sportName: uspsaName,
+      sportName: uspsaSportName,
       name: "Lady PCC",
       femaleOnly: true,
       divisions: [

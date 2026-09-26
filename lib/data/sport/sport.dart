@@ -259,6 +259,9 @@ class PowerFactor extends NameLookupEntity {
 }
 
 class Division extends NameLookupEntity {
+  /// The name of the sport to which this division belongs.
+  final String sportName;
+
   String get longName => _longName ?? name;
   final String? _longName;
   /// Name is the long display name for a division.
@@ -281,6 +284,7 @@ class Division extends NameLookupEntity {
   final bool fallback;
 
   const Division({
+    required this.sportName,
     required this.name,
     required this.shortName,
     this.alternateNames = const [],

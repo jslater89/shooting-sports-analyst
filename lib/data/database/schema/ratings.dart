@@ -26,9 +26,8 @@ import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart'
 import 'package:shooting_sports_analyst/data/source/match_source_registry.dart';
 import 'package:shooting_sports_analyst/data/source/psc/psc_options.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -837,13 +836,25 @@ class RatingGroup with DbSportEntity {
   bool builtin;
 
   /// Whether this group contains the given division.
-  bool containsDivision(Division division) {
-    // special case for USPSA/IPSC compatibility
-    if(sport == uspsaSport && ipscSport.divisions.values.contains(division)) {
-      division = uspsaDivisionForIpscDivision(division) ?? division;
+  bool containsDivision(Division division, {bool canIngest = true, bool? canPredict}) {
+    // Fast path first
+    if(divisions.contains(division)) {
+      return true;
     }
 
-    return divisions.contains(division);
+    // If the division isn't in divisions, it may not belong to this sport. Check
+    // all inbound links to see if the division is compatible with this group.
+    final links = SportLinkRegistry().linksToTarget(sport, canIngest: canIngest, canPredict: canPredict);
+    if(links.isNotEmpty) {
+      for(var link in links) {
+        final compatibleDivision = link.targetCompatibleDivision(division);
+        if(compatibleDivision != null && divisions.contains(compatibleDivision)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /// Whether this group fully contains the given other group
@@ -859,16 +870,16 @@ class RatingGroup with DbSportEntity {
       .cast<Division>()
       .toList();
 
-  List<Division> ipscCompatibleDivisions() {
-    var divisions = this.divisions;
-    if(sport == uspsaSport) {
-      divisions = addUspsaCompatibleIpscDivisions(divisions);
-    }
-    else if(sport == ipscSport) {
-      divisions = addIpscCompatibleUspsaDivisions(divisions);
-    }
-    return divisions;
-  }
+  // List<Division> ipscCompatibleDivisions() {
+  //   var divisions = this.divisions;
+  //   if(sport == uspsaSport) {
+  //     divisions = addUspsaCompatibleIpscDivisions(divisions);
+  //   }
+  //   else if(sport == ipscSport) {
+  //     divisions = addIpscCompatibleUspsaDivisions(divisions);
+  //   }
+  //   return divisions;
+  // }
 
   @ignore
   FilterSet get filters {
@@ -886,16 +897,16 @@ class RatingGroup with DbSportEntity {
     return f;
   }
 
-  FilterSet ipscCompatibleFilters() {
-    var f = filters;
-    var compatibleDivisions = ipscCompatibleDivisions();
-    for(var division in compatibleDivisions) {
-      // need to do this rather than divisionListToMap, because that validates
-      // that the sport includes the division, and in this case, it doesn't
-      f.divisions[division] = true;
-    }
-    return f;
-  }
+  // FilterSet ipscCompatibleFilters() {
+  //   var f = filters;
+  //   var compatibleDivisions = ipscCompatibleDivisions();
+  //   for(var division in compatibleDivisions) {
+  //     // need to do this rather than divisionListToMap, because that validates
+  //     // that the sport includes the division, and in this case, it doesn't
+  //     f.divisions[division] = true;
+  //   }
+  //   return f;
+  // }
 
   /// Default constructor for Isar.
   RatingGroup({
