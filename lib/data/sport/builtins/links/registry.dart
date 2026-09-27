@@ -5,6 +5,7 @@
  */
 
 import 'package:shooting_sports_analyst/data/sport/builtins/links/ipsc_to_uspsa_link.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/links/uspsa_to_ipsc_link.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/sport_link.dart';
 
@@ -14,6 +15,7 @@ class SportLinkRegistry {
 
   SportLinkRegistry._internal() {
     registerLink(ipscToUspsaLink);
+    registerLink(uspsaToIpscLink);
   }
 
   final Map<(String, String), SportLink> _linksByPair = {};
