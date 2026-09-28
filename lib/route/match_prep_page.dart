@@ -54,6 +54,15 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
         workspaceSection: "Prep",
         workspaceDetail: _model.futureMatch.eventName,
         actions: [
+          IconButton(
+            icon: Icon(Icons.calendar_month),
+            onPressed: () async {
+              final date = await showDatePicker(context: context, initialDate: _model.futureMatch.date, firstDate: DateTime(1900,1,1), lastDate: DateTime.now().add(const Duration(days: 365)));
+              if(date != null) {
+                _model.updateFutureMatchDate(date);
+              }
+            }
+          ),
           if(_model.futureMatch.sourceCode?.isEmpty ?? true) Tooltip(
             message: "Link a match result to this match prep",
             child: IconButton(

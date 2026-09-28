@@ -161,6 +161,13 @@ class MatchPrepPageModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update the date of the future match. This will update the date in the database and notify listeners.
+  Future<void> updateFutureMatchDate(DateTime date) async {
+    futureMatch.date = date;
+    await db.saveFutureMatch(futureMatch, updateLinks: []);
+    notifyListeners();
+  }
+
   // ===========================
   // Public utility functions
   // ===========================

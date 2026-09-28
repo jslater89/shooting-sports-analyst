@@ -164,9 +164,10 @@ extension FutureMatchDatabase on AnalystDatabase {
     List<Sport>? sports,
   }) async {
     final sportFilter = sports ?? (sport != null ? [sport] : null);
+    final trimmedName = name?.trim();
     List<FutureMatchQueryElement> elements = [
-      if(name != null)
-        NamePartsQuery(name),
+      if(trimmedName != null && trimmedName.isNotEmpty)
+        NamePartsQuery(trimmedName),
       if(sportFilter != null && sportFilter.isNotEmpty)
         SportQuery(sportFilter),
       if(after != null || before != null)
