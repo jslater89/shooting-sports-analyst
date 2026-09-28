@@ -568,7 +568,8 @@ class PredictionGameManager {
       groupScores[match] = {};
       setScores[match] = {};
       for(var group in matchesToGroups[match]!) {
-        var overallShooters = match.filterShooters(divisions: group.divisions);
+        final divisions = group.divisionsForCompatibleSport(match.sport, canPredict: true);
+        var overallShooters = match.filterShooters(divisions: divisions);
         var overallScores = match.getScores(shooters: overallShooters);
         var filteredOverall = Map.fromEntries(
           overallScores.entries
@@ -782,7 +783,7 @@ class PredictionGameManager {
     //   }
     // }
 
-    final divisions = ratingGroup.divisions;
+    final divisions = ratingGroup.divisionsForCompatibleSport(match.sport, canPredict: true);
     if(predictionSet != null) {
       List<Shooter> predictedShooters = predictionSet.algorithmPredictions.map((p) => p.asShooter(loadFromRating: false)).nonNulls.toList();
       var entries = match.getEntriesFor(predictedShooters, divisions: divisions);
