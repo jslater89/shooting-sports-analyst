@@ -70,7 +70,24 @@ Stu Tennent
 UK8111 -> F1000019
 BR8111 -> F1000019
 
-Robin Sebo
+Robin Sebo/Robin Šebo
 SEB182 -> F1000020
 B182 -> F1000020
 488 -> F1000020
+
+Robin Grauffel
+NONE -> F1000021
+XXXXXX -> F1000021
+FOREIGN -> F1000021
+FR -> F1000021
+
+Martin Kamenicek/Martin Kameniček
+FOREIGN -> F1000022
+FR -> F1000022
+
+František Blaha
+<empty> -> F1000023
+
+Sébastien Egret
+FOREIGN -> F1000024
+FR -> F1000024
