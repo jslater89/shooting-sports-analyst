@@ -693,6 +693,8 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     json["matchPointers"] = matchPointers.map((m) => m.toJson()).toList();
     json["filteredMatchPointers"] = filteredMatchPointers.map((m) => m.toJson()).toList();
     json["matchInProgressPointers"] = matchInProgressPointers.map((m) => m.toJson()).toList();
+
+    json["schemaVersion"] = schemaVersion;
     return json;
   }
 
@@ -722,6 +724,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     project.matchPointers = (json["matchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     project.filteredMatchPointers = (json["filteredMatchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     project.matchInProgressPointers = (json["matchInProgressPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
+
+    // We do _not_ restore schemaVersion, because it's local to the instance of the software
+    // that ran the last calculation.
     return project;
   }
 
@@ -869,6 +874,35 @@ class RatingGroup with DbSportEntity {
       .where((result) => result != null)
       .cast<Division>()
       .toList();
+
+  /// Return a list containing both [divisions] (i.e., the divisions that this group contains in its own
+  /// sport), along with any divisions that are equivalent to [divisions] in [otherSport], if a [SportLink]
+  /// exists from [otherSport] to [sport].
+  ///
+  /// If a link exists, [canIngest] and [canPredict] must be provided, and must match the link's properties
+  /// of the same names.
+  List<Division> divisionsForCompatibleSport(Sport otherSport, {bool? canIngest, bool? canPredict}) {
+    if(otherSport.name == sport.name) {
+      return divisions;
+    }
+
+    final link = SportLinkRegistry().linkFor(source: otherSport, target: sport);
+    if(link == null) {
+      return divisions;
+    }
+
+    if(canIngest == null && canPredict == null) {
+      return divisions;
+    }
+    if(canIngest != null && link.canIngest != canIngest) {
+      return divisions;
+    }
+    if(canPredict != null && link.canPredict != canPredict) {
+      return divisions;
+    }
+
+    return link.withSourceEquivalents(divisions);
+  }
 
   // List<Division> ipscCompatibleDivisions() {
   //   var divisions = this.divisions;
