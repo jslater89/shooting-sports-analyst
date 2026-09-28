@@ -1028,13 +1028,25 @@ class RatingProjectLoader {
             memberNumber: fix.targetNumber,
             useCache: true,
           );
-          if(targetRating != null) {
+
+          // Some defensive programming advised by AI here: source and target should never be the same,
+          // and fixes shouldn't have the same source and target, but just in case that's not completely
+          // enforced elsewhere in the app, check against it here.
+          if(targetRating != null && !identical(sourceRating, targetRating)) {
             if(sourceRating.knownMemberNumbers.any((n) => !targetRating.knownMemberNumbers.contains(n))) {
               targetRating.addKnownMemberNumbers(sourceRating.knownMemberNumbers);
               db.upsertDbShooterRatingSync(targetRating);
             }
+
+            db.deleteShooterRatingSync(sourceRating);
           }
-          db.deleteShooterRatingSync(sourceRating);
+          else {
+            sourceRating.memberNumber = fix.targetNumber;
+            if(fix.sourceNumber != fix.targetNumber) {
+              sourceRating.removeKnownMemberNumbers([fix.sourceNumber]);
+            }
+            db.upsertDbShooterRatingSync(sourceRating);
+          }
         }
 
         // var mapping = project.lookupAutomaticNumberMapping(fix.sourceNumber);
