@@ -208,7 +208,7 @@ class _FutureMatchDatabaseChooserDialogState extends State<FutureMatchDatabaseCh
       if(page > 0) {
         var newMatches = await db.queryFutureMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
-          sport: widget.sport,
+          sports: sports,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
           page: page,
         );
@@ -217,7 +217,7 @@ class _FutureMatchDatabaseChooserDialogState extends State<FutureMatchDatabaseCh
       else {
         matches = await db.queryFutureMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
-          sport: widget.sport,
+          sports: sports,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
         );
       }

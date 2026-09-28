@@ -246,11 +246,12 @@ class _RaterViewState extends State<RaterView> {
         }
       }
       else {
+        final lowercaseSearch = widget.search!.toLowerCase();
         sortedRatings = sortedRatings.where((r) =>
-        r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())
-            || r.memberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
-            || r.originalMemberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
-            || r.knownMemberNumbers.any((n) => n.toLowerCase().endsWith(widget.search!.toLowerCase()))
+        r.getName(suffixes: false).toLowerCase().contains(lowercaseSearch)
+            || r.memberNumber.toLowerCase().endsWith(lowercaseSearch) || r.memberNumber.toLowerCase().startsWith(lowercaseSearch)
+            || r.originalMemberNumber.toLowerCase().endsWith(lowercaseSearch) || r.originalMemberNumber.toLowerCase().startsWith(lowercaseSearch)
+            || r.knownMemberNumbers.any((n) => n.toLowerCase().endsWith(lowercaseSearch) || n.toLowerCase().startsWith(lowercaseSearch))
         ).toList();
       }
     }

@@ -1173,15 +1173,38 @@ class RatingProjectLoader {
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
-      // First, normalize it according to the sport's rules.
-      var processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
+
+      // First, check for a data entry fix against whatever is currently on the shooter record,
+      // which may not be a valid member number at this point; if it processed to an empty number,
+      // it remains on the record.
+      var processed = s.memberNumber;
+      var name = ShooterDeduplicator.processName(s);
+      Set<String> previouslyVisitedNumbers = {processed};
+      Set<String> invalidMemberNumbers = {};
+
+      // Only one pass is needed here; after we apply a correction, we should have a valid member number
+      // and can then loop below as needed.
+      if(processed.isNotEmpty) {
+        var corrections = _dataCorrections.getByInvalidNumber(processed);
+        for(var correction in corrections) {
+          if(correction.name == name) {
+            processed = correction.correctedNumber;
+            previouslyVisitedNumbers.add(processed);
+            s.removeKnownMemberNumbers([correction.invalidNumber]);
+            s.removeKnownMemberNumbers(_alternateForms(correction.invalidNumber));
+            invalidMemberNumbers.add(correction.invalidNumber);
+            break;
+          }
+        }
+      }
+
+      // First, normalize it according to the sport's rules, if we didn't find a hit on the OG data entry above.
+      if(processed == s.memberNumber) {
+        processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
+      }
 
       // Apply data corrections, checking each subsequent target for corrections where
       // it is the source, until we find no more corrections.
-      var name = ShooterDeduplicator.processName(s);
-
-      Set<String> invalidMemberNumbers = {};
-      Set<String> previouslyVisitedNumbers = {processed};
       bool dataEntryFixLoop = false;
       while(true) {
         // If there are data corrections for this member number, apply them.
@@ -1437,7 +1460,13 @@ class RatingProjectLoader {
 
     var numberProcessor = ShooterDeduplicator.numberProcessor(sport);
     for(var shooter in shooters) {
-      shooter.memberNumber = numberProcessor(shooter.memberNumber);
+      final processed = numberProcessor(shooter.memberNumber);
+      if(processed.isNotEmpty) {
+        // if we process to an empty number, we may have some fragment of an
+        // invalid number in the field that we want to target for a data entry
+        // fix, so we only commit
+        shooter.memberNumber = processed;
+      }
     }
 
     if(verify) {
@@ -1463,13 +1492,13 @@ class RatingProjectLoader {
     if(s.memberNumber.isEmpty) {
       var processedName = ShooterDeduplicator.processName(s);
       var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
-      if(emptyCorrection != null) {
-        var numberProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
-        finalMemberNumber = numberProcessor(emptyCorrection.correctedNumber);
+      if(emptyCorrection == null) {
+        _verifyCache[s] = false;
+        return false;
       }
 
-      _verifyCache[s] = false;
-      return false;
+      var numberProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
+      finalMemberNumber = numberProcessor(emptyCorrection.correctedNumber);
     }
 
     // This is already processed, because _verifyShooter is only called from _getShooters

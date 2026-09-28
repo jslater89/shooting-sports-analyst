@@ -322,7 +322,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
     if(_shouldProcessSource && !validate(source, allowEmpty: true)) return;
     if(!validate(target)) return;
 
-    name = name.toLowerCase().replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+    name = ShooterDeduplicator.processNameString(name);
     if(_shouldProcessSource) {
       source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
     }

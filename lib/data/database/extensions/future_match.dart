@@ -151,6 +151,8 @@ extension FutureMatchDatabase on AnalystDatabase {
   /// Query future matches with pagination, sorting, and filtering.
   ///
   /// Similar to [AnalystDatabase.queryMatches] but for [FutureMatch].
+  ///
+  /// If [sports] is provided, it takes precedence over [sport].
   Future<List<FutureMatch>> queryFutureMatches({
     String? name,
     DateTime? after,
@@ -159,12 +161,14 @@ extension FutureMatchDatabase on AnalystDatabase {
     int pageSize = 100,
     FutureMatchSortField sort = const DateSort(),
     Sport? sport,
+    List<Sport>? sports,
   }) async {
+    final sportFilter = sports ?? (sport != null ? [sport] : null);
     List<FutureMatchQueryElement> elements = [
       if(name != null)
         NamePartsQuery(name),
-      if(sport != null)
-        SportQuery([sport]),
+      if(sportFilter != null && sportFilter.isNotEmpty)
+        SportQuery(sportFilter),
       if(after != null || before != null)
         DateQuery(after: after, before: before),
     ];
