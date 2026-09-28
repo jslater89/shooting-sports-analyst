@@ -45,6 +45,7 @@ Future<Result<DbRatingProject, StringError>> importRatingProjectFromJsonFile(
     }
     project.lastUsedMatches = usedMatches;
     project.completedFullCalculation = existingProject.completedFullCalculation;
+    project.schemaVersion = existingProject.schemaVersion;
   }
 
   await db.saveRatingProject(project);
