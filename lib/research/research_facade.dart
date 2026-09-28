@@ -16,6 +16,7 @@ import "package:shooting_sports_analyst/data/database/schema/match_prep/match_pr
 import "package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart";
 import "package:shooting_sports_analyst/data/database/schema/ratings.dart";
 import "package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart";
+import "package:shooting_sports_analyst/data/ranking/model/cheap_career_stats.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_system.dart";
 import "package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart";
@@ -738,6 +739,69 @@ class ResearchFacade implements ResearchQueries {
       }
     }
     return Result.ok(out);
+  }
+
+  Future<ResearchResult<CareerStatsResponse>> getCareerStats({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+  }) async {
+    final resolvedRes = await _resolveShooterRating(
+      projectName: projectName,
+      groupUuid: groupUuid,
+      groupName: groupName,
+      memberNumber: memberNumber,
+      ratingId: ratingId,
+    );
+    if (resolvedRes.isErr()) {
+      return Result.errFrom(resolvedRes);
+    }
+    final resolved = resolvedRes.unwrap();
+    final wrapped = resolved.project.wrapDbRatingSync(resolved.rating);
+    final stats = await CheapCareerStats.load(wrapped);
+    return Result.ok(CareerStatsResponse(
+      ratingId: resolved.rating.id,
+      name: "${resolved.rating.firstName} ${resolved.rating.lastName}".trim(),
+      memberNumber: resolved.rating.memberNumber,
+      projectName: resolved.project.name,
+      groupUuid: resolved.group.uuid,
+      groupName: resolved.group.name,
+      career: _cheapPeriodDto(stats.careerStats, year: 0),
+      years: [
+        for (final year in stats.years)
+          _cheapPeriodDto(stats.statsForYear(year)!, year: year),
+      ],
+      missingMatches: stats.missingMatches,
+      unscoredMatches: stats.unscoredMatches,
+    ));
+  }
+
+  CareerPeriodStatsDto _cheapPeriodDto(CheapPeriodicStats period, {required int year}) {
+    final score = period.totalScore;
+    return CareerPeriodStatsDto(
+      year: year,
+      isCareer: period.isCareer,
+      matchCount: period.matchCount,
+      matchWins: period.matchWins,
+      averageMatchPlace: period.averageMatchPlace,
+      averageMatchPercentage: period.averageMatchPercentage,
+      stageCount: period.stageCount,
+      stageWins: period.stageWins,
+      averageStagePlace: period.averageStagePlace,
+      averageStagePercentage: period.averageStagePercentage,
+      hitCounts: period.hitCountsByName(),
+      hitPercentages: period.hitPercentagesByName(),
+      finalTime: score?.finalTime,
+      rawPoints: score?.points.toDouble(),
+      hitFactor: score == null ? null : score.hitFactor,
+      dqCount: period.dqCount,
+      matchesByLevel: {
+        for (final e in period.matchesByLevel.entries) e.key.name: e.value,
+      },
+      averageCompetitors: period.averageCompetitors,
+    );
   }
 
   Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({

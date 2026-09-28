@@ -42,7 +42,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "get_competitor_stage_scores for stage results and hit/penalty counts. "
               "Use get_rating_history for rating trajectory, and "
               "get_shooter_match_results (bestFirst=true for career highlights) "
-              "for a competitor's match list. For pre-match predictions: "
+              "for a competitor's match list. Use get_career_stats for stored "
+              "in-division career finishes and hit totals (no class scores). "
+              "For pre-match predictions: "
               "search_match_preps (includes latestPredictionSet), then "
               "get_predictions with a required scoring group; use "
               "list_prediction_sets only for older runs. Use search_predictions "
@@ -58,6 +60,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     registerTool(_getShooterSummaryTool, _getShooterSummary);
     registerTool(_getRatingHistoryTool, _getRatingHistory);
     registerTool(_getShooterMatchResultsTool, _getShooterMatchResults);
+    registerTool(_getCareerStatsTool, _getCareerStats);
     registerTool(_getLeaderboardTool, _getLeaderboard);
     registerTool(_searchMatchPrepsTool, _searchMatchPreps);
     registerTool(_listPredictionSetsTool, _listPredictionSets);
@@ -256,6 +259,23 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         return Result.errFrom(results);
       }
       return Result.ok({"results": results.unwrap().map((r) => r.toJson()).toList()});
+    });
+  }
+
+  FutureOr<CallToolResult> _getCareerStats(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, ShooterLookupArgs.fromJson);
+      final result = await _facade.getCareerStats(
+        projectName: args.project ?? defaultProject,
+        groupName: args.group,
+        groupUuid: args.groupUuid,
+        memberNumber: args.memberNumber,
+        ratingId: args.ratingId,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
     });
   }
 
@@ -580,6 +600,25 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "includeInternal": Schema.bool(
           description: "Include raw/internal rating fields (default false)",
         ),
+      },
+    ),
+  );
+
+  final _getCareerStatsTool = Tool(
+    name: "get_career_stats",
+    description:
+        "Career and per-year statistics from stored match-entry fields: "
+        "in-division match/stage finishes, hit counts and percentages, time, "
+        "raw points, DQs, and matches by event level. Uses the division score "
+        "saved with each match (not a live rescoring of the rating group). "
+        "Does not include class finishes.",
+    inputSchema: Schema.object(
+      properties: {
+        "memberNumber": Schema.string(),
+        "ratingId": Schema.int(description: "DbShooterRating id from search_shooters"),
+        "project": Schema.string(),
+        "group": Schema.string(),
+        "groupUuid": Schema.string(),
       },
     ),
   );

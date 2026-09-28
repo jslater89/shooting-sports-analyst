@@ -284,6 +284,23 @@ class SwitchingResearchFacade implements ResearchQueries {
   }
 
   @override
+  Future<ResearchResult<CareerStatsResponse>> getCareerStats({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+  }) {
+    return _delegate((f) => f.getCareerStats(
+          projectName: projectName,
+          groupUuid: groupUuid,
+          groupName: groupName,
+          memberNumber: memberNumber,
+          ratingId: ratingId,
+        ));
+  }
+
+  @override
   Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
     String? projectName,
     String? query,

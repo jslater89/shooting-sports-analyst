@@ -733,6 +733,99 @@ class ShooterMatchResultDto {
   Map<String, dynamic> toJson() => _$ShooterMatchResultDtoToJson(this);
 }
 
+/// Stored in-division career statistics (no class finishes, no live rescoring).
+@JsonSerializable(explicitToJson: true)
+class CareerStatsResponse {
+  CareerStatsResponse({
+    required this.ratingId,
+    required this.name,
+    required this.memberNumber,
+    required this.projectName,
+    required this.groupUuid,
+    required this.groupName,
+    required this.career,
+    required this.years,
+    required this.missingMatches,
+    required this.unscoredMatches,
+  });
+
+  final int ratingId;
+  final String name;
+  final String memberNumber;
+  final String projectName;
+  final String groupUuid;
+  final String groupName;
+  final CareerPeriodStatsDto career;
+  final List<CareerPeriodStatsDto> years;
+  /// Matches in rating history that were not found in the database.
+  final int missingMatches;
+  /// Matches whose entry had no usable stored division score.
+  final int unscoredMatches;
+
+  factory CareerStatsResponse.fromJson(Map<String, dynamic> json) =>
+      _$CareerStatsResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$CareerStatsResponseToJson(this);
+}
+
+@JsonSerializable()
+class CareerPeriodStatsDto {
+  CareerPeriodStatsDto({
+    required this.year,
+    required this.isCareer,
+    required this.matchCount,
+    required this.matchWins,
+    this.averageMatchPlace,
+    this.averageMatchPercentage,
+    required this.stageCount,
+    required this.stageWins,
+    this.averageStagePlace,
+    this.averageStagePercentage,
+    required this.hitCounts,
+    required this.hitPercentages,
+    this.finalTime,
+    this.rawPoints,
+    this.hitFactor,
+    required this.dqCount,
+    required this.matchesByLevel,
+    this.averageCompetitors,
+  });
+
+  /// Calendar year, or 0 for the career total.
+  final int year;
+  final bool isCareer;
+  final int matchCount;
+  final int matchWins;
+  @JsonKey(includeIfNull: false)
+  final double? averageMatchPlace;
+  @JsonKey(includeIfNull: false)
+  final double? averageMatchPercentage;
+  final int stageCount;
+  final int stageWins;
+  @JsonKey(includeIfNull: false)
+  final double? averageStagePlace;
+  @JsonKey(includeIfNull: false)
+  final double? averageStagePercentage;
+  /// Target scoring event name to total count across scored stages.
+  final Map<String, int> hitCounts;
+  /// Target scoring event name to fraction of all target hits (0-1).
+  final Map<String, double> hitPercentages;
+  @JsonKey(includeIfNull: false)
+  final double? finalTime;
+  @JsonKey(includeIfNull: false)
+  final double? rawPoints;
+  @JsonKey(includeIfNull: false)
+  final double? hitFactor;
+  final int dqCount;
+  /// [EventLevel] name to match count.
+  final Map<String, int> matchesByLevel;
+  @JsonKey(includeIfNull: false)
+  final double? averageCompetitors;
+
+  factory CareerPeriodStatsDto.fromJson(Map<String, dynamic> json) =>
+      _$CareerPeriodStatsDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$CareerPeriodStatsDtoToJson(this);
+}
+
 @JsonSerializable(explicitToJson: true)
 class LeaderboardResponse {
   LeaderboardResponse({

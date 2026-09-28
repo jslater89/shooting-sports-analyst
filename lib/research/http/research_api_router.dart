@@ -218,6 +218,23 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
     });
   });
 
+  router.get("$kResearchApiPathPrefix/shooters/career-stats", (Request request) async {
+    return _run(() async {
+      final args = ShooterLookupArgs.fromJson(_queryMap(request));
+      final result = await facade.getCareerStats(
+        projectName: args.project,
+        groupName: args.group,
+        groupUuid: args.groupUuid,
+        memberNumber: args.memberNumber,
+        ratingId: args.ratingId,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  });
+
   router.get("$kResearchApiPathPrefix/leaderboard", (Request request) async {
     return _run(() async {
       final args = GetLeaderboardArgs.fromJson(_queryMap(request));

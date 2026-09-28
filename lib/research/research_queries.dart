@@ -121,6 +121,15 @@ abstract class ResearchQueries {
     bool bestFirst = false,
   });
 
+  /// Stored in-division career stats (hits, finishes). No class scores.
+  Future<ResearchResult<CareerStatsResponse>> getCareerStats({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+  });
+
   Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
     String? projectName,
     String? query,

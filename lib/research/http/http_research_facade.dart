@@ -351,6 +351,27 @@ class HttpResearchFacade implements ResearchQueries {
   }
 
   @override
+  Future<ResearchResult<CareerStatsResponse>> getCareerStats({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    String? memberNumber,
+    int? ratingId,
+  }) {
+    return _mapJson(
+      "$kResearchApiPathPrefix/shooters/career-stats",
+      query: {
+        if(projectName != null) "project": projectName,
+        if(groupUuid != null) "groupUuid": groupUuid,
+        if(groupName != null) "group": groupName,
+        if(memberNumber != null) "memberNumber": memberNumber,
+        if(ratingId != null) "ratingId": ratingId,
+      },
+      map: CareerStatsResponse.fromJson,
+    );
+  }
+
+  @override
   Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({
     String? projectName,
     String? query,

@@ -120,6 +120,8 @@ desktop app is running.
   match).
 * **get_shooter_match_results** — Distinct match finishes derived from rating events. Default order
   is most recent first; use `bestFirst` for career highlights.
+* **get_career_stats** — Career and per-year in-division finishes and hit totals from stored match
+  entries. Uses the division score saved with each match; does not include class finishes.
 * **get_leaderboard** — Sorted leaderboard for one rating group. Sort modes come from
   `supportedSorts` on the project (for example rating, aged rating, last change / movers, trend).
   `seenSince` filters by last activity; when omitted it defaults relative to the project's latest
