@@ -1172,8 +1172,8 @@ class RatingProjectLoader {
     List<DbShooterRating> ratingsToUpsert = [];
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
-      // Process the member number:
 
+      // Process the member number:
       // First, check for a data entry fix against whatever is currently on the shooter record,
       // which may not be a valid member number at this point; if it processed to an empty number,
       // it remains on the record.
@@ -1224,7 +1224,13 @@ class RatingProjectLoader {
               break;
             }
             invalidMemberNumbers.add(correction.invalidNumber);
+
+            // Remove both the invalid number literally, and all of its alternate forms.
+            // Alternate forms uses the sport deduplicator to generate alternate forms,
+            // and does not necessarily include the original number.
+            s.removeKnownMemberNumbers([correction.invalidNumber, ..._alternateForms(correction.invalidNumber)]);
             s.removeKnownMemberNumbers(_alternateForms(correction.invalidNumber));
+
             processed = correction.correctedNumber;
             previouslyVisitedNumbers.add(processed);
             appliedCorrection = true;
@@ -1315,6 +1321,15 @@ class RatingProjectLoader {
             }
           }
           if(!appliedCorrection) break;
+        }
+
+        // If a correction applied, whatever the competitor originally typed is not a valid identity
+        // for them, even if no correction named that exact string (e.g. "FOREIGN" is processed to "FR"
+        // before the correction for "FR" applies). Remove it so it doesn't get copied onto the rating.
+        final enteredNumber = s.originalMemberNumber;
+        if(invalidMemberNumbers.isNotEmpty && enteredNumber.isNotEmpty && enteredNumber != s.memberNumber) {
+          invalidMemberNumbers.add(enteredNumber);
+          s.removeKnownMemberNumbers([enteredNumber]);
         }
 
         if(dataEntryFixLoop) {
@@ -1481,7 +1496,6 @@ class RatingProjectLoader {
   bool _verifyShooter(RatingGroup g, MatchEntry s) {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
-    var finalMemberNumber = s.memberNumber;
     if(!project.settings.byStage && s.dq) {
       _verifyCache[s] = false;
       return false;
@@ -1490,6 +1504,8 @@ class RatingProjectLoader {
       _verifyCache[s] = false;
       return false;
     }
+
+    var finalMemberNumber = s.memberNumber;
     if(s.memberNumber.isEmpty) {
       var processedName = ShooterDeduplicator.processName(s);
       var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
