@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
@@ -651,12 +652,19 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false}) async {
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {String? name, bool allPossibleMemberNumbers = false}) async {
     List<DbShooterRating> results = [];
+    final String processedMemberNumber;
+    if(name != null) {
+      processedMemberNumber = resolveMemberNumberCorrectionsSync(name: name, memberNumber: memberNumber);
+    }
+    else {
+      processedMemberNumber = memberNumber;
+    }
     if(allPossibleMemberNumbers) {
       results = await ratings
         .filter()
-        .dbAllPossibleMemberNumbersElementMatches(memberNumber)
+        .dbAllPossibleMemberNumbersElementMatches(processedMemberNumber)
         .and()
         .ratingGroup((q) => q.idEqualTo(group.id))
         .findAll();
@@ -664,12 +672,74 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     else {
       results = await ratings
         .filter()
-        .dbKnownMemberNumbersElementMatches(memberNumber)
+        .dbKnownMemberNumbersElementMatches(processedMemberNumber)
         .and()
         .ratingGroup((q) => q.idEqualTo(group.id))
         .findAll();
     }
     return DataSourceResult.ok(results.firstOrNull);
+  }
+
+  @override
+  Future<DataSourceResult<String>> resolveMemberNumberCorrections({required String name, required String memberNumber}) async {
+    final outputNumber = resolveMemberNumberCorrectionsSync(name: name, memberNumber: memberNumber);
+    return DataSourceResult.ok(outputNumber);
+  }
+
+  String resolveMemberNumberCorrectionsSync({required String name, required String memberNumber}) {
+    final processedName = ShooterDeduplicator.processNameString(name);
+    final corrections = settings.memberNumberCorrections;
+
+    Set<String> previouslyVisitedNumbers = {memberNumber};
+
+    var outputNumber = memberNumber;
+    final initialCorrections = corrections.getByInvalidNumber(memberNumber);
+    for(var correction in initialCorrections) {
+      if(correction.name == processedName) {
+        outputNumber = correction.correctedNumber;
+        break;
+      }
+    }
+
+    // If we didn't find a correction, process the number according to the sport's rules.
+    if(outputNumber == memberNumber) {
+      outputNumber = sport.shooterDeduplicator?.processNumber(memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(memberNumber);
+      previouslyVisitedNumbers.add(outputNumber);
+    }
+
+    // At this point, loop over corrections until we either don't apply one or encounter a loop.
+    while(true) {
+      final stepCorrections = corrections.getByInvalidNumber(outputNumber);
+      bool appliedCorrection = false;
+      for(var correction in stepCorrections) {
+        if(outputNumber == correction.correctedNumber) {
+          break;
+        }
+        if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
+          _log.w("Data entry fix loop detected for $name: $previouslyVisitedNumbers -> $outputNumber");
+          break;
+        }
+
+        previouslyVisitedNumbers.add(correction.correctedNumber);
+        outputNumber = correction.correctedNumber;
+        appliedCorrection = true;
+        break;
+      }
+
+      if(!appliedCorrection) {
+        break;
+      }
+    }
+
+    if(outputNumber.isEmpty) {
+      var emptyCorrection = corrections.getEmptyCorrectionByName(processedName);
+      if(emptyCorrection != null) {
+        outputNumber = emptyCorrection.correctedNumber;
+        previouslyVisitedNumbers.add(outputNumber);
+      }
+    }
+
+    return outputNumber;
   }
 
   @override

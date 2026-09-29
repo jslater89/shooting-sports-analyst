@@ -61,12 +61,18 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
       }
     }
 
-    var ratingResult = await _source.lookupRating(group, entry.memberNumber, allPossibleMemberNumbers: true);
+    var ratingResult = await _source.lookupRating(group, entry.memberNumber, name: entry.name, allPossibleMemberNumbers: true);
 
     if(ratingResult.isOk()) {
       var rating = ratingResult.unwrap();
       List<_RatingCacheKey> keys = [];
       if(rating != null) {
+        // If the rating doesn't contain the match entry's member number, that means we corrected
+        // it with a data entry fix, so we should update the match entry's member number to the corrected one.
+        if(!rating.allPossibleMemberNumbers.contains(entry.memberNumber)) {
+          entry.memberNumber = rating.memberNumber;
+        }
+
         for(var n in rating.allPossibleMemberNumbers) {
           keys.add(_RatingCacheKey(group, n));
         }

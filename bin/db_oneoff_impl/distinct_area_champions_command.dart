@@ -344,11 +344,11 @@ DbShooterRating? _lookupRating(
     final processed = processNumber(mn);
     if (processed.isNotEmpty) {
       lookupNumbers.add(processed);
-      final corrected = project.settings.resolveMemberNumberCorrection(
-        entry.name,
-        processed,
+      final corrected = project.resolveMemberNumberCorrectionsSync(
+        name: entry.name,
+        memberNumber: processed,
       );
-      if (corrected != null && corrected.isNotEmpty) {
+      if (corrected != processed) {
         lookupNumbers.add(corrected);
       }
     }

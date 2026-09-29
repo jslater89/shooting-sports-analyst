@@ -68,8 +68,13 @@ abstract interface class RatingDataSource {
   /// alternate member number forms, this will search by all equivalent member
   /// numbers for the competitor, not only those that they actually entered under.
   ///
+  /// If [name] is provided, the implementation may apply data entry corrections to the member number.
+  ///
   /// Returns Result.ok(null) if no rating is found.
-  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false});
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {String? name, bool allPossibleMemberNumbers = false});
+
+  /// Resolve a member number to a canonical form, applying any data entry corrections.
+  Future<DataSourceResult<String>> resolveMemberNumberCorrections({required String name, required String memberNumber});
 
   /// Find shooter ratings by name search.
   ///

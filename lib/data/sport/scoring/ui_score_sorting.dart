@@ -26,8 +26,11 @@ extension UiSorting on List<RelativeMatchScore> {
         var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
         if(aGroupRes == null || bGroupRes == null) return b.ratio.compareTo(a.ratio);
 
-        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroupRes, memberNumber: a.shooter.memberNumber);
-        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroupRes, memberNumber: b.shooter.memberNumber);
+        final aResolvedNumber = ratings.resolveMemberNumberCorrectionsSync(name: a.shooter.name, memberNumber: a.shooter.memberNumber);
+        final bResolvedNumber = ratings.resolveMemberNumberCorrectionsSync(name: b.shooter.name, memberNumber: b.shooter.memberNumber);
+
+        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroupRes, memberNumber: aResolvedNumber);
+        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroupRes, memberNumber: bResolvedNumber);
 
         if(ratingCache != null) {
           if(aRating != null) {

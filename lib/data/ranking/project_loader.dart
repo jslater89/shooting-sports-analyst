@@ -1201,6 +1201,7 @@ class RatingProjectLoader {
       // First, normalize it according to the sport's rules, if we didn't find a hit on the OG data entry above.
       if(processed == s.memberNumber) {
         processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
+        previouslyVisitedNumbers.add(processed);
       }
 
       // Apply data corrections, checking each subsequent target for corrections where
