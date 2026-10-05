@@ -133,7 +133,7 @@ class _RatingSetManagerState extends State<RatingSetManager> {
     var initialSetIds = widget.initialSelection.map((s) => s.id).toList();
     selectedRatingSets = ratingSets.where((s) => initialSetIds.contains(s.id)).toList();
     if(selectedRatingSets.isNotEmpty) {
-      model.selectionChanged(selectedRatingSets);
+      model.setInitialSelection(selectedRatingSets);
     }
 
     model.addListener(_handleSetChange);
@@ -276,6 +276,10 @@ class _RatingSetManagerModel with ChangeNotifier {
   }
 
   bool handledSetChange = true;
+
+  void setInitialSelection(List<RatingSet> sets) {
+    _selectedSets = [...sets];
+  }
 
   // The manager will call this when the selection changes.
   void selectionChanged(List<RatingSet> sets) {
