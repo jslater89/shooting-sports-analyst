@@ -67,7 +67,14 @@ class SSAServerSourceUI extends SourceUI {
                             var result = await source.uploadMatch(hydratedMatch);
                             if(result != null) {
                               onError(result);
+                              _log.w("Error uploading match ${hydratedMatch.name}: $result");
                             }
+                            else {
+                              _log.i("Uploaded match ${hydratedMatch.name}");
+                            }
+                          }
+                          else {
+                            _log.i("Source does not need match ${hydratedMatch.name}");
                           }
                         }
                       },
