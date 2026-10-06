@@ -91,3 +91,6 @@ František Blaha
 Sébastien Egret
 FOREIGN -> F1000024
 FR -> F1000024
+
+[many automated USA Extreme Open corrections take us to]
+F10000320
