@@ -1734,7 +1734,7 @@ class ResearchFacade implements ResearchQueries {
           return rating.standardError;
         }
         return rating.wrappedRating.error;
-      case RatingSortMode.dispersion:
+      case RatingSortMode.spread:
         if (rating is LatentLogRating) {
           return rating.dispersion;
         }

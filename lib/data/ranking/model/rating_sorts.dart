@@ -18,7 +18,7 @@ enum RatingSortMode {
   lastName,
   error,
   lastChange,
-  dispersion,
+  spread,
   trend,
   direction,
   stages,
@@ -40,7 +40,7 @@ extension RatingSortModeNames on RatingSortMode {
         return "Last ±";
       case RatingSortMode.trend:
         return "Trend";
-      case RatingSortMode.dispersion:
+      case RatingSortMode.spread:
         return "Dispersion";
       case RatingSortMode.stages:
         return "History";
@@ -118,7 +118,7 @@ extension SortFunctions on RatingSortMode {
           }
           throw ArgumentError();
         };
-      case RatingSortMode.dispersion:
+      case RatingSortMode.spread:
         return (a, b) {
           if(a is LatentLogRating && b is LatentLogRating) {
             double aDispersion = a.dispersion;

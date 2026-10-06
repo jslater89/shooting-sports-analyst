@@ -40,7 +40,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   }
 
   @override
-  String get schemaVersion => "points-1.0";
+  String get schemaVersion => "points-1.1";
 
   @override
   bool get byStage => settings.byStage;
@@ -244,7 +244,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
     final ratingText = settings.mode == PointsMode.inversePlace || settings.mode == PointsMode.f1 ?
       rating.rating.round().toString() :
       rating.rating.toStringAsFixed(1);
-    final ppmText = (rating.rating / rating.length.clamp(1, settings.matchesToCount)).toStringAsFixed(1);
+    final ppmText = rating.pointsPerMatch.toStringAsFixed(1);
     return [
       RatingRowData(data: "", flex: _leadPaddingFlex),
       RatingRowData(data: "$place", flex: _placeFlex),

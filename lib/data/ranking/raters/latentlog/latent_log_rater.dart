@@ -72,7 +72,7 @@ class LatentLogRater extends RatingSystem<LatentLogRating, LatentLogSettings> {
     RatingSortMode.lastChange,
     RatingSortMode.classification,
     RatingSortMode.error,
-    RatingSortMode.dispersion,
+    RatingSortMode.spread,
     RatingSortMode.trend,
     RatingSortMode.stages,
     RatingSortMode.firstName,

@@ -436,9 +436,27 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       RatingSortMode sort = RatingSortMode.rating,
       // Whether to sort ascending or descending.
       bool ascending = false,
+      // Whether to limit to lady only (if true), male only (if false), or both (if null).
+      bool? female,
+      // If not null, the age category to limit to.
+      AgeCategory? ageCategory,
+      // When [ageCategory] is not null, include all competitors whose stored category necessarily entails [ageCategory].
+      //
+      // For instance, a Super Senior >65 and a Grand Senior >70 are both automatically eligible for Senior >60, so providing
+      // Senior and coalesce will return Seniors, Super Seniors, and Grand Seniors.
+      bool coalesceAgeCategories = false,
     }
   ) async {
-    var query = _generateSearchedRatingQuery(group, search: search, name: name, memberNumber: memberNumber, lastSeenAfter: lastSeenAfter);
+    var query = _generateSearchedRatingQuery(
+      group,
+      search: search,
+      name: name,
+      memberNumber: memberNumber,
+      lastSeenAfter: lastSeenAfter,
+      female: female,
+      ageCategory: ageCategory,
+      coalesceAgeCategories: coalesceAgeCategories,
+    );
 
     QueryBuilder<DbShooterRating, DbShooterRating, QAfterSortBy>? sortedQuery;
     if(sort == RatingSortMode.rating) {
@@ -481,6 +499,22 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         sortedQuery = query.sortByCachedLengthDesc();
       }
     }
+    else if(sort == RatingSortMode.trend) {
+      if(ascending) {
+        sortedQuery = query.sortByTrend();
+      }
+      else {
+        sortedQuery = query.sortByTrendDesc();
+      }
+    }
+    else if(sort == RatingSortMode.spread) {
+      if(ascending) {
+        sortedQuery = query.sortBySpread();
+      }
+      else {
+        sortedQuery = query.sortBySpreadDesc();
+      }
+    }
 
     if(sortedQuery != null) {
       return sortedQuery.offset(offset).limit(limit).findAll();
@@ -497,9 +531,21 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       String? name,
       String? memberNumber,
       DateTime? lastSeenAfter,
+      bool? female,
+      AgeCategory? ageCategory,
+      bool coalesceAgeCategories = false,
     }
   ) async {
-    var query = _generateSearchedRatingQuery(group, search: search, name: name, memberNumber: memberNumber, lastSeenAfter: lastSeenAfter);
+    var query = _generateSearchedRatingQuery(
+      group,
+      search: search,
+      name: name,
+      memberNumber: memberNumber,
+      lastSeenAfter: lastSeenAfter,
+      female: female,
+      ageCategory: ageCategory,
+      coalesceAgeCategories: coalesceAgeCategories,
+    );
     return query.count();
   }
 
@@ -510,6 +556,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       String? name,
       String? memberNumber,
       DateTime? lastSeenAfter,
+      bool? female,
+      AgeCategory? ageCategory,
+      bool coalesceAgeCategories = false,
   }) {
     var query = ratings.filter().ratingGroup((q) => q.idEqualTo(group.id));
 
@@ -527,6 +576,69 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
     if(lastSeenAfter != null) {
       query = query.lastSeenGreaterThan(lastSeenAfter, include: true);
+    }
+
+    if(female != null) {
+      query = query.femaleEqualTo(female);
+    }
+
+    if(ageCategory != null) {
+      List<String> ageCategoryNames = [];
+      if(coalesceAgeCategories) {
+        bool isSenior =
+          ageCategory.minimumAge != null
+          && ageCategory.minimumAge! >= 50
+          && (
+            ageCategory.maximumAge == null
+            || ageCategory.maximumAge! >= 50
+          );
+        bool isJunior =
+          ageCategory.maximumAge != null
+          && ageCategory.maximumAge! < 21
+          && (
+            ageCategory.minimumAge == null
+            || ageCategory.minimumAge! < 21
+          );
+
+
+        if(isSenior) {
+          // Given Senior, we want to return all categories whose minimum age is at least Senior's minimum age.
+          final minimumPossibleAge = ageCategory.minimumAge!;
+
+          for(var category in sport.ageCategories.values) {
+            if(category.maximumAge != null && category.maximumAge! < 50) continue;
+
+            if(category.minimumAge != null && category.minimumAge! >= minimumPossibleAge) {
+              ageCategoryNames.add(category.name);
+            }
+          }
+        }
+
+        if(isJunior) {
+          // Given Junior, we want to return all categories whose maximum age is at most Junior's maximum age.
+          final maximumPossibleAge = ageCategory.maximumAge!;
+
+          for(var category in sport.ageCategories.values) {
+            if(category.minimumAge != null && category.minimumAge! >= 21) continue;
+
+            if(category.maximumAge != null && category.maximumAge! <= maximumPossibleAge) {
+              ageCategoryNames.add(category.name);
+            }
+          }
+        }
+      }
+      else {
+        ageCategoryNames.add(ageCategory.name);
+      }
+
+      if(ageCategoryNames.isNotEmpty) {
+        if(ageCategoryNames.length == 1) {
+          query = query.ageCategoryNameEqualTo(ageCategoryNames.first);
+        }
+        else {
+          query = query.anyOf(ageCategoryNames, (q, element) => q.ageCategoryNameEqualTo(element));
+        }
+      }
     }
 
     return query;

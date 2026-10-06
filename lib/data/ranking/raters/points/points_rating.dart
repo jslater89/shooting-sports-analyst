@@ -37,6 +37,9 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
   @override
   double get rating => ratingFromScores + ratingFromParticipation;
 
+  double get pointsPerMatch => wrappedRating.trend;
+  set pointsPerMatch(double v) => wrappedRating.trend = v;
+
   List<PointsRatingEvent>? _cachedSortedEvents;
   /// All events, sorted high to low
   List<PointsRatingEvent> get sortedEvents {
@@ -76,6 +79,8 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
     agedRating = rating;
     careerMinimumRating = min(careerMinimumRating, rating);
     careerMaximumRating = max(careerMaximumRating, rating);
+
+    pointsPerMatch = rating / length.clamp(1, matchesToCount);
   }
 
   @override
