@@ -561,7 +561,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     description:
         "Recent match-level rating events (display rating change + match finish) for a shooter. "
         "Includes division and classification entered at each match when available "
-        "(useful for multi-division rating groups).",
+        "(useful for multi-division rating groups). matchPlace/matchRatio/matchPercentage "
+        "are the in-division result; referenceMatchPlace/Ratio/Percentage appear only when "
+        "the rating system's pool score (e.g. combined LO/CO) differs.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
@@ -583,7 +585,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "Distinct match finishes for a shooter derived from rating events. "
         "Default order is most recent first. Set bestFirst for career highlights "
         "(highest percentage, then best place). Includes division and classification "
-        "entered at each match when available.",
+        "entered at each match when available. place/ratio/percentage are the "
+        "in-division result; referencePlace/Ratio/Percentage appear only when the "
+        "rating system's pool score (e.g. combined LO/CO) differs.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),

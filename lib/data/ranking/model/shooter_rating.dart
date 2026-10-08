@@ -816,7 +816,41 @@ class MatchHistoryEntry {
     this.place = score!.place;
     this.finishRatio = score.ratio;
     this.victoryRatio = score.ratioMargin;
+
+    // If the rating system scored this competitor differently than the official
+    // division result, the canonical score is what we display, and the score the
+    // rating system used becomes the reference.
+    var canonical = event.wrappedEvent.canonicalMatchScore;
+    if(canonical != null) {
+      var reference = event.wrappedEvent.matchScore;
+      this.referencePlace = reference.place;
+      this.referenceFinishRatio = reference.ratio;
+      this.referenceVictoryRatio = reference.ratioMargin;
+      this.place = canonical.place;
+      this.finishRatio = canonical.ratio;
+      this.victoryRatio = canonical.ratioMargin;
+      var canonicalCompetitors = event.wrappedEvent.canonicalCompetitors;
+      if(canonicalCompetitors != null) {
+        this.referenceCompetitors = this.competitors;
+        this.competitors = canonicalCompetitors;
+      }
+    }
   }
+
+  /// The competitor count in the pool the rating system scored, if a reference score is present.
+  int? referenceCompetitors;
+
+  /// The place according to the rating system, if it differs from the canonical [place].
+  int? referencePlace;
+  /// The finish ratio according to the rating system, if a reference score is present.
+  double? referenceFinishRatio;
+  /// The victory margin according to the rating system, if a reference score is present.
+  double? referenceVictoryRatio;
+
+  bool get hasReference => referencePlace != null;
+
+  String? get referencePercentFinish => referenceFinishRatio?.asPercentage();
+  String? get referencePercentVictory => referenceVictoryRatio != null ? "+${referenceVictoryRatio!.asPercentage()}" : null;
 
   @override
   String toString() {

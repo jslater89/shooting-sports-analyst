@@ -207,14 +207,25 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   List<Widget> _buildHistoryLines() {
     List<Widget> widgets = [];
+
+    // Only explain the parenthetical values if at least one row has them.
+    final hasReferences = displayedStats.matchHistory.any((e) => e.hasReference);
+    Widget header(String text, String referenceHint) {
+      Widget label = Text(text, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end);
+      if(hasReferences) {
+        label = Tooltip(message: referenceHint, child: label);
+      }
+      return Expanded(flex: 1, child: label);
+    }
+
     widgets.add(Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: [
           Expanded(flex: 4, child: Text("Match", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 1, child: Text("Place", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-          Expanded(flex: 1, child: Text("Shooters", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-          Expanded(flex: 1, child: Text("Percent", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+          header("Place", "Place in your division. Where it differs, the place in the combined rating group is in parentheses."),
+          header("Shooters", "Competitors in your division. Where it differs, the number in the combined rating group is in parentheses."),
+          header("Percent", "Score in your division. Where it differs, the score in the combined rating group is in parentheses."),
           Expanded(flex: 1, child: Text("Rating change", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
         ],
       ),
@@ -234,12 +245,22 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     for(var entry in entries) {
       Text textWidget;
+      var referencePercent = entry.hasReference ? (entry.referencePercentVictory ?? entry.referencePercentFinish) : null;
+      var canonicalPercent = entry.percentVictory ?? entry.percentFinish;
+      // Only show the reference when it differs from what's displayed for the canonical score.
+      var referenceSuffix = referencePercent != null && referencePercent != canonicalPercent ? " ($referencePercent)" : "";
       if(entry.percentVictory != null) {
-        textWidget = Text(entry.percentVictory!, style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.end);
+        textWidget = Text("${entry.percentVictory!}$referenceSuffix", style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.end);
       }
       else {
-        textWidget = Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end);
+        textWidget = Text("${entry.percentFinish}$referenceSuffix", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end);
       }
+      var competitorsText = entry.referenceCompetitors != null && entry.referenceCompetitors != entry.competitors
+          ? "${entry.competitors} (${entry.referenceCompetitors})"
+          : "${entry.competitors}";
+      var placeText = entry.hasReference && entry.referencePlace != entry.place
+          ? "${entry.place.ordinalPlace} (${entry.referencePlace!.ordinalPlace})"
+          : entry.place.ordinalPlace;
       String matchName = entry.match.name;
       if(entry.matchEntry.dq) {
         matchName += " (DQ)";
@@ -262,8 +283,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   message: programmerYmdFormat.format(entry.match.date),
                 )
               ),
-              Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-              Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: Text(placeText, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: Text(competitorsText, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: textWidget),
               Expanded(flex: 1, child: Text("${widget.rating.formatNumericRatingChange(entry.scaledRatingChange ?? 0)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
             ],

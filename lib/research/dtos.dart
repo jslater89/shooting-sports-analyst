@@ -644,6 +644,9 @@ class RatingEventDto {
     required this.matchPlace,
     required this.matchRatio,
     required this.matchPercentage,
+    this.referenceMatchPlace,
+    this.referenceMatchRatio,
+    this.referenceMatchPercentage,
     this.division,
     this.classification,
     this.internalOldRating,
@@ -662,9 +665,18 @@ class RatingEventDto {
   final double newRating;
   /// Display/scaled rating change.
   final double ratingChange;
+  /// Place in the competitor's own division (the canonical, official result).
   final int matchPlace;
   final double matchRatio;
   final double matchPercentage;
+  /// Place in the pool the rating system scored, present only when it differs
+  /// from the canonical [matchPlace] / [matchRatio] (e.g. a combined LO/CO group).
+  @JsonKey(includeIfNull: false)
+  final int? referenceMatchPlace;
+  @JsonKey(includeIfNull: false)
+  final double? referenceMatchRatio;
+  @JsonKey(includeIfNull: false)
+  final double? referenceMatchPercentage;
   /// Division entered at this match, when available.
   @JsonKey(includeIfNull: false)
   final String? division;
@@ -692,6 +704,9 @@ class ShooterMatchResultDto {
     required this.place,
     required this.ratio,
     required this.percentage,
+    this.referencePlace,
+    this.referenceRatio,
+    this.referencePercentage,
     this.division,
     this.classification,
     this.ratingChange,
@@ -706,9 +721,18 @@ class ShooterMatchResultDto {
   final String matchName;
   @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
   final DateTime date;
+  /// Place in the competitor's own division (the canonical, official result).
   final int place;
   final double ratio;
   final double percentage;
+  /// Place in the pool the rating system scored, present only when it differs
+  /// from the canonical [place] / [ratio] (e.g. a combined LO/CO group).
+  @JsonKey(includeIfNull: false)
+  final int? referencePlace;
+  @JsonKey(includeIfNull: false)
+  final double? referenceRatio;
+  @JsonKey(includeIfNull: false)
+  final double? referencePercentage;
   /// Division entered at this match, when available.
   @JsonKey(includeIfNull: false)
   final String? division;

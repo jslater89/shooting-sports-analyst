@@ -150,6 +150,19 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
   DbRelativeScore score;
   DbRelativeScore matchScore;
 
+  /// The official in-division result for this event (a stage result when
+  /// [stageNumber] >= 0, otherwise a match result), present only when it differs
+  /// from [score], the score the rating system used.
+  DbRelativeScore? canonicalScore;
+
+  /// The official in-division match result, present only when it differs from
+  /// [matchScore], the match score the rating system used.
+  DbRelativeScore? canonicalMatchScore;
+
+  /// The number of competitors in the official division field, when
+  /// [canonicalMatchScore] is present.
+  int? canonicalCompetitors;
+
   @Enumerated(EnumType.name)
   NonRatingResultReason? nonRatingResultReason;
 
@@ -192,6 +205,10 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
       nonRatingResultReason: this.nonRatingResultReason,
       matchId: this.matchId,
     )..intData = ([]..addAll(intData))..doubleData = ([]..addAll(doubleData));
+
+    event.canonicalScore = this.canonicalScore?.copy();
+    event.canonicalMatchScore = this.canonicalMatchScore?.copy();
+    event.canonicalCompetitors = this.canonicalCompetitors;
 
     event.match.value = this.match.value;
     event.owner.value = newOwner ?? this.owner.value;

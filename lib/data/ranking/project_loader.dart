@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/in_memory_container.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
@@ -1660,6 +1661,7 @@ class RatingProjectLoader {
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<DbShooterRating> changedRatings = {};
     int changeCount = 0;
+    final officialScoreCache = <Division, ({Map<int, RelativeMatchScore> byEntryId, int competitors})>{};
 
     if(Timings.enabled) start = DateTime.now();
     // Process ratings for each shooter.
@@ -1732,6 +1734,7 @@ class RatingProjectLoader {
         }
 
         changeCount += changes.length;
+        _stampCanonicalScores(match, changes, officialScoreCache);
         var updateStart = DateTime.now();
 
         for(var r in changes.keys) {
@@ -1906,6 +1909,8 @@ class RatingProjectLoader {
         }
       }
 
+      _stampCanonicalScores(match, changes, officialScoreCache);
+
       var updateStart = DateTime.now();
       changeCount += changes.length;
       for(var r in changes.keys) {
@@ -2029,6 +2034,62 @@ class RatingProjectLoader {
 
     timings.ratingEventCount += changeCount;
     return (changedRatings, changeCount);
+  }
+
+  /// Stamp official in-division scores onto the events in [changes] wherever they
+  /// differ from the score the rating system used. See [DbRatingEvent.canonicalScore].
+  void _stampCanonicalScores(
+    ShootingMatch match,
+    Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    Map<Division, ({Map<int, RelativeMatchScore> byEntryId, int competitors})> cache,
+  ) {
+    if(!sport.hasDivisions) return;
+
+    for(var eventMap in changes.values) {
+      for(var entry in eventMap.entries) {
+        var shooter = entry.key.shooter;
+        var division = shooter.division;
+        if(division == null) continue;
+
+        var official = cache[division];
+        if(official == null) {
+          var divisionShooters = match.filterShooters(divisions: [division]);
+          var scores = match.getScores(shooters: divisionShooters);
+          official = (
+            byEntryId: {for(var s in scores.values) s.shooter.entryId: s},
+            competitors: divisionShooters.where((s) => !s.reentry).length,
+          );
+          cache[division] = official;
+        }
+
+        var officialMatch = official.byEntryId[shooter.entryId];
+        if(officialMatch == null) continue;
+
+        var event = entry.value.wrappedEvent;
+        RelativeScore officialEventScore = officialMatch;
+        if(event.stageNumber >= 0) {
+          var stageScore = officialMatch.stageScores.entries.firstWhereOrNull((e) => e.key.stageId == event.stageNumber)?.value;
+          if(stageScore == null) continue;
+          officialEventScore = stageScore;
+        }
+
+        var scoreDiffers = _scoresDiffer(event.score, officialEventScore);
+        var matchScoreDiffers = _scoresDiffer(event.matchScore, officialMatch);
+        event.canonicalScore = scoreDiffers ? DbRelativeScore.fromHydrated(officialEventScore) : null;
+        event.canonicalMatchScore = matchScoreDiffers ? DbRelativeScore.fromHydrated(officialMatch) : null;
+        event.canonicalCompetitors = matchScoreDiffers ? official.competitors : null;
+      }
+    }
+  }
+
+  bool _scoresDiffer(DbRelativeScore rated, BareRelativeScore official) {
+    if(rated.place != official.place) return true;
+    if((rated.ratio - official.ratio).abs() > 1e-9) return true;
+    var ratedMargin = rated.ratioMargin;
+    var officialMargin = official.ratioMargin;
+    if((ratedMargin == null) != (officialMargin == null)) return true;
+    if(ratedMargin != null && (ratedMargin - officialMargin!).abs() > 1e-9) return true;
+    return false;
   }
 
   (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {

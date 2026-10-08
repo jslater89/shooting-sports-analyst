@@ -61,6 +61,13 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
       }
     }
 
+    // if(entry.name.toLowerCase().contains("martin") && entry.name.toLowerCase().contains("kamen")) {
+    //   print("break");
+    // }
+    // if(entry.name.toLowerCase().contains("robin") && entry.name.toLowerCase().contains("grauffel")) {
+    //   print("break");
+    // }
+
     var ratingResult = await _source.lookupRating(group, entry.memberNumber, name: entry.name, allPossibleMemberNumbers: true);
 
     if(ratingResult.isOk()) {

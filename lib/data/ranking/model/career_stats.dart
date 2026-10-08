@@ -313,11 +313,16 @@ class PeriodicStats {
         }
         eventScore = stageScore;
 
-        if(eventScore.place == 1) {
+        // Prefer the official in-division stage result when the rating system used
+        // a different (e.g. multi-division) score.
+        var canonicalStage = event.wrappedEvent.canonicalScore;
+        var stagePlace = canonicalStage?.place ?? eventScore.place;
+        var stagePercentage = canonicalStage?.percentage ?? eventScore.percentage;
+        if(stagePlace == 1) {
           stageWins += 1;
         }
-        stageFinishes.add(eventScore.place);
-        stagePercentages.add(eventScore.percentage);
+        stageFinishes.add(stagePlace);
+        stagePercentages.add(stagePercentage);
 
         final stageClassScore = classMatchScore.stageScores[stage];
         if(stageClassScore != null) {
@@ -362,11 +367,13 @@ class PeriodicStats {
           filterMode: FilterMode.or,
           divisions: divisions,
         );
-        competitorCounts.add(divisionEntrants.length);
+        var canonicalMatch = event.wrappedEvent.canonicalMatchScore;
+        competitorCounts.add(event.wrappedEvent.canonicalCompetitors ?? divisionEntrants.length);
 
-        matchPlaces.add(matchScore.place);
-        matchPercentages.add(matchScore.percentage);
-        if (matchScore.place == 1) matchWins += 1;
+        var matchPlace = canonicalMatch?.place ?? matchScore.place;
+        matchPlaces.add(matchPlace);
+        matchPercentages.add(canonicalMatch?.percentage ?? matchScore.percentage);
+        if (matchPlace == 1) matchWins += 1;
 
         if (matchClassification != null) {
           if(!matchClassification.fallback) {
