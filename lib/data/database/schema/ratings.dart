@@ -412,6 +412,62 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
   }
 
+  /// Query the rating list for a given group synchronously, doing as much as possible in the database
+  /// for contexts that can't afford a full rating list in memory.
+  List<DbShooterRating> queryRatingListSync(
+    // The group to search in.
+    RatingGroup group,
+    {
+      // Search for a name or member number containing this string.
+      //
+      // [name] and [memberNumber] are ignored if [search] is provided.
+      String? search,
+      // Search for a name exactly matching this string.
+      String? name,
+      // Search for a member number exactly matching this string.
+      String? memberNumber,
+      // A last-seen-after date.
+      DateTime? lastSeenAfter,
+      // The number of results to return.
+      int limit = 50,
+      // The offset of the first result to return.
+      int offset = 0,
+      // The sort mode to use.
+      RatingSortMode sort = RatingSortMode.rating,
+      // Whether to sort ascending or descending.
+      bool ascending = false,
+      // Whether to limit to lady only (if true), male only (if false), or both (if null).
+      bool? female,
+      // If not null, the age category to limit to.
+      AgeCategory? ageCategory,
+      // When [ageCategory] is not null, include all competitors whose stored category necessarily entails [ageCategory].
+      //
+      // For instance, a Super Senior >65 and a Grand Senior >70 are both automatically eligible for Senior >60, so providing
+      // Senior and coalesce will return Seniors, Super Seniors, and Grand Seniors.
+      bool coalesceAgeCategories = false,
+    }
+  ) {
+    var query = _generateSearchedRatingQuery(
+      group,
+      search: search,
+      name: name,
+      memberNumber: memberNumber,
+      lastSeenAfter: lastSeenAfter,
+      female: female,
+      ageCategory: ageCategory,
+      coalesceAgeCategories: coalesceAgeCategories,
+    );
+
+    final sortedQuery = _generateSortedRatingQuery(query, sort, ascending);
+
+    if(sortedQuery != null) {
+      return sortedQuery.offset(offset).limit(limit).findAllSync();
+    }
+    else {
+      return query.offset(offset).limit(limit).findAllSync();
+    }
+  }
+
   /// Query the rating list for a given group, doing as much as possible in the database
   /// for contexts that can't afford a full rating list in memory.
   Future<List<DbShooterRating>> queryRatingList(
@@ -458,6 +514,46 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       coalesceAgeCategories: coalesceAgeCategories,
     );
 
+    final sortedQuery = _generateSortedRatingQuery(query, sort, ascending);
+
+    if(sortedQuery != null) {
+      return sortedQuery.offset(offset).limit(limit).findAll();
+    }
+    else {
+      return query.offset(offset).limit(limit).findAll();
+    }
+  }
+
+  Future<int> countRatingList(
+    RatingGroup group,
+    {
+      String? search,
+      String? name,
+      String? memberNumber,
+      DateTime? lastSeenAfter,
+      bool? female,
+      AgeCategory? ageCategory,
+      bool coalesceAgeCategories = false,
+    }
+  ) async {
+    var query = _generateSearchedRatingQuery(
+      group,
+      search: search,
+      name: name,
+      memberNumber: memberNumber,
+      lastSeenAfter: lastSeenAfter,
+      female: female,
+      ageCategory: ageCategory,
+      coalesceAgeCategories: coalesceAgeCategories,
+    );
+    return query.count();
+  }
+
+  QueryBuilder<DbShooterRating, DbShooterRating, QAfterSortBy>? _generateSortedRatingQuery(
+    QueryBuilder<DbShooterRating, DbShooterRating, QAfterFilterCondition> query,
+    RatingSortMode sort,
+    bool ascending,
+  ) {
     QueryBuilder<DbShooterRating, DbShooterRating, QAfterSortBy>? sortedQuery;
     if(sort == RatingSortMode.rating) {
       if(ascending) {
@@ -516,37 +612,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       }
     }
 
-    if(sortedQuery != null) {
-      return sortedQuery.offset(offset).limit(limit).findAll();
-    }
-    else {
-      return query.offset(offset).limit(limit).findAll();
-    }
-  }
-
-  Future<int> countRatingList(
-    RatingGroup group,
-    {
-      String? search,
-      String? name,
-      String? memberNumber,
-      DateTime? lastSeenAfter,
-      bool? female,
-      AgeCategory? ageCategory,
-      bool coalesceAgeCategories = false,
-    }
-  ) async {
-    var query = _generateSearchedRatingQuery(
-      group,
-      search: search,
-      name: name,
-      memberNumber: memberNumber,
-      lastSeenAfter: lastSeenAfter,
-      female: female,
-      ageCategory: ageCategory,
-      coalesceAgeCategories: coalesceAgeCategories,
-    );
-    return query.count();
+    return sortedQuery;
   }
 
   QueryBuilder<DbShooterRating, DbShooterRating, QAfterFilterCondition> _generateSearchedRatingQuery(
