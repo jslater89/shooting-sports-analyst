@@ -7,9 +7,13 @@
 import "package:json_annotation/json_annotation.dart";
 import "package:shooting_sports_analyst/research/dtos.dart"
     show
+        kDefaultHeatMinCount,
+        kDefaultHeatPercentile,
         kDefaultMatchPoolTopN,
+        kDefaultPackageMoverLimit,
         kDefaultPredictionSearchLimit,
         kDefaultPredictionTopN,
+        kDefaultRatingFieldMinMatches,
         researchArgsJson,
         researchBoolFromJson,
         researchDateOnlyFromJsonNullable,
@@ -78,6 +82,11 @@ class GetMatchWinnersArgs {
     this.project,
     this.byRatingGroup = false,
     this.topN = 1,
+    this.includeRatings = false,
+    this.heatPercentile = kDefaultHeatPercentile,
+    this.heatMinCount = kDefaultHeatMinCount,
+    this.ratingMinMatches = kDefaultRatingFieldMinMatches,
+    this.seenSince,
   });
 
   final int? matchId;
@@ -87,6 +96,19 @@ class GetMatchWinnersArgs {
   final bool byRatingGroup;
   @JsonKey(defaultValue: 1)
   final int topN;
+  /// Attach pre-match rating, rating percentile, and per-division heat.
+  @JsonKey(defaultValue: false)
+  final bool includeRatings;
+  /// Percentile that counts toward [DivisionHeatSummaryDto.heat].
+  @JsonKey(defaultValue: kDefaultHeatPercentile)
+  final int heatPercentile;
+  @JsonKey(defaultValue: kDefaultHeatMinCount)
+  final int heatMinCount;
+  /// Minimum matches for the active field the percentiles are taken from.
+  @JsonKey(defaultValue: kDefaultRatingFieldMinMatches)
+  final int ratingMinMatches;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? seenSince;
 
   factory GetMatchWinnersArgs.fromJson(Map<String, dynamic> json) =>
       _$GetMatchWinnersArgsFromJson(researchArgsJson(json));
@@ -107,6 +129,11 @@ class GetMatchResultsArgs {
     this.ageCategory,
     this.category,
     this.topN = kDefaultMatchPoolTopN,
+    this.includeRatings = false,
+    this.heatPercentile = kDefaultHeatPercentile,
+    this.heatMinCount = kDefaultHeatMinCount,
+    this.ratingMinMatches = kDefaultRatingFieldMinMatches,
+    this.seenSince,
   });
 
   final int? matchId;
@@ -123,6 +150,16 @@ class GetMatchResultsArgs {
   final String? category;
   @JsonKey(defaultValue: kDefaultMatchPoolTopN)
   final int topN;
+  @JsonKey(defaultValue: false)
+  final bool includeRatings;
+  @JsonKey(defaultValue: kDefaultHeatPercentile)
+  final int heatPercentile;
+  @JsonKey(defaultValue: kDefaultHeatMinCount)
+  final int heatMinCount;
+  @JsonKey(defaultValue: kDefaultRatingFieldMinMatches)
+  final int ratingMinMatches;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? seenSince;
 
   factory GetMatchResultsArgs.fromJson(Map<String, dynamic> json) =>
       _$GetMatchResultsArgsFromJson(researchArgsJson(json));
@@ -166,6 +203,8 @@ class ShooterLookupArgs {
     this.limit,
     this.includeInternal = false,
     this.bestFirst = false,
+    this.name,
+    this.maxPlace,
   });
 
   final String? memberNumber;
@@ -180,6 +219,12 @@ class ShooterLookupArgs {
   /// percentage, then place) instead of most-recent first. Ignored by other tools.
   @JsonKey(defaultValue: false)
   final bool bestFirst;
+  /// Used only when [memberNumber] misses. A unique name match is returned
+  /// with matchedBy "name" and the requested number alongside the stored one.
+  final String? name;
+  /// [get_shooter_match_results] only. Keep finishes with in-division place
+  /// from 1 through this value.
+  final int? maxPlace;
 
   factory ShooterLookupArgs.fromJson(Map<String, dynamic> json) =>
       _$ShooterLookupArgsFromJson(researchArgsJson(json));
@@ -197,6 +242,8 @@ class GetLeaderboardArgs {
     this.minMatches = 0,
     this.seenSince,
     this.changeSince,
+    this.ascending = false,
+    this.offset = 0,
   });
 
   final String? project;
@@ -214,6 +261,13 @@ class GetLeaderboardArgs {
   /// Optional date for trend-since-date sorting.
   @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
   final DateTime? changeSince;
+  /// When true, reverse the usual high-first order. For lastChange and trend,
+  /// that lists the largest drops first.
+  @JsonKey(defaultValue: false)
+  final bool ascending;
+  /// Rows to skip. Place numbers stay absolute, so offset = p90 rank - 1 reads that row.
+  @JsonKey(defaultValue: 0)
+  final int offset;
 
   factory GetLeaderboardArgs.fromJson(Map<String, dynamic> json) =>
       _$GetLeaderboardArgsFromJson(researchArgsJson(json));
@@ -394,6 +448,51 @@ class SearchPredictionsArgs {
   factory SearchPredictionsArgs.fromJson(Map<String, dynamic> json) =>
       _$SearchPredictionsArgsFromJson(researchArgsJson(json));
   Map<String, dynamic> toJson() => _$SearchPredictionsArgsToJson(this);
+}
+
+@JsonSerializable()
+class GetPackageMoversArgs {
+  GetPackageMoversArgs({
+    this.project,
+    this.group,
+    this.groups,
+    this.groupUuid,
+    this.since,
+    this.seenSince,
+    this.minMatches = kDefaultRatingFieldMinMatches,
+    this.direction = "both",
+    this.minRatingPct,
+    this.signalPct,
+    this.signalBasis = "package",
+    this.limit = kDefaultPackageMoverLimit,
+  });
+
+  final String? project;
+  final String? group;
+  /// Comma-separated rating group names.
+  final String? groups;
+  final String? groupUuid;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? since;
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? seenSince;
+  @JsonKey(defaultValue: kDefaultRatingFieldMinMatches)
+  final int minMatches;
+  /// "up", "down", or "both".
+  @JsonKey(defaultValue: "both")
+  final String direction;
+  final int? minRatingPct;
+  final int? signalPct;
+  /// "package" (default) ranks lastChange/trend among package shooters.
+  /// "active" ranks them on the whole seenSince field. ratingPct is always active-field.
+  @JsonKey(defaultValue: "package")
+  final String signalBasis;
+  @JsonKey(defaultValue: kDefaultPackageMoverLimit)
+  final int limit;
+
+  factory GetPackageMoversArgs.fromJson(Map<String, dynamic> json) =>
+      _$GetPackageMoversArgsFromJson(researchArgsJson(json));
+  Map<String, dynamic> toJson() => _$GetPackageMoversArgsToJson(this);
 }
 
 int _limit10FromJson(Object? value) => researchIntFromJsonNullable(value) ?? 10;

@@ -64,6 +64,11 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         projectName: args.project,
         byRatingGroup: args.byRatingGroup,
         topN: args.topN,
+        includeRatings: args.includeRatings,
+        heatPercentile: args.heatPercentile,
+        heatMinCount: args.heatMinCount,
+        ratingMinMatches: args.ratingMinMatches,
+        seenSince: args.seenSince,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -87,6 +92,11 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         category: args.category,
         topN: args.topN,
         overall: args.overall,
+        includeRatings: args.includeRatings,
+        heatPercentile: args.heatPercentile,
+        heatMinCount: args.heatMinCount,
+        ratingMinMatches: args.ratingMinMatches,
+        seenSince: args.seenSince,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -171,6 +181,7 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         memberNumber: args.memberNumber,
         ratingId: args.ratingId,
         includeInternal: args.includeInternal,
+        name: args.name,
       );
       if (summary.isErr()) {
         return Result.errFrom(summary);
@@ -190,6 +201,7 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         ratingId: args.ratingId,
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
+        name: args.name,
       );
       if (events.isErr()) {
         return Result.errFrom(events);
@@ -210,6 +222,8 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
         bestFirst: args.bestFirst,
+        name: args.name,
+        maxPlace: args.maxPlace,
       );
       if (results.isErr()) {
         return Result.errFrom(results);
@@ -227,6 +241,7 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         groupUuid: args.groupUuid,
         memberNumber: args.memberNumber,
         ratingId: args.ratingId,
+        name: args.name,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -247,6 +262,41 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
         minMatches: args.minMatches,
         seenSince: args.seenSince,
         changeSince: args.changeSince,
+        ascending: args.ascending,
+        offset: args.offset,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  });
+
+  router.get("$kResearchApiPathPrefix/package-movers", (Request request) async {
+    return _run(() async {
+      final args = GetPackageMoversArgs.fromJson(_queryMap(request));
+      if (args.since == null) {
+        return Result.err(ResearchError("since is required (YYYY-MM-DD)"));
+      }
+      final result = await facade.getPackageMovers(
+        projectName: args.project,
+        groupName: args.group,
+        groupUuid: args.groupUuid,
+        groupNames: args.groups == null
+            ? null
+            : args.groups!
+                .split(",")
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList(),
+        since: args.since!,
+        seenSince: args.seenSince,
+        minMatches: args.minMatches,
+        direction: args.direction,
+        minRatingPct: args.minRatingPct,
+        signalPct: args.signalPct,
+        signalBasis: args.signalBasis,
+        limit: args.limit,
       );
       if (result.isErr()) {
         return Result.errFrom(result);

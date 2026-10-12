@@ -20,6 +20,23 @@ abstract class ResearchQueries {
     int minMatches = 0,
     DateTime? seenSince,
     DateTime? changeSince,
+    bool ascending = false,
+    int offset = 0,
+  });
+
+  Future<ResearchResult<PackageMoversResponse>> getPackageMovers({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    List<String>? groupNames,
+    required DateTime since,
+    DateTime? seenSince,
+    int minMatches = kDefaultRatingFieldMinMatches,
+    String direction = "both",
+    int? minRatingPct,
+    int? signalPct,
+    String signalBasis = "package",
+    int limit = kDefaultPackageMoverLimit,
   });
 
   Future<ResearchResult<List<MatchSummaryDto>>> searchMatches({
@@ -35,6 +52,11 @@ abstract class ResearchQueries {
     String? projectName,
     bool byRatingGroup = false,
     int topN = 1,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   });
 
   Future<ResearchResult<MatchResultsResponse>> getMatchResults({
@@ -49,6 +71,11 @@ abstract class ResearchQueries {
     String? category,
     int topN = kDefaultMatchPoolTopN,
     bool overall = false,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   });
 
   Future<ResearchResult<MatchScoresResponse>> getMatchScores({
@@ -97,6 +124,7 @@ abstract class ResearchQueries {
     String? memberNumber,
     int? ratingId,
     bool includeInternal = false,
+    String? name,
   });
 
   Future<ResearchResult<List<RatingEventDto>>> getRatingHistory({
@@ -108,6 +136,7 @@ abstract class ResearchQueries {
     int limit = 50,
     bool matchLevelOnly = true,
     bool includeInternal = false,
+    String? name,
   });
 
   Future<ResearchResult<List<ShooterMatchResultDto>>> getShooterMatchResults({
@@ -119,6 +148,8 @@ abstract class ResearchQueries {
     int limit = 50,
     bool includeInternal = false,
     bool bestFirst = false,
+    String? name,
+    int? maxPlace,
   });
 
   /// Stored in-division career stats (hits, finishes). No class scores.
@@ -128,6 +159,7 @@ abstract class ResearchQueries {
     String? groupName,
     String? memberNumber,
     int? ratingId,
+    String? name,
   });
 
   Future<ResearchResult<List<MatchPrepHitDto>>> searchMatchPreps({

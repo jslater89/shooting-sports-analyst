@@ -33,6 +33,8 @@ import "package:shooting_sports_analyst/research/dtos.dart";
 import "package:shooting_sports_analyst/research/research_queries.dart";
 import "package:shooting_sports_analyst/util.dart";
 
+part "roundup.dart";
+
 final _log = SSALogger("ResearchFacade");
 
 /// Read-only research queries over [AnalystDatabase].
@@ -67,12 +69,17 @@ class ResearchFacade implements ResearchQueries {
     int minMatches = 0,
     DateTime? seenSince,
     DateTime? changeSince,
+    bool ascending = false,
+    int offset = 0,
   }) async {
     if (limit < 1) {
       return Result.err(ResearchError("limit must be >= 1"));
     }
     if (minMatches < 0) {
       return Result.err(ResearchError("minMatches must be >= 0"));
+    }
+    if (offset < 0) {
+      return Result.err(ResearchError("offset must be >= 0"));
     }
 
     final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
@@ -124,13 +131,18 @@ class ResearchFacade implements ResearchQueries {
 
     final comparator = algo.comparatorFor(sortMode, changeSince: changeSince)
         ?? sortMode.comparator(changeSince: changeSince);
-    wrapped.sort(comparator);
+    if (ascending) {
+      wrapped.sort((a, b) => comparator(b, a));
+    }
+    else {
+      wrapped.sort(comparator);
+    }
 
     final entries = <LeaderboardEntryDto>[];
-    final take = wrapped.take(limit).toList();
+    final take = wrapped.skip(offset).take(limit).toList();
     for (var i = 0; i < take.length; i++) {
       entries.add(_leaderboardEntry(
-        place: i + 1,
+        place: offset + i + 1,
         project: project,
         rating: take[i],
         sortMode: sortMode,
@@ -144,12 +156,45 @@ class ResearchFacade implements ResearchQueries {
       groupName: group.name,
       sort: sortMode.name,
       sortLabel: algo.nameForSort(sortMode),
+      ascending: ascending,
       minMatches: minMatches,
       seenSince: effectiveSeenSince,
       latestMatchDate: latestMatchDate,
       totalAfterFilters: wrapped.length,
+      offset: offset,
       entries: entries,
     ));
+  }
+
+  Future<ResearchResult<PackageMoversResponse>> getPackageMovers({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    List<String>? groupNames,
+    required DateTime since,
+    DateTime? seenSince,
+    int minMatches = kDefaultRatingFieldMinMatches,
+    String direction = "both",
+    int? minRatingPct,
+    int? signalPct,
+    String signalBasis = "package",
+    int limit = kDefaultPackageMoverLimit,
+  }) {
+    return computePackageMovers(
+      this,
+      projectName: projectName,
+      groupUuid: groupUuid,
+      groupName: groupName,
+      groupNames: groupNames,
+      since: since,
+      seenSince: seenSince,
+      minMatches: minMatches,
+      direction: direction,
+      minRatingPct: minRatingPct,
+      signalPct: signalPct,
+      signalBasis: signalBasis,
+      limit: limit,
+    );
   }
 
   Future<ResearchResult<List<MatchSummaryDto>>> searchMatches({
@@ -177,9 +222,23 @@ class ResearchFacade implements ResearchQueries {
     String? projectName,
     bool byRatingGroup = false,
     int topN = 1,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) async {
     if (topN < 1) {
       return Result.err(ResearchError("topN must be >= 1"));
+    }
+    final heatCheck = _checkHeatArgs(
+      includeRatings: includeRatings,
+      heatPercentile: heatPercentile,
+      heatMinCount: heatMinCount,
+      ratingMinMatches: ratingMinMatches,
+    );
+    if (heatCheck != null) {
+      return Result.err(heatCheck);
     }
     final dbMatchRes = await _resolveMatch(matchId: matchId, matchQuery: matchQuery);
     if (dbMatchRes.isErr()) {
@@ -192,7 +251,7 @@ class ResearchFacade implements ResearchQueries {
     }
     final shootingMatch = shootingMatchRes.unwrap();
 
-    final winners = <MatchWinnerDto>[];
+    final pools = <_ScorePool>[];
     if (byRatingGroup) {
       final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
       if (projectRes.isErr()) {
@@ -208,11 +267,11 @@ class ResearchFacade implements ResearchQueries {
           return a.name.compareTo(b.name);
         });
       for (final group in groups) {
-        winners.addAll(_topFromScores(
-          shootingMatch.getScoresFromFilters(group.filters),
+        pools.add(_ScorePool(
           label: group.name,
           kind: "ratingGroup",
-          topN: topN,
+          scores: shootingMatch.getScoresFromFilters(group.filters),
+          group: group,
         ));
       }
     }
@@ -221,11 +280,50 @@ class ResearchFacade implements ResearchQueries {
       final divisions = sport.divisions.values.toList()
         ..sort((a, b) => a.name.compareTo(b.name));
       for (final division in divisions) {
-        winners.addAll(_topFromScores(
-          shootingMatch.getScoresFromFilters(FilterSet.forDivision(sport, division)),
+        pools.add(_ScorePool(
           label: division.displayName,
           kind: "division",
-          topN: topN,
+          scores: shootingMatch.getScoresFromFilters(FilterSet.forDivision(sport, division)),
+          group: null,
+        ));
+      }
+    }
+
+    _HeatContext? heat;
+    if (includeRatings) {
+      final heatRes = await loadHeatContext(
+        this,
+        match: shootingMatch,
+        pools: pools,
+        projectName: projectName ?? kDefaultResearchProjectName,
+        minMatches: ratingMinMatches,
+        seenSince: seenSince,
+      );
+      if (heatRes.isErr()) {
+        return Result.errFrom(heatRes);
+      }
+      heat = heatRes.unwrap();
+    }
+
+    final winners = <MatchWinnerDto>[];
+    final divisionHeat = <DivisionHeatSummaryDto>[];
+    for (final pool in pools) {
+      if (pool.scores.isEmpty) {
+        continue;
+      }
+      winners.addAll(_topFromScores(
+        pool.scores,
+        label: pool.label,
+        kind: pool.kind,
+        topN: topN,
+        ratings: heat?.ratings,
+      ));
+      if (heat != null) {
+        divisionHeat.addAll(summarizeDivisionHeat(
+          pool: pool,
+          ctx: heat,
+          heatPercentile: heatPercentile,
+          heatMinCount: heatMinCount,
         ));
       }
     }
@@ -233,6 +331,7 @@ class ResearchFacade implements ResearchQueries {
     return Result.ok(MatchWinnersResponse(
       match: _matchSummary(dbMatch),
       winners: winners,
+      divisionHeat: heat == null ? null : divisionHeat,
     ));
   }
 
@@ -252,7 +351,21 @@ class ResearchFacade implements ResearchQueries {
     String? category,
     int topN = kDefaultMatchPoolTopN,
     bool overall = false,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) async {
+    final heatCheck = _checkHeatArgs(
+      includeRatings: includeRatings,
+      heatPercentile: heatPercentile,
+      heatMinCount: heatMinCount,
+      ratingMinMatches: ratingMinMatches,
+    );
+    if (heatCheck != null) {
+      return Result.err(heatCheck);
+    }
     final resolvedRes = await _resolveMatchPool(
       matchId: matchId,
       matchQuery: matchQuery,
@@ -271,10 +384,31 @@ class ResearchFacade implements ResearchQueries {
     final resolved = resolvedRes.unwrap();
     final scored = resolved.scores.entries.toList()
       ..sort((a, b) => a.value.place.compareTo(b.value.place));
+    final pool = _ScorePool(
+      label: resolved.pool,
+      kind: resolved.kind,
+      scores: resolved.scores,
+      group: null,
+    );
+    _HeatContext? heat;
+    if (includeRatings) {
+      final heatRes = await loadHeatContext(
+        this,
+        match: resolved.shootingMatch,
+        pools: [pool],
+        projectName: projectName ?? kDefaultResearchProjectName,
+        minMatches: ratingMinMatches,
+        seenSince: seenSince,
+      );
+      if (heatRes.isErr()) {
+        return Result.errFrom(heatRes);
+      }
+      heat = heatRes.unwrap();
+    }
     final limit = topN > 0 ? topN : scored.length;
     final results = <MatchCompetitorResultDto>[];
     for (final e in scored.take(limit)) {
-      results.add(_competitorResult(e.key, e.value));
+      results.add(_competitorResult(e.key, e.value, rating: heat?.ratings[e.key]));
     }
 
     return Result.ok(MatchResultsResponse(
@@ -286,6 +420,14 @@ class ResearchFacade implements ResearchQueries {
       category: resolved.categoryFilter,
       competitorCount: scored.length,
       results: results,
+      divisionHeat: heat == null
+          ? null
+          : summarizeDivisionHeat(
+              pool: pool,
+              ctx: heat,
+              heatPercentile: heatPercentile,
+              heatMinCount: heatMinCount,
+            ),
     ));
   }
 
@@ -547,6 +689,7 @@ class ResearchFacade implements ResearchQueries {
     String? memberNumber,
     int? ratingId,
     bool includeInternal = false,
+    String? name,
   }) async {
     final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
@@ -554,6 +697,7 @@ class ResearchFacade implements ResearchQueries {
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
+      name: name,
     );
     if (resolvedRes.isErr()) {
       return Result.errFrom(resolvedRes);
@@ -596,6 +740,8 @@ class ResearchFacade implements ResearchQueries {
       internalAgedRating: includeInternal ? wrapped.agedRating : null,
       internalCareerMinimumRating: includeInternal ? wrapped.careerMinimumRating : null,
       internalCareerMaximumRating: includeInternal ? wrapped.careerMaximumRating : null,
+      matchedBy: resolved.matchedBy,
+      requestedMemberNumber: resolved.requestedMemberNumber,
     ));
   }
 
@@ -608,6 +754,7 @@ class ResearchFacade implements ResearchQueries {
     int limit = 50,
     bool matchLevelOnly = true,
     bool includeInternal = false,
+    String? name,
   }) async {
     final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
@@ -615,6 +762,7 @@ class ResearchFacade implements ResearchQueries {
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
+      name: name,
     );
     if (resolvedRes.isErr()) {
       return Result.errFrom(resolvedRes);
@@ -671,22 +819,28 @@ class ResearchFacade implements ResearchQueries {
     int limit = 50,
     bool includeInternal = false,
     bool bestFirst = false,
+    String? name,
+    int? maxPlace,
   }) async {
+    if (maxPlace != null && maxPlace < 1) {
+      return Result.err(ResearchError("maxPlace must be >= 1"));
+    }
     final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
       groupUuid: groupUuid,
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
+      name: name,
     );
     if (resolvedRes.isErr()) {
       return Result.errFrom(resolvedRes);
     }
     final resolved = resolvedRes.unwrap();
     final algo = resolved.project.settings.algorithm;
-    // Recency mode can stop after [limit] matches. Highlights need the full
-    // match-level history so "best" is career-best, not recent-best.
-    final eventLimit = bestFirst ? 0 : limit * 8;
+    // Recency mode can stop after [limit] matches. Highlights and a place cap
+    // need the full match-level history so the filter is not just the recent window.
+    final eventLimit = (bestFirst || maxPlace != null) ? 0 : limit * 8;
     final events = await db.getRatingEventsFor(resolved.rating, limit: eventLimit);
     final byMatch = <String, ShooterMatchResultDto>{};
     for (final e in events) {
@@ -704,11 +858,15 @@ class ResearchFacade implements ResearchQueries {
       final entryInfo = await _entryDivisionAndClassification(m, e.entryId);
       final displayOld = algo.scaleRating(e.oldRating);
       final displayNew = algo.scaleRating(e.newRating);
+      final place = (e.canonicalMatchScore ?? e.matchScore).place;
+      if (maxPlace != null && (place < 1 || place > maxPlace)) {
+        continue;
+      }
       byMatch[e.matchId] = ShooterMatchResultDto(
         matchId: e.matchId,
         matchName: matchName,
         date: e.date,
-        place: (e.canonicalMatchScore ?? e.matchScore).place,
+        place: place,
         ratio: (e.canonicalMatchScore ?? e.matchScore).ratio,
         percentage: (e.canonicalMatchScore ?? e.matchScore).percentage,
         referencePlace: e.canonicalMatchScore != null ? e.matchScore.place : null,
@@ -753,6 +911,7 @@ class ResearchFacade implements ResearchQueries {
     String? groupName,
     String? memberNumber,
     int? ratingId,
+    String? name,
   }) async {
     final resolvedRes = await _resolveShooterRating(
       projectName: projectName,
@@ -760,6 +919,7 @@ class ResearchFacade implements ResearchQueries {
       groupName: groupName,
       memberNumber: memberNumber,
       ratingId: ratingId,
+      name: name,
     );
     if (resolvedRes.isErr()) {
       return Result.errFrom(resolvedRes);
@@ -781,6 +941,8 @@ class ResearchFacade implements ResearchQueries {
       ],
       missingMatches: stats.missingMatches,
       unscoredMatches: stats.unscoredMatches,
+      matchedBy: resolved.matchedBy,
+      requestedMemberNumber: resolved.requestedMemberNumber,
     ));
   }
 
@@ -1091,6 +1253,7 @@ class ResearchFacade implements ResearchQueries {
     required String label,
     required String kind,
     required int topN,
+    Map<MatchEntry, _FinisherRating>? ratings,
   }) {
     if (scores.isEmpty) {
       return [];
@@ -1101,6 +1264,7 @@ class ResearchFacade implements ResearchQueries {
     for (final e in scored.take(topN)) {
       final shooter = e.key;
       final score = e.value;
+      final finisher = ratings?[shooter];
       out.add(MatchWinnerDto(
         divisionOrGroup: label,
         kind: kind,
@@ -1117,12 +1281,18 @@ class ResearchFacade implements ResearchQueries {
         points: score.points,
         competitorCount: scored.length,
         dq: shooter.dq,
+        preMatchRating: finisher?.preMatchRating,
+        ratingPct: finisher?.ratingPct,
       ));
     }
     return out;
   }
 
-  MatchCompetitorResultDto _competitorResult(MatchEntry shooter, RelativeMatchScore score) {
+  MatchCompetitorResultDto _competitorResult(
+    MatchEntry shooter,
+    RelativeMatchScore score, {
+    _FinisherRating? rating,
+  }) {
     return MatchCompetitorResultDto(
       place: score.place,
       name: "${shooter.firstName} ${shooter.lastName}".trim(),
@@ -1141,6 +1311,8 @@ class ResearchFacade implements ResearchQueries {
       dq: shooter.dq,
       reentry: shooter.reentry,
       squad: shooter.squad,
+      preMatchRating: rating?.preMatchRating,
+      ratingPct: rating?.ratingPct,
     );
   }
 
@@ -1493,12 +1665,19 @@ class ResearchFacade implements ResearchQueries {
     return Result.ok(all);
   }
 
-  Future<ResearchResult<({DbRatingProject project, RatingGroup group, DbShooterRating rating})>> _resolveShooterRating({
+  Future<ResearchResult<({
+    DbRatingProject project,
+    RatingGroup group,
+    DbShooterRating rating,
+    String matchedBy,
+    String? requestedMemberNumber,
+  })>> _resolveShooterRating({
     String? projectName,
     String? groupUuid,
     String? groupName,
     String? memberNumber,
     int? ratingId,
+    String? name,
   }) async {
     if (ratingId != null) {
       final rating = await db.getRatingById(ratingId);
@@ -1516,7 +1695,13 @@ class ResearchFacade implements ResearchQueries {
       if (group == null || proj == null) {
         return Result.err(ResearchError("Shooter rating $ratingId missing project/group links", statusCode: 500));
       }
-      return Result.ok((project: proj, group: group, rating: rating));
+      return Result.ok((
+        project: proj,
+        group: group,
+        rating: rating,
+        matchedBy: "ratingId",
+        requestedMemberNumber: null,
+      ));
     }
 
     final projectRes = await _requireProject(projectName ?? kDefaultResearchProjectName);
@@ -1528,38 +1713,138 @@ class ResearchFacade implements ResearchQueries {
       await project.dbGroups.load();
     }
 
-    final mn = _processedMemberNumber(project, memberNumber);
-    if (mn.isEmpty) {
-      return Result.err(ResearchError("memberNumber or ratingId is required"));
-    }
-
     final groupsRes = _resolveGroups(project, groupUuid: groupUuid, groupName: groupName);
     if (groupsRes.isErr()) {
       return Result.errFrom(groupsRes);
     }
     final groups = groupsRes.unwrap();
-    DbShooterRating? found;
-    RatingGroup? foundGroup;
-    for (final group in groups) {
-      final rating = await db.maybeKnownShooter(
-        project: project,
-        group: group,
-        memberNumber: mn,
-        usePossibleMemberNumbers: true,
-      );
-      if (rating != null) {
-        found = rating;
-        foundGroup = group;
-        break;
+    final mn = _processedMemberNumber(project, memberNumber);
+    final trimmedName = name?.trim() ?? "";
+    if (mn.isEmpty && trimmedName.length < 2) {
+      return Result.err(ResearchError("memberNumber, ratingId, or name is required"));
+    }
+
+    if (mn.isNotEmpty) {
+      for (final group in groups) {
+        final rating = await db.maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: mn,
+          usePossibleMemberNumbers: true,
+        );
+        if (rating != null) {
+          return Result.ok((
+            project: project,
+            group: group,
+            rating: rating,
+            matchedBy: "memberNumber",
+            requestedMemberNumber: null,
+          ));
+        }
       }
     }
-    if (found == null || foundGroup == null) {
+
+    if (trimmedName.length >= 2) {
+      return _resolveUniqueName(
+        project: project,
+        groups: groups,
+        name: trimmedName,
+        requestedMemberNumber: mn.isEmpty ? null : mn,
+        groupWasSpecified: (groupUuid != null && groupUuid.isNotEmpty)
+            || (groupName != null && groupName.isNotEmpty),
+      );
+    }
+
+    return Result.err(ResearchError(
+      "Shooter not found: memberNumber=$mn project=${project.name}. "
+      "Pass name to fall back to a unique name match.",
+      statusCode: 404,
+    ));
+  }
+
+  Future<ResearchResult<({
+    DbRatingProject project,
+    RatingGroup group,
+    DbShooterRating rating,
+    String matchedBy,
+    String? requestedMemberNumber,
+  })>> _resolveUniqueName({
+    required DbRatingProject project,
+    required List<RatingGroup> groups,
+    required String name,
+    required String? requestedMemberNumber,
+    required bool groupWasSpecified,
+  }) async {
+    final exact = <({RatingGroup group, DbShooterRating rating})>[];
+    for (final group in groups) {
+      final found = await db.findShooterRatings(
+        project: project,
+        group: group,
+        name: name,
+        searchMode: FindShooterSearchMode.exact,
+        limit: 5,
+      );
+      for (final rating in found) {
+        exact.add((group: group, rating: rating));
+      }
+    }
+    final hits = exact.isNotEmpty
+        ? exact
+        : await _containsNameHits(project, groups, name);
+    if (hits.isEmpty) {
+      final numberNote = requestedMemberNumber == null
+          ? ""
+          : " memberNumber=$requestedMemberNumber did not match.";
       return Result.err(ResearchError(
-        "Shooter not found: memberNumber=$mn project=${project.name}",
+        "Shooter not found: name='$name'.$numberNote project=${project.name}",
         statusCode: 404,
       ));
     }
-    return Result.ok((project: project, group: foundGroup, rating: found));
+
+    final names = hits.map((h) => h.rating.deduplicatorName).toSet();
+    final groupsHit = hits.map((h) => h.group.uuid).toSet();
+    if (names.length == 1 && (groupWasSpecified || groupsHit.length == 1)) {
+      final hit = hits.first;
+      return Result.ok((
+        project: project,
+        group: hit.group,
+        rating: hit.rating,
+        matchedBy: "name",
+        requestedMemberNumber: requestedMemberNumber,
+      ));
+    }
+
+    final sample = hits.take(8).map((h) {
+      final who = "${h.rating.firstName} ${h.rating.lastName}".trim();
+      return "$who ${h.rating.memberNumber} (${h.group.name})";
+    }).join("; ");
+    final reason = names.length == 1
+        ? "Name '$name' matched ${groupsHit.length} rating groups"
+        : "Name '$name' matched ${hits.length} ratings";
+    return Result.err(ResearchError(
+      "$reason. Pass group or ratingId. Candidates: $sample",
+    ));
+  }
+
+  Future<List<({RatingGroup group, DbShooterRating rating})>> _containsNameHits(
+    DbRatingProject project,
+    List<RatingGroup> groups,
+    String name,
+  ) async {
+    final hits = <({RatingGroup group, DbShooterRating rating})>[];
+    for (final group in groups) {
+      final found = await db.findShooterRatings(
+        project: project,
+        group: group,
+        name: name,
+        searchMode: FindShooterSearchMode.contains,
+        limit: 8,
+      );
+      for (final rating in found) {
+        hits.add((group: group, rating: rating));
+      }
+    }
+    return hits;
   }
 
   ShooterHitDto _shooterHit(
@@ -1780,6 +2065,12 @@ class ResearchFacade implements ResearchQueries {
     } catch (_) {
       lastChange = null;
     }
+    double? trend;
+    try {
+      trend = _scaleChange(algo, rating.trend.toDouble());
+    } catch (_) {
+      trend = null;
+    }
 
     return LeaderboardEntryDto(
       place: place,
@@ -1803,6 +2094,7 @@ class ResearchFacade implements ResearchQueries {
       matchCount: rating.matchCount,
       historyLength: rating.length,
       lastChange: lastChange,
+      trend: trend,
     );
   }
 

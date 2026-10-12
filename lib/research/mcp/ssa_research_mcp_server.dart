@@ -38,7 +38,13 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "project is '$defaultProject'. Prefer list_rating_projects for "
               "algorithm/supportedSorts metadata, search_matches then "
               "get_match_winners / get_shooter_summary. Use get_leaderboard for "
-              "sorted group rankings (movers = sort=lastChange). Use get_match_scores / "
+              "sorted group rankings (movers = sort=lastChange; ascending=true for "
+              "largest drops; offset reads one rank). Use get_package_movers for "
+              "a package window: filtered movers plus p90/p95 cutoffs and finishes. "
+              "Pass includeRatings=true on get_match_winners / get_match_results for "
+              "pre-match rating and per-division heat (p95 field, not match-heat). "
+              "Shooter lookups accept name when memberNumber misses. "
+              "Use get_match_scores / "
               "get_competitor_stage_scores for stage results and hit/penalty counts. "
               "Use get_rating_history for rating trajectory, and "
               "get_shooter_match_results (bestFirst=true for career highlights) "
@@ -62,6 +68,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     registerTool(_getShooterMatchResultsTool, _getShooterMatchResults);
     registerTool(_getCareerStatsTool, _getCareerStats);
     registerTool(_getLeaderboardTool, _getLeaderboard);
+    registerTool(_getPackageMoversTool, _getPackageMovers);
     registerTool(_searchMatchPrepsTool, _searchMatchPreps);
     registerTool(_listPredictionSetsTool, _listPredictionSets);
     registerTool(_getPredictionsTool, _getPredictions);
@@ -108,6 +115,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         projectName: args.project ?? defaultProject,
         byRatingGroup: args.byRatingGroup,
         topN: args.topN,
+        includeRatings: args.includeRatings,
+        heatPercentile: args.heatPercentile,
+        heatMinCount: args.heatMinCount,
+        ratingMinMatches: args.ratingMinMatches,
+        seenSince: args.seenSince,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -131,6 +143,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         category: args.category,
         topN: args.topN,
         overall: args.overall,
+        includeRatings: args.includeRatings,
+        heatPercentile: args.heatPercentile,
+        heatMinCount: args.heatMinCount,
+        ratingMinMatches: args.ratingMinMatches,
+        seenSince: args.seenSince,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -215,6 +232,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         memberNumber: args.memberNumber,
         ratingId: args.ratingId,
         includeInternal: args.includeInternal,
+        name: args.name,
       );
       if (summary.isErr()) {
         return Result.errFrom(summary);
@@ -234,6 +252,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         ratingId: args.ratingId,
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
+        name: args.name,
       );
       if (events.isErr()) {
         return Result.errFrom(events);
@@ -254,6 +273,8 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         limit: args.limit ?? 50,
         includeInternal: args.includeInternal,
         bestFirst: args.bestFirst,
+        name: args.name,
+        maxPlace: args.maxPlace,
       );
       if (results.isErr()) {
         return Result.errFrom(results);
@@ -271,6 +292,7 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         groupUuid: args.groupUuid,
         memberNumber: args.memberNumber,
         ratingId: args.ratingId,
+        name: args.name,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -291,6 +313,42 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         minMatches: args.minMatches,
         seenSince: args.seenSince,
         changeSince: args.changeSince,
+        ascending: args.ascending,
+        offset: args.offset,
+      );
+      if (result.isErr()) {
+        return Result.errFrom(result);
+      }
+      return Result.ok(result.unwrap().toJson());
+    });
+  }
+
+  FutureOr<CallToolResult> _getPackageMovers(CallToolRequest request) {
+    return _run(() async {
+      final args = parseMcpArgs(request.arguments, GetPackageMoversArgs.fromJson);
+      if (args.since == null) {
+        return Result.err(ResearchError("since is required (YYYY-MM-DD)"));
+      }
+      final groups = args.groups == null
+          ? null
+          : args.groups!
+              .split(",")
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+      final result = await _facade.getPackageMovers(
+        projectName: args.project ?? defaultProject,
+        groupName: args.group,
+        groupUuid: args.groupUuid,
+        groupNames: groups,
+        since: args.since!,
+        seenSince: args.seenSince,
+        minMatches: args.minMatches,
+        direction: args.direction,
+        minRatingPct: args.minRatingPct,
+        signalPct: args.signalPct,
+        signalBasis: args.signalBasis,
+        limit: args.limit,
       );
       if (result.isErr()) {
         return Result.errFrom(result);
@@ -424,7 +482,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     name: "get_match_winners",
     description:
         "Get top finishers per division (default) or per rating group for a match. "
-        "Pass matchId from search_matches, or matchQuery. Includes female/age/category flags.",
+        "Pass matchId from search_matches, or matchQuery. Includes female/age/category flags. "
+        "Set includeRatings to add preMatchRating and ratingPct, plus divisionHeat: "
+        "how many finishers were already at the group's p90/p95 rating. "
+        "heat is true when heatCount >= heatMinCount (default: at least 2 at p95). "
+        "That is a coarse nationally-hot check, not the app's match-heat model.",
     inputSchema: Schema.object(
       properties: {
         "matchId": Schema.int(description: "Database match id"),
@@ -434,6 +496,23 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
           description: "If true, score by project rating-group filters instead of each division",
         ),
         "topN": Schema.int(description: "Places to return per division/group (default 1)"),
+        "includeRatings": Schema.bool(
+          description:
+              "Add pre-match rating, rating percentile, and divisionHeat (default false)",
+        ),
+        "heatPercentile": Schema.int(
+          description: "Percentile that counts as hot (default 95)",
+        ),
+        "heatMinCount": Schema.int(
+          description: "Finishers at heatPercentile required for heat=true (default 2)",
+        ),
+        "ratingMinMatches": Schema.int(
+          description: "Minimum matches in the active field used for percentiles (default 3)",
+        ),
+        "seenSince": Schema.string(
+          description:
+              "YYYY-MM-DD active-field lastSeen cutoff. Default matches the leaderboard.",
+        ),
       },
     ),
   );
@@ -443,7 +522,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     description:
         "Lean standings for one scoring pool in a match (place/ratio/percentage/points). "
         "Provide division, a rating group (group/groupUuid), or overall=true. For stage "
-        "scores or hit/penalty counts, use get_match_scores or get_competitor_stage_scores.",
+        "scores or hit/penalty counts, use get_match_scores or get_competitor_stage_scores. "
+        "Set includeRatings for preMatchRating, ratingPct, and divisionHeat (p90/p95 "
+        "finisher counts). Heat uses pre-match rating against the active field.",
     inputSchema: Schema.object(
       properties: {
         "matchId": Schema.int(description: "Database match id"),
@@ -457,6 +538,23 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "ageCategory": Schema.string(description: "Age category name, e.g. 'Senior'"),
         "category": Schema.string(description: "Competitor category name, e.g. 'Law Enforcement'"),
         "topN": Schema.int(description: "Limit rows (default 10; 0 = entire pool)"),
+        "includeRatings": Schema.bool(
+          description:
+              "Add pre-match rating, rating percentile, and divisionHeat (default false)",
+        ),
+        "heatPercentile": Schema.int(
+          description: "Percentile that counts as hot (default 95)",
+        ),
+        "heatMinCount": Schema.int(
+          description: "Finishers at heatPercentile required for heat=true (default 2)",
+        ),
+        "ratingMinMatches": Schema.int(
+          description: "Minimum matches in the active field used for percentiles (default 3)",
+        ),
+        "seenSince": Schema.string(
+          description:
+              "YYYY-MM-DD active-field lastSeen cutoff. Default matches the leaderboard.",
+        ),
       },
     ),
   );
@@ -541,10 +639,16 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     name: "get_shooter_summary",
     description:
         "Career/rating summary for a shooter (display rating, location, first/last seen, "
-        "career min/max, event count).",
+        "career min/max, event count). If memberNumber misses and name is passed, a unique "
+        "name match is used and matchedBy/requestedMemberNumber report the mismatch.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
+        "name": Schema.string(
+          description:
+              "Fallback when memberNumber misses. Used only if the name is unique "
+              "in the requested group, or in exactly one group.",
+        ),
         "ratingId": Schema.int(description: "DbShooterRating id from search_shooters"),
         "project": Schema.string(),
         "group": Schema.string(),
@@ -567,6 +671,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
+        "name": Schema.string(
+          description: "Unique-name fallback when memberNumber misses. See get_shooter_summary.",
+        ),
         "ratingId": Schema.int(),
         "project": Schema.string(),
         "group": Schema.string(),
@@ -584,13 +691,17 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     description:
         "Distinct match finishes for a shooter derived from rating events. "
         "Default order is most recent first. Set bestFirst for career highlights "
-        "(highest percentage, then best place). Includes division and classification "
+        "(highest percentage, then best place). maxPlace keeps in-division finishes "
+        "of that place or better (maxPlace=3 is podiums). Includes division and classification "
         "entered at each match when available. place/ratio/percentage are the "
         "in-division result; referencePlace/Ratio/Percentage appear only when the "
         "rating system's pool score (e.g. combined LO/CO) differs.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
+        "name": Schema.string(
+          description: "Unique-name fallback when memberNumber misses. See get_shooter_summary.",
+        ),
         "ratingId": Schema.int(),
         "project": Schema.string(),
         "group": Schema.string(),
@@ -600,6 +711,11 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
           description:
               "If true, return the best finishes first (percentage, then place) "
               "instead of most recent. Default false.",
+        ),
+        "maxPlace": Schema.int(
+          description:
+              "Keep finishes with in-division place from 1 through this value. "
+              "maxPlace=3 is podiums. Scans the full history.",
         ),
         "includeInternal": Schema.bool(
           description: "Include raw/internal rating fields (default false)",
@@ -615,10 +731,15 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "in-division match/stage finishes, hit counts and percentages, time, "
         "raw points, DQs, and matches by event level. Uses the division score "
         "saved with each match (not a live rescoring of the rating group). "
-        "Does not include class finishes.",
+        "Does not include class finishes. matchesByLevel uses the level stored on "
+        "the match, which is often wrong, especially for Nationals. "
+        "Pass name when memberNumber misses; matchedBy reports a name fallback.",
     inputSchema: Schema.object(
       properties: {
         "memberNumber": Schema.string(),
+        "name": Schema.string(
+          description: "Unique-name fallback when memberNumber misses. See get_shooter_summary.",
+        ),
         "ratingId": Schema.int(description: "DbShooterRating id from search_shooters"),
         "project": Schema.string(),
         "group": Schema.string(),
@@ -632,6 +753,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
     description:
         "Sorted rating leaderboard for one project group. Use list_rating_projects "
         "for supportedSorts (e.g. rating, agedRating, lastChange/movers, trend). "
+        "Default order is high-first (largest gains for lastChange and trend). "
+        "Pass ascending=true to reverse it and list the largest drops first. "
+        "Rows always include both lastChange and trend. offset skips rows while "
+        "place stays the absolute rank. "
         "seenSince filters by competitor lastSeen; when omitted it defaults to "
         "January 1 of the year before the project's latest match date (not today). "
         "Pass seenSince=1970-01-01 for no recency filter. minMatches uses the "
@@ -647,6 +772,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "Aliases: movers -> lastChange",
         ),
         "limit": Schema.int(description: "Max rows (default 25)"),
+        "offset": Schema.int(
+          description:
+              "Rows to skip (default 0). place on each row stays the absolute rank.",
+        ),
         "minMatches": Schema.int(
           description:
               "Minimum matches/history length (default 0). Uses matchCount when "
@@ -660,7 +789,59 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "changeSince": Schema.string(
           description: "YYYY-MM-DD optional date for trend-since-date sorting",
         ),
+        "ascending": Schema.bool(
+          description:
+              "Reverse the usual high-first order (default false). For "
+              "lastChange and trend, true lists the largest drops first.",
+        ),
       },
+    ),
+  );
+
+  final _getPackageMoversTool = Tool(
+    name: "get_package_movers",
+    description:
+        "Rank package-window movers in one or more rating groups and return only "
+        "rows that pass the filters. ratingPct and p90/p95 rating use the active "
+        "field (seenSince, defaulting like the leaderboard, and minMatches). "
+        "lastChangePct, trendPct, and the p10/p90 lastChange and trend cutoffs "
+        "use the package by default (signalBasis=package). signalBasis=active "
+        "ranks those signals on the whole active field instead. "
+        "direction=up keeps positive lastChange or "
+        "trend, down keeps negative, both keeps either. signalPct is the tail "
+        "percentile required (90 means top 10% up, or bottom 10% down). "
+        "packageFinishes are matches on or after since. Prefer this over pulling "
+        "a full leaderboard.",
+    inputSchema: Schema.object(
+      properties: {
+        "project": Schema.string(description: "Rating project name"),
+        "group": Schema.string(description: "One rating group name"),
+        "groups": Schema.string(description: "Comma-separated rating group names"),
+        "groupUuid": Schema.string(description: "One rating group uuid"),
+        "since": Schema.string(
+          description: "YYYY-MM-DD package window start (required)",
+        ),
+        "seenSince": Schema.string(
+          description:
+              "YYYY-MM-DD active-field lastSeen cutoff. Default matches the leaderboard.",
+        ),
+        "minMatches": Schema.int(description: "Minimum matches in the active field (default 3)"),
+        "direction": Schema.string(description: "up, down, or both (default both)"),
+        "minRatingPct": Schema.int(
+          description: "Keep shooters whose rating percentile is at least this",
+        ),
+        "signalPct": Schema.int(
+          description:
+              "Keep shooters whose up or down signal percentile is at least this",
+        ),
+        "signalBasis": Schema.string(
+          description:
+              "package (default) or active. package ranks lastChange and trend "
+              "among people who shot since `since`. ratingPct stays on the active field.",
+        ),
+        "limit": Schema.int(description: "Max rows per group (default 40)"),
+      },
+      required: ["since"],
     ),
   );
 

@@ -63,6 +63,8 @@ class SwitchingResearchFacade implements ResearchQueries {
     int minMatches = 0,
     DateTime? seenSince,
     DateTime? changeSince,
+    bool ascending = false,
+    int offset = 0,
   }) {
     return _delegate((f) => f.getLeaderboard(
           projectName: projectName,
@@ -73,6 +75,39 @@ class SwitchingResearchFacade implements ResearchQueries {
           minMatches: minMatches,
           seenSince: seenSince,
           changeSince: changeSince,
+          ascending: ascending,
+          offset: offset,
+        ));
+  }
+
+  @override
+  Future<ResearchResult<PackageMoversResponse>> getPackageMovers({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    List<String>? groupNames,
+    required DateTime since,
+    DateTime? seenSince,
+    int minMatches = kDefaultRatingFieldMinMatches,
+    String direction = "both",
+    int? minRatingPct,
+    int? signalPct,
+    String signalBasis = "package",
+    int limit = kDefaultPackageMoverLimit,
+  }) {
+    return _delegate((f) => f.getPackageMovers(
+          projectName: projectName,
+          groupUuid: groupUuid,
+          groupName: groupName,
+          groupNames: groupNames,
+          since: since,
+          seenSince: seenSince,
+          minMatches: minMatches,
+          direction: direction,
+          minRatingPct: minRatingPct,
+          signalPct: signalPct,
+          signalBasis: signalBasis,
+          limit: limit,
         ));
   }
 
@@ -98,6 +133,11 @@ class SwitchingResearchFacade implements ResearchQueries {
     String? projectName,
     bool byRatingGroup = false,
     int topN = 1,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) {
     return _delegate((f) => f.getMatchWinners(
           matchId: matchId,
@@ -105,6 +145,11 @@ class SwitchingResearchFacade implements ResearchQueries {
           projectName: projectName,
           byRatingGroup: byRatingGroup,
           topN: topN,
+          includeRatings: includeRatings,
+          heatPercentile: heatPercentile,
+          heatMinCount: heatMinCount,
+          ratingMinMatches: ratingMinMatches,
+          seenSince: seenSince,
         ));
   }
 
@@ -121,6 +166,11 @@ class SwitchingResearchFacade implements ResearchQueries {
     String? category,
     int topN = kDefaultMatchPoolTopN,
     bool overall = false,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) {
     return _delegate((f) => f.getMatchResults(
           matchId: matchId,
@@ -134,6 +184,11 @@ class SwitchingResearchFacade implements ResearchQueries {
           category: category,
           topN: topN,
           overall: overall,
+          includeRatings: includeRatings,
+          heatPercentile: heatPercentile,
+          heatMinCount: heatMinCount,
+          ratingMinMatches: ratingMinMatches,
+          seenSince: seenSince,
         ));
   }
 
@@ -226,6 +281,7 @@ class SwitchingResearchFacade implements ResearchQueries {
     String? memberNumber,
     int? ratingId,
     bool includeInternal = false,
+    String? name,
   }) {
     return _delegate((f) => f.getShooterSummary(
           projectName: projectName,
@@ -234,6 +290,7 @@ class SwitchingResearchFacade implements ResearchQueries {
           memberNumber: memberNumber,
           ratingId: ratingId,
           includeInternal: includeInternal,
+          name: name,
         ));
   }
 
@@ -247,6 +304,7 @@ class SwitchingResearchFacade implements ResearchQueries {
     int limit = 50,
     bool matchLevelOnly = true,
     bool includeInternal = false,
+    String? name,
   }) {
     return _delegate((f) => f.getRatingHistory(
           projectName: projectName,
@@ -257,6 +315,7 @@ class SwitchingResearchFacade implements ResearchQueries {
           limit: limit,
           matchLevelOnly: matchLevelOnly,
           includeInternal: includeInternal,
+          name: name,
         ));
   }
 
@@ -270,6 +329,8 @@ class SwitchingResearchFacade implements ResearchQueries {
     int limit = 50,
     bool includeInternal = false,
     bool bestFirst = false,
+    String? name,
+    int? maxPlace,
   }) {
     return _delegate((f) => f.getShooterMatchResults(
           projectName: projectName,
@@ -280,6 +341,8 @@ class SwitchingResearchFacade implements ResearchQueries {
           limit: limit,
           includeInternal: includeInternal,
           bestFirst: bestFirst,
+          name: name,
+          maxPlace: maxPlace,
         ));
   }
 
@@ -290,6 +353,7 @@ class SwitchingResearchFacade implements ResearchQueries {
     String? groupName,
     String? memberNumber,
     int? ratingId,
+    String? name,
   }) {
     return _delegate((f) => f.getCareerStats(
           projectName: projectName,
@@ -297,6 +361,7 @@ class SwitchingResearchFacade implements ResearchQueries {
           groupName: groupName,
           memberNumber: memberNumber,
           ratingId: ratingId,
+          name: name,
         ));
   }
 

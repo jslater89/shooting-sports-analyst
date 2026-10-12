@@ -71,6 +71,8 @@ class HttpResearchFacade implements ResearchQueries {
     int minMatches = 0,
     DateTime? seenSince,
     DateTime? changeSince,
+    bool ascending = false,
+    int offset = 0,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/leaderboard",
@@ -81,10 +83,47 @@ class HttpResearchFacade implements ResearchQueries {
         if(sort != null) "sort": sort,
         "limit": limit,
         "minMatches": minMatches,
+        "ascending": ascending,
+        "offset": offset,
         if(seenSince != null) "seenSince": researchDateOnlyToJson(seenSince),
         if(changeSince != null) "changeSince": researchDateOnlyToJson(changeSince),
       },
       map: LeaderboardResponse.fromJson,
+    );
+  }
+
+  @override
+  Future<ResearchResult<PackageMoversResponse>> getPackageMovers({
+    String? projectName,
+    String? groupUuid,
+    String? groupName,
+    List<String>? groupNames,
+    required DateTime since,
+    DateTime? seenSince,
+    int minMatches = kDefaultRatingFieldMinMatches,
+    String direction = "both",
+    int? minRatingPct,
+    int? signalPct,
+    String signalBasis = "package",
+    int limit = kDefaultPackageMoverLimit,
+  }) {
+    return _mapJson(
+      "$kResearchApiPathPrefix/package-movers",
+      query: {
+        if(projectName != null) "project": projectName,
+        if(groupUuid != null) "groupUuid": groupUuid,
+        if(groupName != null) "group": groupName,
+        if(groupNames != null && groupNames.isNotEmpty) "groups": groupNames.join(","),
+        "since": researchDateOnlyToJson(since),
+        if(seenSince != null) "seenSince": researchDateOnlyToJson(seenSince),
+        "minMatches": minMatches,
+        "direction": direction,
+        if(minRatingPct != null) "minRatingPct": minRatingPct,
+        if(signalPct != null) "signalPct": signalPct,
+        "signalBasis": signalBasis,
+        "limit": limit,
+      },
+      map: PackageMoversResponse.fromJson,
     );
   }
 
@@ -119,6 +158,11 @@ class HttpResearchFacade implements ResearchQueries {
     String? projectName,
     bool byRatingGroup = false,
     int topN = 1,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/matches/winners",
@@ -128,6 +172,11 @@ class HttpResearchFacade implements ResearchQueries {
         if(projectName != null) "project": projectName,
         "byRatingGroup": byRatingGroup,
         "topN": topN,
+        "includeRatings": includeRatings,
+        "heatPercentile": heatPercentile,
+        "heatMinCount": heatMinCount,
+        "ratingMinMatches": ratingMinMatches,
+        if(seenSince != null) "seenSince": researchDateOnlyToJson(seenSince),
       },
       map: MatchWinnersResponse.fromJson,
     );
@@ -146,6 +195,11 @@ class HttpResearchFacade implements ResearchQueries {
     String? category,
     int topN = kDefaultMatchPoolTopN,
     bool overall = false,
+    bool includeRatings = false,
+    int heatPercentile = kDefaultHeatPercentile,
+    int heatMinCount = kDefaultHeatMinCount,
+    int ratingMinMatches = kDefaultRatingFieldMinMatches,
+    DateTime? seenSince,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/matches/results",
@@ -161,6 +215,11 @@ class HttpResearchFacade implements ResearchQueries {
         if(category != null) "category": category,
         "topN": topN,
         "overall": overall,
+        "includeRatings": includeRatings,
+        "heatPercentile": heatPercentile,
+        "heatMinCount": heatMinCount,
+        "ratingMinMatches": ratingMinMatches,
+        if(seenSince != null) "seenSince": researchDateOnlyToJson(seenSince),
       },
       map: MatchResultsResponse.fromJson,
     );
@@ -272,6 +331,7 @@ class HttpResearchFacade implements ResearchQueries {
     String? memberNumber,
     int? ratingId,
     bool includeInternal = false,
+    String? name,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/shooters/summary",
@@ -281,6 +341,7 @@ class HttpResearchFacade implements ResearchQueries {
         if(groupName != null) "group": groupName,
         if(memberNumber != null) "memberNumber": memberNumber,
         if(ratingId != null) "ratingId": ratingId,
+        if(name != null) "name": name,
         "includeInternal": includeInternal,
       },
       map: ShooterSummaryDto.fromJson,
@@ -297,6 +358,7 @@ class HttpResearchFacade implements ResearchQueries {
     int limit = 50,
     bool matchLevelOnly = true,
     bool includeInternal = false,
+    String? name,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/shooters/history",
@@ -306,6 +368,7 @@ class HttpResearchFacade implements ResearchQueries {
         if(groupName != null) "group": groupName,
         if(memberNumber != null) "memberNumber": memberNumber,
         if(ratingId != null) "ratingId": ratingId,
+        if(name != null) "name": name,
         "limit": limit,
         "includeInternal": includeInternal,
       },
@@ -328,6 +391,8 @@ class HttpResearchFacade implements ResearchQueries {
     int limit = 50,
     bool includeInternal = false,
     bool bestFirst = false,
+    String? name,
+    int? maxPlace,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/shooters/match-results",
@@ -337,9 +402,11 @@ class HttpResearchFacade implements ResearchQueries {
         if(groupName != null) "group": groupName,
         if(memberNumber != null) "memberNumber": memberNumber,
         if(ratingId != null) "ratingId": ratingId,
+        if(name != null) "name": name,
         "limit": limit,
         "includeInternal": includeInternal,
         "bestFirst": bestFirst,
+        if(maxPlace != null) "maxPlace": maxPlace,
       },
       map: (json) {
         final list = json["results"] as List<dynamic>? ?? [];
@@ -357,6 +424,7 @@ class HttpResearchFacade implements ResearchQueries {
     String? groupName,
     String? memberNumber,
     int? ratingId,
+    String? name,
   }) {
     return _mapJson(
       "$kResearchApiPathPrefix/shooters/career-stats",
@@ -366,6 +434,7 @@ class HttpResearchFacade implements ResearchQueries {
         if(groupName != null) "group": groupName,
         if(memberNumber != null) "memberNumber": memberNumber,
         if(ratingId != null) "ratingId": ratingId,
+        if(name != null) "name": name,
       },
       map: CareerStatsResponse.fromJson,
     );

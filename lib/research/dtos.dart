@@ -21,6 +21,14 @@ const int kDefaultPredictionTopN = 10;
 const int kDefaultPredictionSearchLimit = 20;
 /// Hard cap for [searchPredictions] when batching memberNumbers / ratingIds.
 const int kMaxPredictionSearchLimit = 100;
+/// Default [getPackageMovers] row cap per group.
+const int kDefaultPackageMoverLimit = 40;
+/// Rating percentile that counts as nationally hot on match heat summaries.
+const int kDefaultHeatPercentile = 95;
+/// How many finishers at [kDefaultHeatPercentile] make a division hot.
+const int kDefaultHeatMinCount = 2;
+/// Minimum matches for the active field behind package movers and match heat.
+const int kDefaultRatingFieldMinMatches = 3;
 
 String? researchDateOnlyToJson(DateTime? d) =>
     d?.toIso8601String().split("T").first;
@@ -179,6 +187,8 @@ class MatchWinnerDto {
     this.points,
     this.competitorCount,
     this.dq = false,
+    this.preMatchRating,
+    this.ratingPct,
   });
 
   final String divisionOrGroup;
@@ -199,6 +209,12 @@ class MatchWinnerDto {
   @JsonKey(includeIfNull: false)
   final int? competitorCount;
   final bool dq;
+  /// Display rating going into this match, when [includeRatings] was set.
+  @JsonKey(includeIfNull: false)
+  final double? preMatchRating;
+  /// Percentile of [preMatchRating] in the division's active rating field.
+  @JsonKey(includeIfNull: false)
+  final double? ratingPct;
 
   factory MatchWinnerDto.fromJson(Map<String, dynamic> json) =>
       _$MatchWinnerDtoFromJson(json);
@@ -210,10 +226,17 @@ class MatchWinnersResponse {
   MatchWinnersResponse({
     required this.match,
     required this.winners,
+    this.divisionHeat,
   });
 
   final MatchSummaryDto match;
   final List<MatchWinnerDto> winners;
+  /// Per-division counts of finishers at the high end of the active rating field.
+  ///
+  /// Present when ratings were requested. This is a coarse "nationally hot field"
+  /// check, separate from the app's match-heat model.
+  @JsonKey(includeIfNull: false)
+  final List<DivisionHeatSummaryDto>? divisionHeat;
 
   factory MatchWinnersResponse.fromJson(Map<String, dynamic> json) =>
       _$MatchWinnersResponseFromJson(json);
@@ -240,6 +263,8 @@ class MatchCompetitorResultDto {
     this.dq = false,
     this.reentry = false,
     this.squad,
+    this.preMatchRating,
+    this.ratingPct,
   });
 
   final int place;
@@ -261,10 +286,68 @@ class MatchCompetitorResultDto {
   final bool reentry;
   @JsonKey(includeIfNull: false)
   final int? squad;
+  /// Display rating going into this match, when ratings were requested.
+  @JsonKey(includeIfNull: false)
+  final double? preMatchRating;
+  /// Percentile of [preMatchRating] in the shooter's rating-group field.
+  @JsonKey(includeIfNull: false)
+  final double? ratingPct;
 
   factory MatchCompetitorResultDto.fromJson(Map<String, dynamic> json) =>
       _$MatchCompetitorResultDtoFromJson(json);
   Map<String, dynamic> toJson() => _$MatchCompetitorResultDtoToJson(this);
+}
+
+/// How many finishers in one division were already at the high end of the
+/// active rating field going into the match.
+@JsonSerializable()
+class DivisionHeatSummaryDto {
+  DivisionHeatSummaryDto({
+    required this.pool,
+    required this.kind,
+    required this.competitorCount,
+    required this.ratedCount,
+    required this.p90Count,
+    required this.p95Count,
+    required this.p95Names,
+    required this.heatCount,
+    required this.heat,
+    required this.heatPercentile,
+    required this.heatMinCount,
+    this.groupName,
+    this.p90Rating,
+    this.p95Rating,
+  });
+
+  /// Division or rating-group label.
+  final String pool;
+  /// "division" | "ratingGroup"
+  final String kind;
+  @JsonKey(includeIfNull: false)
+  final String? groupName;
+  final int competitorCount;
+  /// Finishers with a pre-match rating in [groupName].
+  final int ratedCount;
+  /// Finishers with pre-match rating at or above the group's p90 rating.
+  final int p90Count;
+  /// Finishers with pre-match rating at or above the group's p95 rating.
+  final int p95Count;
+  final List<String> p95Names;
+  /// Finishers at or above [heatPercentile].
+  final int heatCount;
+  /// True when [heatCount] >= [heatMinCount].
+  final bool heat;
+  final int heatPercentile;
+  final int heatMinCount;
+  /// High-end rating cutoffs for the active field. p95 is the hotter bar.
+  @JsonKey(includeIfNull: false)
+  final double? p90Rating;
+  @JsonKey(includeIfNull: false)
+  final double? p95Rating;
+
+  factory DivisionHeatSummaryDto.fromJson(Map<String, dynamic> json) =>
+      _$DivisionHeatSummaryDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$DivisionHeatSummaryDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -278,6 +361,7 @@ class MatchResultsResponse {
     this.femaleOnly = false,
     this.ageCategory,
     this.category,
+    this.divisionHeat,
   });
 
   final MatchSummaryDto match;
@@ -292,6 +376,9 @@ class MatchResultsResponse {
   final String? category;
   final int competitorCount;
   final List<MatchCompetitorResultDto> results;
+  /// Per-division high-end rating counts. See [MatchWinnersResponse.divisionHeat].
+  @JsonKey(includeIfNull: false)
+  final List<DivisionHeatSummaryDto>? divisionHeat;
 
   factory MatchResultsResponse.fromJson(Map<String, dynamic> json) =>
       _$MatchResultsResponseFromJson(json);
@@ -578,6 +665,8 @@ class ShooterSummaryDto {
     this.internalAgedRating,
     this.internalCareerMinimumRating,
     this.internalCareerMaximumRating,
+    this.matchedBy = "memberNumber",
+    this.requestedMemberNumber,
   });
 
   final int ratingId;
@@ -625,6 +714,14 @@ class ShooterSummaryDto {
   final double? internalCareerMinimumRating;
   @JsonKey(includeIfNull: false)
   final double? internalCareerMaximumRating;
+  /// "memberNumber", "ratingId", or "name".
+  ///
+  /// "name" means the requested member number missed and a unique name match was used.
+  @JsonKey(defaultValue: "memberNumber")
+  final String matchedBy;
+  /// Member number that failed exact lookup, when [matchedBy] is "name".
+  @JsonKey(includeIfNull: false)
+  final String? requestedMemberNumber;
 
   factory ShooterSummaryDto.fromJson(Map<String, dynamic> json) =>
       _$ShooterSummaryDtoFromJson(json);
@@ -771,6 +868,8 @@ class CareerStatsResponse {
     required this.years,
     required this.missingMatches,
     required this.unscoredMatches,
+    this.matchedBy = "memberNumber",
+    this.requestedMemberNumber,
   });
 
   final int ratingId;
@@ -785,6 +884,12 @@ class CareerStatsResponse {
   final int missingMatches;
   /// Matches whose entry had no usable stored division score.
   final int unscoredMatches;
+  /// See [ShooterSummaryDto.matchedBy].
+  @JsonKey(defaultValue: "memberNumber")
+  final String matchedBy;
+  /// See [ShooterSummaryDto.requestedMemberNumber].
+  @JsonKey(includeIfNull: false)
+  final String? requestedMemberNumber;
 
   factory CareerStatsResponse.fromJson(Map<String, dynamic> json) =>
       _$CareerStatsResponseFromJson(json);
@@ -858,11 +963,13 @@ class LeaderboardResponse {
     required this.groupName,
     required this.sort,
     required this.sortLabel,
+    this.ascending = false,
     required this.minMatches,
     required this.seenSince,
     required this.latestMatchDate,
     required this.totalAfterFilters,
     required this.entries,
+    this.offset = 0,
   });
 
   final String projectName;
@@ -871,6 +978,9 @@ class LeaderboardResponse {
   /// [RatingSortMode] enum name.
   final String sort;
   final String sortLabel;
+  /// True when the usual high-first order was reversed.
+  @JsonKey(defaultValue: false)
+  final bool ascending;
   final int minMatches;
   /// Inclusive lower bound on competitor lastSeen.
   ///
@@ -880,6 +990,9 @@ class LeaderboardResponse {
   @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
   final DateTime latestMatchDate;
   final int totalAfterFilters;
+  /// Rows skipped before [entries]. [LeaderboardEntryDto.place] stays the absolute rank.
+  @JsonKey(defaultValue: 0)
+  final int offset;
   final List<LeaderboardEntryDto> entries;
 
   factory LeaderboardResponse.fromJson(Map<String, dynamic> json) =>
@@ -911,6 +1024,7 @@ class LeaderboardEntryDto {
     this.rawLocation,
     this.matchCount,
     this.lastChange,
+    this.trend,
   });
 
   final int place;
@@ -945,10 +1059,164 @@ class LeaderboardEntryDto {
   /// Display/scaled last match rating change, when available.
   @JsonKey(includeIfNull: false)
   final double? lastChange;
+  /// Display/scaled trend, whatever [LeaderboardResponse.sort] was.
+  @JsonKey(includeIfNull: false)
+  final double? trend;
 
   factory LeaderboardEntryDto.fromJson(Map<String, dynamic> json) =>
       _$LeaderboardEntryDtoFromJson(json);
   Map<String, dynamic> toJson() => _$LeaderboardEntryDtoToJson(this);
+}
+
+/// One match the shooter fired inside a package window.
+@JsonSerializable()
+class PackageFinishDto {
+  PackageFinishDto({
+    required this.matchId,
+    required this.matchName,
+    required this.date,
+    required this.place,
+    required this.pct,
+    this.division,
+    this.fieldSize,
+  });
+
+  /// Source match id, same as [ShooterMatchResultDto.matchId].
+  final String matchId;
+  final String matchName;
+  @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
+  final DateTime date;
+  @JsonKey(includeIfNull: false)
+  final String? division;
+  final int place;
+  @JsonKey(includeIfNull: false)
+  final int? fieldSize;
+  final double pct;
+
+  factory PackageFinishDto.fromJson(Map<String, dynamic> json) =>
+      _$PackageFinishDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PackageFinishDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PackageMoverDto {
+  PackageMoverDto({
+    required this.ratingId,
+    required this.name,
+    required this.memberNumber,
+    required this.rating,
+    required this.preRating,
+    required this.ratingPct,
+    required this.lastChange,
+    required this.lastChangePct,
+    required this.trend,
+    required this.trendPct,
+    required this.packageChange,
+    required this.matchCount,
+    required this.packageFinishes,
+  });
+
+  final int ratingId;
+  final String name;
+  final String memberNumber;
+  final double rating;
+  /// Display rating at the start of the package window.
+  final double preRating;
+  final double ratingPct;
+  final double lastChange;
+  final double lastChangePct;
+  final double trend;
+  final double trendPct;
+  /// [rating] minus [preRating], the move across the package window.
+  final double packageChange;
+  final int matchCount;
+  final List<PackageFinishDto> packageFinishes;
+
+  factory PackageMoverDto.fromJson(Map<String, dynamic> json) =>
+      _$PackageMoverDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PackageMoverDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PackageMoverGroupDto {
+  PackageMoverGroupDto({
+    required this.groupUuid,
+    required this.groupName,
+    required this.fieldSize,
+    required this.packageSize,
+    required this.matchedCount,
+    required this.p90Rating,
+    required this.p95Rating,
+    required this.p10LastChange,
+    required this.p90LastChange,
+    required this.p10Trend,
+    required this.p90Trend,
+    required this.entries,
+  });
+
+  final String groupUuid;
+  final String groupName;
+  /// Active-field size used for percentiles (seenSince + minMatches).
+  final int fieldSize;
+  /// Active-field shooters with lastSeen on or after the package start.
+  final int packageSize;
+  /// Rows that passed direction, rating, and signal filters, before [entries] was capped.
+  final int matchedCount;
+  /// 90th percentile rating of the active field. Higher than 90% of that field.
+  final double p90Rating;
+  /// 95th percentile rating of the active field.
+  final double p95Rating;
+  /// Follow [PackageMoversResponse.signalBasis]. Default population is the package.
+  final double p10LastChange;
+  final double p90LastChange;
+  final double p10Trend;
+  final double p90Trend;
+  final List<PackageMoverDto> entries;
+
+  factory PackageMoverGroupDto.fromJson(Map<String, dynamic> json) =>
+      _$PackageMoverGroupDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$PackageMoverGroupDtoToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class PackageMoversResponse {
+  PackageMoversResponse({
+    required this.projectName,
+    required this.since,
+    required this.seenSince,
+    required this.latestMatchDate,
+    required this.direction,
+    required this.minMatches,
+    required this.groups,
+    this.signalBasis = "package",
+    this.minRatingPct,
+    this.signalPct,
+  });
+
+  final String projectName;
+  @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
+  final DateTime since;
+  /// Activity window for the percentile field. Defaults like the leaderboard.
+  @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
+  final DateTime seenSince;
+  @JsonKey(toJson: researchDateOnlyToJson, fromJson: researchDateOnlyFromJson)
+  final DateTime latestMatchDate;
+  /// "up", "down", or "both".
+  final String direction;
+  /// "package" or "active". lastChange/trend percentiles and their p10/p90
+  /// cutoffs use this population. ratingPct and p90/p95 rating stay on the active field.
+  @JsonKey(defaultValue: "package")
+  final String signalBasis;
+  final int minMatches;
+  @JsonKey(includeIfNull: false)
+  final int? minRatingPct;
+  @JsonKey(includeIfNull: false)
+  final int? signalPct;
+  final List<PackageMoverGroupDto> groups;
+
+  factory PackageMoversResponse.fromJson(Map<String, dynamic> json) =>
+      _$PackageMoversResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$PackageMoversResponseToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
@@ -1135,6 +1403,13 @@ const kResearchIntArgKeys = {
   "topN",
   "ratingId",
   "minMatches",
+  "offset",
+  "signalPct",
+  "minRatingPct",
+  "heatPercentile",
+  "heatMinCount",
+  "ratingMinMatches",
+  "maxPlace",
 };
 
 /// JSON keys that generated request DTOs decode as [bool].
@@ -1147,6 +1422,8 @@ const kResearchBoolArgKeys = {
   "includeStages",
   "includeScoringEventCounts",
   "hasPredictionsOnly",
+  "ascending",
+  "includeRatings",
 };
 
 /// Coerce HTTP query / MCP JSON argument maps so generated `as String?` /

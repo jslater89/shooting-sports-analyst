@@ -102,9 +102,12 @@ desktop app is running.
 ### Match results
 
 * **get_match_winners** — Top finishers per division, or per rating group when `byRatingGroup` is
-  true. Supports female-only, age, and category filters.
+  true. Supports female-only, age, and category filters. `includeRatings` adds each finisher's
+  pre-match rating and a per-division count of shooters already at the high end of the active
+  rating field.
 * **get_match_results** — Lean standings for one scoring pool (place, ratio, percentage, points).
-  Specify a division, a rating group, or `overall=true`.
+  Specify a division, a rating group, or `overall=true`. `includeRatings` adds the same pre-match
+  rating and division heat summary as `get_match_winners`.
 * **get_match_scores** — Detailed scores for a pool, including underlying points, time, and hit
   factor. Optionally include per-stage rows and target/penalty event counts.
 * **get_competitor_stage_scores** — One competitor's stage-by-stage breakdown at a match, looked up
@@ -115,17 +118,25 @@ desktop app is running.
 * **search_shooters** — Search competitors in a rating project by name or member number. Returns
   display ratings, location fields, and ids for follow-up calls.
 * **get_shooter_summary** — Career summary: current display rating, first/last seen, career
-  min/max, and event count.
+  min/max, and event count. If a member number misses, pass `name`. A unique name match is
+  returned with `matchedBy` and the number that did not match.
 * **get_rating_history** — Recent match-level rating events (rating change plus finish at each
   match).
 * **get_shooter_match_results** — Distinct match finishes derived from rating events. Default order
-  is most recent first; use `bestFirst` for career highlights.
+  is most recent first; use `bestFirst` for career highlights. `maxPlace` keeps
+  in-division finishes of that place or better (`maxPlace=3` is podiums).
 * **get_career_stats** — Career and per-year in-division finishes and hit totals from stored match
   entries. Uses the division score saved with each match; does not include class finishes.
+  Match level counts use the level stored on the match, which is often wrong.
 * **get_leaderboard** — Sorted leaderboard for one rating group. Sort modes come from
   `supportedSorts` on the project (for example rating, aged rating, last change / movers, trend).
-  `seenSince` filters by last activity; when omitted it defaults relative to the project's latest
-  match date, not today's calendar date.
+  The usual order is high-first. Pass `ascending` to reverse it, which lists the largest
+  rating drops first for last change and trend. Every row includes both last change and trend.
+  `offset` skips rows without renumbering place. `seenSince` filters by last activity; when
+  omitted it defaults relative to the project's latest match date, not today's calendar date.
+* **get_package_movers** — Filtered movers for a package window, with the active field's p90/p95
+  rating cutoffs and each row's finishes since the window start. Last-change and trend
+  percentiles are ranked inside the package unless `signalBasis` is `active`.
 
 ## Errors and Limits
 
