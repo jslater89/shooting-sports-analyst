@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/closed_sources/ps_registration/ps_registration_source.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/csv/csv_registration_source.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_registration_source.dart';
@@ -26,6 +27,7 @@ class FutureMatchSourceRegistry {
 
   List<FutureMatchSource> _sources = [
     SSAServerFutureMatchSource(),
+    PSRegistrationSource(),
     CSVRegistrationSource(),
   ];
   List<FutureMatchSource> get sources => _sources.where((e) => e.isImplemented).toList(growable: false);

@@ -1,6 +1,6 @@
 # Registration Interchange File Format (RIFF) Specification
 
-## Version 1.0
+## Version 1.1
 
 The Registration Interchange File Format (`.riff` or `.riff.gz`) is an open standard for exchanging match registration data across platforms and applications in practical shooting sports. This format uses JSON as its underlying data structure, compressed with gzip for efficient storage and transfer. The format is designed to be compact, easily parseable, and sufficient to identify registrations from third-party sources.
 
@@ -11,7 +11,7 @@ RIFF files are gzip-compressed JSON documents. When decompressed, the JSON has t
 ```json
 {
   "format": "riff",
-  "version": "1.0",
+  "version": "1.1",
   "match": { ... },
   "registrations": [ ... ]
 }
@@ -27,7 +27,7 @@ When delivered over HTTP connections, it is recommended to use RIFF-specific MIM
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `format` | string | Yes | Must be `"riff"` |
-| `version` | string | Yes | Format version (e.g., `"1.0"`) |
+| `version` | string | Yes | Format version (e.g., `"1.1"`) |
 | `match` | object | Yes | Match information (see Match Object) |
 | `registrations` | array | Yes | Array of registration objects (see Registration Object) |
 
@@ -40,9 +40,23 @@ The match object contains information about the match for which registrations ar
 | `matchId` | string | Yes | A unique identifier for the match. If a unique identifier is not yet available, this may be a synthetic ID |
 | `eventName` | string | No | The name of the event |
 | `date` | string | No | ISO 8601 date (YYYY-MM-DD) |
+| `endDate` | string | No | ISO 8601 datetime for the end of the event |
 | `sportName` | string | No | The sport of the event |
 | `sourceCode` | string | No | The source code of the event, if available |
 | `sourceIds` | array[string] | No | The source IDs of the event, if available |
+| `address1` | string | No | Street address line 1 of the venue |
+| `address2` | string | No | Street address line 2 of the venue |
+| `city` | string | No | City of the venue |
+| `state` | string | No | State/province of the venue |
+| `zip` | string | No | Postal/ZIP code of the venue |
+| `latitude` | number | No | Venue latitude |
+| `longitude` | number | No | Venue longitude |
+| `levelName` | string | No | Match level name from the registration source (e.g., `"Level III"`) |
+| `timezone` | string | No | IANA timezone of the match (e.g., `"America/Phoenix"`) |
+| `slug` | string | No | URL/slug handle for the match |
+| `registrationOpenDate` | string | No | ISO 8601 datetime when registration opens |
+| `registrationCloseDate` | string | No | ISO 8601 datetime when registration closes |
+| `registrationStatus` | string | No | Registration status from the source (e.g., `"open"`) |
 
 ## Registration Object
 
@@ -64,12 +78,27 @@ A registration object represents a single competitor's registration for a match.
 ```json
 {
   "format": "riff",
-  "version": "1.0",
+  "version": "1.1",
   "match": {
     "matchId": "2024-area-4-championship",
     "eventName": "2024 Area 4 Championship",
     "date": "2024-05-15",
-    "sportName": "uspsa"
+    "endDate": "2024-05-17T00:00:00.000",
+    "sportName": "uspsa",
+    "sourceCode": "psreg",
+    "sourceIds": ["b51f6aaf-ae2a-4ee6-a91d-10b99ac4d27a", "340851"],
+    "address1": "3960 N. Usery Pass Rd",
+    "city": "Mesa",
+    "state": "AZ",
+    "zip": "85207",
+    "latitude": 33.4886,
+    "longitude": -111.6227,
+    "levelName": "Level III",
+    "timezone": "America/Phoenix",
+    "slug": "2024-area-4-championship",
+    "registrationOpenDate": "2024-01-15T18:00:00.000Z",
+    "registrationCloseDate": "2024-05-10T21:00:00.000Z",
+    "registrationStatus": "open"
   },
   "registrations": [
     {
@@ -100,12 +129,22 @@ A registration object represents a single competitor's registration for a match.
 
 ## Versioning
 
-The format version is specified in the `version` field. This specification describes version 1.0.
+The format version is specified in the `version` field. This specification describes version 1.1.
+
+### Version History
+
+| Version | Changes |
+|---------|---------|
+| 1.0 | Initial release |
+| 1.1 | Added optional match metadata: `endDate`, venue (`address1`, `address2`, `city`, `state`, `zip`, `latitude`, `longitude`), `levelName`, `timezone`, `slug`, and registration window (`registrationOpenDate`, `registrationCloseDate`, `registrationStatus`) |
 
 Future versions may add fields, but must maintain backward compatibility where possible. Parsers should:
+- Accept any `1.x` version string
 - Ignore unknown fields
 - Use defaults for missing optional fields
 - Handle version differences gracefully
+
+Writers should emit the latest `1.x` version they support. Files written as 1.0 remain valid under 1.1 (all new match fields are optional).
 
 ## Compression
 
@@ -137,4 +176,3 @@ The format is designed to be extensible. Unknown fields should be preserved when
 - Arrays are ordered; objects (maps) are unordered in JSON but order may be preserved by parsers
 - Empty arrays and objects may be omitted to reduce file size
 - Optional fields may be omitted entirely from the JSON to reduce file size
-

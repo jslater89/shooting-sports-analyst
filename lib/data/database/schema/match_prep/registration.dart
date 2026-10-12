@@ -35,10 +35,20 @@ class MatchRegistration {
   String entryId;
   /// The name of the competitor.
   String? shooterName;
+
+  /// The email of the competitor.
+  String? email;
+
   /// The classification of the competitor.
   String? shooterClassificationName;
   /// The division of the competitor.
   String? shooterDivisionName;
+  /// The power factor of the competitor.
+  String? shooterPowerFactorName;
+
+  /// The categories of the competitor.
+  List<String> shooterCategoryNames;
+
   /// The member number of the competitor.
   List<String> shooterMemberNumbers;
   /// The squad of the competitor.
@@ -65,18 +75,25 @@ class MatchRegistration {
   /// mapping.
   bool resolvedFromManualMapping;
 
+  /// The date and time the registration was created.
+  DateTime? registeredAt;
+
   MatchRegistration({
     required this.matchId,
     required this.entryId,
+    this.email,
     this.shooterName,
     this.shooterClassificationName,
     this.shooterDivisionName,
+    this.shooterPowerFactorName,
+    this.shooterCategoryNames = const [],
     this.shooterMemberNumbers = const [],
     this.squad,
     this.hadMemberNumber = false,
     this.addedManually = false,
     this.resolvedAutomatically = false,
     this.resolvedFromManualMapping = false,
+    this.registeredAt,
   });
 
   operator ==(Object other) {

@@ -62,6 +62,35 @@ class FutureMatch {
   /// The source IDs of the event, if available.
   List<String>? sourceIds;
 
+  /// Street address line 1, if available.
+  String? address1;
+  /// Street address line 2, if available.
+  String? address2;
+  /// City of the venue, if available.
+  String? city;
+  /// State/province of the venue, if available.
+  String? state;
+  /// Postal/ZIP code of the venue, if available.
+  String? zip;
+  /// Venue latitude, if available.
+  double? latitude;
+  /// Venue longitude, if available.
+  double? longitude;
+
+  /// Match level name from the registration source (e.g. "Level III"), if available.
+  String? levelName;
+  /// IANA timezone of the match (e.g. "America/Phoenix"), if available.
+  String? timezone;
+  /// URL/slug handle for the match, if available.
+  String? slug;
+
+  /// When registration opens, if available.
+  DateTime? registrationOpenDate;
+  /// When registration closes, if available.
+  DateTime? registrationCloseDate;
+  /// Registration status from the source (e.g. "open"), if available.
+  String? registrationStatus;
+
   /// Associate a [DbShootingMatch] with this [FutureMatch].
   ///
   /// If [save] is true, the changes will be persisted to the database.
@@ -317,6 +346,20 @@ class FutureMatch {
     required this.sportName,
     required this.sourceCode,
     required this.sourceIds,
+    this.endDate,
+    this.address1,
+    this.address2,
+    this.city,
+    this.state,
+    this.zip,
+    this.latitude,
+    this.longitude,
+    this.levelName,
+    this.timezone,
+    this.slug,
+    this.registrationOpenDate,
+    this.registrationCloseDate,
+    this.registrationStatus,
     this.newRegistrations = const [],
   });
 

@@ -12,6 +12,7 @@ fi
 set +e
 rm psv2
 rm ps_search
+rm ps_registration
 rm ssa_server_source
 rm ssa_auth_client
 rm ssa_auth_server
@@ -30,6 +31,13 @@ git checkout $TARGET_BRANCH
 cd ..
 ls ps_search
 head ps_search/ps_search_source.dart
+
+ln -sf ../../../shooting-sports-analyst-closed-sources/ps_registration_source ps_registration
+cd ps_registration
+git checkout $TARGET_BRANCH
+cd ..
+ls ps_registration
+head ps_registration/ps_registration_source.dart
 
 ln -s ../../../shooting-sports-analyst-closed-sources/ssa_auth/client ssa_auth_client
 cd ssa_auth_client

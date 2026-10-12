@@ -136,6 +136,45 @@ class RiffValidator implements AbstractRiffValidator {
       }
     }
 
+    for (var key in const [
+      "endDate",
+      "registrationOpenDate",
+      "registrationCloseDate",
+    ]) {
+      if (json.containsKey(key) && json[key] != null) {
+        if (json[key] is! String) {
+          return StringError("Field '$key' must be a string");
+        }
+        try {
+          DateTime.parse(json[key] as String);
+        } catch (e) {
+          return StringError("Field '$key' must be a valid ISO 8601 datetime, got: ${json[key]}");
+        }
+      }
+    }
+
+    for (var key in const [
+      "address1",
+      "address2",
+      "city",
+      "state",
+      "zip",
+      "levelName",
+      "timezone",
+      "slug",
+      "registrationStatus",
+    ]) {
+      if (json.containsKey(key) && json[key] != null && json[key] is! String) {
+        return StringError("Field '$key' must be a string");
+      }
+    }
+
+    for (var key in const ["latitude", "longitude"]) {
+      if (json.containsKey(key) && json[key] != null && json[key] is! num) {
+        return StringError("Field '$key' must be a number");
+      }
+    }
+
     return null;
   }
 

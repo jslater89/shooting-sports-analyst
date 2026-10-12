@@ -92,18 +92,89 @@ class RiffImporter implements AbstractRiffImporter {
         sourceIds = sourceIdsList.map((e) => e.toString()).toList();
       }
 
+      DateTime? endDate;
+      var endDateResult = _parseOptionalDateTime(json, "endDate");
+      if (endDateResult.isErr()) {
+        return Result.err(endDateResult.unwrapErr());
+      }
+      endDate = endDateResult.unwrap();
+
+      DateTime? registrationOpenDate;
+      var regOpenResult = _parseOptionalDateTime(json, "registrationOpenDate");
+      if (regOpenResult.isErr()) {
+        return Result.err(regOpenResult.unwrapErr());
+      }
+      registrationOpenDate = regOpenResult.unwrap();
+
+      DateTime? registrationCloseDate;
+      var regCloseResult = _parseOptionalDateTime(json, "registrationCloseDate");
+      if (regCloseResult.isErr()) {
+        return Result.err(regCloseResult.unwrapErr());
+      }
+      registrationCloseDate = regCloseResult.unwrap();
+
+      double? latitude;
+      if (json.containsKey("latitude")) {
+        var lat = json["latitude"];
+        if (lat is num) {
+          latitude = lat.toDouble();
+        }
+        else {
+          return Result.err(StringError("Invalid latitude: $lat"));
+        }
+      }
+      double? longitude;
+      if (json.containsKey("longitude")) {
+        var lng = json["longitude"];
+        if (lng is num) {
+          longitude = lng.toDouble();
+        }
+        else {
+          return Result.err(StringError("Invalid longitude: $lng"));
+        }
+      }
+
       var match = FutureMatch(
         matchId: matchId,
         eventName: eventName,
         date: date,
+        endDate: endDate,
         sportName: sportName,
         sourceCode: sourceCode,
         sourceIds: sourceIds,
+        address1: json["address1"] as String?,
+        address2: json["address2"] as String?,
+        city: json["city"] as String?,
+        state: json["state"] as String?,
+        zip: json["zip"] as String?,
+        latitude: latitude,
+        longitude: longitude,
+        levelName: json["levelName"] as String?,
+        timezone: json["timezone"] as String?,
+        slug: json["slug"] as String?,
+        registrationOpenDate: registrationOpenDate,
+        registrationCloseDate: registrationCloseDate,
+        registrationStatus: json["registrationStatus"] as String?,
       );
 
       return Result.ok(match);
     } catch (e) {
       return Result.err(StringError("Failed to parse match: $e"));
+    }
+  }
+
+  Result<DateTime?, ResultErr> _parseOptionalDateTime(Map<String, dynamic> json, String key) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return Result.ok(null);
+    }
+    var value = json[key];
+    if (value is! String) {
+      return Result.err(StringError("Invalid $key format: $value"));
+    }
+    try {
+      return Result.ok(DateTime.parse(value));
+    } catch (e) {
+      return Result.err(StringError("Invalid $key format: $value"));
     }
   }
 

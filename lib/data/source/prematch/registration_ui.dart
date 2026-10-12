@@ -5,6 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_registration/ps_registration_source.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_registration/ps_registration_ui.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/csv/csv_registration_source.dart';
@@ -25,6 +27,9 @@ abstract class FutureMatchSourceUI {
   static FutureMatchSourceUI forSource(FutureMatchSource source) {
     if(source is SSAServerFutureMatchSource) {
       return SSAServerFutureMatchSourceUI();
+    }
+    if(source is PSRegistrationSource) {
+      return PSRegistrationSourceUI();
     }
     if(source is CSVRegistrationSource) {
       return CSVRegistrationSourceUI();

@@ -16,6 +16,8 @@ import "package:shooting_sports_analyst/util.dart";
 class RiffExporter implements AbstractRiffExporter {
   static const String mimeType = "application/x-riff";
   static const String compressedMimeType = "application/x-riff+gzip";
+  /// Current RIFF format version written by this exporter.
+  static const String formatVersion = "1.1";
 
   @override
   Result<List<int>, ResultErr> exportMatch(FutureMatch match) {
@@ -43,6 +45,9 @@ class RiffExporter implements AbstractRiffExporter {
     if (match.date != practicalShootingZeroDate) {
       matchJson["date"] = programmerYmdFormat.format(match.date);
     }
+    if (match.endDate != null) {
+      matchJson["endDate"] = match.endDate!.toIso8601String();
+    }
     if (match.sportName.isNotEmpty) {
       matchJson["sportName"] = match.sportName;
     }
@@ -52,13 +57,52 @@ class RiffExporter implements AbstractRiffExporter {
     if (match.sourceIds != null && match.sourceIds!.isNotEmpty) {
       matchJson["sourceIds"] = match.sourceIds;
     }
+    if (match.address1 != null && match.address1!.isNotEmpty) {
+      matchJson["address1"] = match.address1;
+    }
+    if (match.address2 != null && match.address2!.isNotEmpty) {
+      matchJson["address2"] = match.address2;
+    }
+    if (match.city != null && match.city!.isNotEmpty) {
+      matchJson["city"] = match.city;
+    }
+    if (match.state != null && match.state!.isNotEmpty) {
+      matchJson["state"] = match.state;
+    }
+    if (match.zip != null && match.zip!.isNotEmpty) {
+      matchJson["zip"] = match.zip;
+    }
+    if (match.latitude != null) {
+      matchJson["latitude"] = match.latitude;
+    }
+    if (match.longitude != null) {
+      matchJson["longitude"] = match.longitude;
+    }
+    if (match.levelName != null && match.levelName!.isNotEmpty) {
+      matchJson["levelName"] = match.levelName;
+    }
+    if (match.timezone != null && match.timezone!.isNotEmpty) {
+      matchJson["timezone"] = match.timezone;
+    }
+    if (match.slug != null && match.slug!.isNotEmpty) {
+      matchJson["slug"] = match.slug;
+    }
+    if (match.registrationOpenDate != null) {
+      matchJson["registrationOpenDate"] = match.registrationOpenDate!.toIso8601String();
+    }
+    if (match.registrationCloseDate != null) {
+      matchJson["registrationCloseDate"] = match.registrationCloseDate!.toIso8601String();
+    }
+    if (match.registrationStatus != null && match.registrationStatus!.isNotEmpty) {
+      matchJson["registrationStatus"] = match.registrationStatus;
+    }
 
     // Get registrations from the match
     var registrations = match.registrations.toList();
 
     return {
       "format": "riff",
-      "version": "1.0",
+      "version": formatVersion,
       "match": matchJson,
       "registrations": registrations.map((registration) => _registrationToJson(registration)).toList(),
     };
