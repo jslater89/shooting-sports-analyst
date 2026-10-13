@@ -95,6 +95,7 @@ import "db_oneoff_impl/bomb_fail_to_finish_command.dart";
 import "db_oneoff_impl/most_stages_in_month_command.dart";
 import "db_oneoff_impl/nationals_points_champion_command.dart";
 import "db_oneoff_impl/match_heat_debug_command.dart";
+import "db_oneoff_impl/stage_reference_hit_factor_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -221,6 +222,52 @@ Future<void> main(List<String> args) async {
           MenuArgumentValue<String>(argument: strCompare, value: compareProject),
           MenuArgumentValue<String>(argument: strCsv, value: csvPath),
           MenuArgumentValue<String>(argument: strTraj, value: trajectoryCsv),
+        ],
+      );
+    }
+    else if(command == "SRH") {
+      final srhCmd = StageReferenceHitFactorCommand(db);
+      final defs = srhCmd.arguments;
+      final startArg = defs[0] as IntMenuArgument;
+      final endArg = defs[1] as IntMenuArgument;
+      final projectArg = defs[2] as StringMenuArgument;
+      final groupArg = defs[3] as StringMenuArgument;
+      final lowArg = defs[4] as StringMenuArgument;
+      final highArg = defs[5] as StringMenuArgument;
+      final momentumArg = defs[6] as StringMenuArgument;
+      final sdArg = defs[7] as StringMenuArgument;
+      final priorArg = defs[8] as IntMenuArgument;
+      final minNArg = defs[9] as IntMenuArgument;
+      final csvArg = defs[10] as StringMenuArgument;
+
+      int pickInt(int index, IntMenuArgument spec) {
+        if(args.length <= index) {
+          return spec.getDefault()!;
+        }
+        return int.tryParse(args[index]) ?? spec.getDefault()!;
+      }
+
+      String pickString(int index, StringMenuArgument spec) {
+        if(args.length <= index) {
+          return spec.getDefault() ?? "";
+        }
+        return args[index];
+      }
+
+      await srhCmd.executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: startArg, value: pickInt(1, startArg)),
+          MenuArgumentValue<int>(argument: endArg, value: pickInt(2, endArg)),
+          MenuArgumentValue<String>(argument: projectArg, value: pickString(3, projectArg)),
+          MenuArgumentValue<String>(argument: groupArg, value: pickString(4, groupArg)),
+          MenuArgumentValue<String>(argument: lowArg, value: pickString(5, lowArg)),
+          MenuArgumentValue<String>(argument: highArg, value: pickString(6, highArg)),
+          MenuArgumentValue<String>(argument: momentumArg, value: pickString(7, momentumArg)),
+          MenuArgumentValue<String>(argument: sdArg, value: pickString(8, sdArg)),
+          MenuArgumentValue<int>(argument: priorArg, value: pickInt(9, priorArg)),
+          MenuArgumentValue<int>(argument: minNArg, value: pickInt(10, minNArg)),
+          MenuArgumentValue<String>(argument: csvArg, value: pickString(11, csvArg)),
         ],
       );
     }
@@ -442,6 +489,7 @@ Future<void> main(List<String> args) async {
     MostStagesInMonthCommand(db),
     NationalsPointsChampionCommand(db),
     MatchHeatDebugCommand(db),
+    StageReferenceHitFactorCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
