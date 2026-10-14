@@ -96,6 +96,7 @@ import "db_oneoff_impl/most_stages_in_month_command.dart";
 import "db_oneoff_impl/nationals_points_champion_command.dart";
 import "db_oneoff_impl/match_heat_debug_command.dart";
 import "db_oneoff_impl/stage_reference_hit_factor_command.dart";
+import "db_oneoff_impl/season_tier_command.dart";
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -411,6 +412,25 @@ Future<void> main(List<String> args) async {
         ],
       );
     }
+    else if(command == "TIER") {
+      final tierCmd = SeasonTierCommand(db);
+      final defs = tierCmd.arguments;
+      final startArg = defs[0] as IntMenuArgument;
+      final endArg = defs[1] as IntMenuArgument;
+      final startYear = args.length > 1
+          ? (int.tryParse(args[1]) ?? startArg.getDefault()!)
+          : startArg.getDefault()!;
+      final endYear = args.length > 2
+          ? (int.tryParse(args[2]) ?? endArg.getDefault()!)
+          : endArg.getDefault()!;
+      await tierCmd.executor(
+        console,
+        [
+          MenuArgumentValue<int>(argument: startArg, value: startYear),
+          MenuArgumentValue<int>(argument: endArg, value: endYear),
+        ],
+      );
+    }
     else if(command == "MHD") {
       final mhdCmd = MatchHeatDebugCommand(db);
       final defs = mhdCmd.arguments;
@@ -490,6 +510,7 @@ Future<void> main(List<String> args) async {
     NationalsPointsChampionCommand(db),
     MatchHeatDebugCommand(db),
     StageReferenceHitFactorCommand(db),
+    SeasonTierCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
