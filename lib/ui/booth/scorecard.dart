@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/booth/shooter_overrides.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -20,6 +21,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
+import 'package:shooting_sports_analyst/ui/booth/shooter_override_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
@@ -99,7 +101,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
       var model = context.read<BroadcastBoothModel>();
       if(_hasChanges(model)) {
-        _calculateScores();
+        // A local competitor edit rescores the card in place. A server refresh
+        // still flows through the ticker comparison.
+        _calculateScores(manuallyTriggered: _onlyShooterOverrideChanged(model));
       }
       else {
         _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but UI change flags are false");
@@ -168,7 +172,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
     });
   }
 
-  bool _hasChanges(BroadcastBoothModel model) {
+  int _seenShooterOverrideEpoch = 0;
+
+  bool _serverOrFilterChanged(BroadcastBoothModel model) {
     if(sc.lastScoresBefore != sc.scoresBefore) {
       return true;
     }
@@ -178,10 +184,21 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(sc.lastPredictionMode != sc.predictionMode) {
       return true;
     }
-    // if(sc.lastScorecardCount != model.scorecardCount) {
-    //   return true;
-    // }
     if(sc.lastScoresCalculated.isBefore(model.tickerModel.lastUpdateTime)) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _onlyShooterOverrideChanged(BroadcastBoothModel model) {
+    return _seenShooterOverrideEpoch != model.shooterOverrideEpoch && !_serverOrFilterChanged(model);
+  }
+
+  bool _hasChanges(BroadcastBoothModel model) {
+    if(_serverOrFilterChanged(model)) {
+      return true;
+    }
+    if(_seenShooterOverrideEpoch != model.shooterOverrideEpoch) {
       return true;
     }
     return false;
@@ -195,6 +212,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     sc.lastPredictionMode = sc.predictionMode;
     // sc.lastScorecardCount = model.scorecardCount;
     sc.lastScoresCalculated = model.tickerModel.lastUpdateTime;
+    _seenShooterOverrideEpoch = model.shooterOverrideEpoch;
   }
 
   Future<void> _calculateScores({bool manuallyTriggered = false}) async {
@@ -685,17 +703,50 @@ class _BoothScorecardState extends State<BoothScorecard> {
       ],
     );
 
+    var hasOverride = ShooterOverrideStore.instance.find(match, entry) != null;
+    var labeled = hasOverride
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Icon(Icons.edit, size: 14 * _finalTextScaleFactor, color: Colors.orange[700]),
+              child,
+            ],
+          )
+        : child;
+
+    Future<void> editShooter() async {
+      var boothController = context.read<BroadcastBoothController>();
+      var result = await ShooterOverrideDialog.show(
+        context,
+        match: match,
+        shooter: entry,
+      );
+      if(!mounted || result == null || result == ShooterOverrideDialogResult.cancelled) {
+        return;
+      }
+      boothController.shooterOverridesChanged();
+      if(result == ShooterOverrideDialogResult.cleared) {
+        // Pull the official competitor back. A failed refresh leaves the
+        // reverted in-memory shooter in place and does not stop the ticker.
+        await boothController.refreshMatch(manual: true);
+      }
+    }
+
+    Widget tappable = labeled;
     if(rating != null) {
-      return ClickableLink(
+      tappable = ClickableLink(
         onTap: () {
           ShooterStatsDialog.show(context, rating, match: match, ratings: _ratingProjectContext!, showDivisions: sc.scoresMultipleDivisions);
         },
-        child: child,
+        child: labeled,
       );
     }
-    else {
-      return child;
-    }
+
+    return GestureDetector(
+      onLongPress: editShooter,
+      onSecondaryTap: editShooter,
+      child: tappable,
+    );
   }
 
   Widget _buildTotalScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change, ShootingMatch match) {

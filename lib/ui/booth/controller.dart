@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shooting_sports_analyst/data/booth/shooter_overrides.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
@@ -43,6 +44,17 @@ class BroadcastBoothController {
     }
 
     refreshPending = true;
+    try {
+      return await _refreshMatchBody();
+    }
+    finally {
+      // A failed or thrown refresh must not leave this set, or the ticker
+      // stops permanently on the next error.
+      refreshPending = false;
+    }
+  }
+
+  Future<bool> _refreshMatchBody() async {
     SourceIdsProvider match;
     if(model.ready) {
       match = model.latestMatch;
@@ -59,12 +71,20 @@ class BroadcastBoothController {
       return false;
     }
 
+    var freshMatch = copyMatchForLocalEdit(matchRes.unwrap());
+    try {
+      await ShooterOverrideStore.instance.ensureLoaded();
+      ShooterOverrideStore.instance.applyToMatch(freshMatch);
+    }
+    catch(e, st) {
+      _log.e("shooter overrides failed; showing the server match", error: e, stackTrace: st);
+    }
 
     var priorUpdateTime = model.tickerModel.lastUpdateTime;
     if(model.ready) {
       model.previousMatch = model.latestMatch;
     }
-    model.latestMatch = matchRes.unwrap();
+    model.latestMatch = freshMatch;
     model.tickerModel.lastUpdateTime = DateTime.now().toUtc();
     model.tickerModel.liveTickerEvents.clear();
     model.tickerModel.fuzzAmount = (0.5 - Random().nextDouble()) * model.tickerModel.fuzzFactor * model.tickerModel.updateInterval;
@@ -106,7 +126,6 @@ class BroadcastBoothController {
 
     _scheduleTickerReset();
 
-    refreshPending = false;
     return true;
   }
 
@@ -461,7 +480,17 @@ class BroadcastBoothController {
     model.tickerModel.update();
   }
 
+  /// Rescore every card after a local competitor edit.
+  ///
+  /// Does not move [BoothTickerModel.lastUpdateTime], so the live refresh
+  /// interval and update bell stay on the server's schedule.
+  void shooterOverridesChanged() {
+    model.shooterOverrideEpoch++;
+    model.update();
+  }
+
   BroadcastBoothController(this.model) {
+    ShooterOverrideStore.instance.ensureLoaded();
     // The refresh timer checks if the next update should have happened and refreshes if so.
     _refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       if(!model.tickerModel.paused && model.tickerModel.timeUntilUpdate.isNegative) {
