@@ -746,6 +746,7 @@ List<DivisionHeatSummaryDto> summarizeDivisionHeat({
           pool: label,
           kind: "division",
           shooters: byDivision[label]!,
+          places: _divisionPlaces(byDivision[label]!, pool.scores),
           ctx: ctx,
           heatPercentile: heatPercentile,
           heatMinCount: heatMinCount,
@@ -761,6 +762,7 @@ List<DivisionHeatSummaryDto> summarizeDivisionHeat({
       pool: pool.label,
       kind: pool.kind,
       shooters: shooters,
+      places: {for (final shooter in shooters) shooter: pool.scores[shooter]!.place},
       ctx: ctx,
       heatPercentile: heatPercentile,
       heatMinCount: heatMinCount,
@@ -768,17 +770,32 @@ List<DivisionHeatSummaryDto> summarizeDivisionHeat({
   ];
 }
 
+/// Approximate in-division places when an overall pool is split by division:
+/// rank by overall place. Hit-factor rescoring can reorder close finishers, so
+/// prefer a division pool when exact division places matter.
+Map<MatchEntry, int> _divisionPlaces(
+  List<MatchEntry> shooters,
+  Map<MatchEntry, RelativeMatchScore> scores,
+) {
+  final ranked = shooters.toList()
+    ..sort((a, b) => scores[a]!.place.compareTo(scores[b]!.place));
+  return {
+    for (var i = 0; i < ranked.length; i++) ranked[i]: i + 1,
+  };
+}
+
 DivisionHeatSummaryDto _heatSummary({
   required String pool,
   required String kind,
   required List<MatchEntry> shooters,
+  required Map<MatchEntry, int> places,
   required _HeatContext ctx,
   required int heatPercentile,
   required int heatMinCount,
 }) {
   var ratedCount = 0;
   var p90Count = 0;
-    var p95Count = 0;
+  var p95Count = 0;
   var heatCount = 0;
   String? groupName;
   double? p90Rating;
@@ -816,6 +833,17 @@ DivisionHeatSummaryDto _heatSummary({
   for (final entry in ranked) {
     p95Names.add("${entry.key.firstName} ${entry.key.lastName}".trim());
   }
+  final heatRanked = names.entries.where((e) => e.value.ratingPct >= heatPercentile).toList()
+    ..sort((a, b) => b.value.ratingPct.compareTo(a.value.ratingPct));
+  final heatFinishers = [
+    for (final entry in heatRanked)
+      HeatFinisherDto(
+        name: "${entry.key.firstName} ${entry.key.lastName}".trim(),
+        place: places[entry.key] ?? 0,
+        preMatchRating: entry.value.preMatchRating,
+        ratingPct: entry.value.ratingPct,
+      ),
+  ];
   return DivisionHeatSummaryDto(
     pool: pool,
     kind: kind,
@@ -829,6 +857,7 @@ DivisionHeatSummaryDto _heatSummary({
     heat: heatCount >= heatMinCount,
     heatPercentile: heatPercentile,
     heatMinCount: heatMinCount,
+    heatFinishers: heatFinishers,
     p90Rating: mixedGroups ? null : p90Rating,
     p95Rating: mixedGroups ? null : p95Rating,
   );

@@ -24,9 +24,13 @@ const int kMaxPredictionSearchLimit = 100;
 /// Default [getPackageMovers] row cap per group.
 const int kDefaultPackageMoverLimit = 40;
 /// Rating percentile that counts as nationally hot on match heat summaries.
-const int kDefaultHeatPercentile = 95;
+/// 99 against the single-division group lines up with editorial judgment of
+/// "national heat" (roughly the top 20-40 active shooters in a big group).
+const int kDefaultHeatPercentile = 99;
 /// How many finishers at [kDefaultHeatPercentile] make a division hot.
-const int kDefaultHeatMinCount = 2;
+/// One is enough at p99; use [DivisionHeatSummaryDto.heatFinishers] places to
+/// tell whether that shooter finished ahead of a given competitor.
+const int kDefaultHeatMinCount = 1;
 /// Minimum matches for the active field behind package movers and match heat.
 const int kDefaultRatingFieldMinMatches = 3;
 
@@ -314,6 +318,7 @@ class DivisionHeatSummaryDto {
     required this.heat,
     required this.heatPercentile,
     required this.heatMinCount,
+    required this.heatFinishers,
     this.groupName,
     this.p90Rating,
     this.p95Rating,
@@ -339,6 +344,9 @@ class DivisionHeatSummaryDto {
   final bool heat;
   final int heatPercentile;
   final int heatMinCount;
+  /// Finishers at or above [heatPercentile], best rating first, with their
+  /// in-division place so callers can check who finished ahead of whom.
+  final List<HeatFinisherDto> heatFinishers;
   /// High-end rating cutoffs for the active field. p95 is the hotter bar.
   @JsonKey(includeIfNull: false)
   final double? p90Rating;
@@ -348,6 +356,27 @@ class DivisionHeatSummaryDto {
   factory DivisionHeatSummaryDto.fromJson(Map<String, dynamic> json) =>
       _$DivisionHeatSummaryDtoFromJson(json);
   Map<String, dynamic> toJson() => _$DivisionHeatSummaryDtoToJson(this);
+}
+
+/// One finisher at or above the heat percentile in a division.
+@JsonSerializable()
+class HeatFinisherDto {
+  HeatFinisherDto({
+    required this.name,
+    required this.place,
+    required this.preMatchRating,
+    required this.ratingPct,
+  });
+
+  final String name;
+  /// In-division place at this match.
+  final int place;
+  final double preMatchRating;
+  final double ratingPct;
+
+  factory HeatFinisherDto.fromJson(Map<String, dynamic> json) =>
+      _$HeatFinisherDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$HeatFinisherDtoToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)

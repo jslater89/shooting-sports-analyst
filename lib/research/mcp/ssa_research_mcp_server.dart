@@ -491,7 +491,9 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "Pass matchId from search_matches, or matchQuery. Includes female/age/category flags. "
         "Set includeRatings to add preMatchRating and ratingPct, plus divisionHeat: "
         "how many finishers were already at the group's p90/p95 rating. "
-        "heat is true when heatCount >= heatMinCount (default: at least 2 at p95). "
+        "heat is true when heatCount >= heatMinCount (default: at least 1 at p99). "
+        "heatFinishers lists those shooters with their in-division place, so you can "
+        "tell whether national heat finished ahead of a given competitor. "
         "That is a coarse nationally-hot check, not the app's match-heat model.",
     inputSchema: Schema.object(
       properties: {
@@ -507,10 +509,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "Add pre-match rating, rating percentile, and divisionHeat (default false)",
         ),
         "heatPercentile": Schema.int(
-          description: "Percentile that counts as hot (default 95)",
+          description: "Percentile that counts as hot (default 99)",
         ),
         "heatMinCount": Schema.int(
-          description: "Finishers at heatPercentile required for heat=true (default 2)",
+          description: "Finishers at heatPercentile required for heat=true (default 1)",
         ),
         "ratingMinMatches": Schema.int(
           description: "Minimum matches in the active field used for percentiles (default 3)",
@@ -530,7 +532,8 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
         "Provide division, a rating group (group/groupUuid), or overall=true. For stage "
         "scores or hit/penalty counts, use get_match_scores or get_competitor_stage_scores. "
         "Set includeRatings for preMatchRating, ratingPct, and divisionHeat (p90/p95 "
-        "finisher counts). Heat uses pre-match rating against the active field.",
+        "finisher counts, heatFinishers with places; heat defaults to at least 1 at p99). "
+        "Heat uses pre-match rating against the active field.",
     inputSchema: Schema.object(
       properties: {
         "matchId": Schema.int(description: "Database match id"),
@@ -549,10 +552,10 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
               "Add pre-match rating, rating percentile, and divisionHeat (default false)",
         ),
         "heatPercentile": Schema.int(
-          description: "Percentile that counts as hot (default 95)",
+          description: "Percentile that counts as hot (default 99)",
         ),
         "heatMinCount": Schema.int(
-          description: "Finishers at heatPercentile required for heat=true (default 2)",
+          description: "Finishers at heatPercentile required for heat=true (default 1)",
         ),
         "ratingMinMatches": Schema.int(
           description: "Minimum matches in the active field used for percentiles (default 3)",
