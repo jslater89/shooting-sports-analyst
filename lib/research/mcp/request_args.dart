@@ -62,12 +62,20 @@ class SearchMatchesArgs {
   SearchMatchesArgs({
     this.query = "",
     this.limit = 10,
+    this.after,
+    this.before,
   });
 
   @JsonKey(defaultValue: "")
   final String query;
   @JsonKey(fromJson: _limit10FromJson)
   final int limit;
+  /// Inclusive lower bound on match date.
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? after;
+  /// Exclusive upper bound on match date.
+  @JsonKey(fromJson: researchDateOnlyFromJsonNullable, toJson: researchDateOnlyToJson)
+  final DateTime? before;
 
   factory SearchMatchesArgs.fromJson(Map<String, dynamic> json) =>
       _$SearchMatchesArgsFromJson(researchArgsJson(json));

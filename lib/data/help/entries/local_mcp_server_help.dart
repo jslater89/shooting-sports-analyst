@@ -98,6 +98,7 @@ desktop app is running.
   supported leaderboard sorts, whether the algorithm is stage-based, and the latest match date in
   the project.
 * **search_matches** — Fuzzy search completed matches in the local database by name.
+  Optional `after` and `before` dates bound the match date.
 
 ### Match results
 

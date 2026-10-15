@@ -47,6 +47,8 @@ RouterPlus buildResearchApiRouter(ResearchQueries facade) {
       final matches = await facade.searchMatches(
         query: args.query,
         limit: args.limit,
+        after: args.after,
+        before: args.before,
       );
       if (matches.isErr()) {
         return Result.errFrom(matches);

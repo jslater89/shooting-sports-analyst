@@ -98,6 +98,8 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
       final matches = await _facade.searchMatches(
         query: args.query,
         limit: args.limit,
+        after: args.after,
+        before: args.before,
       );
       if (matches.isErr()) {
         return Result.errFrom(matches);
@@ -468,11 +470,15 @@ base class SsaResearchMcpServer extends MCPServer with ToolsSupport {
 
   final _searchMatchesTool = Tool(
     name: "search_matches",
-    description: "Search matches by name (fuzzy text search).",
+    description:
+        "Search matches by name (fuzzy text search). Optional after/before "
+        "bound the match date.",
     inputSchema: Schema.object(
       properties: {
         "query": Schema.string(description: "Match name query, e.g. '2024 Area 5'"),
         "limit": Schema.int(description: "Max results (default 10)"),
+        "after": Schema.string(description: "YYYY-MM-DD inclusive lower bound on match date"),
+        "before": Schema.string(description: "YYYY-MM-DD exclusive upper bound on match date"),
       },
       required: ["query"],
     ),
