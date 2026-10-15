@@ -831,6 +831,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       levelIIICount += displayedStats.matchesByLevel[level] ?? 0;
     }
 
+    bool hasClassMatchWins = displayedStats.classMatchPlaces.isNotEmpty || displayedStats.classMatchWins > 0;
+
     return [
       Row(
         children: [
@@ -911,11 +913,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
-      if(displayedStats.classMatchPlaces.isNotEmpty) Row(
+      Row(
         children: [
           Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${displayedStats.matchWins}/${displayedStats.classMatchWins}",
+              "${displayedStats.matchWins}/${hasClassMatchWins ? displayedStats.classMatchWins : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
