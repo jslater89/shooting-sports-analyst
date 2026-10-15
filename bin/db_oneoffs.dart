@@ -423,11 +423,27 @@ Future<void> main(List<String> args) async {
       final endYear = args.length > 2
           ? (int.tryParse(args[2]) ?? endArg.getDefault()!)
           : endArg.getDefault()!;
+      final wideArg = defs[2] as BoolMenuArgument;
+      var wideTiers = wideArg.getDefault() ?? false;
+      if (args.length > 3) {
+        final flag = args[3].toLowerCase();
+        if (flag == "wide" || flag == "true" || flag == "1") {
+          wideTiers = true;
+        }
+        else if (flag == "classic" || flag == "false" || flag == "0") {
+          wideTiers = false;
+        }
+        else {
+          console.print("Usage: TIER [startYear] [endYear] [classic|wide]");
+          return;
+        }
+      }
       await tierCmd.executor(
         console,
         [
           MenuArgumentValue<int>(argument: startArg, value: startYear),
           MenuArgumentValue<int>(argument: endArg, value: endYear),
+          MenuArgumentValue<bool>(argument: wideArg, value: wideTiers),
         ],
       );
     }
