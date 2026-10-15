@@ -30,8 +30,11 @@ class PredictionGameMatchList extends StatelessWidget {
               child: Text("ADD MATCH"),
               onPressed: () async {
                 var matchPrep = await MatchPrepSelectDialog.show(context);
-                if(matchPrep != null) {
+                if(matchPrep != null && matchPrep.futureMatch.value != null && matchPrep.ratingProject.value != null) {
                   model.addMatchPrep(matchPrep);
+                }
+                else if(matchPrep != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Selected match prep is missing required data. Please select a match prep with a future match and a rating project.")));
                 }
               },
             )

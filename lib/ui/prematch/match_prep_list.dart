@@ -51,13 +51,18 @@ class _MatchPrepListState extends State<MatchPrepList> {
                 Expanded(flex: _dateFlex, child: Text(programmerYmdFormat.format(prep.matchDate))),
               ],
             ),
-            subtitle: Text(prep.ratingProject.value!.name),
+            subtitle: Text(prep.ratingProject.value?.name ?? "(rating project missing)"),
             onTap: () {
               if(widget.onMatchPrepSelected != null) {
                 widget.onMatchPrepSelected!(prep);
               }
               else {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
+                if(prep.ratingProject.value != null && prep.futureMatch.value != null) {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
+                }
+                else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Selected match prep is missing required data. Please select a match prep with a future match and a rating project.")));
+                }
               }
             },
             trailing: IconButton(
