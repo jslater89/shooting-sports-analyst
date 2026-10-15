@@ -1169,6 +1169,9 @@ class RatingProjectLoader {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(group, match);
+    // A linked match belongs to another sport. lastClassification should stay
+    // the classification from the home project.
+    final usesSportLink = _ingestsViaSportLink(group, match);
     List<ShooterRating> ratingsToCreate = [];
     List<DbShooterRating> ratingsToUpsert = [];
     List<DbShooterRating> newRatings = [];
@@ -1365,6 +1368,9 @@ class RatingProjectLoader {
             continue;
           }
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
+          if(usesSportLink) {
+            newRating.lastClassification = project.sport.classifications.fallback();
+          }
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           ratingsToCreate.add(newRating);
           newRatings.add(newRating.wrappedRating);
@@ -1399,7 +1405,7 @@ class RatingProjectLoader {
           rating.memberNumber = s.memberNumber;
           rating.addKnownMemberNumbers(s.knownMemberNumbers);
 
-          if(s.classification != null) {
+          if(!usesSportLink && s.classification != null) {
             if(rating.lastClassification == null || s.classification!.index < rating.lastClassification!.index) {
               rating.lastClassification = s.classification!;
             }
@@ -1458,6 +1464,13 @@ class RatingProjectLoader {
     }
 
     return (newRatings, added + updated);
+  }
+
+  /// True when [match] is scored into [group] through an ingest sport link,
+  /// rather than as a match in the group's own sport.
+  bool _ingestsViaSportLink(RatingGroup group, ShootingMatch match) {
+    final link = SportLinkRegistry().linkFor(source: match.sport, target: group.sport);
+    return link != null && link.canIngest;
   }
 
   List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
@@ -1571,6 +1584,7 @@ class RatingProjectLoader {
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
     double strengthMod = 1.0;
+    final usesSportLink = _ingestsViaSportLink(group, match);
     if(sport.ratingStrengthProvider != null) {
       var matchStrength = 0.0;
       for(var shooter in shooters) {
@@ -1584,7 +1598,7 @@ class RatingProjectLoader {
           useCache: true,
         );
         if(rating != null) {
-          if(shooter.classification != null) {
+          if(!usesSportLink && shooter.classification != null) {
             if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
               rating.lastClassification = shooter.classification!;
             }
