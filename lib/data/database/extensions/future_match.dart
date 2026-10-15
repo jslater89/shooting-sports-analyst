@@ -42,6 +42,9 @@ extension FutureMatchDatabase on AnalystDatabase {
   /// If [newRegistrations] or FutureMatch.newRegistrations is provided, the existing registrations on the
   /// FutureMatch will be deleted and replaced with the contents of the new registrations. If both are
   /// provided, [newRegistrations] will take precedence.
+  ///
+  /// Member numbers previously resolved onto a registration are copied forward when the incoming row has
+  /// none, and saved registration mappings are reapplied after the write.
   Future<VoidResult> saveFutureMatch(FutureMatch match, {
     List<MatchPrepLinkTypes> updateLinks = MatchPrepLinkTypes.values,
     List<MatchRegistration>? newRegistrations,
@@ -55,6 +58,15 @@ extension FutureMatchDatabase on AnalystDatabase {
       // normalize to the canonically-cased name
       match.sportName = sport.name;
     }
+
+    final replacingRegistrations = match.newRegistrations.isNotEmpty || newRegistrations != null;
+    if(replacingRegistrations) {
+      await _preserveResolvedMemberNumbers(match.newRegistrations);
+      if(newRegistrations != null) {
+        await _preserveResolvedMemberNumbers(newRegistrations);
+      }
+    }
+
     try {
       await isar.writeTxn(() async {
         await isar.futureMatchs.put(match);
@@ -90,8 +102,43 @@ extension FutureMatchDatabase on AnalystDatabase {
     } catch(e) {
       return Result.err(StringError("Failed to save future match: $e"));
     }
+    if(replacingRegistrations) {
+      await match.updateRegistrationsFromMappings();
+    }
     notifyEntityChange(EntityType.futureMatch, match.id);
     return Result.ok(null);
+  }
+
+  /// Copy member numbers resolved on a previous download onto incoming rows that have none.
+  ///
+  /// A blank-only list counts as missing, so an empty `member-number` field does not wipe a manual link.
+  Future<void> _preserveResolvedMemberNumbers(List<MatchRegistration> incoming) async {
+    if(incoming.isEmpty) {
+      return;
+    }
+    final previous = await isar.matchRegistrations.where().matchIdEqualTo(incoming.first.matchId).findAll();
+    if(previous.isEmpty) {
+      return;
+    }
+    final previousByEntryId = <String, MatchRegistration>{
+      for(final registration in previous) registration.entryId: registration,
+    };
+    for(final registration in incoming) {
+      final prior = previousByEntryId[registration.entryId];
+      if(prior == null) {
+        continue;
+      }
+      if(registration.hadMemberNumber || registration.shooterMemberNumbers.any((number) => number.isNotEmpty)) {
+        continue;
+      }
+      final priorNumbers = prior.shooterMemberNumbers.where((number) => number.isNotEmpty).toList();
+      if(priorNumbers.isEmpty) {
+        continue;
+      }
+      registration.shooterMemberNumbers = priorNumbers;
+      registration.resolvedAutomatically = prior.resolvedAutomatically;
+      registration.resolvedFromManualMapping = prior.resolvedFromManualMapping;
+    }
   }
 
   Future<void> unlinkFutureMatchResult(FutureMatch match) async {

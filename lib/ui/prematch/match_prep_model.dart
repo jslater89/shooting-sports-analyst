@@ -45,7 +45,10 @@ class MatchPrepPageModel extends ChangeNotifier {
 
   Future<void> init() async {
     _getKnownSquads(notify: false);
-    loadMatchingRegistrations(notify: false);
+    // Reapply saved mappings before the first rating lookup, so a registration
+    // whose member number was overwritten still links on the next open.
+    await futureMatch.updateRegistrationsFromMappings();
+    loadMatchingRegistrations(notify: true);
   }
 
   // ===========================
@@ -97,7 +100,7 @@ class MatchPrepPageModel extends ChangeNotifier {
       shooterName: registration.shooterName ?? "",
       shooterClassificationName: registration.shooterClassificationName ?? "",
       shooterDivisionName: registration.shooterDivisionName ?? "",
-      detectedMemberNumbers: rating.knownMemberNumbers.toList(),
+      detectedMemberNumbers: rating.knownMemberNumbers.where((number) => number.isNotEmpty).toList(),
       squad: registration.squad,
       createdAutomatically: false,
     );
@@ -122,7 +125,9 @@ class MatchPrepPageModel extends ChangeNotifier {
     futureMatch.mappings.add(newMapping);
     await db.saveFutureMatch(futureMatch, updateLinks: [MatchPrepLinkTypes.mappings]);
 
-    registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
+    registration.shooterMemberNumbers = rating.knownMemberNumbers.where((number) => number.isNotEmpty).toList();
+    registration.resolvedFromManualMapping = true;
+    registration.resolvedAutomatically = false;
     await db.saveMatchRegistrations([registration]);
 
     notifyListeners();
@@ -142,10 +147,13 @@ class MatchPrepPageModel extends ChangeNotifier {
     var existingMapping = futureMatch.getMappingFor(registration);
     if(existingMapping != null) {
       futureMatch.mappings.remove(existingMapping);
-      await db.saveMatchRegistrationMappings(futureMatch.matchId, [existingMapping]);
+      await db.saveFutureMatch(futureMatch, updateLinks: [MatchPrepLinkTypes.mappings]);
+      await db.deleteMatchRegistrationMappings([existingMapping]);
     }
 
     registration.shooterMemberNumbers = [];
+    registration.resolvedFromManualMapping = false;
+    registration.resolvedAutomatically = false;
     await db.saveMatchRegistrations([registration]);
 
     notifyListeners();
@@ -253,7 +261,8 @@ class MatchPrepPageModel extends ChangeNotifier {
 
     int matched = 0;
     for(var registration in registrations) {
-      if(registration.shooterMemberNumbers.isNotEmpty) {
+      final usableMemberNumbers = registration.shooterMemberNumbers.where((number) => number.isNotEmpty);
+      if(usableMemberNumbers.isNotEmpty) {
         var division = lookupSport.divisions.lookupByName(registration.shooterDivisionName, fallback: !differentSport);
         if(division == null) {
           continue;
@@ -266,7 +275,7 @@ class MatchPrepPageModel extends ChangeNotifier {
 
         var ratingSourceGroup = prep.ratingSourceGroupFor(ratingProject, scoringGroup);
         DbShooterRating? rating;
-        for(var memberNumber in registration.shooterMemberNumbers) {
+        for(var memberNumber in usableMemberNumbers) {
           rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingSourceGroup, memberNumber: memberNumber, usePossibleMemberNumbers: true);
           if(rating != null) {
             break;

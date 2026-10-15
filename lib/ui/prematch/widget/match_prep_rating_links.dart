@@ -189,6 +189,26 @@ class _RatingLinksKey extends StatelessWidget {
   }
 }
 
+/// Member number from the registration, falling back to a saved mapping when a
+/// re-import cleared the registration row.
+String _displayMemberNumber(MatchPrepPageModel model, MatchRegistration entry) {
+  for(final number in entry.shooterMemberNumbers) {
+    if(number.isNotEmpty) {
+      return number;
+    }
+  }
+  final mapping = model.prep.futureMatch.value?.getMappingFor(entry);
+  if(mapping == null) {
+    return "";
+  }
+  for(final number in mapping.detectedMemberNumbers) {
+    if(number.isNotEmpty) {
+      return number;
+    }
+  }
+  return "";
+}
+
 class _RatingLinksEntry extends StatelessWidget {
   const _RatingLinksEntry({required this.model, required this.index, required this.entry, required this.group});
   final MatchPrepPageModel model;
@@ -237,7 +257,7 @@ class _RatingLinksEntry extends StatelessWidget {
           Expanded(flex: _RatingLinksKey._nameInRegistrationFlex, child: Text(entry.shooterName ?? "")),
           Expanded(flex: _RatingLinksKey._classInRegistrationFlex, child: Text(entry.shooterClassificationName ?? "")),
           Expanded(flex: _RatingLinksKey._divisionInRegistrationFlex, child: Text(entry.shooterDivisionName ?? "")),
-          Expanded(flex: _RatingLinksKey._memberNumberInRegistrationFlex, child: Text(entry.shooterMemberNumbers.firstOrNull ?? "")),
+          Expanded(flex: _RatingLinksKey._memberNumberInRegistrationFlex, child: Text(_displayMemberNumber(model, entry))),
           Expanded(flex: _RatingLinksKey._autoDetectedFlex, child: model.prep.futureMatch.value!.hasMappingFor(entry) ? Align(alignment: Alignment.centerLeft, child: Icon(Icons.check, color: Theme.of(context).iconTheme.color)) : Container()),
           Expanded(flex: _RatingLinksKey._linkedRatingFlex, child: ratingText),
           Expanded(flex: _RatingLinksKey._actionsFlex, child: _RatingLinksActions(

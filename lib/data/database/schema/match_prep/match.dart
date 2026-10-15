@@ -294,16 +294,20 @@ class FutureMatch {
     var mappings = await db.getMatchRegistrationMappings(matchId);
     List<MatchRegistration> registrationsToUpdate = [];
     for(var mapping in mappings) {
+      final detectedMemberNumbers = mapping.detectedMemberNumbers.where((n) => n.isNotEmpty).toList();
+      if(detectedMemberNumbers.isEmpty) {
+        continue;
+      }
       var registration = registrations.firstWhereOrNull((r) =>
         r.shooterName == mapping.shooterName
         && r.shooterDivisionName == mapping.shooterDivisionName
         && r.shooterClassificationName == mapping.shooterClassificationName
         /// If any numbers from the mapping are not in the registration, we need
         /// to update the registration.
-        && !mapping.detectedMemberNumbers.every((n) => r.shooterMemberNumbers.contains(n)));
+        && !detectedMemberNumbers.every((n) => r.shooterMemberNumbers.contains(n)));
 
       if(registration != null) {
-        registration.shooterMemberNumbers = mapping.detectedMemberNumbers.toList();
+        registration.shooterMemberNumbers = detectedMemberNumbers;
         registration.resolvedFromManualMapping = !mapping.createdAutomatically;
         registration.resolvedAutomatically = mapping.createdAutomatically;
         registrationsToUpdate.add(registration);
